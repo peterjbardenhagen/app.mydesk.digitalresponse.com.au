@@ -783,6 +783,101 @@ body {
   color: var(--tl-primary);
 }
 
+/* Compact Slimline Filter Panel - For Module List Screens */
+.tl-filter-compact {
+  background: white;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  border: 1px solid var(--tl-border);
+}
+
+.tl-filter-compact-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+}
+
+.tl-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 140px;
+}
+
+.tl-filter-field-narrow {
+  min-width: 100px;
+  flex: 0 0 auto;
+}
+
+.tl-filter-field label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--tl-text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.tl-filter-compact .tl-form-input,
+.tl-filter-compact .tl-form-select {
+  padding: 8px 10px;
+  font-size: 13px;
+  min-height: 36px;
+}
+
+.tl-filter-actions {
+  display: flex;
+  gap: 8px;
+  align-items: end;
+  padding-left: 8px;
+  border-left: 1px solid var(--tl-border);
+  margin-left: 4px;
+}
+
+.tl-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  height: 36px;
+}
+
+.tl-filter-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.tl-filter-btn-primary {
+  background: var(--tl-primary);
+  color: white;
+}
+
+.tl-filter-btn-primary:hover {
+  background: var(--tl-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,168,181,0.3);
+}
+
+.tl-filter-btn-secondary {
+  background: var(--tl-bg);
+  color: var(--tl-text);
+  border: 1px solid var(--tl-border);
+}
+
+.tl-filter-btn-secondary:hover {
+  background: #e8ecef;
+}
+
 /* Action Buttons */
 .tl-action-bar {
   display: flex;
