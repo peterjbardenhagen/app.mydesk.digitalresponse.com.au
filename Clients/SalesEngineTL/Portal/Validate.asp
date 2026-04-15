@@ -124,7 +124,7 @@ Else
 	rsCheck.Close
 	Set rsCheck = Nothing	
 
-	MyRedirect(Session("WorkingDir") & "/DefaultFrame.asp?Msg=Login+failed,+incorrect+Username+and/or+Password.+Please+try+again.")
+	MyRedirect("/?Msg=Login+failed,+incorrect+Username+and/or+Password.+Please+try+again.")
 End If
 
 %>
