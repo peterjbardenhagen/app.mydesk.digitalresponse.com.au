@@ -1,5 +1,5 @@
 <% 
-
+' Techlight MyDesk - Modern Quotes List
 Response.AddHeader "Pragma", "No-Store"
 Response.ExpiresAbsolute = ServerToEST(Now()) - 1
 Response.AddHeader "pragma","no-cache"
@@ -8,16 +8,11 @@ Response.CacheControl = "no-cache"
 
 If Not Request.Cookies("DivisionIdsAccess")("Quotes") <> "0" Then Response.Redirect("../Portal/AccessDenied.asp")
 
-Dim strSort
-Dim strFilter_Code
-Dim intDivisionId
-Dim strCustomerSearch
+Dim strSort, strFilter_Code, intDivisionId, strCustomerSearch, strCode
 
 If Request.Cookies("UserSettings")("Manager") Then
 	strCode = Trim(Request("Code"))
-	If strCode = "" Then
-		strCode = "All"
-	End If
+	If strCode = "" Then strCode = "All"
 Else
 	strCode = Request.Cookies("UserSettings")("Code")
 End If
@@ -26,13 +21,11 @@ If Request.QueryString("Sort") = "" Then
 	strSort = "Quotes.Date DESC"
 Else
 	strSort = Trim(Request.QueryString("Sort"))
-End if
+End If
 
 If Request.Cookies("UserSettings")("Manager") Then
 	strFilter_Code = Trim(Request("Filter_Code"))
-	If strFilter_Code = "" Then
-		strFilter_Code = Request.Cookies("UserSettings")("Code")
-	End If
+	If strFilter_Code = "" Then strFilter_Code = Request.Cookies("UserSettings")("Code")
 Else
 	strFilter_Code = Request.Cookies("UserSettings")("Code")
 End If
@@ -49,71 +42,117 @@ Else
 End If
 
 intSelDivisionId = 555
-
 %>
 <!--#include virtual="/Clients/SalesEngine/ssi_Security.inc"-->
 <!--#include virtual="/System/ssi_Functions.asp"-->
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <!--#include virtual="/System/ssi_Dates.inc"-->
-<html>
-	<head>
-		<title>MyDesk</title>
-		<META http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, pre-check=0">
-		<META http-equiv="Expires" content="0">
-		<META http-equiv="Pragma" content="no-store, private, must-revalidate">
-		<link rel="stylesheet" type="text/css" href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/<%= Request.Cookies("ClientSettings")("Stylesheet") %>">
-		<script language="javascript" src="/System/cal2.js"></script>
-		<script language="javascript" src="/System/cal_conf2.js"></script>
-	</head>
-	<body bgcolor="#dddddd">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Quotes - Techlight MyDesk</title>
+	<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+	<meta http-equiv="Expires" content="0">
+	<meta http-equiv="Pragma" content="no-store">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" type="text/css" href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/Style_Techlight.css">
+	<script language="javascript" src="/System/cal2.js"></script>
+	<script language="javascript" src="/System/cal_conf2.js"></script>
+</head>
+<body>
 <!--#include virtual="/System/ssi_Header.inc"-->
-	<center>
-	<table width=95% align="center" cellpadding=0 cellspacing=0 border=0 ID="Table3">
-		<tr>
-			<td>
-				<br>
-				<table width="100%" cellpadding=0 cellspacing=0 border=0 ID="Table4">
-					<tr>
-						<td><span class="Header2"><a href="/Portal.asp" class="Header2">Home</a> / Quotes /></span></td>
-						<td align="right"><a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Quotes/Add.asp" class="Header2">Add Quote</a></td>
-					</tr>
-					<tr>
-						<td colspan=2>
-<%
 
+<div class="tl-page-container">
+	<!-- Breadcrumb -->
+	<nav class="tl-breadcrumb">
+		<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Dashboard.asp" target="_parent">Home</a>
+		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+		<span>Quotes</span>
+	</nav>
+
+	<!-- Page Header -->
+	<div class="tl-action-bar">
+		<h1 class="tl-page-title">
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+				<polyline points="14 2 14 8 20 8"></polyline>
+				<line x1="16" y1="13" x2="8" y2="13"></line>
+				<line x1="16" y1="17" x2="8" y2="17"></line>
+			</svg>
+			Quotes
+		</h1>
+		<div class="tl-btn-group">
+			<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Quotes/Add.asp" class="tl-btn-primary" target="_parent">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+					<line x1="12" y1="5" x2="12" y2="19"></line>
+					<line x1="5" y1="12" x2="19" y2="12"></line>
+				</svg>
+				New Quote
+			</a>
+		</div>
+	</div>
+
+<%
 strMsg = Trim(Request("Msg"))
 If strMsg <> "" Then
-
 %>
-							<br>
-							<table width="100%" cellpadding=3 cellspacing=0 border=0 bgcolor="#ffffff" ID="Table5">
-								<tr>
-									<td><span style="color:red;"><%= strMsg %></span></td>
-								</tr>
-							</table>
+	<div class="tl-alert tl-alert-success">
+		<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+			<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+			<polyline points="22 4 12 14.01 9 11.01"></polyline>
+		</svg>
+		<%= strMsg %>
+	</div>
 <%
-
 End If
-
 %>
-						</td>
-					</tr>
-				</table>
-				<table width=760>
-					<tr>
-						<td>
 
-							<fieldset style="width:760px;">
-								<legend style="font-weight:bold;">Filter</legend>
-								<table width="100%" cellpadding=5 cellspacing=0 border=0 ID="Table1">
-									<form name="FormReport" id="FormReport" method="post" action="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/SalesProjects/Report.asp" target="MyIFrame">
-									<tr>
-										<td style="font-weight:bold;">Date From</td>
-										<td valign="top"><input type="input" value="<%= dteDateFrom %>" name="DateFrom" readonly ID="Input1"> <a href="javascript:showCal('Calendar3')"><img src="/Images/Calendar.gif" border=0></a></td>
-										<td style="font-weight:bold;">User</td>
-										<td>
-											<select name="Code" ID="Select4">
-											<option selected value="All">All users</option>
+	<!-- Filter Panel -->
+	<div class="tl-filter-panel">
+		<div class="tl-filter-title">
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+			</svg>
+			Filter Quotes
+		</div>
+		<form name="FormReport" id="FormReport" method="post" action="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/SalesProjects/Report.asp" target="MyIFrame">
+			<div class="tl-form-row">
+				<div class="tl-form-group">
+					<label class="tl-form-label">Date From</label>
+					<div style="display: flex; gap: 8px;">
+						<input type="text" value="<%= dteDateFrom %>" name="DateFrom" class="tl-form-input" readonly style="flex: 1;">
+						<a href="javascript:showCal('Calendar3')" class="tl-icon-btn" title="Open Calendar">
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+								<line x1="16" y1="2" x2="16" y2="6"></line>
+								<line x1="8" y1="2" x2="8" y2="6"></line>
+								<line x1="3" y1="10" x2="21" y2="10"></line>
+							</svg>
+						</a>
+					</div>
+				</div>
+				<div class="tl-form-group">
+					<label class="tl-form-label">Date To</label>
+					<div style="display: flex; gap: 8px;">
+						<input type="text" value="<%= dteDateTo %>" name="DateTo" class="tl-form-input" readonly style="flex: 1;">
+						<a href="javascript:showCal('Calendar4')" class="tl-icon-btn" title="Open Calendar">
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+								<line x1="16" y1="2" x2="16" y2="6"></line>
+								<line x1="8" y1="2" x2="8" y2="6"></line>
+								<line x1="3" y1="10" x2="21" y2="10"></line>
+							</svg>
+						</a>
+					</div>
+				</div>
+				<div class="tl-form-group">
+					<label class="tl-form-label">User</label>
+					<select name="Code" class="tl-form-select">
+						<option selected value="All">All users</option>
 <%
 	Set rsUsers = Server.CreateObject("ADODB.RecordSet")
 	sql = "Select * From Users Where Deleted = 0 AND (Code In (" & GetAccessCodesList(Request.Cookies("UserSettings")("Code"), Request.Cookies("UserSettings")("UserTypeID")) & ")) Order By Name"
