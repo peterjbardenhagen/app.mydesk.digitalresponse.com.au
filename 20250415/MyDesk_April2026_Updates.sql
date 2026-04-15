@@ -86,3 +86,31 @@ SELECT TOP 1 * FROM InvoiceExportLog;
 -- 3. Set ExportId as Primary Key (AutoNumber)
 -- 4. Save table as "InvoiceExportLog"
 
+-- HERE IS THE COMPLETE SQL TO RUN THROUGH MYDESK ADMIN
+
+ALTER TABLE Quotes ADD COLUMN SenderCode TEXT(10);
+
+UPDATE Quotes SET SenderCode = Code WHERE SenderCode IS NULL;
+
+ALTER TABLE Invoices ADD COLUMN ExportedToMYOB YESNO;
+
+UPDATE Invoices SET ExportedToMYOB = 0 WHERE ExportedToMYOB IS NULL;
+
+ALTER TABLE Invoices ADD COLUMN ExportedDate DATETIME;
+
+CREATE TABLE InvoiceExportLog (
+    ExportId COUNTER PRIMARY KEY,
+    ExportDate DATETIME,
+    ExportedBy TEXT(10),
+    DateFrom DATETIME,
+    DateTo DATETIME,
+    InvoiceCount INTEGER,
+    TotalAmount CURRENCY,
+    Status TEXT(50)
+);
+
+SELECT TOP 1 SenderCode FROM Quotes;
+
+SELECT TOP 1 ExportedToMYOB, ExportedDate FROM Invoices;
+
+SELECT TOP 1 * FROM InvoiceExportLog;

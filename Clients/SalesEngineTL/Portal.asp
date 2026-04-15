@@ -1,5 +1,4 @@
-<% 
-
+<%
 Response.AddHeader "Pragma", "No-Store"
 Response.AddHeader "cache-control", "no-store, private, must-revalidate"
 Response.Expires = -1
@@ -8,94 +7,235 @@ Response.CacheControl = "no-store, private, must-revalidate"
 
 Dim strMsg
 strMsg = Trim(Request("Msg"))
+
+Dim strWorkingDir
+strWorkingDir = Session("WorkingDir")
 %>
 <!--#include virtual="/Clients/SalesEngine/ssi_Security.inc"-->
 <!--#include virtual="/System/ssi_Functions.asp"-->
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <!--#include virtual="/System/ssi_Dates.inc"-->
-<html>
-	<head>
-		<title>SalesEngine</title>
-		<META http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, pre-check=0">
-		<META http-equiv="Expires" content="0">
-		<META http-equiv="Pragma" content="no-store, private, must-revalidate">
-		<link rel="stylesheet" type="text/css" href="/System/<%= Session("Stylesheet") %>">
-		<script language="JavaScript" src="/System/Global.js"></script>
-		<script language="javascript">	
-		function MM_swapImgRestore() { //v3.0
-		var i,x,a=document.MM_sr; for(i=0;a&&i<a.length&&(x=a[i])&&x.oSrc;i++) x.src=x.oSrc;
-		}
-		function MM_findObj(n, d) { //v4.01
-		var p,i,x;  if(!d) d=document; if((p=n.indexOf("?"))>0&&parent.frames.length) {
-			d=parent.frames[n.substring(p+1)].document; n=n.substring(0,p);}
-		if(!(x=d[n])&&d.all) x=d.all[n]; for (i=0;!x&&i<d.forms.length;i++) x=d.forms[i][n];
-		for(i=0;!x&&d.layers&&i<d.layers.length;i++) x=MM_findObj(n,d.layers[i].document);
-		if(!x && d.getElementById) x=d.getElementById(n); return x;
-		}
-		function MM_swapImage() { //v3.0
-		var i,j=0,x,a=MM_swapImage.arguments; document.MM_sr=new Array; for(i=0;i<(a.length-2);i+=3)
-		if ((x=MM_findObj(a[i]))!=null){document.MM_sr[j++]=x; if(!x.oSrc) x.oSrc=x.src; x.src=a[i+2];}
-		}
-		</script>
-	</head>
-	<body bgcolor="#dddddd">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>MyDesk - Techlight CRM Dashboard</title>
+	<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+	<meta http-equiv="Expires" content="0">
+	<meta http-equiv="Pragma" content="no-store">
+	<link rel="stylesheet" type="text/css" href="/System/Style_Modern.css">
+	<script language="JavaScript" src="/System/Global.js"></script>
+</head>
+<body>
 
 <!--#include virtual="/System/ssi_Header.inc"-->
 
-<table width="100%" cellpadding=0 cellspacing=0 border=0 bgcolor="#ffffff">
-	<tr>
-		<td>
-			<table width="95%" align="center" cellpadding=0 cellspacing=0 border=0>
-				<tr>
-					<td>
-						<br><span class="Header2">Welcome <strong><%= Session("Name") %>. You have successfully logged into SalesEngine. <% If Session("Admin") Then %>You are an Administrator.<% End If %></span><br><br>
-					</td>
-				</tr>
-			</table>
-<%
-If strMsg <> "" Then
-%>
-			<br>
-			<table width="100%" cellpadding=3 cellspacing=0 border=0 bgcolor="#ffffff" ID="Table6">
-				<tr>
-					<td><span style="color:red;"><%= strMsg %></span></td>
-				</tr>
-			</table>
-<%
-End If
-%>
-		</td>
-	</tr>
-</table>
+<main class="tl-main">
 
-<table background="/Clients/SalesEngineTT/Images/Filler.gif" bgcolor="#ffffff" width="100%" cellpadding=0 cellspacing=0 border=0>
-	<tr>
-		<td>
-			<table bgcolor="#ffffff" cellpadding=0 cellspacing=0 border=0 ID="Table5">
-				<tr>
-					<td valign="top"><a href="/Clients/SalesEngineTT/Contacts" onMouseOver="MM_swapImage('btn_Contacts','','/Clients/SalesEngineTT/Images/btn_Contacts_On.gif',0);" onMouseOut="MM_swapImgRestore();"><img src="/Clients/SalesEngineTT/Images/btn_Contacts.gif" border=0 alt="Contacts" name="btn_Contacts"></a></td>
-					<td valign="top"><a href="/Clients/SalesEngineTT/CallReports" onMouseOver="MM_swapImage('btn_CallReports','','/Clients/SalesEngineTT/Images/btn_CallReports_On.gif',0);" onMouseOut="MM_swapImgRestore();"><img src="/Clients/SalesEngineTT/Images/btn_CallReports.gif" border=0 alt="Call Reports" name="btn_CallReports"></a></td>
-					<td valign="top"><a href="/Clients/SalesEngineTT/Users" onMouseOver="MM_swapImage('btn_Users','','/Clients/SalesEngineTT/Images/btn_Users_On.gif',0);" onMouseOut="MM_swapImgRestore();"><img src="/Clients/SalesEngineTT/Images/btn_Users.gif" border=0 alt="Manage Users" name="btn_Users"></a></td>
-				</tr>
-				<tr>
-					<td valign="top"><a href="/Clients/SalesEngineTT/Expenses" onMouseOver="MM_swapImage('btn_Expenses','','/Clients/SalesEngineTT/Images/btn_Expenses_On.gif',0);" onMouseOut="MM_swapImgRestore();"><img src="/Clients/SalesEngineTT/Images/btn_Expenses.gif" border=0 alt="Expenses" name="btn_Expenses"></a></td>
-					<td valign="top"><a href="/Clients/SalesEngineTT/Noticeboard" onMouseOver="MM_swapImage('btn_Noticeboard','','/Clients/SalesEngineTT/Images/btn_Noticeboard_On.gif',0);" onMouseOut="MM_swapImgRestore();"><img src="/Clients/SalesEngineTT/Images/btn_Noticeboard.gif" border=0 alt="Noticeboard" name="btn_Noticeboard"></a></td>
-					<td valign="top"><a href="/Clients/SalesEngineTT/Jobs" onMouseOver="MM_swapImage('btn_Jobs','','/Clients/SalesEngineTT/Images/btn_Jobs_On.gif',0);" onMouseOut="MM_swapImgRestore();"><img src="/Clients/SalesEngineTT/Images/btn_Jobs.gif" border=0 alt="Jobs" name="btn_Jobs"></a></td>
-				</tr>
-				<tr>
-					<td valign="top"><a href="/Clients/SalesEngineTT/Timesheets" onMouseOver="MM_swapImage('btn_Timesheets','','/Clients/SalesEngineTT/Images/btn_Timesheets_On.gif',0);" onMouseOut="MM_swapImgRestore();"><img src="/Clients/SalesEngineTT/Images/btn_Timesheets.gif" border=0 alt="Timesheets" name="btn_Timesheets""></a></td>
-					<td valign="top"><a href="/Clients/SalesEngineTT/TMail" onMouseOver="MM_swapImage('btn_TMail','','/Clients/SalesEngineTT/Images/btn_TMail_On.gif',0);" onMouseOut="MM_swapImgRestore();"><img src="/Clients/SalesEngineTT/Images/btn_TMail.gif" border=0 alt="T-Mail" name="btn_TMail"></a></td>
-					<td valign="top"><a href="/Clients/SalesEngineTT/Portal/LogOff.asp" onMouseOver="MM_swapImage('btn_LogOff','','/Clients/SalesEngineTT/Images/btn_LogOff_On.gif',0);" onMouseOut="MM_swapImgRestore();"><img src="/Clients/SalesEngineTT/Images/btn_LogOff.gif" border=0 alt="Log Off" name="btn_LogOff"></a></td>
-				</tr>
-				<tr>
-					<td valign="top"><a href="/Clients/SalesEngineTT/Types" onMouseOver="MM_swapImage('btn_Types','','/Clients/SalesEngineTT/Images/btn_Types_On.gif',0);" onMouseOut="MM_swapImgRestore();"><img src="/Clients/SalesEngineTT/Images/btn_Types.gif" border=0 alt="Types" name="btn_Types"></a></td>
-					<td valign="top"><a href="/Clients/SalesEngineTT/FilesLibrary" onMouseOver="MM_swapImage('btn_FilesLibrary','','/Clients/SalesEngineTT/Images/btn_FilesLibrary_On.gif',0);" onMouseOut="MM_swapImgRestore();"><img src="/Clients/SalesEngineTT/Images/btn_FilesLibrary.gif" border=0 alt="Files Library" name="btn_FilesLibrary"></a></td>
-					<td background="/Clients/SalesEngineTT/Images/btn_Filler.gif" border=0></td>
-				</tr>
-			</table>
-		</td>
-	</tr>
-</table>
+	<!-- Welcome Section -->
+	<section class="tl-page-header">
+		<h1 class="tl-page-title">Welcome, <%= Session("Name") %></h1>
+		<p class="tl-page-subtitle">
+			You have successfully logged into MyDesk CRM. 
+			<% If Session("Admin") Then %><span class="tl-status tl-status-issued" style="margin-left: 8px;">Administrator</span><% End If %>
+		</p>
+		
+		<% If strMsg <> "" Then %>
+		<div class="tl-alert tl-alert-info" style="margin-top: 16px;">
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<circle cx="12" cy="12" r="10"></circle>
+				<line x1="12" y1="16" x2="12" y2="12"></line>
+				<line x1="12" y1="8" x2="12.01" y2="8"></line>
+			</svg>
+			<%= strMsg %>
+		</div>
+		<% End If %>
+	</section>
+
+	<!-- Quick Actions Grid -->
+	<section style="margin-bottom: 32px;">
+		<h2 style="font-size: 1.125rem; font-weight: 600; color: var(--dark); margin-bottom: 16px;">Quick Actions</h2>
+		<div class="tl-grid tl-grid-4">
+			
+			<!-- Contacts -->
+			<a href="<%= strWorkingDir %>/Contacts/" class="tl-feature-card">
+				<div class="tl-feature-icon">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+						<circle cx="9" cy="7" r="4"></circle>
+						<path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+						<path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+					</svg>
+				</div>
+				<div class="tl-feature-content">
+					<h3 class="tl-feature-title">Contacts</h3>
+					<p class="tl-feature-desc">Manage customer contacts and companies</p>
+				</div>
+			</a>
+			
+			<!-- Quotes -->
+			<a href="<%= strWorkingDir %>/Quotes/" class="tl-feature-card">
+				<div class="tl-feature-icon">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+						<polyline points="14 2 14 8 20 8"></polyline>
+						<line x1="16" y1="13" x2="8" y2="13"></line>
+						<line x1="16" y1="17" x2="8" y2="17"></line>
+					</svg>
+				</div>
+				<div class="tl-feature-content">
+					<h3 class="tl-feature-title">Quotes</h3>
+					<p class="tl-feature-desc">Create and manage customer quotes</p>
+				</div>
+			</a>
+			
+			<!-- Invoices -->
+			<a href="<%= strWorkingDir %>/Invoices/" class="tl-feature-card">
+				<div class="tl-feature-icon">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+						<line x1="3" y1="9" x2="21" y2="9"></line>
+						<line x1="9" y1="21" x2="9" y2="9"></line>
+					</svg>
+				</div>
+				<div class="tl-feature-content">
+					<h3 class="tl-feature-title">Invoices</h3>
+					<p class="tl-feature-desc">Generate invoices and track payments</p>
+				</div>
+			</a>
+			
+			<!-- Purchasing -->
+			<a href="<%= strWorkingDir %>/Purchasing/" class="tl-feature-card">
+				<div class="tl-feature-icon">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+						<line x1="3" y1="6" x2="21" y2="6"></line>
+						<path d="M16 10a4 4 0 0 1-8 0"></path>
+					</svg>
+				</div>
+				<div class="tl-feature-content">
+					<h3 class="tl-feature-title">Purchasing</h3>
+					<p class="tl-feature-desc">Manage purchase orders and suppliers</p>
+				</div>
+			</a>
+			
+			<!-- Call Reports -->
+			<a href="<%= strWorkingDir %>/CallReports/" class="tl-feature-card">
+				<div class="tl-feature-icon" style="background: linear-gradient(135deg, #cca05a 0%, #b98745 100%);">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+					</svg>
+				</div>
+				<div class="tl-feature-content">
+					<h3 class="tl-feature-title">Call Reports</h3>
+					<p class="tl-feature-desc">Log and track customer interactions</p>
+				</div>
+			</a>
+			
+			<!-- Jobs -->
+			<a href="<%= strWorkingDir %>/Jobs/" class="tl-feature-card">
+				<div class="tl-feature-icon" style="background: linear-gradient(135deg, #cca05a 0%, #b98745 100%);">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+						<path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+					</svg>
+				</div>
+				<div class="tl-feature-content">
+					<h3 class="tl-feature-title">Jobs</h3>
+					<p class="tl-feature-desc">Track project jobs and tasks</p>
+				</div>
+			</a>
+			
+			<!-- Users (Admin Only) -->
+			<% If Session("Admin") Then %>
+			<a href="<%= strWorkingDir %>/Users/" class="tl-feature-card">
+				<div class="tl-feature-icon" style="background: linear-gradient(135deg, #334155 0%, #1a2a3a 100%);">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+						<circle cx="12" cy="7" r="4"></circle>
+					</svg>
+				</div>
+				<div class="tl-feature-content">
+					<h3 class="tl-feature-title">Users</h3>
+					<p class="tl-feature-desc">Manage system users and permissions</p>
+				</div>
+			</a>
+			
+			<!-- Setup -->
+			<a href="<%= strWorkingDir %>/Setup/" class="tl-feature-card">
+				<div class="tl-feature-icon" style="background: linear-gradient(135deg, #334155 0%, #1a2a3a 100%);">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<circle cx="12" cy="12" r="3"></circle>
+						<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+					</svg>
+				</div>
+				<div class="tl-feature-content">
+					<h3 class="tl-feature-title">Setup</h3>
+					<p class="tl-feature-desc">Configure system settings</p>
+				</div>
+			</a>
+			<% End If %>
+		</div>
+	</section>
+
+	<!-- Dashboard Widgets -->
+	<div class="tl-grid tl-grid-2">
+		
+		<!-- Recent Activity -->
+		<div class="tl-card">
+			<div class="tl-card-header">
+				<h3 class="tl-card-title">Quick Access</h3>
+			</div>
+			<div class="tl-card-body">
+				<div style="display: flex; flex-direction: column; gap: 12px;">
+					<a href="<%= strWorkingDir %>/CallReports/Add.asp" class="tl-btn tl-btn-secondary" style="justify-content: flex-start;">
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
+							<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+						</svg>
+						Log a Call Report
+					</a>
+					<a href="<%= strWorkingDir %>/Quotes/Add.asp" class="tl-btn tl-btn-secondary" style="justify-content: flex-start;">
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
+							<line x1="12" y1="5" x2="12" y2="19"></line>
+							<line x1="5" y1="12" x2="19" y2="12"></line>
+						</svg>
+						Create New Quote
+					</a>
+					<a href="<%= strWorkingDir %>/Expenses/Add.asp" class="tl-btn tl-btn-secondary" style="justify-content: flex-start;">
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
+							<line x1="12" y1="1" x2="12" y2="23"></line>
+							<path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+						</svg>
+						Submit Expense
+					</a>
+				</div>
+			</div>
+		</div>
+
+		<!-- System Status -->
+		<div class="tl-card">
+			<div class="tl-card-header">
+				<h3 class="tl-card-title">System Status</h3>
+			</div>
+			<div class="tl-card-body">
+				<div style="display: flex; flex-direction: column; gap: 16px;">
+					<div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: var(--success-light); border-radius: var(--radius-md);">
+						<div style="display: flex; align-items: center; gap: 12px;">
+							<div style="width: 8px; height: 8px; background: var(--success); border-radius: 50%;"></div>
+							<span style="font-weight: 500; color: #065f46;">System Online</span>
+						</div>
+						<span style="font-size: 0.75rem; color: var(--gray);">All services operational</span>
+					</div>
+					<div style="font-size: 0.8125rem; color: var(--gray);">
+						<strong style="color: var(--dark);">Version:</strong> MyDesk 2026.04<br>
+						<strong style="color: var(--dark);">Server Time:</strong> <%= FormatDateU(Now(), True) %>
+					</div>
+				</div>
+			</div>
+		</div>
+
+	</div>
 
 	<table width=95% align="center" cellpadding=0 cellspacing=0 border=0 ID="Table4">
 		<tr>
