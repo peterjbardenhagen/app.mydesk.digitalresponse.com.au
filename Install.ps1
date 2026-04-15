@@ -272,19 +272,39 @@ function Install-BuildTools {
     }
 }
 
+# Detect if running on Windows Server or Windows 10/11
+function Test-IsWindowsServer {
+    $osInfo = Get-CimInstance -ClassName Win32_OperatingSystem
+    return $osInfo.ProductType -eq 1 -or $osInfo.ProductType -eq 2
+}
+
 # Check if IIS is installed
 function Test-IIS {
     Write-Status "Checking IIS installation..." -Color "Cyan"
     
     try {
-        $iisFeature = Get-WindowsFeature -Name Web-Server -ErrorAction Stop
-        if ($iisFeature.InstallState -eq "Installed") {
-            Write-Success "IIS is already installed"
-            return $true
+        if (Test-IsWindowsServer) {
+            $iisFeature = Get-WindowsFeature -Name Web-Server -ErrorAction Stop
+            if ($iisFeature.InstallState -eq "Installed") {
+                Write-Success "IIS is already installed"
+                return $true
+            }
+            else {
+                Write-Warning "IIS is not installed"
+                return $false
+            }
         }
         else {
-            Write-Warning "IIS is not installed"
-            return $false
+            # Windows 10/11
+            $iisFeature = Get-WindowsOptionalFeature -Online -FeatureName IIS-WebServer -ErrorAction Stop
+            if ($iisFeature.State -eq "Enabled") {
+                Write-Success "IIS is already installed"
+                return $true
+            }
+            else {
+                Write-Warning "IIS is not installed"
+                return $false
+            }
         }
     }
     catch {
@@ -300,87 +320,161 @@ function Install-IIS {
     Write-Status "Installing IIS with ASP Classic Support" -Color "Cyan"
     Write-Status "========================================" -Color "Cyan"
     
+    $isServer = Test-IsWindowsServer
+    
+    if ($isServer) {
+        Write-Status "Detected Windows Server - using Server Manager cmdlets" -Color "Gray"
+    }
+    else {
+        Write-Status "Detected Windows 10/11 - using DISM cmdlets" -Color "Gray"
+    }
+    
     Write-Status "Installing IIS and all required features..." -Color "Yellow"
     Write-Status "This may take several minutes..." -Color "Gray"
     
-    # All IIS features needed for ASP Classic with custom error pages
-    $iisFeatures = @(
-        # Core IIS
-        "Web-Server",
-        "Web-WebServer",
-        "Web-Common-Http",
-        "Web-Default-Doc",
-        "Web-Dir-Browsing",
-        "Web-Http-Errors",
-        "Web-Static-Content",
-        "Web-Http-Redirect",
-        "Web-Health",
-        "Web-Http-Logging",
-        "Web-Performance",
-        "Web-Stat-Compression",
-        "Web-Security",
-        "Web-Filtering",
-        "Web-App-Dev",
-        "Web-Net-Ext",
-        "Web-ASP",
-        "Web-ASP-Net45",
-        "Web-ISAPI-Ext",
-        "Web-ISAPI-Filter",
-        "Web-Includes",
-        "Web-WebSockets",
-        "Web-Mgmt-Tools",
-        "Web-Mgmt-Console",
-        "Web-Mgmt-Compat",
-        "Web-Metabase",
-        "Web-Lgcy-Mgmt-Compat",
-        "Web-Lgcy-Scripting",
-        "Web-WMI",
-        "Web-Scripting-Tools",
-        "Web-Mgmt-Service",
-        "Web-Ftp-Server",
-        "Web-Ftp-Service",
-        "Web-Ftp-Ext"
-    )
-    
     try {
-        Write-Status "Enabling IIS features..." -Color "Yellow"
-        
-        $installResult = Install-WindowsFeature -Name $iisFeatures -IncludeManagementTools -ErrorAction Stop
-        
-        if ($installResult.Success -eq $true) {
-            Write-Success "IIS and all features installed successfully"
+        if ($isServer) {
+            # Windows Server - use Install-WindowsFeature
+            $iisFeatures = @(
+                "Web-Server",
+                "Web-WebServer",
+                "Web-Common-Http",
+                "Web-Default-Doc",
+                "Web-Dir-Browsing",
+                "Web-Http-Errors",
+                "Web-Static-Content",
+                "Web-Http-Redirect",
+                "Web-Health",
+                "Web-Http-Logging",
+                "Web-Performance",
+                "Web-Stat-Compression",
+                "Web-Security",
+                "Web-Filtering",
+                "Web-App-Dev",
+                "Web-Net-Ext",
+                "Web-ASP",
+                "Web-ASP-Net45",
+                "Web-ISAPI-Ext",
+                "Web-ISAPI-Filter",
+                "Web-Includes",
+                "Web-WebSockets",
+                "Web-Mgmt-Tools",
+                "Web-Mgmt-Console",
+                "Web-Mgmt-Compat",
+                "Web-Metabase",
+                "Web-Lgcy-Mgmt-Compat",
+                "Web-Lgcy-Scripting",
+                "Web-WMI",
+                "Web-Scripting-Tools",
+                "Web-Mgmt-Service",
+                "Web-Ftp-Server",
+                "Web-Ftp-Service",
+                "Web-Ftp-Ext"
+            )
             
-            # Enable ASP Classic error sending to browser
-            Write-Status "Configuring ASP Classic error settings..." -Color "Yellow"
-            try {
-                # Enable script error messages to be sent to browser
-                Set-WebConfigurationProperty -Filter "/system.webServer/httpErrors" -Name "errorMode" -Value "Detailed" -ErrorAction SilentlyContinue
-                Set-WebConfigurationProperty -Filter "/system.webServer/asp" -Name "scriptErrorSentToBrowser" -Value "true" -ErrorAction SilentlyContinue
-                Set-WebConfigurationProperty -Filter "/system.webServer/httpErrors" -Name "existingResponse" -Value "PassThrough" -ErrorAction SilentlyContinue
-                
-                Write-Success "ASP Classic error settings configured"
-            }
-            catch {
-                Write-Warning "Could not configure ASP Classic error settings: $_"
-            }
+            Write-Status "Enabling IIS features via Install-WindowsFeature..." -Color "Yellow"
+            $installResult = Install-WindowsFeature -Name $iisFeatures -IncludeManagementTools -ErrorAction Stop
             
-            # Enable detailed error messages for IIS
-            Write-Status "Enabling detailed IIS error messages..." -Color "Yellow"
-            try {
-                Set-WebConfigurationProperty -Filter "system.webServer/httpErrors" -Name "errorMode" -Value "Detailed" -ErrorAction SilentlyContinue
-                Write-Success "Detailed IIS error messages enabled"
+            if ($installResult.Success -eq $true) {
+                Write-Success "IIS and all features installed successfully"
             }
-            catch {
-                Write-Warning "Could not enable detailed IIS error messages: $_"
+            else {
+                Write-Error "IIS installation failed"
+                Write-Status "Restart the computer and try again" -Color "Yellow"
+                return $false
             }
-            
-            return $true
         }
         else {
-            Write-Error "IIS installation failed"
-            Write-Status "Restart the computer and try again" -Color "Yellow"
-            return $false
+            # Windows 10/11 - use Enable-WindowsOptionalFeature
+            $iisFeatures = @(
+                "IIS-WebServer",
+                "IIS-WebServerRole",
+                "IIS-CommonHttpFeatures",
+                "IIS-DefaultDocument",
+                "IIS-DirectoryBrowsing",
+                "IIS-HttpErrors",
+                "IIS-StaticContent",
+                "IIS-HttpRedirect",
+                "IIS-HealthAndDiagnostics",
+                "IIS-HttpLogging",
+                "IIS-Performance",
+                "IIS-HttpCompressionStatic",
+                "IIS-Security",
+                "IIS-RequestFiltering",
+                "IIS-ApplicationDevelopment",
+                "IIS-NetFxExtensibility45",
+                "IIS-ASPNET45",
+                "IIS-ISAPIExtensions",
+                "IIS-ISAPIFilter",
+                "IIS-ServerSideIncludes",
+                "IIS-WebSockets",
+                "IIS-ManagementConsole",
+                "IIS-BasicAuthentication",
+                "IIS-WindowsAuthentication",
+                "IIS-StaticCompression",
+                "IIS-ManagementService",
+                "IIS-FTPServer",
+                "IIS-FTPService"
+            )
+            
+            # ASP Classic features for Windows 10/11
+            $aspFeatures = @(
+                "IIS-ASP",
+                "IIS-ASPNET45"
+            )
+            
+            Write-Status "Enabling IIS features via Enable-WindowsOptionalFeature..." -Color "Yellow"
+            
+            foreach ($feature in $iisFeatures) {
+                Write-Status "Enabling $feature..." -Color "Gray"
+                try {
+                    Enable-WindowsOptionalFeature -Online -FeatureName $feature -NoRestart -ErrorAction SilentlyContinue | Out-Null
+                }
+                catch {
+                    Write-Warning "Could not enable $feature: ${_}"
+                }
+            }
+            
+            # Enable ASP Classic separately as it requires parent features
+            Write-Status "Enabling ASP Classic features..." -Color "Yellow"
+            foreach ($feature in $aspFeatures) {
+                Write-Status "Enabling $feature..." -Color "Gray"
+                try {
+                    Enable-WindowsOptionalFeature -Online -FeatureName $feature -NoRestart -ErrorAction SilentlyContinue | Out-Null
+                }
+                catch {
+                    Write-Warning "Could not enable $feature: ${_}"
+                }
+            }
+            
+            Write-Success "IIS and all features installed successfully"
         }
+        
+        # Enable ASP Classic error sending to browser
+        Write-Status "Configuring ASP Classic error settings..." -Color "Yellow"
+        try {
+            # Enable script error messages to be sent to browser
+            Set-WebConfigurationProperty -Filter "/system.webServer/httpErrors" -Name "errorMode" -Value "Detailed" -ErrorAction SilentlyContinue
+            Set-WebConfigurationProperty -Filter "/system.webServer/asp" -Name "scriptErrorSentToBrowser" -Value "true" -ErrorAction SilentlyContinue
+            Set-WebConfigurationProperty -Filter "/system.webServer/httpErrors" -Name "existingResponse" -Value "PassThrough" -ErrorAction SilentlyContinue
+            
+            Write-Success "ASP Classic error settings configured"
+        }
+        catch {
+            Write-Warning "Could not configure ASP Classic error settings: $_"
+        }
+        
+        # Enable detailed error messages for IIS
+        Write-Status "Enabling detailed IIS error messages..." -Color "Yellow"
+        try {
+            Set-WebConfigurationProperty -Filter "system.webServer/httpErrors" -Name "errorMode" -Value "Detailed" -ErrorAction SilentlyContinue
+            Write-Success "Detailed IIS error messages enabled"
+        }
+        catch {
+            Write-Warning "Could not enable detailed IIS error messages: $_"
+        }
+        
+        return $true
     }
     catch {
         Write-Error "Failed to install IIS: $_"
