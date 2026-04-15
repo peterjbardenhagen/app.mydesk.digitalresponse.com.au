@@ -225,13 +225,17 @@ function Install-BuildTools {
         "--wait"
         "--norestart"
         "--add", "Microsoft.VisualStudio.Workload.MSBuildTools"
+        "--add", "Microsoft.VisualStudio.Workload.WebBuildTools"
         "--add", "Microsoft.VisualStudio.Component.WebDeploy"
         "--add", "Microsoft.VisualStudio.Component.NETFramework.TargetingPack_4.8"
         "--add", "Microsoft.VisualStudio.Component.Web"
+        "--add", "Microsoft.VisualStudio.Web.BuildTools.ComponentGroup"
         "--add", "Microsoft.VisualStudio.Component.NuGet"
         "--add", "Microsoft.VisualStudio.Component.Roslyn.Compiler"
         "--add", "Microsoft.Net.Component.4.8.SDK"
         "--add", "Microsoft.Net.Component.4.8.TargetingPack"
+        "--add", "Microsoft.VisualStudio.Component.AspNet"
+        "--add", "Microsoft.VisualStudio.Component.AspNet45"
     )
     
     if ($Force) {

@@ -253,6 +253,26 @@ function Invoke-Build {
     # Show output
     $buildOutput | ForEach-Object { Write-Status "  $_" -Color "Gray" }
     
+    # Check for specific errors
+    $outputText = $buildOutput -join " "
+    if ($outputText -match "Microsoft.WebApplication.targets" -or $outputText -match "WebApplications.*was not found") {
+        Write-Status "" -Color "White"
+        Write-Error "Web development build tools are missing!"
+        Write-Status "" -Color "White"
+        Write-Status "To fix this, run one of the following:" -Color "Yellow"
+        Write-Status "" -Color "White"
+        Write-Status "  Option 1: Run the install script to add missing components:" -Color "White"
+        Write-Status "    .\Install.ps1 -Force" -Color "Cyan"
+        Write-Status "" -Color "White"
+        Write-Status "  Option 2: Install manually via Visual Studio Installer:" -Color "White"
+        Write-Status "    1. Open 'Visual Studio Installer' from Start Menu" -Color "White"
+        Write-Status "    2. Click 'Modify' on Build Tools" -Color "White"
+        Write-Status "    3. Select 'Web development build tools' workload" -Color "White"
+        Write-Status "    4. Click Install" -Color "White"
+        Write-Status "" -Color "White"
+        return $false
+    }
+    
     if ($exitCode -eq 0) {
         Write-Success "Build completed successfully"
         return $true
