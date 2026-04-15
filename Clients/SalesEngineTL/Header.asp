@@ -70,6 +70,30 @@ End Function
 			</div>
 		</a>
 		
+		<!-- Decorative Elements -->
+		<div class="tl-header-decor">
+			<svg class="tl-decor-svg" viewBox="0 0 400 100" preserveAspectRatio="none">
+				<defs>
+					<linearGradient id="decorGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+						<stop offset="0%" style="stop-color:#00a8b5;stop-opacity:0.3"/>
+						<stop offset="100%" style="stop-color:#d4a574;stop-opacity:0.2"/>
+					</linearGradient>
+					<linearGradient id="decorGrad2" x1="0%" y1="100%" x2="100%" y2="0%">
+						<stop offset="0%" style="stop-color:#00c4d3;stop-opacity:0.15"/>
+						<stop offset="100%" style="stop-color:#00a8b5;stop-opacity:0.1"/>
+					</linearGradient>
+				</defs>
+				<!-- Flowing curves -->
+				<path d="M0,80 Q100,20 200,60 T400,40" stroke="url(#decorGrad1)" stroke-width="2" fill="none" opacity="0.6"/>
+				<path d="M0,60 Q80,90 160,50 T320,70 T400,30" stroke="url(#decorGrad2)" stroke-width="1.5" fill="none" opacity="0.4"/>
+				<path d="M50,100 Q150,40 250,80 T400,60" stroke="#00a8b5" stroke-width="1" fill="none" opacity="0.3"/>
+				<!-- Decorative circles -->
+				<circle cx="320" cy="25" r="15" fill="url(#decorGrad1)" opacity="0.3"/>
+				<circle cx="360" cy="70" r="8" fill="#d4a574" opacity="0.25"/>
+				<circle cx="280" cy="85" r="5" fill="#00c4d3" opacity="0.4"/>
+			</svg>
+		</div>
+		
 		<!-- User Info -->
 		<% If Request.Cookies("LoggedIn")&"" <> "" Then
 			If CBool(Request.Cookies("LoggedIn")) Then 
@@ -168,6 +192,54 @@ End Function
 					Users
 				</a>
 			</li>
+			<li class="tl-nav-item tl-nav-dropdown">
+				<button class="tl-nav-link tl-dropdown-toggle" onclick="toggleDropdown(event)">
+					<svg class="tl-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="3" y1="12" x2="21" y2="12"></line>
+						<line x1="3" y1="6" x2="21" y2="6"></line>
+						<line x1="3" y1="18" x2="21" y2="18"></line>
+					</svg>
+					Quick Nav
+					<svg class="tl-dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<polyline points="6 9 12 15 18 9"></polyline>
+					</svg>
+				</button>
+				<div class="tl-dropdown-menu">
+					<a href="<%= strWorkingDir %>/PortalFrame.asp" target="_parent" class="tl-dropdown-item">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+						Dashboard
+					</a>
+					<a href="<%= strWorkingDir %>/Contacts/" target="_parent" class="tl-dropdown-item">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+						Contacts
+					</a>
+					<a href="<%= strWorkingDir %>/Quotes/" target="_parent" class="tl-dropdown-item">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+						Quotes
+					</a>
+					<a href="<%= strWorkingDir %>/Invoices/" target="_parent" class="tl-dropdown-item">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line></svg>
+						Invoices
+					</a>
+					<a href="<%= strWorkingDir %>/PurchaseOrders/" target="_parent" class="tl-dropdown-item">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line></svg>
+						Purchase Orders
+					</a>
+					<a href="<%= strWorkingDir %>/Setup/" target="_parent" class="tl-dropdown-item">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle></svg>
+						Setup
+					</a>
+					<a href="<%= strWorkingDir %>/Users/" target="_parent" class="tl-dropdown-item">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+						Users
+					</a>
+					<div class="tl-dropdown-divider"></div>
+					<a href="<%= strWorkingDir %>/Portal/LogOff.asp" target="_parent" class="tl-dropdown-item tl-dropdown-item-danger">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline></svg>
+						Log Out
+					</a>
+				</div>
+			</li>
 			<li class="tl-nav-item tl-nav-logout">
 				<a href="<%= strWorkingDir %>/Portal/LogOff.asp" target="_parent" class="tl-btn-logout">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -180,6 +252,23 @@ End Function
 			</li>
 		</ul>
 	</nav>
+	<script>
+		function toggleDropdown(e) {
+			e.preventDefault();
+			e.stopPropagation();
+			var dropdown = e.currentTarget.parentElement;
+			dropdown.classList.toggle('active');
+		}
+		
+		document.addEventListener('click', function(e) {
+			var dropdowns = document.querySelectorAll('.tl-nav-dropdown');
+			dropdowns.forEach(function(dropdown) {
+				if (!dropdown.contains(e.target)) {
+					dropdown.classList.remove('active');
+				}
+			});
+		});
+	</script>
 	<% End If
 	End If %>
 </header>
