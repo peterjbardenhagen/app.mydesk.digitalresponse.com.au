@@ -48,46 +48,22 @@ strBy = Trim(Request("By"))
 
 %>
 <!--#include virtual="/System/ssi_dbConn_Open.inc"-->
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-	<title></title>
-	<META http-equiv="Cache-Control" content="no-cache">
-	<META http-equiv="Expires" content="0">
-	<META http-equiv="Pragma" content="no-cache">
-	<link href="/System/Style2.css" rel="stylesheet" type="text/css" ></link>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Contacts List - Techlight MyDesk</title>
+	<meta http-equiv="Cache-Control" content="no-cache">
+	<meta http-equiv="Expires" content="0">
+	<meta http-equiv="Pragma" content="no-cache">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<link href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/Style_Techlight.css" rel="stylesheet" type="text/css">
 	<script src="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/Global.js"></script>
-	<style>
-		body, p, td, span, div {
-			font-size:12px !important;
-		}
-		table {
-			width: 100%;
-			background-color: #ffffff;
-			padding-bottom: 5px;
-			padding-top: 5px;
-			padding-left: 5px;
-			padding-right: 5px;
-			margin: 0px;
-			border: 5px;
-		}
-		tr {
-			margin: 5px;
-		}
-		td {
-			padding: 10px;
-			background-color:#eeeeee;
-		}
-		.header {
-			font-weight: bold;
-			background-color: #cccccc;
-		}
-		td,.header {
-			font-size: 12px;
-		}
-
-	</style>
 </head>
-<body style="background-color:#eeeeee;">
+<body style="background-color:#ffffff; margin: 0; padding: 16px; font-family: 'Inter', sans-serif;">
 <%
 
 Dim oRecordset
@@ -107,7 +83,6 @@ sql = sql & " (Users.DivisionId In (" & Request.Cookies("DivisionIdsAccess")("Vi
 If strCode <> "All" Then sql = sql & " AND Users.Code = '" & strCode & "'"
 If intCompanyId <> 0 Then sql = sql & " AND C.CompanyId = " & intCompanyId
 
-
 if strBy = "Surname" Then
 	sql = sql & " ORDER BY C.Surname, C.CompanyName, C.FirstName"
 Else
@@ -118,21 +93,21 @@ Set oRecordset = dbConn.Execute(sql)
 
 If oRecordset.BOF And oRecordset.EOF Then MyRedirect(Request.Cookies("ClientSettings")("WorkingDir") & "/NoRecords.asp")
 
-Response.Write("<table cellspacing=0>")
-Response.Write("<tr><td class='header'>First Name</td><td class='header'>Surname</td><td class='header'>Company</td><td class='header'>Action</td></tr>")
+Response.Write("<table class='tl-data-grid'>")
+Response.Write("<thead><tr><th>First Name</th><th>Surname</th><th>Company</th><th>Actions</th></tr></thead>")
+Response.Write("<tbody>")
 Do While Not (oRecordset.EOF)
 	Dim Id
 	Id = oRecordset("Id")
-	Response.Write("<tr style='height:1px !important;background-color:white;'></tr>")
 	Response.Write("<tr>")
 	Response.Write("<td>" & oRecordset("First Name") & "</td>")
-	Response.Write("<td>" & oRecordset("Surname") & "</td>")
+	Response.Write("<td><strong>" & oRecordset("Surname") & "</strong></td>")
 	Response.Write("<td>" & oRecordset("CompanyName") & "</td>")
-	Response.Write("<td>" & "<input type='button' onclick='parent.document.location.href=""../Contacts/View.asp?ContactId=" & Id & """' value='View'/> <input type='button' onclick='parent.document.location.href=""" & Request.Cookies("ClientSettings")("WorkingDir") & "/Contacts/Edit.asp?ContactId=" & Id & """' value='Edit'/> <input type='button' onclick='deleteRecord(" & Id & ");' value='Delete'/></td>")
+	Response.Write("<td nowrap><a href='" & Request.Cookies("ClientSettings")("WorkingDir") & "/Contacts/View.asp?ContactId=" & Id & "' class='tl-btn-secondary' style='padding:4px 8px;font-size:12px;'>View</a> <a href='" & Request.Cookies("ClientSettings")("WorkingDir") & "/Contacts/Edit.asp?ContactId=" & Id & "' class='tl-btn-primary' style='padding:4px 8px;font-size:12px;'>Edit</a></td>")
 	Response.Write("</tr>")
 	oRecordset.MoveNext
 Loop
-Response.Write("</table>")
+Response.Write("</tbody></table>")
 
 ' Close recordset and connection
 oRecordset.close
