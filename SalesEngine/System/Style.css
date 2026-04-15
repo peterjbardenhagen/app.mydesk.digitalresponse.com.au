@@ -1,0 +1,50 @@
+body, p, td 
+{
+	font-family: Arial;
+	font-size: 12px;
+}
+
+.Header 
+{
+	font-family: Tahoma;
+	font-size: 28px;
+}
+
+.Header2
+{
+	font-family: Tahoma;
+	font-size: 18px;
+	color: Teal;
+}
+
+.Header3
+{
+	font-family: Tahoma;
+	font-size: 18px;
+	font-weight: bold;
+	color: #666666;
+}
+
+A.Header3, A:Link.Header3, A:Visited.Header3, A:Active.Header3
+{
+	font-family: Tahoma;
+	font-size: 18px;
+	font-weight: bold;
+	color: #777777;
+}
+
+A,A:Link,A:Hover,A:Visited,A:Active 
+{
+	color: Blue;
+}
+
+.Error 
+{	
+	color: Red;	
+}
+
+.Req
+{	
+	color: Red;
+	font-weight: bold;
+}

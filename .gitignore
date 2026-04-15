@@ -1,0 +1,36 @@
+# Build artifacts
+obj/
+bin/
+*.log
+
+# Windows files
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+*.stackdump
+
+# IDE
+.vs/
+*.user
+*.suo
+*.cache
+
+# Temp files
+*.tmp
+*.temp
+*.pidb
+*.resources
+
+# Database backups
+*.mdb.bak
+*.ldb
+
+# Generated PDFs
+*/Quotes/Files/*.pdf
+*/Invoices/Files/*.pdf
+*/PurchaseOrders/Files/*.pdf
+*/RFQ/Files/*.pdf
+
+# Security
+web.config.bak
+*.config.bak

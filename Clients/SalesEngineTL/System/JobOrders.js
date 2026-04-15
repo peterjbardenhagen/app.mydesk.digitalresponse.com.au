@@ -1,0 +1,717 @@
+function checkDecimals(fieldName, fieldValue) {
+	decallowed = 2;  // how many decimals are allowed?
+
+	if (isNotNumeric(fieldValue) || fieldValue == "") {
+		alert("Oops!  That does not appear to be a valid number.  Please try again.");
+		fieldName.select();
+		fieldName.focus();
+	}
+	else {
+		if (fieldValue.indexOf('.') == -1) fieldValue += ".";
+		dectext = fieldValue.substring(fieldValue.indexOf('.')+1, fieldValue.length);
+		if (dectext.length > decallowed)
+		{
+			alert ("Oops!  Please enter a number with up to " + decallowed + " decimal places.  Please try again.");
+			fieldName.select();
+			fieldName.focus();
+		}
+		else {
+			alert ("That number validated successfully.");
+      }
+   }
+}
+
+
+
+// PRODUCTS
+
+// Insert new Item Line in Quote page
+function Items_InsertLine(bDivisionManager)
+{
+	itemLines++;
+	document.Form1.ItemLinesVal.value = itemLines;
+	var newitem;
+	newitem="<table width='760' cellpadding='3' cellspacing='0' id='Items_Holder"+itemLines+"'>";
+	newitem+="	<tr style='background-color:#666666;'>";
+	newitem+="		<td style='color:white;' colspan=10><b>Line " + (itemLines-1) + "</b></td>";
+	newitem+="	</tr>";
+	newitem+="	<tr>";
+	newitem+="		<td width=90 class='Quote_Item_TD' style='border-top:2px solid #666666;font-size:10px;' valign='top'><img src='/Images/Spacer.gif' width=90 height=1 border=0 alt=''><br>";
+	newitem+="		<div id='ItemLineQuantity"+itemLines+"' style='display:none;'>";
+	newitem+="			<input type='text' name='Quantity" + itemLines + "' onChange='Items_CalcLineSubTotal(" + itemLines + ")' size=5 style='width:50px;' value=0>";
+	newitem+="		</div>";
+	newitem+="		<div id='ItemLineQuantity"+itemLines+"_PerUnitPerDay' style='display:none;'>";
+	newitem+="			<table cellpadding=2 cellspacing=0 border=0><tr><td style='font-size:10px;'>Days:</td><td><input type='text' name='Days" + itemLines + "' onChange='Items_CalcLineSubTotal(" + itemLines + ")' size=5 style='width:50px;' value=0></td></tr><tr><td style='font-size:10px;'>Units:</td><td><input type='text' name='Units" + itemLines + "' onChange='Items_CalcLineSubTotal(" + itemLines + ")' size=5 style='width:50px;' value=0></td></tr></table>";
+	newitem+="		</div>";
+	newitem+="		</td>";
+	newitem+="		<td width=50 class='Quote_Item_TD' style='border-top:2px solid #666666;'><img src='/Images/Spacer.gif' width=50 height=1 border=0 alt=''><br><input type='button' value='Select' onClick='Items_OpenSelectWindow(" + DivisionId + "," + itemLines + ")'></td>";
+	newitem+="		<td width=50 class='Quote_Item_TD' style='border-top:2px solid #666666;'><img src='/Images/Spacer.gif' width=50 height=1 border=0 alt=''><br><input type='text' name='Type" + itemLines + "' id='Type" + itemLines + "' style='width:50px;' maxlength=5></td>";
+	newitem+="		<td width=250 class='Quote_Item_TD' style='border-top:2px solid #666666;'><img src='/Images/Spacer.gif' width=250 height=1 border=0 alt=''><br><b>Product Code</b><br><textarea rows=3 type='text' name='ProductCode" + itemLines + "' style='width:250px;Overflow:hidden;' onkeyup=parent.TrackCount(this,'TextCountPC"+itemLines+"',100) onkeypress='parent.LimitText(this,100)'></textarea><br>Remaining: <input type='text' name='TextCountPC"+itemLines+"' size=4 value='100' readonly><br><br><b>Description</b><br><textarea rows=5 type='text' name='Description" + itemLines + "' style='width:250px;Overflow:hidden;' onkeyup=parent.TrackCount(this,'TextCountItems"+itemLines+"',500) onkeypress='parent.LimitText(this,500)'></textarea><br>Remaining: <input type='text' name='TextCountItems"+itemLines+"' size=4 value='255' readonly></td>";
+	newitem+="		<td width=220 class='Quote_Item_TD' style='border-top:2px solid #666666;' align='right'><img src='/Images/Spacer.gif' width=220 height=1 border=0 alt=''><br>";
+	newitem+="			<table cellpadding=1 cellspacing=0 border=0>";
+	newitem+="				<tr id='Items_UnitCost_Holder"+itemLines+"'><td style='font-weight:bold;font-size:10px;'>Unit Cost</td><td><input type='text' name='UnitCost" + itemLines + "' size=1 style='width:110px;border:1px solid black;text-align:right;' value='0.00' onchange='Items_UnitCostChange("+itemLines+")'></td></tr>";
+	newitem+="				<tr><td style='font-weight:bold;font-size:10px;'>Nett Price</td><td><input type='text' name='NettPrice" + itemLines + "' size=1 style='border:1px solid black;width:110px;text-align:right;' onChange='Items_NettPriceChange("+itemLines+");' value='0.00'></td></tr>";
+	newitem+="				<tr><td style='font-weight:bold;font-size:10px;'>Ext. Nett Price</td><td><input type='text' name='ExtNettPrice" + itemLines + "' size=1 style='border:0px 0px 0px 0px;width:110px;text-align:right;' value='0.00' readonly></td></tr>";
+	newitem+="			</table>";
+	newitem+="		</td>";
+	newitem+="		<td width=40 class='Quote_Item_TD' style='border-top:2px solid #666666;' align='right'><img src='/Images/Spacer.gif' width=40 height=1 border=0 alt=''><br></td>";
+	newitem+="		<td width=15 class='Quote_Item_TD' style='border-top:2px solid #666666;' align='right'><img src='/Images/Spacer.gif' width=15 height=1 border=0 alt=''><br><input value='X' style='color:red;font-weight:bold;' type='button' onClick='Items_ClearLine(" + itemLines + ");'></td>";
+	newitem+="	</tr>";
+	newitem+="	<tr>";
+	newitem+="		<td colspan=10 style='background-color:#eeeeee;border-bottom:2px solid black;'>";
+	newitem+="			<table width='100%' cellpadding=5 cellspacing=0 border=0>";
+	newitem+="				<tr>";
+	newitem+="					<td valign='top' width=100 nowrap style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Status</td>";
+	newitem+="					<td valign='top' align='right' nowrap><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br>"+JobOrderStatusList(itemLines,false)+"</td>";
+	newitem+="					<td valign='top' width=100 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=75 height=15 border=0 alt=''><br>Purchasing/Factory Instructions</td>";
+	newitem+="					<td valign='top' rowspan=3 width=500><textarea type='text' name='Comment" + itemLines + "' style='width:100%;height:51px;Overflow:hidden;' onkeyup=parent.TrackCount(this,'CountComment"+itemLines+"',500) onkeypress='parent.LimitText(this,500)'></textarea><br>Remaining: <input type='text' name='CountComment"+itemLines+"' size=4 value=500 readonly></td>";
+	newitem+="				</tr>";
+	newitem+="				<tr>";
+	newitem+="					<td valign='top' width=100 nowrap style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Delivery&nbsp;Requested</td>";
+	newitem+="					<td valign='top' align='right' nowrap><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br><input type='text' name='DateDeliveryRequested" + itemLines + "' id='DateDeliveryRequested" + itemLines + "' size=1 style='width:100px;text-align:right;' onclick='clearMe(this);;' value='dd/mm/yyyy' maxlength=10></td>";
+	newitem+="				</tr>";
+	newitem+="				<tr>";
+	newitem+="					<td valign='top' width=100 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br>Delivery&nbsp;Scheduled</td>";
+	if(document.location.href.indexOf("Add.asp")>0){
+		newitem+="				<td valign='top' align='right'><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br>Cannot set</td>";
+	} else {
+		newitem+="				<td valign='top' align='right'><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br><input type='text' name='DateDeliveryScheduled" + itemLines + "' id='DateDeliveryScheduled" + itemLines + "' size=1 style='width:100px;' onclick='clearMe(this);;' value='dd/mm/yyyy' maxlength=10></td>";
+	}
+	newitem+="				</tr>";
+	newitem+="			</table>";
+	newitem+="		</td>";
+	newitem+="	</tr>";
+	newitem+="</table>";
+	newitem+="<input type='hidden' name='LineMargin" + itemLines + "' value='0.00'>";
+	newitem+="<input type='hidden' name='ProductId" + itemLines + "' id='ProductId" + itemLines + "' value='0'>"
+	newitem+="<input type='hidden' name='UnitCostSubTotal" + itemLines + "' id='UnitCostSubTotal" + itemLines + "' value='0'>"
+	newitem+="<input type='hidden' name='MinNettPrice" + itemLines + "' id='MinNettPrice" + itemLines + "' value='0'>"
+	var myText = document.createTextNode(newitem);
+	document.getElementById("QuoteItems").innerHTML += newitem;
+	Line_SwitchQuantityType(itemLines, false);
+	
+	document.getElementById("Items_UnitCost_Holder" + itemLines).style.display = 'block';
+
+	document.getElementById("UnitCost" + itemLines).readOnly = false;
+	document.getElementById("UnitCost" + itemLines).style.border = '1px solid';
+}
+
+function Items_InsertLine_WithData(itemLine, itemQuantity, itemDays, itemUnits, itemType, itemProductCode, itemDescription, itemProductId, itemUnitCost, itemMinNettPrice, itemNettPrice, itemUnitCostSubTotal, itemMinExtNettPrice, itemExtNettPrice, bDivisionManager, bPerUnitPerDay)
+{
+	itemLines++;
+	document.Form1.ItemLinesVal.value = itemLines;
+	var newitem;
+	newitem="<table width='760' cellpadding='3' cellspacing='0' id='Items_Holder"+itemLines+"'>";
+	newitem+="	<tr style='background-color:#666666;'>";
+	newitem+="		<td style='color:white;' colspan=10><b>Line " + (itemLines-1) + "</b></td>";
+	newitem+="	</tr>";
+	newitem+="	<tr>";
+	newitem+="		<td width=90 class='Quote_Item_TD' style='border-top:2px solid #666666;font-size:10px;' valign='top'><img src='/Images/Spacer.gif' width=90 height=1 border=0 alt=''><br>";
+	newitem+="		<div id='ItemLineQuantity"+itemLines+"' style='display:none;'>";
+	newitem+="			<input type='text' name='Quantity" + itemLines + "' onChange='Items_CalcLineSubTotal(" + itemLines + ")' size=5 style='width:50px;' value="+itemQuantity+">";
+	newitem+="		</div>";
+	newitem+="		<div id='ItemLineQuantity"+itemLines+"_PerUnitPerDay' style='display:none;'>";
+	newitem+="			<table cellpadding=2 cellspacing=0 border=0><tr><td style='font-size:10px;'>Days:</td><td><input type='text' name='Days" + itemLines + "' onChange='Items_CalcLineSubTotal(" + itemLines + ")' size=5 style='width:50px;' value="+itemDays+"></td></tr><tr><td style='font-size:10px;'>Units:</td><td><input type='text' name='Units" + itemLines + "' onChange='Items_CalcLineSubTotal(" + itemLines + ")' size=5 style='width:50px;' value="+itemUnits+"></td></tr></table>";
+	newitem+="		</div>";
+	newitem+="		</td>";
+//	newitem+="		<td width=50 class='Quote_Item_TD' style='border-top:2px solid #666666;'><img src='/Images/Spacer.gif' width=50 height=1 border=0 alt=''><br><input type='button' value='Select' onClick='Items_OpenSelectWindow(" + DivisionId + "," + itemLines + ")'></td>";
+	newitem+="		<td width=50 class='Quote_Item_TD' style='border-top:2px solid #666666;'><img src='/Images/Spacer.gif' width=50 height=1 border=0 alt=''><br><input type='text' name='Type" + itemLines + "' id='Type" + itemLines + "' style='width:50px;' maxlength=5 value='"+itemType+"'></td>";
+	newitem+="		<td width=250 class='Quote_Item_TD' style='border-top:2px solid #666666;'><img src='/Images/Spacer.gif' width=250 height=1 border=0 alt=''><br><b>Product Code</b><br><textarea rows=3 type='text' name='ProductCode" + itemLines + "' style='width:250px;Overflow:hidden;' onkeyup=parent.TrackCount(this,'TextCountPC"+itemLines+"',100) onkeypress='parent.LimitText(this,100)'>"+itemProductCode+"</textarea><br>Remaining: <input type='text' name='TextCountPC"+itemLines+"' size=4 value="+(100-itemProductCode.length)+" readonly><br><br><b>Description</b><br><textarea rows=5 type='text' name='Description" + itemLines + "' style='width:250px;Overflow:hidden;' onkeyup=parent.TrackCount(this,'TextCountItems"+itemLines+"',500) onkeypress='parent.LimitText(this,500)'>"+itemDescription+"</textarea><br>Remaining: <input type='text' name='TextCountItems"+itemLines+"' size=4 value="+(500-itemDescription.length)+" readonly></td>";
+	newitem+="		<td width=220 class='Quote_Item_TD' style='border-top:2px solid #666666;' align='right'><img src='/Images/Spacer.gif' width=220 height=1 border=0 alt=''><br>";
+	newitem+="			<table cellpadding=1 cellspacing=0 border=0>";
+	newitem+="				<tr id='Items_UnitCost_Holder"+itemLines+"'><td style='font-weight:bold;font-size:10px;'>Unit Cost</td><td><input type='text' name='UnitCost" + itemLines + "' size=1 style='width:110px;border:1px solid black;text-align:right;' value='"+formatDecimal(itemUnitCost)+"' onchange='Items_UnitCostChange("+itemLines+")'></td></tr>";
+	newitem+="				<tr><td style='font-weight:bold;font-size:10px;'>Nett Price</td><td><input type='text' name='NettPrice" + itemLines + "' size=1 style='border:1px solid black;width:110px;text-align:right;' onChange='Items_NettPriceChange("+itemLines+");' value='"+formatDecimal(itemNettPrice)+"'></td></tr>";
+	newitem+="				<tr><td style='font-weight:bold;font-size:10px;'>Ext. Nett Price</td><td><input type='text' name='ExtNettPrice" + itemLines + "' size=1 style='border:0px 0px 0px 0px;width:110px;text-align:right;' value='"+formatDecimal(itemExtNettPrice)+"' readonly></td></tr>";
+	newitem+="			</table>";
+	newitem+="		</td>";
+	newitem+="		<td width=40 class='Quote_Item_TD' style='border-top:2px solid #666666;' align='right'><img src='/Images/Spacer.gif' width=40 height=1 border=0 alt=''><br></td>";
+	newitem+="		<td width=15 class='Quote_Item_TD' style='border-top:2px solid #666666;' align='right'><img src='/Images/Spacer.gif' width=15 height=1 border=0 alt=''><br><input value='X' style='color:red;font-weight:bold;' type='button' onClick='Items_ClearLine(" + itemLines + ");'></td>";
+	newitem+="	</tr>";
+	newitem+="	<tr>";
+	newitem+="		<td colspan=10 style='background-color:#eeeeee;border-bottom:2px solid black;'>";
+	newitem+="			<table width='100%' cellpadding=5 cellspacing=0 border=0>";
+	newitem+="				<tr>";
+	newitem+="					<td valign='top' width=100 nowrap style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Status</td>";
+	newitem+="					<td valign='top' align='right' nowrap><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br>"+JobOrderStatusList(itemLines,false)+"</td>";
+	newitem+="					<td valign='top' width=100 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br>Purchasing/Factory Instructions</td>";
+	newitem+="					<td valign='top' rowspan=3 width=500><textarea type='text' name='Comment" + itemLines + "' style='width:100%;height:51px;Overflow:hidden;' onkeyup=parent.TrackCount(this,'CountComment"+itemLines+"',500) onkeypress='parent.LimitText(this,500)'></textarea><br>Remaining: <input type='text' name='CountComment"+itemLines+"' size=4 value=500 readonly></td>";
+	newitem+="				</tr>";
+	newitem+="				<tr>";
+	newitem+="					<td valign='top' width=100 nowrap style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Delivery&nbsp;Requested</td>";
+	newitem+="					<td valign='top' align='right' nowrap><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br><input type='text' name='DateDeliveryRequested" + itemLines + "' id='DateDeliveryRequested" + itemLines + "' size=1 style='width:100px;text-align:right;' onclick='clearMe(this);;' value='dd/mm/yyyy' maxlength=10></td>";
+	newitem+="				</tr>";
+	newitem+="				<tr>";
+	newitem+="					<td valign='top' width=100 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br>Delivery&nbsp;Scheduled</td>";
+	if(document.location.href.indexOf("Add.asp")>0){
+		newitem+="					<td valign='top' align='right'><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br>Cannot set</td>";
+	} else {
+		newitem+="					<td valign='top' align='right'><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br><input type='text' name='DateDeliveryScheduled" + itemLines + "' id='DateDeliveryScheduled" + itemLines + "' size=1 style='width:100px;' onclick='clearMe(this);;' value='dd/mm/yyyy' maxlength=10></td>";
+	}
+	newitem+="				</tr>";
+	newitem+="			</table>";
+	newitem+="		</td>";
+	newitem+="	</tr>";
+	newitem+="</table>";
+	newitem+="<input type='hidden' name='LineMargin" + itemLines + "' id='LineMargin" + itemLines + "' value='0.00'>";
+	newitem+="<input type='hidden' name='ProductId" + itemLines + "' id='ProductId" + itemLines + "' value="+itemProductId+">"
+	newitem+="<input type='hidden' name='UnitCostSubTotal" + itemLines + "' id='UnitCostSubTotal" + itemLines + "' value="+itemUnitCostSubTotal+">"
+	newitem+="<input type='hidden' name='MinNettPrice" + itemLines + "' id='MinNettPrice" + itemLines + "' value='0'>"
+	var myText = document.createTextNode(newitem);
+	document.getElementById("QuoteItems").innerHTML += newitem;
+	Line_SwitchQuantityType(itemLine, bPerUnitPerDay);
+	Items_NettPriceChange(itemLines);
+
+	if(itemProductId == 0) {
+		document.getElementById("UnitCost" + itemLines).readOnly = false;
+		document.getElementById("UnitCost" + itemLines).style.border = '0px';
+		document.getElementById("Items_UnitCost_Holder" + itemLine).style.display = 'block';
+	} else {
+		if(itemUnitCost > 0) {
+			if(bDivisionManager == 'True') {
+				document.getElementById("Items_UnitCost_Holder" + itemLine).style.display = 'block';
+			} else {
+				document.getElementById("Items_UnitCost_Holder" + itemLine).style.display = 'none';
+			}
+		} else {
+			document.getElementById("UnitCost" + itemLines).readOnly = false;
+			document.getElementById("UnitCost" + itemLines).style.border = '0px';
+			document.getElementById("Items_UnitCost_Holder" + itemLine).style.display = 'block';
+		}
+	}
+}
+
+function Line_SwitchQuantityType(itemLine, bPerUnitPerDay) {
+	if(bPerUnitPerDay == 'True') {
+		document.getElementById("Quantity"+itemLine).value = 0;
+		document.getElementById("ItemLineQuantity"+itemLine+"_PerUnitPerDay").style.display = 'block';
+		document.getElementById("ItemLineQuantity" + itemLine).style.display = 'none';
+	} else {
+		try { document.getElementById("Units"+itemLine).value = 0; } catch { console.log('error'); }
+		document.getElementById("Days"+itemLine).value = 0;
+		document.getElementById("ItemLineQuantity" + itemLine).style.display = 'block';
+		document.getElementById("ItemLineQuantity"+itemLine+"_PerUnitPerDay").style.display = 'none';
+	}
+	Items_QuantityChange(itemLine);
+}
+
+function Items_CalcAllLines() {
+/*	var i = 2;
+	while (i < (itemLines+1)){
+		Items_CalcLine(i);
+		i++;
+	}
+*/
+}
+
+function Items_UnitCostChange(itemLine) {
+	Items_FormatLine(itemLine);
+	var quantity = document.getElementById("Quantity"+itemLine).value;
+	var unitCost = document.getElementById("UnitCost"+itemLine).value;
+	var nettPrice = document.getElementById("NettPrice"+itemLine).value;
+	var margin = 1-(unitCost/nettPrice);
+	document.getElementById("UnitCostSubTotal"+itemLine).value = formatDecimal(quantity * unitCost);
+	document.getElementById("LineMargin"+itemLine).value = formatDecimal(margin*100);
+	Quotes_CalcAll();
+}
+
+function Items_CalcNettPriceTotal() {
+	var i = 2;
+	// For Items
+	var unitCostTotal = parseFloat('0.00');
+	var nettPriceTotal = parseFloat('0.00');
+	while (i < (itemLines+1)){
+		unitCostTotal = parseFloat(unitCostTotal) + parseFloat(document.getElementById("UnitCostSubTotal"+i).value);
+		nettPriceTotal = parseFloat(nettPriceTotal) + parseFloat(document.getElementById("ExtNettPrice"+i).value);
+		i++;
+	}
+	// For Third Party Supply
+	i = 2;
+	while (i < (thirdPartyLines+1)){
+		unitCostTotal = parseFloat(unitCostTotal) + parseFloat(document.getElementById("TP_TotalCost"+i).value);
+		nettPriceTotal = parseFloat(nettPriceTotal) + parseFloat(document.getElementById("TP_ExtNettPrice"+i).value);
+		i++;
+	}
+	document.getElementById("UnitCostTotal").value = formatDecimal(unitCostTotal);
+	document.getElementById("NettPriceTotal").value = formatDecimal(nettPriceTotal);
+}
+
+function Items_FormatLine(itemLine) {
+	document.getElementById("Quantity"+itemLine).value = formatInteger(document.getElementById("Quantity"+itemLine).value);
+	document.getElementById("UnitCost"+itemLine).value = formatDecimal(document.getElementById("UnitCost"+itemLine).value);
+	document.getElementById("NettPrice"+itemLine).value = formatDecimal(document.getElementById("NettPrice"+itemLine).value);
+	document.getElementById("UnitCostSubTotal"+itemLine).value = formatDecimal(document.getElementById("UnitCostSubTotal"+itemLine).value);
+	document.getElementById("LineMargin"+itemLine).value = formatDecimal(document.getElementById("LineMargin"+itemLine).value);
+}
+
+function Items_QuantityChange(itemLine) {
+	Items_FormatLine(itemLine);
+	var quantity = document.getElementById("Quantity"+itemLine).value;
+	var unitCost = document.getElementById("UnitCost"+itemLine).value;
+	var nettPrice = document.getElementById("NettPrice"+itemLine).value;
+	document.getElementById("UnitCostSubTotal"+itemLine).value = formatDecimal(quantity * unitCost);
+	document.getElementById("ExtNettPrice"+itemLine).value = formatDecimal(quantity * nettPrice);
+	Quotes_CalcAll();
+}
+
+
+function Items_UnitCostChange(itemLine) {
+	Items_FormatLine(itemLine);
+	var quantity = document.getElementById("Quantity"+itemLine).value;
+	var unitCost = document.getElementById("UnitCost"+itemLine).value;
+	var nettPrice = document.getElementById("NettPrice"+itemLine).value;
+	var margin = 1-(unitCost/nettPrice);
+	document.getElementById("UnitCostSubTotal"+itemLine).value = formatDecimal(quantity * unitCost);
+	document.getElementById("LineMargin"+itemLine).value = formatDecimal(margin*100);
+	Quotes_CalcAll();
+}
+
+function Items_NettPriceChange(itemLine) {
+	Items_FormatLine(itemLine);
+	var lineQty = parseInt(document.getElementById("Quantity" + itemLine).value);
+	var lineDays = parseInt(document.getElementById("Days" + itemLine).value);
+	var lineUnits = parseInt(document.getElementById("Units" + itemLine).value);
+	
+	if(lineDays > 0 && lineUnits > 0) {
+		lineQty = lineDays * lineUnits;
+	}
+
+	if(isNotNumeric(lineQty)) {
+		lineQty = 0;
+		document.getElementById("Quantity" + itemLine).value = 0;
+	}
+	var unitCost = document.getElementById("UnitCost"+itemLine).value;
+	var nettPrice = document.getElementById("NettPrice"+itemLine).value;
+	var margin = 1-(unitCost/nettPrice);
+	document.getElementById("UnitCostSubTotal"+itemLine).value = formatDecimal(lineQty * unitCost);
+	document.getElementById("LineMargin"+itemLine).value = formatDecimal(margin*100);
+	document.getElementById("ExtNettPrice"+itemLine).value = formatDecimal(lineQty * nettPrice);
+	Quotes_CalcAll();
+}
+
+function Items_MarginChange(itemLine) {
+	Items_FormatLine(itemLine);
+	var unitCost = document.getElementById("UnitCost"+itemLine).value;
+	var margin = document.getElementById("LineMargin"+itemLine).value;
+	var nettPrice = formatDecimal(unitCost/(1-margin/100));
+	document.getElementById("NettPrice"+itemLine).value = nettPrice;
+	Items_NettPriceChange(itemLine)
+	Quotes_CalcAll();
+}
+
+// From Quotes page opens a window to select a Product
+function Items_OpenSelectWindow(DivisionId,itemLine) {
+//	try {
+		var w = window.open ("../Products/Select.asp?DivisionId=" + DivisionId + "&itemLine=" + itemLine, 'winResults', "menubar=no,location=no,resizable=yes,scrollbars=yes,status=yes");
+		w.focus();
+		w.moveTo(0,0);
+//	}
+//	catch (error) {
+//	}
+}
+
+// Select Product For Quote in Selector window - Links to Quotes Window
+function Items_Select(itemLine, itemProductCode, itemDescription, itemProductId, itemUnitCost, itemMinNettPrice, itemNettPrice, bDivisionManager, bPerUnitPerDay) {
+	if(window.opener && !window.opener.closed) {
+		window.opener.document.parentWindow.Items_SelectInQuotes(itemLine, itemProductCode, itemDescription, itemProductId, itemUnitCost, itemMinNettPrice, itemNettPrice, bDivisionManager, bPerUnitPerDay);
+		window.opener.document.parentWindow.Items_InsertLine();
+	}
+}
+
+// Select Product for Quote in Quotes window
+function Items_SelectInQuotes(itemLine, itemProductCode, itemDescription, itemProductId, itemUnitCost, itemMinNettPrice, itemNettPrice, bDivisionManager, bPerUnitPerDay) {
+	document.getElementById("Quantity"+itemLine).value = 0;
+	document.getElementById("Units"+itemLine).value = 0;
+	document.getElementById("Days"+itemLine).value = 0;
+	document.getElementById("Description" + itemLine).value = itemDescription;
+	document.getElementById("ProductId" + itemLine).value = itemProductId;
+	document.getElementById("UnitCost" + itemLine).value = itemUnitCost;
+	document.getElementById("MinNettPrice" + itemLine).value = itemMinNettPrice;
+	document.getElementById("NettPrice" + itemLine).value = itemNettPrice;
+	Items_CalcLineSubTotal(itemLine);
+	Line_SwitchQuantityType(itemLine, bPerUnitPerDay);
+
+	document.getElementById("UnitCost" + itemLines).readOnly = true;
+	document.getElementById("UnitCost" + itemLines).style.border = '0px';
+}
+
+function Items_CalcLineSubTotal(itemLine) {
+	Items_NettPriceChange(itemLine);
+}
+
+function Items_CalcRealMargin() {
+	var myUnitCostTotal;
+	var myNettPriceTotal;
+	var myMargin = parseInt(0);
+	var myUnitCostTotal = parseFloat(parseFloat(document.getElementById("UnitCostTotal").value)/100);
+	var myNettPriceTotal = parseFloat(parseFloat(document.getElementById("NettPriceTotal").value)/100);
+
+	if(myUnitCostTotal > 0 && myNettPriceTotal > 0) {
+		myMargin = 100*(1-(myUnitCostTotal/myNettPriceTotal))
+	}
+
+	myMargin = formatDecimal(myMargin);
+	document.getElementById("RealMargin").value = formatDecimal(myMargin);
+	return formatDecimal(myMargin) + '%';
+}
+
+function Items_ClearLine(itemLine) {
+	document.getElementById("Quantity" + itemLine).value = '0';
+	document.getElementById("Description" + itemLine).value = '';
+	document.getElementById("MinNettPrice" + itemLine).value = '0.00';
+	document.getElementById("NettPrice" + itemLine).value = '0.00';
+	document.getElementById("UnitCost" + itemLine).value = '0.00';
+	document.getElementById("UnitCostSubTotal" + itemLine).value = '0.00';
+	document.getElementById("ProductId" + itemLine).value = '0';
+	document.getElementById("ExtNettPrice" + itemLine).value = '0.00';
+	document.getElementById("LineMargin" + itemLine).value = '0.00';
+	document.getElementById("DateDeliveryRequested" + itemLine).value = '0.00';
+	//document.getElementById("DateDeliveryScheduled" + itemLine).value = '0.00';
+	document.getElementById("Comment" + itemLine).value = '0.00';
+	document.getElementById("Items_Holder" + itemLine).style.display = 'none';
+	Items_CalcAllLines();
+	Items_CalcNettPriceTotal();
+	Quotes_CalcTotal();
+}
+
+function Quotes_CalcTotal() {
+	var myTotal = 0;
+	myTotal = parseFloat(document.getElementById("NettPriceTotal").value);
+	document.getElementById("NettPriceTotalInc").value = formatDecimal(myTotal*1.1);
+	Items_CalcRealMargin();
+}
+
+function Quotes_CalcAll_Edit() {
+	Quotes_CalcTotal;
+//	Items_CalcAllLines();
+	Items_CalcNettPriceTotal();
+}
+
+function Quotes_CalcAll() {
+	TP_Calc_Total();
+	Quotes_CalcTotal;
+	Items_CalcAllLines();
+	Items_CalcNettPriceTotal();
+	Quotes_CalcTotal();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function OpenUpdateStatus() {
+	var w = window.open ('/System/Admin/Loading.html', 'QuotesUpdateStatus', "width=300,height=300,location=0,menubar=0,resizable=1,scrollbars=1,status=0,titlebar=1,toolbar=0");
+	w.focus();
+
+	if(screen.height > 800) {
+		w.resizeTo(300, 300);
+	}
+
+	if (parseInt(navigator.appVersion) >= 4 && screen.height > 800) {
+		var screenHeight = screen.height;
+		var screenWidth = screen.width;
+		var topPos = (screenHeight)/2-370;
+		var leftPos = (screenWidth)/2-400;
+	}
+	w.moveTo(leftPos,topPos);
+}
+
+function calcLineMargin(UnitCost, NettPrice) {
+	// eg. 95.00
+	var LineMargin;
+	LineMargin = formatDecimal(100*(1-(UnitCost/NettPrice)));
+	if(isNotNumeric(LineMargin)) {
+		return '0.00';
+	} else {
+		return LineMargin;
+	}
+}
+
+function calcNettPrice(UnitCost, Margin) {
+	var NettPrice;
+	NettPrice = formatDecimal(UnitCost/(1-Margin));
+	if(isNotNumeric(NettPrice)) {
+		return '0.00';
+	} else {
+		return NettPrice;
+	}
+}
+
+
+function ThirdParty_InsertLine()
+{
+	thirdPartyLines++;
+	document.Form1.ThirdPartyLinesVal.value = thirdPartyLines;
+	var newitem;
+	newitem="<table width=760 cellpadding='0' cellspacing='0' id='TP_Holder"+thirdPartyLines+"'>";
+	newitem+="	<tr>";
+	newitem+="		<td valign='top'>";
+	newitem+="			<table width='100%' cellpadding='3' cellspacing='0'>";
+	newitem+="				<tr style='background-color:#666666;'>";
+	newitem+="					<td style='border-top:2px solid black;color:white;' colspan=10><b>Line " + (thirdPartyLines-1) + "</b></td>";
+	newitem+="				</tr>";
+	newitem+="				<tr>";
+	newitem+="					<td width=100 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Description</td>";
+	newitem+="					<td width=230 align='right'><img src='/Images/Spacer.gif' width=230 height=1 border=0 alt=''><br><input type='text' name='TP_Description" + thirdPartyLines + "' id='TP_Description" + thirdPartyLines + "' size=1 style='width:230px;' value='' maxlength=500></td>";
+	newitem+="					<td width=20 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=20 height=1 border=0 alt=''></td>";
+	newitem+="					<td width=80 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=80 height=1 border=0 alt=''><br>Supplier</td>";
+	newitem+="					<td width=150 align='right'><img src='/Images/Spacer.gif' width=150 height=1 border=0 alt=''><br><input type='text' name='TP_Supplier" + thirdPartyLines + "' id='TP_Supplier" + thirdPartyLines + "' size=1 style='width:230px;' value='' maxlength=500></td>";
+	newitem+="					<td align='right'><img src='/Images/Spacer.gif' width=15 height=1 border=0 alt=''><br><input value='X' style='color:red;font-weight:bold;' type='button' onClick='ThirdParty_ClearLine(" + thirdPartyLines + ");'></td>";
+	newitem+="				</tr>";
+	newitem+="			</table>";
+	newitem+="			<table width='100%' cellpadding='3' cellspacing='0'>";
+	newitem+="				<tr>";
+	newitem+="					<td width=100 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Quote #</td>";
+	newitem+="					<td width=100 align='right'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br><input type='text' name='TP_QuoteNumber" + thirdPartyLines + "' id='TP_QuoteNumber" + thirdPartyLines + "' size=1 style='width:100px;' value='' maxlength=50></td>";
+	newitem+="					<td width=15><img src='/Images/Spacer.gif' width=15 height=1 border=0 alt=''>"
+	newitem+="					<td	width=100 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Quote Date</td>";
+	newitem+="					<td width=100 align='right'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br><input type='text' name='TP_QuoteDate" + thirdPartyLines + "' id='TP_QuoteDate" + thirdPartyLines + "' size=1 style='width:100px;' onclick='clearMe(this);;' value='dd/mm/yyyy' maxlength=10></td>";
+	newitem+="					<td width=15><img src='/Images/Spacer.gif' width=15 height=1 border=0 alt=''>"
+	newitem+="					<td width=100 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Expiry Date</td>";
+	newitem+="					<td align='right'><img src='/Images/Spacer.gif' width=120 height=1 border=0 alt=''><br><input type='text' name='TP_ExpiryDate" + thirdPartyLines + "' id='TP_ExpiryDate" + thirdPartyLines + "' size=1 style='width:100px;' onclick='clearMe(this);;' value='dd/mm/yyyy' maxlength=10></td>";
+	newitem+="				</tr>";
+	newitem+="				<tr>";
+	newitem+="					<td width=100 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Supplier Part #</td>";
+	newitem+="					<td width=100 align='right'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br><input type='text' name='TP_SupplierPartNumber" + thirdPartyLines + "' id='TP_SupplierPartNumber" + thirdPartyLines + "' size=1 style='width:100px;' value='' maxlength=50></td>";
+	newitem+="					<td width=15><img src='/Images/Spacer.gif' width=15 height=1 border=0 alt=''>"
+	newitem+="					<td width=100 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Our Part #</td>";
+	newitem+="					<td width=100 align='right'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br><input type='text' name='TP_OurPartNumber" + thirdPartyLines + "' id='TP_OurPartNumber" + thirdPartyLines + "' size=1 style='width:100px;' value='' maxlength=50></td>";
+	newitem+="					<td width=15><img src='/Images/Spacer.gif' width=15 height=1 border=0 alt=''>"
+	newitem+="					<td width=100 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Type</td>";
+	newitem+="					<td align='right'><img src='/Images/Spacer.gif' width=120 height=1 border=0 alt=''><br><input type='text' name='TP_Type" + thirdPartyLines + "' id='TP_Type" + thirdPartyLines + "' size=1 style='width:100px;' value='' maxlength=5></td>";
+	newitem+="				</tr>";
+	newitem+="				<tr>";
+	newitem+="					<td width=100 class='Quote_Item_TD' style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Quantity</td>";
+	newitem+="					<td width=100 class='Quote_Item_TD' align='right'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br><input type='text' name='TP_Quantity" + thirdPartyLines + "' id='TP_Quantity" + thirdPartyLines + "' size=1 style='width:100px;' value='0' maxlength=6 onChange='TP_Calc("+thirdPartyLines+");'></td>";
+	newitem+="					<td width=15 class='Quote_Item_TD'><img src='/Images/Spacer.gif' width=15 height=1 border=0 alt=''>"
+	newitem+="					<td width=100 class='Quote_Item_TD' style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Unit Cost ($)</td>";
+	newitem+="					<td width=100 class='Quote_Item_TD' align='right'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br><input type='text' name='TP_UnitCost" + thirdPartyLines + "' id='TP_UnitCost" + thirdPartyLines + "' size=1 style='width:100px;text-align:right;' value='0.00' maxlength=20 onChange='TP_Calc("+thirdPartyLines+");'></td>";
+	newitem+="					<td width=15 class='Quote_Item_TD'><img src='/Images/Spacer.gif' width=15 height=1 border=0 alt=''>"
+	newitem+="					<td width=100 class='Quote_Item_TD' style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Nett Price ($)</td>";
+	newitem+="					<td class='Quote_Item_TD' align='right'><img src='/Images/Spacer.gif' width=120 height=1 border=0 alt=''><br><input type='text' name='TP_NettPrice" + thirdPartyLines + "' id='TP_NettPrice" + thirdPartyLines + "' size=1 style='width:100px;text-align:right;' value='0.00' maxlength=20 onChange='TP_Calc("+thirdPartyLines+");'></td>";
+	newitem+="				</tr>";
+	newitem+="				<tr>";
+	newitem+="					<td width=100 style='background-color:#eeeeee;border-bottom:2px solid black;font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br></td>";
+	newitem+="					<td width=100 style='background-color:#eeeeee;border-bottom:2px solid black;' align='right'><img src='/Images/Spacer.gif' width=120 height=1 border=0 alt=''><br><input type='hidden' name='TP_Margin" + thirdPartyLines + "' id='TP_Margin" + thirdPartyLines + "' size=1 style='border:1px solid black;background-color:#ffffff;width:100px;text-align:right;' value='0.00' maxlength=20 onChange='TP_MarginChange("+thirdPartyLines+");'></td>";
+	newitem+="					<td width=15 style='background-color:#eeeeee;border-bottom:2px solid black;'><img src='/Images/Spacer.gif' width=15 height=1 border=0 alt=''></td>";
+	newitem+="					<td width=100 style='background-color:#eeeeee;border-bottom:2px solid black;font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Total Cost Ex. GST ($)</td>";
+	newitem+="					<td width=100 style='background-color:#eeeeee;border-bottom:2px solid black;' align='right'><img src='/Images/Spacer.gif' width=120 height=1 border=0 alt=''><br><input type='text' name='TP_TotalCost" + thirdPartyLines + "' id='TP_TotalCost" + thirdPartyLines + "' size=1 style='background-color:#eeeeee;border:0px 0px 0px 0px;width:100px;text-align:right;' value='0.00' maxlength=20 readonly></td>";
+	newitem+="					<td width=15 style='background-color:#eeeeee;border-bottom:2px solid black;'><img src='/Images/Spacer.gif' width=15 height=1 border=0 alt=''></td>";
+	newitem+="					<td width=100 style='background-color:#eeeeee;border-bottom:2px solid black;font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Ext. Nett Price ($)</td>";
+	newitem+="					<td style='background-color:#eeeeee;border-bottom:2px solid black;' align='right'><img src='/Images/Spacer.gif' width=120 height=1 border=0 alt=''><br><input type='text' name='TP_ExtNettPrice" + thirdPartyLines + "' id='TP_ExtNettPrice" + thirdPartyLines + "' size=1 style='background-color:#eeeeee;border:0px 0px 0px 0px;width:100px;text-align:right;' value='0.00' maxlength=20 readonly></td>";
+	newitem+="				</tr>";
+	newitem+="			</table>";
+	newitem+="			<table style='background-color:#eeeeee;border-bottom:2px solid black;' width='100%' cellpadding=5 cellspacing=0 border=0>";
+	newitem+="				<tr>";
+	newitem+="					<td valign='top' width=100 nowrap style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Status</td>";
+	newitem+="					<td valign='top' align='right' nowrap><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br>"+JobOrderStatusList(thirdPartyLines,true)+"</td>";
+	newitem+="					<td valign='top' style='font-weight:bold;' rowspan=3 width=100 valign='top'><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br>Purchasing/Factory Instructions</td>";
+	newitem+="					<td valign='top' rowspan=3 width=500><textarea type='text' name='TP_Comment" + thirdPartyLines + "' style='width:100%;height:51px;Overflow:hidden;' onkeyup=parent.TrackCount(this,'TP_CountComment"+thirdPartyLines+"',500) onkeypress='parent.LimitText(this,500)'></textarea><br>Remaining: <input type='text' name='TP_CountComment"+thirdPartyLines+"' size=4 value=500 readonly></td>";
+	newitem+="				</tr>";
+	newitem+="				<tr>";
+	newitem+="					<td valign='top' width=100 nowrap style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Delivery&nbsp;Requested</td>";
+	newitem+="					<td valign='top' align='right' nowrap><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br><input type='text' name='TP_DateDeliveryRequested" + thirdPartyLines + "' id='TP_DateDeliveryRequested" + thirdPartyLines + "' size=1 style='width:100px;text-align:right;' onclick='clearMe(this);;' value='dd/mm/yyyy' maxlength=10></td>";
+	newitem+="				</tr>";
+	newitem+="				<tr>";
+	newitem+="					<td valign='top' width=100 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br>Delivery&nbsp;Scheduled</td>";
+	if(document.location.href.indexOf("Add.asp")>0){
+		newitem+="				<td valign='top' align='right'><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br>Cannot set</td>";
+	} else {
+		newitem+="				<td valign='top' align='right'><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br><input type='text' name='DateDeliveryScheduled" + itemLines + "' id='DateDeliveryScheduled" + itemLines + "' size=1 style='width:100px;' onclick='clearMe(this);;' value='dd/mm/yyyy' maxlength=10></td>";
+	}
+	newitem+="				</tr>";
+	newitem+="			</table><img src='/Images/Spacer.gif' width=700 height=1 border=0>";
+	newitem+="		</td>";
+	newitem+="	</tr>";
+	newitem+="</table>"
+	var myText = document.createTextNode(newitem);
+	document.getElementById("thirdPartyLines").innerHTML += newitem;
+}
+
+function ThirdParty_InsertLineWithData(thirdPartyLine, TP_Description, TP_Supplier, TP_QuoteNumber, TP_QuoteDate, TP_ExpiryDate, TP_SupplierPartNumber, TP_OurPartNumber, TP_Quantity, TP_Type, TP_UnitCost, TP_NettPrice, TP_Margin, TP_TotalCost, TP_ExtNettPrice)
+{
+	thirdPartyLines++;
+	document.Form1.ThirdPartyLinesVal.value = thirdPartyLines;
+	var newitem;
+	newitem="<table width=760 cellpadding='0' cellspacing='0' id='TP_Holder"+thirdPartyLines+"'>";
+	newitem+="	<tr>";
+	newitem+="		<td valign='top'>";
+	newitem+="			<table width='100%' cellpadding='3' cellspacing='0'>";
+	newitem+="				<tr style='background-color:#666666;'>";
+	newitem+="					<td style='color:white;' colspan=10><b>Line " + (thirdPartyLines-1) + "</b></td>";
+	newitem+="				</tr>";
+	newitem+="				<tr>";
+	newitem+="					<td width=100 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Description</td>";
+	newitem+="					<td width=230 align='right'><img src='/Images/Spacer.gif' width=230 height=1 border=0 alt=''><br><input type='text' name='TP_Description" + thirdPartyLines + "' id='TP_Description" + thirdPartyLines + "' size=1 style='width:230px;' value='"+TP_Description+"' maxlength=500></td>";
+	newitem+="					<td width=20 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=20 height=1 border=0 alt=''></td>";
+	newitem+="					<td width=80 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=80 height=1 border=0 alt=''><br>Supplier</td>";
+	newitem+="					<td width=150 align='right'><img src='/Images/Spacer.gif' width=150 height=1 border=0 alt=''><br><input type='text' name='TP_Supplier" + thirdPartyLines + "' id='TP_Supplier" + thirdPartyLines + "' size=1 style='width:230px;' value='"+TP_Supplier+"' maxlength=500></td>";
+	newitem+="					<td align='right'><img src='/Images/Spacer.gif' width=15 height=1 border=0 alt=''><br><input value='X' style='color:red;font-weight:bold;' type='button' onClick='ThirdParty_ClearLine(" + thirdPartyLines + ");'></td>";
+	newitem+="				</tr>";
+	newitem+="			</table>";
+	newitem+="			<table width='100%' cellpadding='3' cellspacing='0'>";
+	newitem+="				<tr>";
+	newitem+="					<td width=100 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Quote #</td>";
+	newitem+="					<td width=100 align='right'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br><input type='text' name='TP_QuoteNumber" + thirdPartyLines + "' id='TP_QuoteNumber" + thirdPartyLines + "' size=1 style='width:100px;' value='"+TP_QuoteNumber+"' maxlength=50></td>";
+	newitem+="					<td width=15><img src='/Images/Spacer.gif' width=15 height=1 border=0 alt=''>"
+	newitem+="					<td	width=100 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Quote Date</td>";
+	newitem+="					<td width=100 align='right'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br><input type='text' name='TP_QuoteDate" + thirdPartyLines + "' id='TP_QuoteDate" + thirdPartyLines + "' size=1 style='width:100px;' onclick='clearMe(this);;' value='"+TP_QuoteDate+"' maxlength=10></td>";
+	newitem+="					<td width=15><img src='/Images/Spacer.gif' width=15 height=1 border=0 alt=''>"
+	newitem+="					<td width=100 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Expiry Date</td>";
+	newitem+="					<td align='right'><img src='/Images/Spacer.gif' width=120 height=1 border=0 alt=''><br><input type='text' name='TP_ExpiryDate" + thirdPartyLines + "' id='TP_ExpiryDate" + thirdPartyLines + "' size=1 style='width:100px;' onclick='clearMe(this);;' value='"+TP_ExpiryDate+"' maxlength=10></td>";
+	newitem+="				</tr>";
+	newitem+="				<tr>";
+	newitem+="					<td width=100 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Supplier Part #</td>";
+	newitem+="					<td width=100 align='right'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br><input type='text' name='TP_SupplierPartNumber" + thirdPartyLines + "' id='TP_SupplierPartNumber" + thirdPartyLines + "' size=1 style='width:100px;' value='"+TP_SupplierPartNumber+"' maxlength=50></td>";
+	newitem+="					<td width=15><img src='/Images/Spacer.gif' width=15 height=1 border=0 alt=''>"
+	newitem+="					<td width=100 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Our Part #</td>";
+	newitem+="					<td width=100 align='right'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br><input type='text' name='TP_OurPartNumber" + thirdPartyLines + "' id='TP_OurPartNumber" + thirdPartyLines + "' size=1 style='width:100px;' value='"+TP_OurPartNumber+"' maxlength=50></td>";
+	newitem+="					<td width=15><img src='/Images/Spacer.gif' width=15 height=1 border=0 alt=''>"
+	newitem+="					<td width=100 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Type</td>";
+	newitem+="					<td align='right'><img src='/Images/Spacer.gif' width=120 height=1 border=0 alt=''><br><input type='text' name='TP_Type" + thirdPartyLines + "' id='TP_Type" + thirdPartyLines + "' size=1 style='width:100px;' value='" + TP_Type + "' maxlength=5></td>";
+	newitem+="				</tr>";
+	newitem+="				<tr>";
+	newitem+="					<td width=100 class='Quote_Item_TD' style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Quantity</td>";
+	newitem+="					<td width=100 class='Quote_Item_TD' align='right'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br><input type='text' name='TP_Quantity" + thirdPartyLines + "' id='TP_Quantity" + thirdPartyLines + "' size=1 style='width:100px;' value='"+TP_Quantity+"' maxlength=6 onChange='TP_Calc("+thirdPartyLines+");'></td>";
+	newitem+="					<td width=15 class='Quote_Item_TD'><img src='/Images/Spacer.gif' width=15 height=1 border=0 alt=''>"
+	newitem+="					<td width=100 class='Quote_Item_TD' style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Unit Cost ($)</td>";
+	newitem+="					<td width=100 class='Quote_Item_TD' align='right'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br><input type='text' name='TP_UnitCost" + thirdPartyLines + "' id='TP_UnitCost" + thirdPartyLines + "' size=1 style='width:100px;text-align:right;' value='"+TP_UnitCost+"' maxlength=20 onChange='TP_Calc("+thirdPartyLines+");'></td>";
+	newitem+="					<td width=15 class='Quote_Item_TD'><img src='/Images/Spacer.gif' width=15 height=1 border=0 alt=''>"
+	newitem+="					<td width=100 class='Quote_Item_TD' style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Nett Price ($)</td>";
+	newitem+="					<td class='Quote_Item_TD' align='right'><img src='/Images/Spacer.gif' width=120 height=1 border=0 alt=''><br><input type='text' name='TP_NettPrice" + thirdPartyLines + "' id='TP_NettPrice" + thirdPartyLines + "' size=1 style='width:100px;text-align:right;' value='"+TP_NettPrice+"' maxlength=20 onChange='TP_Calc("+thirdPartyLines+");'></td>";
+	newitem+="				</tr>";
+	newitem+="				<tr>";
+	newitem+="					<td width=100 style='background-color:#eeeeee;border-bottom:2px solid black;font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br></td>";
+	newitem+="					<td width=100 style='background-color:#eeeeee;border-bottom:2px solid black;' align='right'><img src='/Images/Spacer.gif' width=120 height=1 border=0 alt=''><br><input type='hidden' name='TP_Margin" + thirdPartyLines + "' id='TP_Margin" + thirdPartyLines + "' size=1 style='border:1px solid black;background-color:#ffffff;width:100px;text-align:right;' value='"+TP_Margin+"' maxlength=20 onChange='TP_MarginChange("+thirdPartyLines+");'></td>";
+	newitem+="					<td width=15 style='background-color:#eeeeee;border-bottom:2px solid black;'><img src='/Images/Spacer.gif' width=15 height=1 border=0 alt=''></td>";
+	newitem+="					<td width=100 style='background-color:#eeeeee;border-bottom:2px solid black;font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Total Cost Ex. GST ($)</td>";
+	newitem+="					<td width=100 style='background-color:#eeeeee;border-bottom:2px solid black;' align='right'><img src='/Images/Spacer.gif' width=120 height=1 border=0 alt=''><br><input type='text' name='TP_TotalCost" + thirdPartyLines + "' id='TP_TotalCost" + thirdPartyLines + "' size=1 style='background-color:#eeeeee;border:0px 0px 0px 0px;width:100px;text-align:right;' value='"+TP_TotalCost+"' maxlength=20 readonly></td>";
+	newitem+="					<td width=15 style='background-color:#eeeeee;border-bottom:2px solid black;'><img src='/Images/Spacer.gif' width=15 height=1 border=0 alt=''></td>";
+	newitem+="					<td width=100 style='background-color:#eeeeee;border-bottom:2px solid black;font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Ext. Nett Price ($)</td>";
+	newitem+="					<td style='background-color:#eeeeee;border-bottom:2px solid black;' align='right'><img src='/Images/Spacer.gif' width=120 height=1 border=0 alt=''><br><input type='text' name='TP_ExtNettPrice" + thirdPartyLines + "' id='TP_ExtNettPrice" + thirdPartyLines + "' size=1 style='background-color:#eeeeee;border:0px 0px 0px 0px;width:100px;text-align:right;' value='"+TP_ExtNettPrice+"' maxlength=20 readonly></td>";
+	newitem+="				</tr>";
+	newitem+="			</table>";
+	newitem+="		</td>";
+	newitem+="	</tr>";
+	newitem+="	<tr>";
+	newitem+="		<td colspan=10>";
+	newitem+="			<table style='border-bottom:2px solid black;background-color:#eeeeee;' width='100%' cellpadding=5 cellspacing=0 border=0>";
+	newitem+="				<tr>";
+	newitem+="					<td valign='top' width=100 nowrap style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Status</td>";
+	newitem+="					<td valign='top' align='right' nowrap><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br>"+JobOrderStatusList(thirdPartyLines,true)+"</td>";
+	newitem+="					<td valign='top' style='font-weight:bold;' rowspan=3 width=100 valign='top'><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br>Purchasing/Factory Instructions</td>";
+	newitem+="					<td valign='top' rowspan=3 width=500><textarea type='text' name='TP_Comment" + thirdPartyLines + "' style='width:100%;height:51px;Overflow:hidden;' onkeyup=parent.TrackCount(this,'TP_CountComment"+thirdPartyLines+"',500) onkeypress='parent.LimitText(this,500)'></textarea><br>Remaining: <input type='text' name='TP_CountComment"+thirdPartyLines+"' size=4 value=500 readonly></td>";
+	newitem+="				</tr>";
+	newitem+="				<tr>";
+	newitem+="					<td valign='top' width=100 nowrap style='font-weight:bold;'><img src='/Images/Spacer.gif' width=100 height=1 border=0 alt=''><br>Delivery&nbsp;Requested</td>";
+	newitem+="					<td valign='top' align='right' nowrap><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br><input type='text' name='TP_DateDeliveryRequested" + thirdPartyLines + "' id='TP_DateDeliveryRequested" + thirdPartyLines + "' size=1 style='width:100px;text-align:right;' onclick='clearMe(this);;' value='dd/mm/yyyy' maxlength=10></td>";
+	newitem+="				</tr>";
+	newitem+="				<tr>";
+	newitem+="					<td valign='top' width=100 style='font-weight:bold;'><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br>Delivery&nbsp;Scheduled</td>";
+	if(document.location.href.indexOf("Add.asp")>0){
+		newitem+="				<td valign='top' align='right'><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br>Cannot set</td>";
+	} else {
+		newitem+="				<td valign='top' align='right'><img src='/Images/Spacer.gif' width=75 height=1 border=0 alt=''><br><input type='text' name='DateDeliveryScheduled" + itemLines + "' id='DateDeliveryScheduled" + itemLines + "' size=1 style='width:100px;' onclick='clearMe(this);;' value='dd/mm/yyyy' maxlength=10></td>";
+	}
+	newitem+="				</tr>";
+	newitem+="			</table><img src='/Images/Spacer.gif' width=700 height=1 border=0>";
+	newitem+="		</td>";
+	newitem+="	</tr>";
+	newitem+="</table>"
+	var myText = document.createTextNode(newitem);
+	document.getElementById("thirdPartyLines").innerHTML += newitem;
+	TP_Calc(thirdPartyLines)
+}
+
+function ThirdParty_ClearLine(thirdPartyLine) {
+	document.getElementById("TP_Quantity" + thirdPartyLine).value = 0;
+	document.getElementById("TP_Supplier" + thirdPartyLine).value = '';
+	document.getElementById("TP_QuoteNumber" + thirdPartyLine).value = '';
+	document.getElementById("TP_QuoteDate" + thirdPartyLine).value = '';
+	document.getElementById("TP_ExpiryDate" + thirdPartyLine).value = '';
+	document.getElementById("TP_SupplierPartNumber" + thirdPartyLine).value = '';
+	document.getElementById("TP_UnitCost" + thirdPartyLine).value = '';
+	document.getElementById("TP_NettPrice" + thirdPartyLine).value = '';
+	document.getElementById("TP_Description" + thirdPartyLine).value = '';
+	document.getElementById("TP_DateDeliveryRequested" + thirdPartyLine).value = '0.00';
+	document.getElementById("TP_DateDeliveryScheduled" + thirdPartyLine).value = '0.00';
+	document.getElementById("TP_Comment" + thirdPartyLine).value = '0.00';
+	document.getElementById("TP_Holder" + thirdPartyLine).style.display = 'none';
+	Quotes_CalcAll();
+}
+
+function TP_Calc(thirdPartyLine) {
+	TP_FormatLine(thirdPartyLine);
+	var TP_Quantity = formatInteger(document.getElementById("TP_Quantity"+thirdPartyLine).value);
+	var TP_UnitCost = formatDecimal(document.getElementById("TP_UnitCost"+thirdPartyLine).value);
+	var TP_NettPrice = formatDecimal(document.getElementById("TP_NettPrice"+thirdPartyLine).value);
+	var TP_ExtNettPrice = TP_Quantity * TP_NettPrice;
+	var TP_TotalCost = TP_Quantity * TP_UnitCost;
+	var TP_Margin = 100*(1-(TP_UnitCost/TP_NettPrice));
+	document.getElementById("TP_ExtNettPrice"+thirdPartyLine).value = formatDecimal(TP_ExtNettPrice);
+	document.getElementById("TP_TotalCost"+thirdPartyLine).value = formatDecimal(TP_TotalCost);
+	document.getElementById("TP_Margin"+thirdPartyLine).value = formatDecimal(TP_Margin);
+	Quotes_CalcAll();
+}
+
+function TP_MarginChange(thirdPartyLine) {
+	var TP_UnitCost = document.getElementById("TP_UnitCost"+thirdPartyLine).value;
+	var TP_Margin = document.getElementById("TP_Margin"+thirdPartyLine).value;
+	var TP_NettPrice = formatDecimal(TP_UnitCost/(1-TP_Margin/100));
+	document.getElementById("TP_Margin"+thirdPartyLine).value = formatDecimal(TP_Margin);
+	document.getElementById("TP_NettPrice"+thirdPartyLine).value = formatDecimal(TP_NettPrice);
+	Quotes_CalcAll();
+}
+
+function TP_Calc_Total() {
+	var i = 2;
+	var TP_Total = parseFloat('0.00');
+	while (i < (thirdPartyLines+1)){
+//		Items_CalcLine(i);
+		TP_Total = parseFloat(TP_Total) + parseFloat(document.getElementById("TP_ExtNettPrice"+i).value);
+		i++;
+	}
+	return TP_Total;
+}
+
+function TP_FormatLine(thirdPartyLine) {
+	document.getElementById("TP_Quantity"+thirdPartyLine).value = formatInteger(document.getElementById("TP_Quantity"+thirdPartyLine).value);
+	document.getElementById("TP_UnitCost"+thirdPartyLine).value = formatDecimal(document.getElementById("TP_UnitCost"+thirdPartyLine).value);
+	document.getElementById("TP_NettPrice"+thirdPartyLine).value = formatDecimal(document.getElementById("TP_NettPrice"+thirdPartyLine).value);
+	document.getElementById("TP_TotalCost"+thirdPartyLine).value = formatDecimal(document.getElementById("TP_TotalCost"+thirdPartyLine).value);
+	document.getElementById("TP_Margin"+thirdPartyLine).value = formatDecimal(document.getElementById("TP_Margin"+thirdPartyLine).value);
+}
+
+function clearMe(obj) {
+	obj.value = '';
+}
+
+function JobOrderStatusList(Line, ThirdParty) {
+	var s;
+	var sField;
+	if(ThirdParty) {
+		sField = "TP_JobOrderStatusCode"+Line;
+	} else {
+		sField = "JobOrderStatusCode"+Line;
+	}
+	if(document.location.href.indexOf("Add.asp")>0){
+		s="New Job<input type='hidden' name='"+sField+"' value='20'>";
+	} else {
+		s="<select name='"+sField+"'>";
+		s+="	<option value=0>00";
+		s+="</select>";
+	}
+	return s;
+}

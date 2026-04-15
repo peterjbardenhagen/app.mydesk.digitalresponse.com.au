@@ -1,0 +1,201 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <ProductVersion>7.10.3077</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{149B2E29-E35C-4E20-9360-ECCDC25CBE51}</ProjectGuid>
+    <ProjectTypeGuids>{349c5851-65df-11da-9384-00065b846f21};{F184B08F-C81C-45F6-A57F-5ABD9991F28F}</ProjectTypeGuids>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ApplicationIcon />
+    <AssemblyKeyContainerName />
+    <AssemblyName>www.mydesk.com.au</AssemblyName>
+    <AssemblyOriginatorKeyFile />
+    <AssemblyOriginatorKeyMode>None</AssemblyOriginatorKeyMode>
+    <DefaultClientScript>JScript</DefaultClientScript>
+    <DefaultHTMLPageLayout>Flow</DefaultHTMLPageLayout>
+    <DefaultTargetSchema>IE32Nav30</DefaultTargetSchema>
+    <DelaySign>false</DelaySign>
+    <OutputType>Library</OutputType>
+    <OptionCompare>Binary</OptionCompare>
+    <OptionExplicit>On</OptionExplicit>
+    <OptionStrict>Off</OptionStrict>
+    <RootNamespace>www.mydesk.com.au</RootNamespace>
+    <StartupObject />
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <MyType>Windows</MyType>
+    <UseIISExpress>true</UseIISExpress>
+    <UpgradeBackupLocation />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <OutputPath>bin\</OutputPath>
+    <DocumentationFile>www.mydesk.com.au.xml</DocumentationFile>
+    <BaseAddress>285212672</BaseAddress>
+    <ConfigurationOverrideFile />
+    <DefineConstants />
+    <DefineDebug>true</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <DebugSymbols>true</DebugSymbols>
+    <Optimize>false</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>1</WarningLevel>
+    <NoWarn>42016,42017,42018,42019,42032,42353,42354,42355</NoWarn>
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <OutputPath>bin\</OutputPath>
+    <DocumentationFile>www.mydesk.com.au.xml</DocumentationFile>
+    <BaseAddress>285212672</BaseAddress>
+    <ConfigurationOverrideFile />
+    <DefineConstants />
+    <DefineDebug>false</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <DebugSymbols>false</DebugSymbols>
+    <Optimize>true</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>1</WarningLevel>
+    <NoWarn>42016,42017,42018,42019,42032,42353,42354,42355</NoWarn>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System.Xml">
+      <Name>System.Xml</Name>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Import Include="Microsoft.VisualBasic" />
+    <Import Include="System" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Default.asp" />
+    <Content Include="MyDesk\CallReports.asp" />
+    <Content Include="MyDesk\CallReports_Add.asp" />
+    <Content Include="MyDesk\CallReports_Add_Proc.asp" />
+    <Content Include="MyDesk\CallReports_Del_Proc.asp" />
+    <Content Include="MyDesk\CallReports_Edit_Proc.asp" />
+    <Content Include="MyDesk\CareOnline.asp" />
+    <Content Include="MyDesk\Comments.asp" />
+    <Content Include="MyDesk\Comments_Add.asp" />
+    <Content Include="MyDesk\Comments_Add_Proc.asp" />
+    <Content Include="MyDesk\Copy of Noticeboard_Edit.asp" />
+    <Content Include="MyDesk\Default.asp" />
+    <Content Include="MyDesk\DeliveryRun.asp" />
+    <Content Include="MyDesk\EditPassword.asp" />
+    <Content Include="MyDesk\EditPassword_Proc.asp" />
+    <Content Include="MyDesk\Images\Button_Bul.gif" />
+    <Content Include="MyDesk\Images\Button_Sep.gif" />
+    <Content Include="MyDesk\Images\Calendar.gif" />
+    <Content Include="MyDesk\Images\FP_1.gif" />
+    <Content Include="MyDesk\Images\FP_Bg.gif" />
+    <Content Include="MyDesk\Images\FP_Footer.gif" />
+    <Content Include="MyDesk\Images\FP_Header.gif" />
+    <Content Include="MyDesk\Images\Header_Bg.gif" />
+    <Content Include="MyDesk\Images\Login.gif" />
+    <Content Include="MyDesk\Images\Moonlighting.gif" />
+    <Content Include="MyDesk\Images\MyDesk_Header_1.gif" />
+    <Content Include="MyDesk\Images\MyDesk_Header_2.gif" />
+    <Content Include="MyDesk\Images\MyDesk_Header_3.gif" />
+    <Content Include="MyDesk\Images\Pierlite_Header_1.gif" />
+    <Content Include="MyDesk\Images\Pierlite_Header_2.gif" />
+    <Content Include="MyDesk\Images\Pierlite_Header_3.gif" />
+    <Content Include="MyDesk\Images\SolutionsCorp.gif" />
+    <Content Include="MyDesk\LogOff.asp" />
+    <Content Include="MyDesk\ManageUsers.asp" />
+    <Content Include="MyDesk\ManageUsers_Add.asp" />
+    <Content Include="MyDesk\ManageUsers_Add_Proc.asp" />
+    <Content Include="MyDesk\ManageUsers_Del_Proc.asp" />
+    <Content Include="MyDesk\ManageUsers_Edit.asp" />
+    <Content Include="MyDesk\ManageUsers_Edit_Proc.asp" />
+    <Content Include="MyDesk\MoonProject.asp" />
+    <Content Include="MyDesk\Noticeboard.asp" />
+    <Content Include="MyDesk\Noticeboard_Add.asp" />
+    <Content Include="MyDesk\Noticeboard_Add_Proc.asp" />
+    <Content Include="MyDesk\Noticeboard_Del_Proc.asp" />
+    <Content Include="MyDesk\Noticeboard_Edit.asp" />
+    <Content Include="MyDesk\Noticeboard_Edit_Proc.asp" />
+    <Content Include="MyDesk\Portal.asp" />
+    <Content Include="MyDesk\Quote.asp" />
+    <Content Include="MyDesk\QuotesList.asp" />
+    <Content Include="MyDesk\QuotesList_IFrame.asp" />
+    <Content Include="MyDesk\SalesEngine.asp" />
+    <Content Include="MyDesk\Synch\Pierlite_NSW.asp" />
+    <Content Include="MyDesk\System\ADOVBS.inc" />
+    <Content Include="MyDesk\System\cal2.js" />
+    <Content Include="MyDesk\System\cal_conf2.js" />
+    <Content Include="MyDesk\System\Global.js" />
+    <Content Include="MyDesk\System\ssi_Dates.inc" />
+    <Content Include="MyDesk\System\ssi_dbConn_close.inc" />
+    <Content Include="MyDesk\System\ssi_dbConn_open.inc" />
+    <Content Include="MyDesk\System\ssi_Header.inc" />
+    <Content Include="MyDesk\System\ssi_Header_DeliveryRun.inc" />
+    <Content Include="MyDesk\System\ssi_Header_Morcare.inc" />
+    <Content Include="MyDesk\System\ssi_Header_MyDesk.inc" />
+    <Content Include="MyDesk\System\ssi_Header_Timber.inc" />
+    <Content Include="MyDesk\System\ssi_Header_TSA.inc" />
+    <Content Include="MyDesk\System\ssi_Security.inc" />
+    <Content Include="MyDesk\System\Style.css" />
+    <Content Include="MyDesk\System\Style2.css" />
+    <Content Include="MyDesk\TimberRequirements.asp" />
+    <Content Include="MyDesk\TSA\Default.asp" />
+    <Content Include="MyDesk\TSA\Download.asp" />
+    <Content Include="MyDesk\TSA\Upload.asp" />
+    <Content Include="MyDesk\Validate.asp" />
+    <Content Include="MyDesk\Validate_Portal.asp" />
+    <Content Include="Pierlite_NSW.vbs" />
+    <Content Include="SalesEngine\CareOnline.asp" />
+    <Content Include="SalesEngine\Comments.asp" />
+    <Content Include="SalesEngine\Comments_Add.asp" />
+    <Content Include="SalesEngine\Comments_Add_Proc.asp" />
+    <Content Include="SalesEngine\Default.asp" />
+    <Content Include="SalesEngine\DeliveryRun.asp" />
+    <Content Include="SalesEngine\EditPassword.asp" />
+    <Content Include="SalesEngine\EditPassword_Proc.asp" />
+    <Content Include="SalesEngine\Images\PeritusGroup.gif" />
+    <Content Include="SalesEngine\LogOff.asp" />
+    <Content Include="SalesEngine\ManageUsers.asp" />
+    <Content Include="SalesEngine\ManageUsers_Add.asp" />
+    <Content Include="SalesEngine\ManageUsers_Add_Proc.asp" />
+    <Content Include="SalesEngine\ManageUsers_Del_Proc.asp" />
+    <Content Include="SalesEngine\ManageUsers_Edit.asp" />
+    <Content Include="SalesEngine\ManageUsers_Edit_Proc.asp" />
+    <Content Include="SalesEngine\Noticeboard.asp" />
+    <Content Include="SalesEngine\Noticeboard_Add.asp" />
+    <Content Include="SalesEngine\Noticeboard_Add_Proc.asp" />
+    <Content Include="SalesEngine\Noticeboard_Del_Proc.asp" />
+    <Content Include="SalesEngine\Noticeboard_Edit.asp" />
+    <Content Include="SalesEngine\Noticeboard_Edit_Proc.asp" />
+    <Content Include="SalesEngine\Portal.asp" />
+    <Content Include="SalesEngine\Quote.asp" />
+    <Content Include="SalesEngine\QuotesList.asp" />
+    <Content Include="SalesEngine\QuotesList_IFrame.asp" />
+    <Content Include="SalesEngine\SalesEngine.asp" />
+    <Content Include="SalesEngine\System\ADOVBS.inc" />
+    <Content Include="SalesEngine\System\Global.js" />
+    <Content Include="SalesEngine\System\ssi_Dates.inc" />
+    <Content Include="SalesEngine\System\ssi_dbConn_close.inc" />
+    <Content Include="SalesEngine\System\ssi_dbConn_open.inc" />
+    <Content Include="SalesEngine\System\ssi_Header.inc" />
+    <Content Include="SalesEngine\System\ssi_Header_DeliveryRun.inc" />
+    <Content Include="SalesEngine\System\ssi_Header_Morcare.inc" />
+    <Content Include="SalesEngine\System\ssi_Header_MyDesk.inc" />
+    <Content Include="SalesEngine\System\ssi_Header_Timber.inc" />
+    <Content Include="SalesEngine\System\ssi_Security.inc" />
+    <Content Include="SalesEngine\System\Style.css" />
+    <Content Include="SalesEngine\TimberRequirements.asp" />
+    <Content Include="SalesEngine\Validate.asp" />
+    <Content Include="SalesEngine\Validate_Portal.asp" />
+    <None Include="MyDesk\DB\MyDesk.mdb" />
+    <None Include="SalesEngine\DB\MyDesk.mdb" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
+  <PropertyGroup>
+    <PreBuildEvent />
+    <PostBuildEvent />
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v16.0\WebApplications\Microsoft.WebApplication.targets" />
+</Project>
