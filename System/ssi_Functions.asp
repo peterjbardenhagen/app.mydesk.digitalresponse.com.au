@@ -1,4 +1,3 @@
-<!--#include virtual="System/Consts.asp"-->
 <!--#include virtual="Timezone.asp"-->
 <!--#include virtual="System/ssi_Alerts.asp"-->
 <!--#include virtual="System/ssi_Functions_Core.asp"-->
