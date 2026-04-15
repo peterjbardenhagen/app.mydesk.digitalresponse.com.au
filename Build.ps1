@@ -60,6 +60,39 @@ function Write-Error([string]$Message) {
     Write-Host "❌ $Message" -ForegroundColor Red
 }
 
+# Find devenv.exe (Visual Studio)
+function Find-DevEnv {
+    Write-Status "Checking for Visual Studio (devenv.exe)..." -Color "Cyan"
+    
+    # Check PATH first
+    $devEnvInPath = Get-Command "devenv" -ErrorAction SilentlyContinue
+    if ($devEnvInPath) {
+        Write-Success "Found devenv.exe in PATH: $($devEnvInPath.Source)"
+        return $devEnvInPath.Source
+    }
+    
+    # Common devenv locations
+    $possiblePaths = @(
+        # VS 2022
+        "${env:ProgramFiles}\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\devenv.exe"
+        "${env:ProgramFiles}\Microsoft Visual Studio\2022\Professional\Common7\IDE\devenv.exe"
+        "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\Common7\IDE\devenv.exe"
+        # VS 2019
+        "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Enterprise\Common7\IDE\devenv.exe"
+        "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Professional\Common7\IDE\devenv.exe"
+        "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Community\Common7\IDE\devenv.exe"
+    )
+    
+    foreach ($path in $possiblePaths) {
+        if (Test-Path $path) {
+            Write-Success "Found devenv.exe: $path"
+            return $path
+        }
+    }
+    
+    return $null
+}
+
 # Find MSBuild
 function Find-MSBuild {
     Write-Status "Locating MSBuild..." -Color "Cyan"
@@ -67,22 +100,31 @@ function Find-MSBuild {
     # Check PATH first
     $msbuildInPath = Get-Command "msbuild" -ErrorAction SilentlyContinue
     if ($msbuildInPath) {
-        Write-Success "Found MSBuild in PATH: $($msbuildInPath.Source)"
-        return $msbuildInPath.Source
+        # Check if this is BuildTools (which may lack WebApplications targets)
+        if ($msbuildInPath.Source -like "*BuildTools*") {
+            Write-Warning "Found MSBuild in PATH but it's from BuildTools (may lack Web Development workload)"
+            Write-Status "  Path: $($msbuildInPath.Source)" -Color "Gray"
+            # Still return it, but we'll prefer devenv if available
+            return $msbuildInPath.Source
+        } else {
+            Write-Success "Found MSBuild in PATH: $($msbuildInPath.Source)"
+            return $msbuildInPath.Source
+        }
     }
     
-    # Common MSBuild locations
+    # Common MSBuild locations (prefer full VS over BuildTools)
     $possiblePaths = @(
-        # VS 2022 (17.0+)
-        "${env:ProgramFiles}\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe"
+        # VS 2022 (17.0+) - Full installations first
         "${env:ProgramFiles}\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe"
         "${env:ProgramFiles}\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin\MSBuild.exe"
         "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"
-        # VS 2019 (16.0)
-        "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe"
+        # VS 2019 (16.0) - Full installations first
         "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\MSBuild.exe"
         "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Professional\MSBuild\Current\Bin\MSBuild.exe"
         "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe"
+        # BuildTools (may lack WebApplications targets)
+        "${env:ProgramFiles}\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe"
+        "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe"
         # VS 2017 (15.0)
         "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2017\BuildTools\MSBuild\15.0\Bin\MSBuild.exe"
         "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2017\Enterprise\MSBuild\15.0\Bin\MSBuild.exe"
@@ -92,7 +134,11 @@ function Find-MSBuild {
     
     foreach ($path in $possiblePaths) {
         if (Test-Path $path) {
-            Write-Success "Found MSBuild: $path"
+            if ($path -like "*BuildTools*") {
+                Write-Warning "Found MSBuild from BuildTools (may lack Web Development workload): $path"
+            } else {
+                Write-Success "Found MSBuild: $path"
+            }
             return $path
         }
     }
@@ -100,6 +146,7 @@ function Find-MSBuild {
     # Try vswhere (VS 2017+ installer)
     $vswherePath = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
     if (Test-Path $vswherePath) {
+        # Prefer full VS over BuildTools
         $vsPath = & $vswherePath -latest -products * -requires Microsoft.Component.MSBuild -property installationPath 2>$null
         if ($vsPath) {
             $msbuildPath = Join-Path $vsPath "MSBuild\Current\Bin\MSBuild.exe"
@@ -241,36 +288,61 @@ function Invoke-Clean {
 function Invoke-Build {
     param(
         [string]$MSBuildPath,
-        [string]$SolutionPath
+        [string]$SolutionPath,
+        [string]$DevEnvPath = $null
     )
     
     Write-Status "Building solution ($Configuration)..." -Color "Cyan"
-    Write-Status "Command: $MSBuildPath $SolutionPath /p:Configuration=$Configuration /p:Platform='Any CPU' /v:minimal" -Color "Gray"
     
-    $buildOutput = & $MSBuildPath $SolutionPath /p:Configuration=$Configuration /p:Platform="Any CPU" /v:minimal /nologo 2>&1
-    $exitCode = $LASTEXITCODE
+    $exitCode = 0
+    $buildOutput = @()
+    
+    # Use devenv.exe if available (has full Web Development workload)
+    if ($DevEnvPath) {
+        Write-Status "Using Visual Studio (devenv.exe) for build (includes Web Development workload)" -Color "Green"
+        Write-Status "Command: $DevEnvPath $SolutionPath /Build $Configuration" -Color "Gray"
+        
+        # devenv.exe build command
+        $process = Start-Process -FilePath $DevEnvPath -ArgumentList "`"$SolutionPath`"", "/Build", $Configuration -NoNewWindow -Wait -PassThru
+        $exitCode = $process.ExitCode
+        
+        if ($exitCode -eq 0) {
+            $buildOutput += "Build completed via Visual Studio"
+        } else {
+            $buildOutput += "Visual Studio build failed with exit code $exitCode"
+        }
+    } else {
+        # Fall back to MSBuild
+        Write-Status "Using MSBuild for build" -Color "Gray"
+        Write-Status "Command: $MSBuildPath $SolutionPath /p:Configuration=$Configuration /p:Platform='Any CPU' /v:minimal" -Color "Gray"
+        
+        $buildOutput = & $MSBuildPath $SolutionPath /p:Configuration=$Configuration /p:Platform="Any CPU" /v:minimal /nologo 2>&1
+        $exitCode = $LASTEXITCODE
+    }
     
     # Show output
     $buildOutput | ForEach-Object { Write-Status "  $_" -Color "Gray" }
     
-    # Check for specific errors
-    $outputText = $buildOutput -join " "
-    if ($outputText -match "Microsoft.WebApplication.targets" -or $outputText -match "WebApplications.*was not found") {
-        Write-Status "" -Color "White"
-        Write-Error "Web development build tools are missing!"
-        Write-Status "" -Color "White"
-        Write-Status "To fix this, run one of the following:" -Color "Yellow"
-        Write-Status "" -Color "White"
-        Write-Status "  Option 1: Run the install script to add missing components:" -Color "White"
-        Write-Status "    .\Install.ps1 -Force" -Color "Cyan"
-        Write-Status "" -Color "White"
-        Write-Status "  Option 2: Install manually via Visual Studio Installer:" -Color "White"
-        Write-Status "    1. Open 'Visual Studio Installer' from Start Menu" -Color "White"
-        Write-Status "    2. Click 'Modify' on Build Tools" -Color "White"
-        Write-Status "    3. Select 'Web development build tools' workload" -Color "White"
-        Write-Status "    4. Click Install" -Color "White"
-        Write-Status "" -Color "White"
-        return $false
+    # Check for specific errors when using MSBuild
+    if (-not $DevEnvPath) {
+        $outputText = $buildOutput -join " "
+        if ($outputText -match "Microsoft.WebApplication.targets" -or $outputText -match "WebApplications.*was not found") {
+            Write-Status "" -Color "White"
+            Write-Error "Web development build tools are missing!"
+            Write-Status "" -Color "White"
+            Write-Status "To fix this, run one of the following:" -Color "Yellow"
+            Write-Status "" -Color "White"
+            Write-Status "  Option 1: Use Visual Studio (which has the Web Development workload)" -Color "White"
+            Write-Status "    Open the solution in Visual Studio and build from there" -Color "Cyan"
+            Write-Status "" -Color "White"
+            Write-Status "  Option 2: Install Web Development build tools:" -Color "White"
+            Write-Status "    1. Open 'Visual Studio Installer' from Start Menu" -Color "White"
+            Write-Status "    2. Click 'Modify' on Build Tools" -Color "White"
+            Write-Status "    3. Select 'Web development build tools' workload" -Color "White"
+            Write-Status "    4. Click Install" -Color "White"
+            Write-Status "" -Color "White"
+            return $false
+        }
     }
     
     if ($exitCode -eq 0) {
@@ -366,6 +438,16 @@ function Start-BuildProcess {
     }
     Write-Status ""
     
+    # Check for devenv.exe (Visual Studio) - prefer this over BuildTools MSBuild
+    $devEnvPath = Find-DevEnv
+    if ($devEnvPath) {
+        Write-Status "Will use Visual Studio for build (includes Web Development workload)" -Color "Green"
+    } elseif ($msbuildPath -like "*BuildTools*") {
+        Write-Warning "Only BuildTools MSBuild found - may lack Web Development workload"
+        Write-Status "Visual Studio not found, will attempt build with MSBuild from BuildTools" -Color "Yellow"
+    }
+    Write-Status ""
+    
     # Find NuGet
     $nugetPath = $null
     if (-not $SkipRestore) {
@@ -397,7 +479,7 @@ function Start-BuildProcess {
     }
     
     # Build
-    $buildResult = Invoke-Build -MSBuildPath $msbuildPath -SolutionPath $SolutionFile
+    $buildResult = Invoke-Build -MSBuildPath $msbuildPath -SolutionPath $SolutionFile -DevEnvPath $devEnvPath
     if (-not $buildResult) {
         exit 1
     }

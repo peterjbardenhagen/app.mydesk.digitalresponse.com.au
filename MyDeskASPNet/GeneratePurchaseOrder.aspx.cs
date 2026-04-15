@@ -44,7 +44,6 @@ namespace MyDeskASPNet
             // Get protocol based on hostname
             string protocol = GetProtocol(host);
 
-            bool email = true; // might want to fix later
             int poid = Convert.ToInt16(Request["poid"]);
             string notes = Request["notes"]+"".ToString();
             string attention = Request["attention"]+"".ToString();
@@ -57,7 +56,6 @@ namespace MyDeskASPNet
 
             if (poid == 0)
             {
-                email = true;
                 poid = 2068;
                 workingDir = "/Clients/SalesEngineTL";
                 toEmail = "peterb@digitalresponse.com.au";
@@ -89,15 +87,6 @@ namespace MyDeskASPNet
                 }
 
                 if (mode == 1)
-                {
-                    email = true;
-                }
-                else
-                {
-                    email = false;
-                }
-
-				if (mode == 1)
                 {
                     Response.Redirect(workingDir + "/PurchaseOrders/Email_Proc.asp?Notes=" + notes + "&Attention=" + attention + "&ToEmail=" + toEmail + "&poid=" + poid.ToString());
                 }

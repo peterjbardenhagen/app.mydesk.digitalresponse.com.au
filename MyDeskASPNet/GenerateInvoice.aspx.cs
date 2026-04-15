@@ -44,14 +44,15 @@ namespace MyDeskASPNet
             // Get protocol based on hostname
             string protocol = GetProtocol(host);
 
-            bool email = true; // might want to fix later
             int invoiceId = Convert.ToInt16(Request["invoiceId"]);
+            int mode = Convert.ToInt16(Request["mode"]);
+
+            // Determine if email should be sent based on mode
             string notes = Request["notes"]+"".ToString();
             string attention = Request["attention"]+"".ToString();
             string toEmail = Request["toEmail"]+"".ToString();
             string workingDir = Request["workingDir"]+"".ToString();
             string system = workingDir.Replace("/Clients/", "");
-            int mode = Convert.ToInt16(Request["mode"]);
 
             string path = Server.MapPath(workingDir + "/Invoices/Files");
 
@@ -88,15 +89,6 @@ namespace MyDeskASPNet
 				using (var wc = new System.Net.WebClient())
                 {
                     wc.OpenRead(wcUrl);
-                }
-
-                if (mode == 1)
-                {
-                    email = true;
-                }
-                else
-                {
-                    email = false;
                 }
 
 				if (mode == 1)
