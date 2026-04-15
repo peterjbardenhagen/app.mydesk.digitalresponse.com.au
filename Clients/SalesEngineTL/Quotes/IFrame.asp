@@ -55,13 +55,19 @@ strCustomerSearch = Trim(Request("CustomerSearch"))
 
 %>
 <!--#include virtual="/System/ssi_dbConn_Open.inc"-->
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-	<title>MyDesk</title>
-	<META http-equiv="Cache-Control" content="no-cache">
-	<META http-equiv="Expires" content="0">
-	<META http-equiv="Pragma" content="no-cache">
-	<link href="/System/Style2.css" rel="stylesheet" type="text/css" ></link>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Quotes List - Techlight MyDesk</title>
+	<meta http-equiv="Cache-Control" content="no-cache">
+	<meta http-equiv="Expires" content="0">
+	<meta http-equiv="Pragma" content="no-cache">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<link href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/Style_Techlight.css" rel="stylesheet" type="text/css">
 	<script src="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/Global.js"></script>
 	<script>
 function copyRecord(id) {
@@ -239,7 +245,7 @@ end function
 %>
 
 </head>
-<body style="background-color:#eeeeee;">
+<body style="background-color:#ffffff; margin: 0; padding: 16px; font-family: 'Inter', sans-serif;">
 <%
 
 Dim oRecordset
@@ -279,19 +285,33 @@ strSql = strSql & " ORDER BY Qid DESC"
 Set oRecordset = dbConn.Execute(strSql)
 If oRecordset.BOF And oRecordset.EOF Then MyRedirect(Request.Cookies("ClientSettings")("WorkingDir") & "/NoRecords.asp")
 
-Response.Write("<table cellspacing=0>")
-Response.Write("<tr><td class='header' nowrap>Quote&nbsp;#</td><td class='header'>Company Name</td><td class='header'>Project</td><td class='header'>Quote Status</td><td class='header'>Cost Ex GST</td><td class='header'>Price Ex GST</td><td class='header'>Margin</td><td class='header' nowrap>Quote Date</td><td class='header' nowrap>Action</td></tr>")
+Response.Write("<table class='tl-data-grid'>")
+Response.Write("<thead><tr><th>Quote #</th><th>Company</th><th>Project</th><th>Status</th><th>Cost Ex GST</th><th>Price Ex GST</th><th>Margin</th><th>Date</th><th>Actions</th></tr></thead>")
+Response.Write("<tbody>")
 Do While Not (oRecordset.EOF)
-	Dim Id
-	Dim Action
+	Dim Id, Action, StatusClass
 	Id = oRecordset("Quote #")
-	Action = "<input type='button' onclick='parent.document.location.href=""" & Request.Cookies("ClientSettings")("WorkingDir") & "/Quotes/View.asp?Qid=" & Id & """' value='View'/> <input type='button' onclick='parent.document.location.href=""" & Request.Cookies("ClientSettings")("WorkingDir") & "/Quotes/Edit.asp?Qid=" & Id & """' value='Edit'/> <input type='button' onclick='parent.document.location.href=""" & Request.Cookies("ClientSettings")("WorkingDir") & "/Quotes/UpdateStatus.asp?Qid=" & Id & """' value='Update' /> <input type='button' onclick='copyRecord(" & Id & ");' value='Copy Quote'/> <input type='button' onclick='deleteRecord(" & Id & ");' value='Delete'/>"
-	Response.Write("<tr style='height:1px !important;background-color:white;'></tr>")
+	
+	' Determine status badge class
+	Select Case oRecordset("Quote Status")
+		Case "Won", "Approved"
+			StatusClass = "tl-badge-success"
+		Case "Pending", "Submitted"
+			StatusClass = "tl-badge-warning"
+		Case "Lost", "Cancelled"
+			StatusClass = "tl-badge-danger"
+		Case Else
+			StatusClass = "tl-badge-info"
+	End Select
+	
+	Action = "<a href='" & Request.Cookies("ClientSettings")("WorkingDir") & "/Quotes/View.asp?Qid=" & Id & "' class='tl-btn-secondary' style='padding:4px 8px;font-size:12px;'>View</a> " & _
+			 "<a href='" & Request.Cookies("ClientSettings")("WorkingDir") & "/Quotes/Edit.asp?Qid=" & Id & "' class='tl-btn-primary' style='padding:4px 8px;font-size:12px;'>Edit</a>"
+	
 	Response.Write("<tr>")
-	Response.Write("<td nowrap>" & oRecordset("Quote #") & "</td>")
+	Response.Write("<td nowrap><strong>" & oRecordset("Quote #") & "</strong></td>")
 	Response.Write("<td>" & oRecordset("CompanyName") & "</td>")
 	Response.Write("<td>" & oRecordset("Project") & "</td>")
-	Response.Write("<td>" & oRecordset("Quote Status") & "</td>")
+	Response.Write("<td><span class='tl-badge " & StatusClass & "'>" & oRecordset("Quote Status") & "</span></td>")
 	Response.Write("<td>$" & FormatNumber(oRecordset("UnitCostTotal"),2) & "</td>")
 	Response.Write("<td>$" & FormatNumber(oRecordset("NettPriceTotal"),2) & "</td>")
 	Response.Write("<td>" & FormatNumber(oRecordset("Margin"),2) & "%</td>")
@@ -300,7 +320,7 @@ Do While Not (oRecordset.EOF)
 	Response.Write("</tr>")
 	oRecordset.MoveNext
 Loop
-Response.Write("</table>")
+Response.Write("</tbody></table>")
 
 ' Close recordset and connection
 oRecordset.close
