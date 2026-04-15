@@ -18,12 +18,14 @@ Response.Expires = -1
 Response.ExpiresAbsolute = DateAdd("Y", -10, Now())
 Response.CacheControl = "no-store, private, must-revalidate"
 
-' Include required system files
+' Include required system files - Var.asp MUST be first to set WorkingDir
 %>
+<!--#include virtual="/System/Var.asp"-->
 <!--#include virtual="/System/ssi_Functions.asp"-->
 <%
 
 ' Initialize session variables for Techlight (always the same)
+' Var.asp already sets WorkingDir cookie, now set session if needed
 If Session("WorkingDir") = "" Then
     Session("Stylesheet") = "Style.css"
     Session("MainBgColor") = "#cccccc"
@@ -34,6 +36,11 @@ If Session("WorkingDir") = "" Then
     Session("PortalCompany") = "Techlight"
     Session("WorkingDir") = "/Clients/SalesEngineTL"
     Session("HomeColor1") = "#005b89"
+End If
+
+' HARDEN: Always ensure WorkingDir is set - never allow null or empty
+If Session("WorkingDir") = "" Or IsNull(Session("WorkingDir")) Then
+    Session("WorkingDir") = "/Clients/SalesEngineTL"
 End If
 
 ' Check if user is already logged in

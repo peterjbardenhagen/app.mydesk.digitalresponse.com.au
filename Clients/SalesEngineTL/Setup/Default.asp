@@ -1,8 +1,8 @@
 <% 
-'Response.AddHeader "Pragma", "No-Store"
-'Response.AddHeader "cache-control", "no-store, private, must-revalidate"
-'Response.Expires = -1
-'Response.ExpiresAbsolute = DateAdd("Y", -10, Now())
+Response.AddHeader "Pragma", "No-Store"
+Response.AddHeader "cache-control", "no-store, private, must-revalidate"
+Response.Expires = -1
+Response.ExpiresAbsolute = DateAdd("Y", -10, Now())
 Response.CacheControl = "no-store, private, must-revalidate"
 
 Dim strMsg, strWorkingDir
@@ -395,6 +395,24 @@ isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
 					</svg>
 				</div>
 				<p class="setup-card-desc">Define user permissions, access levels, and role-based security</p>
+			</a>
+
+			<!-- API Keys -->
+			<a href="APIKeys/Default.asp" class="setup-card" target="_parent">
+				<div class="setup-card-header">
+					<div class="setup-card-icon" style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);">
+						<svg viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2">
+							<path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+						</svg>
+					</div>
+					<div>
+						<h3 class="setup-card-title">API Keys</h3>
+					</div>
+					<svg class="setup-card-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+						<polyline points="9 18 15 12 9 6"></polyline>
+					</svg>
+				</div>
+				<p class="setup-card-desc">Manage API keys for external system integrations, webhooks, and third-party access</p>
 			</a>
 
 		</div>

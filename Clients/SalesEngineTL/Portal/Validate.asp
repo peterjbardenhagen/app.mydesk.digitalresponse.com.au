@@ -1,4 +1,10 @@
 <% 
+' Techlight MyDesk - Login Validation
+' ===============================================================================
+' Validates user credentials and sets up session
+' MUST include Var.asp first to ensure WorkingDir is always set
+' ===============================================================================
+
 Response.AddHeader "Pragma", "No-Store"
 Response.AddHeader "cache-control", "no-store, private, must-revalidate"
 Response.Expires = -1
@@ -6,9 +12,26 @@ Response.ExpiresAbsolute = DateAdd("Y", -10, Now())
 Response.CacheControl = "no-store, private, must-revalidate"
 
 %>
+<!--#include virtual="/System/Var.asp"-->
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <!--#include virtual="/System/ssi_Functions.asp"-->
 <%
+
+' HARDEN: Always ensure WorkingDir is set - fallback to hardcoded value if needed
+If Session("WorkingDir") = "" Or IsNull(Session("WorkingDir")) Then
+    Session("WorkingDir") = "/Clients/SalesEngineTL"
+End If
+
+' Also ensure the WorkingDir cookie is set
+Response.Cookies("ClientSettings")("WorkingDir") = "/Clients/SalesEngineTL"
+Response.Cookies("ClientSettings").Expires = Date() + 1000
+
+' Set other required client settings if not already set
+If Request.Cookies("ClientSettings")("Prefix") = "" Then
+    Response.Cookies("ClientSettings")("Prefix") = "TL"
+    Response.Cookies("ClientSettings")("State") = "AUS"
+    Response.Cookies("ClientSettings").Expires = Date() + 1000
+End If
 
 Dim strUsername
 Dim strPassword

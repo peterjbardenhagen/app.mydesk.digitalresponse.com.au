@@ -1,4 +1,9 @@
 <% 
+' Techlight MyDesk - Portal Cookie Setting and Redirect
+' ===============================================================================
+' This file is called after successful login to set cookies and redirect
+' MUST include Var.asp first to ensure WorkingDir is always set
+' ===============================================================================
 
 'Response.AddHeader "Pragma", "No-Store"
 'Response.AddHeader "cache-control", "no-store, private, must-revalidate"
@@ -7,7 +12,20 @@
 'Response.CacheControl = "no-store, private, must-revalidate"
 
 %>
+<!--#include virtual="/System/Var.asp"-->
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
+<%
+
+' HARDEN: Always ensure WorkingDir is set - fallback to hardcoded value if needed
+If Session("WorkingDir") = "" Or IsNull(Session("WorkingDir")) Then
+    Session("WorkingDir") = "/Clients/SalesEngineTL"
+End If
+
+' Also ensure the WorkingDir cookie is set
+Response.Cookies("ClientSettings")("WorkingDir") = "/Clients/SalesEngineTL"
+Response.Cookies("ClientSettings").Expires = Date() + 1000
+
+%>
 <%
 
 Function GetAccessCodesList(strCode, lngUserTypeId)

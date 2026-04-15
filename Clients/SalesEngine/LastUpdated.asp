@@ -16,9 +16,7 @@ Response.AddHeader "cache-control", "no-store, private, must-revalidate"
 <%
 
 Dim objFileSystemObject
-Dim myNSWFile
-Dim myRealDate
-
+Dim myNSWFi
 Set objFileSystemObject = Server.CreateObject("Scripting.FileSystemObject")
 Set myNSWFile = objFileSystemObject.GetFile(Server.MapPath("/Database/Pierlite_NSW.mdb"))
 
