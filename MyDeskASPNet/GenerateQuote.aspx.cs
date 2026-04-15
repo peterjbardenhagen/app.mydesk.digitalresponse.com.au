@@ -45,14 +45,10 @@ namespace MyDeskASPNet
             // Get protocol based on hostname
             string protocol = GetProtocol(host);
 
-            //bool email = true; // might want to fix later
-            //bool fax = false; // might want to fix later
             int qid = Convert.ToInt16(Request["qid"]);
             string notes = Request["notes"]+"".ToString();
             string attention = Request["attention"]+"".ToString();
             string toEmail = Request["toEmail"]+"".ToString();
-            string fromFax = Request["fromFax"]+"".ToString();
-            string toFax = Request["toFax"]+"".ToString();
             string workingDir = Request["workingDir"]+"".ToString();
             string system = workingDir.Replace("/Clients/", "");
             int mode = Convert.ToInt16(Request["mode"]);
@@ -104,34 +100,12 @@ namespace MyDeskASPNet
                     }
                 }
 
-                        //if (mode == 1)
-                        //{
-                        //    email = true;
-                        //}
-                        //else
-                        //{
-                        //    email = false;
-                        //}
-
-                        //if (mode == 2)
-                        //{
-                        //    fax = true;
-                        //}
-                        //else
-                        //{
-                        //    fax = false;
-                        //}
-
                         System.Threading.Thread.Sleep(5000);
 
 				if (mode == 1)
                         {
 					Response.Redirect(workingDir + "/Quotes/Email_Proc.asp?Notes=" + notes + "&Attention=" + attention + "&ToEmail=" + toEmail + "&Qid=" + qid.ToString());
 				}
-                        else
-                        {
-                    Response.Redirect(workingDir + "/Quotes/Fax_Proc.asp?Notes=" + notes + "&Attention=" + attention + "&ToEmail=" + toEmail + "&Qid=" + qid.ToString());
-                }
 
                     //}
                     //catch (Exception ex)

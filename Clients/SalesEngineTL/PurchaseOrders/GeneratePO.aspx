@@ -87,8 +87,6 @@
 
                 If intMode = 1 Then
                     Response.Redirect("Email_Proc.asp?Notes=" & strNotes.Replace(Convert.ToChar(10), "") & "&Attention=" & strAttention & "&ToEmail=" & strToEmail & "&POid=" & lngPOid & "&CurrencyName=" & strCurrencyName & "&CurrencyRate=" & dblCurrencyRate & "&CurrencyPrefix=" & strCurrencyPrefix)
-                ElseIf intMode = 2 Then
-                    Response.Redirect("Fax_Proc.asp?Notes=" & strNotes.Replace(Convert.ToChar(10), "") & "&Attention=" & strAttention & "&ToFax=" & strToFax & "&FromFax=" & strFromFax & "&POid=" & lngPOid & "&CurrencyName=" & strCurrencyName & "&CurrencyRate=" & dblCurrencyRate & "&CurrencyPrefix=" & strCurrencyPrefix)
                 End If
             End Sub
 

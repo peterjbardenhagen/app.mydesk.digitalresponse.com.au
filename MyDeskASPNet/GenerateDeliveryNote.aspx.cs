@@ -44,14 +44,10 @@ namespace MyDeskASPNet
             // Get protocol based on hostname
             string protocol = GetProtocol(host);
 
-            //bool email = true; // might want to fix later
-            //bool fax = false; // might want to fix later
             int invoiceId = Convert.ToInt16(Request["invoiceId"]);
             string notes = Request["notes"]+"".ToString();
             string attention = Request["attention"]+"".ToString();
             string toEmail = Request["toEmail"]+"".ToString();
-            string fromFax = Request["fromFax"]+"".ToString();
-            string toFax = Request["toFax"]+"".ToString();
             string workingDir = Request["workingDir"]+"".ToString();
             string system = workingDir.Replace("/Clients/", "");
             int mode = Convert.ToInt16(Request["mode"]);

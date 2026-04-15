@@ -45,13 +45,10 @@ namespace MyDeskASPNet
             string protocol = GetProtocol(host);
 
             bool email = true; // might want to fix later
-            bool fax = false; // might want to fix later
             int poid = Convert.ToInt16(Request["poid"]);
             string notes = Request["notes"]+"".ToString();
             string attention = Request["attention"]+"".ToString();
             string toEmail = Request["toEmail"]+"".ToString();
-            string fromFax = Request["fromFax"]+"".ToString();
-            string toFax = Request["toFax"]+"".ToString();
             string workingDir = Request["workingDir"]+"".ToString();
             string system = workingDir.Replace("/Clients/", "");
             int mode = Convert.ToInt16(Request["mode"]);
@@ -100,22 +97,9 @@ namespace MyDeskASPNet
                     email = false;
                 }
 
-                if (mode == 2)
-                {
-                    fax = true;
-                }
-                else
-                {
-                    fax = false;
-                }
-
 				if (mode == 1)
                 {
                     Response.Redirect(workingDir + "/PurchaseOrders/Email_Proc.asp?Notes=" + notes + "&Attention=" + attention + "&ToEmail=" + toEmail + "&poid=" + poid.ToString());
-                }
-                else
-                {
-                    Response.Redirect(workingDir + "/PurchaseOrders/Fax_Proc.asp?Notes=" + notes + "&Attention=" + attention + "&ToEmail=" + toEmail + "&poid=" + poid.ToString());
                 }
             }
         }
