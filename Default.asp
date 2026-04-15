@@ -79,7 +79,7 @@ strMsg = Trim(Request("Msg"))
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MyDesk - Techlight Sign In</title>
+    <title>Techlight MyDesk - Sign In</title>
     <link rel="shortcut icon" href="/favicon.ico">
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
     <meta http-equiv="Expires" content="0">

@@ -20,7 +20,7 @@ strWorkingDir = Session("WorkingDir")
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>MyDesk - Techlight CRM Dashboard</title>
+	<title>Techlight MyDesk - Dashboard</title>
 	<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
 	<meta http-equiv="Expires" content="0">
 	<meta http-equiv="Pragma" content="no-store">
@@ -37,7 +37,7 @@ strWorkingDir = Session("WorkingDir")
 	<section class="tl-page-header">
 		<h1 class="tl-page-title">Welcome, <%= Session("Name") %></h1>
 		<p class="tl-page-subtitle">
-			You have successfully logged into MyDesk CRM. 
+			You have successfully logged into Techlight MyDesk. 
 			<% If Session("Admin") Then %><span class="tl-status tl-status-issued" style="margin-left: 8px;">Administrator</span><% End If %>
 		</p>
 		

@@ -197,7 +197,7 @@ End If
 			<!-- Quick Navigation Search -->
 			<div class="tl-quick-search">
 				<span class="tl-quick-search-label">Quick Navigation</span>
-				<form action="<%= strWorkingDir %>/QuickNav.asp" method="get" target="_parent" style="display: flex; align-items: center; gap: 8px; flex: 1;">
+				<form action="<%= strWorkingDir %>/QuickNav.asp" method="get" target="_self" style="display: flex; align-items: center; gap: 8px; flex: 1;">
 					<input type="text" name="ID" class="tl-quick-search-input" placeholder="Enter ID #" required>
 					<select name="Type" class="tl-quick-search-select">
 						<option value="Quote">Quote</option>
@@ -218,7 +218,7 @@ End If
 
 		<!-- Quick Actions Grid -->
 		<div class="tl-quick-actions">
-			<a href="<%= strWorkingDir %>/Contacts/" class="tl-action-btn" target="_parent">
+			<a href="<%= strWorkingDir %>/Contacts/" class="tl-action-btn" target="_self">
 				<svg class="tl-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
 					<circle cx="9" cy="7" r="4"></circle>
@@ -236,7 +236,7 @@ End If
 				</svg>
 				<span class="tl-action-label">Quotes</span>
 			</a>
-			<a href="<%= strWorkingDir %>/Invoices/" class="tl-action-btn" target="_parent">
+			<a href="<%= strWorkingDir %>/Invoices/" class="tl-action-btn" target="_self">
 				<svg class="tl-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
 					<line x1="3" y1="9" x2="21" y2="9"></line>
@@ -244,7 +244,7 @@ End If
 				</svg>
 				<span class="tl-action-label">Invoices</span>
 			</a>
-			<a href="<%= strWorkingDir %>/PurchaseOrders/" class="tl-action-btn" target="_parent">
+			<a href="<%= strWorkingDir %>/PurchaseOrders/" class="tl-action-btn" target="_self">
 				<svg class="tl-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
 					<line x1="3" y1="6" x2="21" y2="6"></line>
@@ -252,14 +252,14 @@ End If
 				</svg>
 				<span class="tl-action-label">Purchase Orders</span>
 			</a>
-			<a href="<%= strWorkingDir %>/Setup/" class="tl-action-btn" target="_parent">
+			<a href="<%= strWorkingDir %>/Setup/" class="tl-action-btn" target="_self">
 				<svg class="tl-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<circle cx="12" cy="12" r="3"></circle>
 					<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
 				</svg>
 				<span class="tl-action-label">Setup</span>
 			</a>
-			<a href="<%= strWorkingDir %>/Users/" class="tl-action-btn" target="_parent">
+			<a href="<%= strWorkingDir %>/Users/" class="tl-action-btn" target="_self">
 				<svg class="tl-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
 					<circle cx="12" cy="7" r="4"></circle>
@@ -433,7 +433,7 @@ End If
 								<p style="font-size: 11px; color: #9b2c2c;">Require follow-up with customers</p>
 							</div>
 						</div>
-						<a href="<%= strWorkingDir %>/Quotes/" target="_parent" style="padding: 6px 12px; background: #c53030; color: white; border-radius: 6px; font-size: 12px; text-decoration: none;">View</a>
+						<a href="<%= strWorkingDir %>/Quotes/" target="_self" style="padding: 6px 12px; background: #c53030; color: white; border-radius: 6px; font-size: 12px; text-decoration: none;">View</a>
 					</div>
 					<% End If %>
 
@@ -451,7 +451,7 @@ End If
 								<p style="font-size: 11px; color: #9b2c2c;">Payment collection required</p>
 							</div>
 						</div>
-						<a href="<%= strWorkingDir %>/Invoices/" target="_parent" style="padding: 6px 12px; background: #c53030; color: white; border-radius: 6px; font-size: 12px; text-decoration: none;">View</a>
+						<a href="<%= strWorkingDir %>/Invoices/" target="_self" style="padding: 6px 12px; background: #c53030; color: white; border-radius: 6px; font-size: 12px; text-decoration: none;">View</a>
 					</div>
 					<% End If %>
 
@@ -468,7 +468,7 @@ End If
 								<p style="font-size: 11px; color: #9b2c2c;">Awaiting director approval</p>
 							</div>
 						</div>
-						<a href="<%= strWorkingDir %>/PurchaseOrders/" target="_parent" style="padding: 6px 12px; background: #c53030; color: white; border-radius: 6px; font-size: 12px; text-decoration: none;">View</a>
+						<a href="<%= strWorkingDir %>/PurchaseOrders/" target="_self" style="padding: 6px 12px; background: #c53030; color: white; border-radius: 6px; font-size: 12px; text-decoration: none;">View</a>
 					</div>
 					<% End If %>
 
@@ -494,7 +494,7 @@ End If
 					</h3>
 					
 					<div style="display: flex; flex-direction: column; gap: 10px;">
-						<a href="<%= strWorkingDir %>/Admin/MYOBData.asp" target="_parent" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: white; border-radius: 8px; text-decoration: none; border: 1px solid #fbd38d; transition: all 0.2s;">
+						<a href="<%= strWorkingDir %>/Admin/MYOBData.asp" target="_self" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: white; border-radius: 8px; text-decoration: none; border: 1px solid #fbd38d; transition: all 0.2s;">
 							<div style="width: 32px; height: 32px; background: #fbd38d; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
 								<svg viewBox="0 0 24 24" fill="none" stroke="#975a16" stroke-width="2" style="width: 16px; height: 16px;">
 									<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -509,7 +509,7 @@ End If
 							</svg>
 						</a>
 
-						<a href="<%= strWorkingDir %>/Quotes/?status=pending" target="_parent" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: white; border-radius: 8px; text-decoration: none; border: 1px solid #fbd38d; transition: all 0.2s;">
+						<a href="<%= strWorkingDir %>/Quotes/?status=pending" target="_self" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: white; border-radius: 8px; text-decoration: none; border: 1px solid #fbd38d; transition: all 0.2s;">
 							<div style="width: 32px; height: 32px; background: #fbd38d; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
 								<svg viewBox="0 0 24 24" fill="none" stroke="#975a16" stroke-width="2" style="width: 16px; height: 16px;">
 									<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -524,7 +524,7 @@ End If
 							</svg>
 						</a>
 
-						<a href="<%= strWorkingDir %>/Admin/" target="_parent" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: white; border-radius: 8px; text-decoration: none; border: 1px solid #fbd38d; transition: all 0.2s;">
+						<a href="<%= strWorkingDir %>/Admin/" target="_self" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: white; border-radius: 8px; text-decoration: none; border: 1px solid #fbd38d; transition: all 0.2s;">
 							<div style="width: 32px; height: 32px; background: #fbd38d; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
 								<svg viewBox="0 0 24 24" fill="none" stroke="#975a16" stroke-width="2" style="width: 16px; height: 16px;">
 									<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
@@ -560,7 +560,7 @@ End If
 					</h3>
 					<ul class="tl-menu-list">
 						<li class="tl-menu-item">
-							<a href="<%= strWorkingDir %>/Contacts/Add.asp" class="tl-menu-link" target="_parent">
+							<a href="<%= strWorkingDir %>/Contacts/Add.asp" class="tl-menu-link" target="_self">
 								<svg class="tl-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 									<line x1="12" y1="5" x2="12" y2="19"></line>
 									<line x1="5" y1="12" x2="19" y2="12"></line>
@@ -569,7 +569,7 @@ End If
 							</a>
 						</li>
 						<li class="tl-menu-item">
-							<a href="<%= strWorkingDir %>/Quotes/Add.asp" class="tl-menu-link" target="_parent">
+							<a href="<%= strWorkingDir %>/Quotes/Add.asp" class="tl-menu-link" target="_self">
 								<svg class="tl-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 									<line x1="12" y1="5" x2="12" y2="19"></line>
 									<line x1="5" y1="12" x2="19" y2="12"></line>
@@ -578,7 +578,7 @@ End If
 							</a>
 						</li>
 						<li class="tl-menu-item">
-							<a href="<%= strWorkingDir %>/PurchaseOrders/Add.asp" class="tl-menu-link" target="_parent">
+							<a href="<%= strWorkingDir %>/PurchaseOrders/Add.asp" class="tl-menu-link" target="_self">
 								<svg class="tl-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 									<line x1="12" y1="5" x2="12" y2="19"></line>
 									<line x1="5" y1="12" x2="19" y2="12"></line>
@@ -587,7 +587,7 @@ End If
 							</a>
 						</li>
 						<li class="tl-menu-item">
-							<a href="<%= strWorkingDir %>/Reports/" class="tl-menu-link" target="_parent">
+							<a href="<%= strWorkingDir %>/Reports/" class="tl-menu-link" target="_self">
 								<svg class="tl-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 									<path d="M3 3v18h18"></path>
 									<path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"></path>
