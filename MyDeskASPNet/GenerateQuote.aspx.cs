@@ -11,13 +11,39 @@ namespace MyDeskASPNet
 {
     public partial class GenerateQuote : System.Web.UI.Page
     {
+        // Returns the appropriate protocol (http or https) based on the hostname
+        // Production (techlight.digitalresponse.com.au) requires HTTPS
+        // Local/UAT environments can use HTTP or HTTPS
+        private string GetProtocol(string hostname)
+        {
+            string hostLower = hostname.ToLower();
+            
+            // Production hostname - must use HTTPS
+            if (hostLower == "techlight.digitalresponse.com.au")
+            {
+                return "https";
+            }
+            else
+            {
+                // Local/UAT environments - use current protocol
+                string isHttps = Request.ServerVariables["HTTPS"];
+                if (isHttps == "on" || isHttps == "true")
+                {
+                    return "https";
+                }
+                else
+                {
+                    return "http";
+                }
+            }
+        }
+
         protected void Page_Load(object sender, EventArgs e)
         {
             string host = Request.ServerVariables["SERVER_NAME"];
-            if (host == "localhost")
-            {
-                host = "techlight.digitalresponse.com.au";
-            }
+            
+            // Get protocol based on hostname
+            string protocol = GetProtocol(host);
 
             //bool email = true; // might want to fix later
             //bool fax = false; // might want to fix later
@@ -56,9 +82,9 @@ namespace MyDeskASPNet
 
                 if (Request.ServerVariables["SERVER_NAME"] == "localhost")
                 {
-					wcUrl = "https://" + Request.ServerVariables["SERVER_NAME"] + ":" + Request.ServerVariables["SERVER_PORT"] + "/ScrapeToPDF.aspx?system=" + system + "&module=quote&url=" + "https://" + host + workingDir + "/Quotes/View.asp?qid=" + qid.ToString();
+					wcUrl = protocol + "://" + Request.ServerVariables["SERVER_NAME"] + ":" + Request.ServerVariables["SERVER_PORT"] + "/ScrapeToPDF.aspx?system=" + system + "&module=quote&url=" + protocol + "://" + host + workingDir + "/Quotes/View.asp?qid=" + qid.ToString();
 				} else {
-                    wcUrl = "https://" + Request.ServerVariables["SERVER_NAME"] + ":" + Request.ServerVariables["SERVER_PORT"] + "/MyDeskASPNet/ScrapeToPDF.aspx?system=" + system + "&module=quote&url=" + "https://" + host + workingDir + "/Quotes/View.asp?qid=" + qid.ToString();
+                    wcUrl = protocol + "://" + Request.ServerVariables["SERVER_NAME"] + ":" + Request.ServerVariables["SERVER_PORT"] + "/MyDeskASPNet/ScrapeToPDF.aspx?system=" + system + "&module=quote&url=" + protocol + "://" + host + workingDir + "/Quotes/View.asp?qid=" + qid.ToString();
                 }
 				
 				//Response.Write(wcUrl);
