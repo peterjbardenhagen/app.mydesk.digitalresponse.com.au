@@ -6,26 +6,36 @@
     Builds the MyDeskASPNet solution and creates the binaries needed for deployment.
     This script locates MSBuild, restores NuGet packages, and compiles the solution.
 .PARAMETER Configuration
-    Build configuration: Debug or Release (default: Release)
+    Build configuration: Debug or Release (default: Debug for troubleshooting)
 .PARAMETER Clean
     Clean the build before compiling
 .PARAMETER SkipRestore
     Skip NuGet package restore
+.PARAMETER Release
+    Build Release configuration (optimized, no debug symbols)
 .EXAMPLE
-    .\Build.ps1
-    .\Build.ps1 -Configuration Debug
-    .\Build.ps1 -Clean
+    .\Build.ps1                    # Build Debug (with PDB files for debugging)
+    .\Build.ps1 -Release           # Build Release (optimized for production)
+    .\Build.ps1 -Clean             # Clean and rebuild Debug
+    .\Build.ps1 -Clean -Release    # Clean and rebuild Release
 #>
 
 [CmdletBinding()]
 param(
     [ValidateSet("Debug", "Release")]
-    [string]$Configuration = "Release",
+    [string]$Configuration = "Debug",
     
     [switch]$Clean,
     
-    [switch]$SkipRestore
+    [switch]$SkipRestore,
+    
+    [switch]$Release
 )
+
+# If Release switch is specified, override Configuration
+if ($Release) {
+    $Configuration = "Release"
+}
 
 # Configuration
 $script:ProjectName = "MyDeskASPNet"
@@ -382,6 +392,14 @@ function Start-BuildProcess {
     Write-Status "  Build Summary" -Color "Cyan"
     Write-Status "========================================" -Color "Cyan"
     Write-Success "Build completed successfully!"
+    Write-Status "Configuration: $Configuration" -Color "Gray"
+    if ($Configuration -eq "Debug") {
+        Write-Status "  ✓ Includes PDB files for debugging" -Color "Green"
+        Write-Status "  ✓ Optimizations disabled for easier troubleshooting" -Color "Green"
+    } else {
+        Write-Status "  ✓ Optimized for production" -Color "Green"
+        Write-Status "  ✓ No debug symbols (smaller file size)" -Color "Green"
+    }
     Write-Status "Output location: $(Resolve-Path $OutputPath)" -Color "Gray"
     Write-Status ""
     Write-Status "Next steps:" -Color "Yellow"
