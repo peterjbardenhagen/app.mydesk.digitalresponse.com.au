@@ -275,7 +275,8 @@ function Install-BuildTools {
 # Detect if running on Windows Server or Windows 10/11
 function Test-IsWindowsServer {
     $osInfo = Get-CimInstance -ClassName Win32_OperatingSystem
-    return $osInfo.ProductType -eq 1 -or $osInfo.ProductType -eq 2
+    # ProductType: 1 = Workstation (Windows 10/11), 2 = Domain Controller, 3 = Server
+    return $osInfo.ProductType -eq 2 -or $osInfo.ProductType -eq 3
 }
 
 # Check if IIS is installed
