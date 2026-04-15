@@ -14,7 +14,7 @@ For Each Item In Request.Cookies
 	Response.Cookies(Item) = ""
 Next
 
-Response.Redirect("/Clients/SalesEngine/Portal/Validate_Portal.asp?ClientId=Techlight&AccessCode=2984")
+Response.Redirect("/Clients/SalesEngineTL/Portal/Validate_Portal.asp")
 Response.End
 
 %>
@@ -96,7 +96,7 @@ If strMsg <> "" Then
 End If
 %>
 
-								<form action="/Clients/SalesEngine/Portal/Validate_Portal.asp" method="post" name="Form1" ID="Form1" onSubmit="return checkForm();">
+								<form action="/Clients/SalesEngineTL/Portal/Validate_Portal.asp" method="post" name="Form1" ID="Form1" onSubmit="return checkForm();">
 								
 
 								<!--<div style="position:absolute;top:150px;left:130px;color:white;z-index:50;font-weight:bold;font-size:14px;"><span style="color:white;font-weight:bold;font-size:36px;">*</span>&nbsp;&nbsp;MyDesk will be offline for scheduled maintenance between 6pm and 8pm AEST 13/11/2008.</div>-->
