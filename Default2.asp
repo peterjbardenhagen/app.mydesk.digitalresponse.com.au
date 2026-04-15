@@ -29,7 +29,7 @@ If Err.Number <> 0 Then
 	Response.End
 End If
 
-Response.Redirect("/Clients/SalesEngineTL/Portal/Validate_Portal.asp")
+Response.Redirect("/Clients/SalesEngine/Portal/Validate_Portal.asp")
 If Err.Number <> 0 Then
 	Response.Clear
 	Response.Write("<html><head><title>Error</title></head><body>")
@@ -37,7 +37,7 @@ If Err.Number <> 0 Then
 	Response.Write("<p><strong>Error Number:</strong> " & Err.Number & "</p>")
 	Response.Write("<p><strong>Error Description:</strong> " & Err.Description & "</p>")
 	Response.Write("<p><strong>Error Source:</strong> " & Err.Source & "</p>")
-	Response.Write("<p><strong>Redirect Target:</strong> /Clients/SalesEngineTL/Portal/Validate_Portal.asp</p>")
+	Response.Write("<p><strong>Redirect Target:</strong> /Clients/SalesEngine/Portal/Validate_Portal.asp</p>")
 	Response.Write("<hr>")
 	Response.Write("<p><a href=""javascript:history.back()"">Go Back</a></p>")
 	Response.Write("</body></html>")
@@ -125,7 +125,7 @@ If strMsg <> "" Then
 End If
 %>
 
-								<form action="/Clients/SalesEngineTL/Portal/Validate_Portal.asp" method="post" name="Form1" ID="Form1" onSubmit="return checkForm();">
+								<form action="/Clients/SalesEngine/Portal/Validate_Portal.asp" method="post" name="Form1" ID="Form1" onSubmit="return checkForm();">
 								
 
 								<!--<div style="position:absolute;top:150px;left:130px;color:white;z-index:50;font-weight:bold;font-size:14px;"><span style="color:white;font-weight:bold;font-size:36px;">*</span>&nbsp;&nbsp;MyDesk will be offline for scheduled maintenance between 6pm and 8pm AEST 13/11/2008.</div>-->
