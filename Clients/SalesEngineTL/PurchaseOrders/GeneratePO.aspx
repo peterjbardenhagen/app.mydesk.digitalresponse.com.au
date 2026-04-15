@@ -11,6 +11,26 @@
     <body>
         <script language="VisualBasic" runat="Server">
 
+            ' Returns the appropriate protocol (http or https) based on the hostname
+            ' Production (techlight.digitalresponse.com.au) requires HTTPS
+            ' Local/UAT environments can use HTTP or HTTPS
+            Private Function GetProtocol(ByVal hostname As String) As String
+                Dim hostLower As String = hostname.ToLower()
+                
+                ' Production hostname - must use HTTPS
+                If hostLower = "techlight.digitalresponse.com.au" Then
+                    Return "https"
+                Else
+                    ' Local/UAT environments - use current protocol
+                    Dim isHttps As String = Request.ServerVariables("HTTPS")
+                    If isHttps = "on" OrElse isHttps = "true" Then
+                        Return "https"
+                    Else
+                        Return "http"
+                    End If
+                End If
+            End Function
+
             Private Sub Page_Load(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles MyBase.Load
                 Dim boolEmail As Boolean
                 Dim boolFax As Boolean
@@ -28,7 +48,8 @@
 
                 Dim intMode As Integer = CInt(Request("Mode"))
                 Dim strStream As String = ""
-                Dim oRequest As WebRequest = WebRequest.Create("https://" & Request.ServerVariables("SERVER_NAME") & strWorkingDir & "/PurchaseOrders/View.asp?Email=" & boolEmail & "&Fax=" & boolFax & "&POid=" & lngPOid & "&CurrencyName=" & strCurrencyName & "&CurrencyRate=" & dblCurrencyRate & "&CurrencyPrefix=" & strCurrencyPrefix)
+                Dim strProtocol As String = GetProtocol(Request.ServerVariables("SERVER_NAME"))
+                Dim oRequest As WebRequest = WebRequest.Create(strProtocol & "://" & Request.ServerVariables("SERVER_NAME") & strWorkingDir & "/PurchaseOrders/View.asp?Email=" & boolEmail & "&Fax=" & boolFax & "&POid=" & lngPOid & "&CurrencyName=" & strCurrencyName & "&CurrencyRate=" & dblCurrencyRate & "&CurrencyPrefix=" & strCurrencyPrefix)
                 Dim oResponse As WebResponse = oRequest.GetResponse()
                 Dim oStream As Stream = oResponse.GetResponseStream()
                 Dim oStreamReader As New StreamReader(oStream, True)
