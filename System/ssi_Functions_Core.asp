@@ -1,4 +1,4 @@
-<!--#include virtual="System/Consts.asp"-->
+<!--#include virtual="/System/Consts.asp"-->
 <%
 
 ' Returns the appropriate protocol (http or https) based on the hostname
