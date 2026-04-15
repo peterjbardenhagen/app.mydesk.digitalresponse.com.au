@@ -2,7 +2,7 @@
 
 If 1 = 4 Then
 
-If Not(boolForFaxEmail) Then
+If Not(boolEmail) Then
 	' Set Session
 	If Request.Form("CurrencyName") <> "" Then
 		Set rsCurrency = Server.CreateObject("ADODB.RecordSet")
@@ -24,7 +24,7 @@ If Session("CurrencyName") = "" Or IsNull(Session("CurrencyName")) Or Len(Sessio
 	Session("CurrencyPrefix") = "$"
 End If
 
-If boolForFaxEmail Then
+If boolEmail Then
 	strCurrencyName = Trim(Request("CurrencyName"))
 	dblCurrencyRate = CDbl(Request("CurrencyRate"))
 	strCurrencyPrefix = Trim(Request("CurrencyPrefix"))

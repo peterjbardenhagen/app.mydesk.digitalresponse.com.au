@@ -11,24 +11,15 @@ SetWorkingDir Request.ServerVariables("URL")
 'If Not Request.Cookies("DivisionIdsAccess")("Invoices") <> "0" Then Response.Redirect("../Portal/AccessDenied.asp")
 
 Dim lngInvoiceId
-Dim strFax
 Dim strEmail
-Dim boolFax
 Dim boolEmail
 Dim boolPrint
 Dim intInvoiceStatusId
 Dim strInvoiceStatus
 
 lngInvoiceId = CLng(Request("InvoiceId"))
-boolFax = Trim(Request("Fax"))
 boolEmail = Trim(Request("Email"))
 boolPrint = Trim(Request("Print"))
-
-If boolFax <> "" Then
-	boolFax = True
-Else
-	boolFax = False
-End If
 
 If boolEmail <> "" Then
 	boolEmail = True
@@ -41,8 +32,6 @@ If boolPrint <> "" Then
 Else
 	boolPrint = False
 End If
-
-If boolEmail Or boolFax Then boolForFaxEmail = True
 
     strCurrencyName = "Australia Dollars"
 			dblGSTPercentage = 10
@@ -71,7 +60,7 @@ If Not(rsInv.BOF And rsInv.EOF) Then
 	lngDivisionId = rsInv("DivisionId")
 
 	' If Draft then make Issued
-	If boolPrint Or boolForFaxEmail Then
+	If boolPrint Or boolEmail Then
 		' Set New Status
 		Select Case intInvoiceStatusId
 			Case 1, 8, 3 ' Draft -> Issued, Approved -> Issued
@@ -130,7 +119,7 @@ If Not(rsInv.BOF And rsInv.EOF) Then
 		<META http-equiv="Expires" content="0">
 		<META http-equiv="Pragma" content="no-store, private, must-revalidate">
 <%
-	If Not boolForFaxEmailboolPrint Then
+	If Not boolEmailboolPrint Then
 %>
 		<script language="javascript" src="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/Global.js"></script>
 <%
@@ -249,7 +238,7 @@ If Not(rsInv.BOF And rsInv.EOF) Then
 		<style media="print">
 <%
 
-	If Not boolForFaxEmail And Not boolPrint Then
+	If Not boolEmail And Not boolPrint Then
 
 %>
 			body, p, td {
@@ -404,7 +393,7 @@ If Not(rsInv.BOF And rsInv.EOF) Then
 	<body Marginheight=0 Marginwidth=2 topMargin=0 leftMargin=2 class="page">
 <%
 
-	If Not boolForFaxEmail Then
+	If Not boolEmail Then
 				dblCurrencyRate = 1
 
 %>
@@ -804,7 +793,7 @@ WESTPAC BANKING CORPORATION<br />
 		</script>
 <%
 	End If
-	If Not(boolFax or boolEmail) AND Request.Cookies("ClientSettings")("HasInternalNotes") = "true" Then
+	If Not boolEmail AND Request.Cookies("ClientSettings")("HasInternalNotes") = "true" Then
 		If Not(rsInv("InternalNotes")&""="" Or rsInv("InternalNotes") = Null) Then
 %>
 		<table align="center" width="595" border="0" cellpadding="5" cellspacing="0" class="NoPrint" ID="Table15">
@@ -823,7 +812,7 @@ End If
 
 
 <%
-	If Not boolForFaxEmail And Not boolPrint Then
+	If Not boolEmail And Not boolPrint Then
 		If Request("Msg") <> "" Then
 
 %>

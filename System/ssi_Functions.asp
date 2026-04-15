@@ -1381,74 +1381,8 @@ Function GetUserContactDetails(lngDivisionId, strCode)
 			s = s & "					<table cellpadding=2 cellspacing=0 border=0>" & vbcrlf
 			s = s & "						<tr>" & vbcrlf
 			s = s & "							<td style=""font-size:12px;"" colspan=2><img src=""" & GetProtocol() & Request.ServerVariables("SERVER_NAME") & Request.Cookies("ClientSettings")("WorkingDir") & "/Images/" & Replace(rs("Logo"),".","_footer.") & """></td>" & vbcrlf
-			s = s & "						</tr>" & vbcrlf
-			s = s & "					</table>" & vbcrlf
-		End If
 	End If
 	GetUserContactDetails = s
-End Function
-
-Function GetUserContactDetailsFax(lngDivisionId, strCode)
-	If lngDivisionId = 7 And strCode = "MD0029" Then
-		s = "<br><br><br>" &_
-			"<b>Best Regards,</b><br><br>" &_
-			"<span style='font-size:14pt;'>James Hopping</span><br>" &_
-			"<span style='color:#999999'>" &_
-			"<span style='font-size:11pt;'>Manager<br>" &_
-			"George Industries Traffic<br><br>" &_
-			"t: 61 7 3271 2866<br>" &_
-			"f: 61 7 3271 2152<br>" &_
-			"m: 0414 921 999<br>" &_
-			"e: jamesh@georgetraffic.com.au<br><br>" &_
-			"</span>" &_
-			"</span>" &_
-			"<span style='color:#999999'>" &_
-			"57 Campbell Ave Wacol QLD 4076<br>" &_
-			"<a href='http://www.georgeindustries.com.au' target='_Blank' style='color:#999999'>www.georgeindustries.com.au</a></span>" &_
-			"</span>"
-	Else
-		Dim rs
-		Dim sql
-		Dim s
-		Set rs = Server.CreateObject("ADODB.RecordSet")
-		If lngDivisionId <> 0 Then
-			sql = "SELECT Divisions.*,Users.*,Locations.*,Users.Email AS userEmail FROM Divisions, Users INNER JOIN Locations ON Users.LocationId = Locations.LocationId WHERE Divisions.DivisionId=" & lngDivisionId & " AND Users.Code='" & strCode & "'"
-			'sql = "SELECT * FROM Divisions, Users INNER JOIN Locations ON Users.LocationId = Locations.LocationId WHERE Divisions.DivisionId=" & lngDivisionId & " AND Users.Code='" & strCode & "'"
-		Else
-			sql = "SELECT Users.*, Locations.Phone AS lPhone, Locations.Fax AS lFax, Divisions.* FROM Divisions INNER JOIN (Users INNER JOIN Locations ON Users.LocationId = Locations.LocationId) ON Divisions.DivisionId = Users.DivisionId WHERE (((Users.Code)='" & strCode & "'))"
-		End If
-		Set rs = dbConn.Execute(sql)
-		If Not(rs.BOF And rs.EOF) Then
-			If rs("Phone")&"" <> "" Then strPhone = rs("Phone") Else strPhone = rs("lPhone")
-			If rs("Fax")&"" <> "" Then strFax = rs("Fax") Else strFax = rs("lFax")
-			s = s & "					<table bgcolor=""#ffffff"" cellpadding=2 cellspacing=0 border=0>" & vbcrlf
-			s = s & "						<tr>" & vbcrlf
-			s = s & "							<td colspan=2 style=""font-size:12px;"">" & vbcrlf
-			s = s & "							<b>" & rs("Name") & "</b><br>" & vbcrlf
-			s = s & "							" & rs("Position") & "<br>" & vbcrlf
-			s = s & "							" &  rs("Division") & "<br><br>" & vbcrlf
-			s = s & "							</td>" & vbcrlf
-			s = s & "						</tr>" & vbcrlf
-			If rs("Phone")&"" <> "" Then
-				s = s & "						<tr>" & vbcrlf
-				s = s & "							<td style=""font-size:12px;""><b>Phone:</b> " &  rs("Phone") & "</td>" & vbcrlf
-				s = s & "						</tr>" & vbcrlf
-			End If
-			If rs("Mobile")&"" <> "" Then
-				s = s & "						<tr>" & vbcrlf
-				s = s & "							<td style=""font-size:12px;""><b>Mobile:</b> " &  rs("Mobile") & "</td>" & vbcrlf
-				s = s & "						</tr>" & vbcrlf
-			End If
-			s = s & "						<tr>" & vbcrlf
-			s = s & "							<td style=""font-size:12px;""><b>Email:</b> <a href=""mailto:" & rs("userEmail") & """>" & rs("userEmail") & "</a></td>" & vbcrlf
-			s = s & "						</tr>" & vbcrlf
-	'		s = s & "						<tr>" & vbcrlf
-	'		s = s & "							<td style=""font-size:12px;""><img src=""" & GetProtocol() & Request.ServerVariables("SERVER_NAME") & "/" & Request.Cookies("ClientSettings")("WorkingDir") & "/Images/" & Replace(rs("Logo"),".gif","_footer.gif") & """></td>" & vbcrlf
-	'		s = s & "						</tr>" & vbcrlf
-			s = s & "					</table>" & vbcrlf
-		End If
-	End If
-	GetUserContactDetailsFax = s
 End Function
 
 Function SearchArray(arrArray, strFind)

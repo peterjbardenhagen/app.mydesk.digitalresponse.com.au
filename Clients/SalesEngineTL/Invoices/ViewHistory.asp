@@ -150,7 +150,7 @@ Set rsInv = dbConn.Execute(sql)
 		<style media="print">
 <%
 
-	If Not boolForFaxEmail And Not boolPrint Then
+	If Not boolEmail And Not boolPrint Then
 
 %>
 			body, p, td {

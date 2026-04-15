@@ -1,5 +1,5 @@
 <%
-If Not boolForFaxEmail Then
+If Not boolEmail Then
 %>
 		<table width="100%" bgcolor="#DDDDDD" class="NoPrint" width="100%" cellpadding=5 cellspacing=0 border=0 ID="Table3">
 			<tr>

@@ -160,7 +160,7 @@ If Not(rsPO.BOF and rsPO.EOF) Then
 		<style media="print">
 <%
 
-	If Not boolForFaxEmail And Not boolPrint Then
+	If Not boolEmail And Not boolPrint Then
 
 %>
 			body, p, td {
@@ -181,7 +181,7 @@ If Not(rsPO.BOF and rsPO.EOF) Then
 	<body Marginheight=0 Marginwidth=2 topMargin=0 leftMargin=2>
 <%
 
-	If Not boolForFaxEmail Then
+	If Not boolEmail Then
 		If boolRequest Then
 %>
 		<!--#include file="NavBar_Requests.asp"-->

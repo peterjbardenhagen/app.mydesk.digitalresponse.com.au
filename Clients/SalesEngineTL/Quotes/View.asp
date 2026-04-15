@@ -11,24 +11,15 @@ SetWorkingDir Request.ServerVariables("URL")
 'If Not Request.Cookies("DivisionIdsAccess")("Quotes") <> "0" Then Response.Redirect("../Portal/AccessDenied.asp")
 
 Dim lngQid
-Dim strFax
 Dim strEmail
-Dim boolFax
 Dim boolEmail
 Dim boolPrint
 Dim intQuoteStatusId
 Dim strQuoteStatus
 
 lngQid = CLng(Request("Qid"))
-boolFax = Trim(Request("Fax"))
 boolEmail = Trim(Request("Email"))
 boolPrint = Trim(Request("Print"))
-
-If boolFax <> "" Then
-	boolFax = True
-Else
-	boolFax = False
-End If
 
 If boolEmail <> "" Then
 	boolEmail = True
@@ -42,13 +33,11 @@ Else
 	boolPrint = False
 End If
 
-If boolEmail Or boolFax Then boolForFaxEmail = True End If
-
-		If boolEmail Then
-			dblGSTPercentage = 10
-			dblCurrencyRate = 1
-			strCurrencyPrefix = "$"
-		End If
+If boolEmail Then
+	dblGSTPercentage = 10
+	dblCurrencyRate = 1
+	strCurrencyPrefix = "$"
+End If
 
 %>
 <!--#include virtual="/System/Var.asp"-->
@@ -71,7 +60,7 @@ If Not(rsQu.BOF And rsQu.EOF) Then
 	intQuoteStatusId = rsQu("QuoteStatusId")
 	lngDivisionId = rsQu("DivisionId")
 	' If Draft then make Issued
-	If boolPrint Or boolForFaxEmail Then
+	If boolPrint Or boolEmail Then
 		' Set New Status
 		Select Case intQuoteStatusId
 			Case 9, 1, 8, 3 ' Pending Approval -> Issued, Draft -> Issued, Approved -> Issued
@@ -243,7 +232,7 @@ If Not(rsQu.BOF And rsQu.EOF) Then
 		</style>
 		<style media="print">
 <%
-	If Not boolForFaxEmail And Not boolPrint And Not Request.Cookies("UserSettings")("Code") = "TL0084" Then
+	If Not boolEmail And Not boolPrint And Not Request.Cookies("UserSettings")("Code") = "TL0084" Then
 %>
 			body, p, td {
 				display:none;
@@ -283,7 +272,7 @@ If Not(rsQu.BOF And rsQu.EOF) Then
 	<body Marginheight=0 Marginwidth=2 topMargin=0 leftMargin=2 class="page">
 <%
 
-	If Not boolForFaxEmail Then
+	If Not boolEmail Then
 
 %>
 		<table width="100%" bgcolor="#DDDDDD" class="NoPrint" width="100%" cellpadding=5 cellspacing=0 border=0 ID="Table3">
@@ -709,7 +698,7 @@ End If
 		</script>
 <%
 	End If
-	If Not(boolFax or boolEmail) Then
+	If Not boolEmail Then
 		If Not(rsQu("InternalNotes")&""="" Or rsQu("InternalNotes") = Null) Then
 %>
 		<table align="center" width="595" border="0" cellpadding="5" cellspacing="0" class="NoPrint" ID="Table15">

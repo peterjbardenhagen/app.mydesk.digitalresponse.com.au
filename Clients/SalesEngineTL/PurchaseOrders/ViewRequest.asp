@@ -11,23 +11,14 @@ Response.CacheControl = "no-store, private, must-revalidate"
 SetWorkingDir Request.ServerVariables("URL")
 
 Dim lngPOid
-Dim strFax
 Dim strEmail
-Dim boolFax
 Dim boolEmail
 Dim boolPrint
 Dim strPOStatus
 
 lngPOid = CLng(Request("POid"))
-boolFax = Trim(Request("Fax"))
 boolEmail = Trim(Request("Email"))
 boolPrint = Trim(Request("Print"))
-
-If boolFax <> "" Then
-	boolFax = True
-Else
-	boolFax = False
-End If
 
 If boolEmail <> "" Then
 	boolEmail = True
@@ -41,7 +32,7 @@ Else
 	boolPrint = False
 End If
 
-If boolEmail Or boolFax Then boolForFaxEmail = True
+If boolEmail Then boolEmail = True
 
 %>
 <!--#include virtual="/System/Var.asp"-->
@@ -210,7 +201,7 @@ If Not(rsPO.BOF and rsPO.EOF) Then
 		<style media="print">
 <%
 
-	If Not boolForFaxEmail And Not boolPrint Then
+	If Not boolEmail And Not boolPrint Then
 
 %>
 			body, p, td {
@@ -231,7 +222,7 @@ If Not(rsPO.BOF and rsPO.EOF) Then
 	<body Marginheight=0 Marginwidth=2 topMargin=0 leftMargin=2>
 <%
 
-	If Not boolForFaxEmail Then
+	If Not boolEmail Then
 
 %>
 		<!--#include file="NavBar_Requests.asp"-->
