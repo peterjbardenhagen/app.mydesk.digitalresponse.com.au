@@ -489,7 +489,7 @@ isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
 					<h3 style="font-size: 16px; font-weight: 600; color: var(--tl-dark); margin-bottom: 8px;">Need Help?</h3>
 					<p style="font-size: 14px; color: var(--tl-text-light); margin-bottom: 12px;">Contact Techlight support for assistance with system configuration or training.</p>
 					<div style="display: flex; gap: 12px;">
-						<a href="mailto:support@techlight.com.au" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: var(--tl-primary); color: white; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 500;">
+						<a href="mailto:info@digitalresponse.com.au" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: var(--tl-primary); color: white; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 500;">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
 								<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
 								<polyline points="22,6 12,13 2,6"></polyline>

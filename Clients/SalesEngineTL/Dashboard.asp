@@ -674,14 +674,14 @@ End If
 						Help & Resources
 					</h3>
 					<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
-						<a href="mailto:support@techlight.com.au" style="display: flex; align-items: center; gap: 12px; padding: 16px; background: var(--tl-bg); border-radius: var(--tl-radius); text-decoration: none; color: var(--tl-text); transition: var(--tl-transition);">
+						<a href="mailto:info@digitalresponse.com.au" style="display: flex; align-items: center; gap: 12px; padding: 16px; background: var(--tl-bg); border-radius: var(--tl-radius); text-decoration: none; color: var(--tl-text); transition: var(--tl-transition);">
 							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--tl-primary)" stroke-width="2">
 								<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
 								<polyline points="22,6 12,13 2,6"></polyline>
 							</svg>
 							<div>
 								<div style="font-weight: 600; font-size: 13px;">Email Support</div>
-								<div style="font-size: 12px; color: var(--tl-text-light);">support@techlight.com.au</div>
+								<div style="font-size: 12px; color: var(--tl-text-light);">info@digitalresponse.com.au</div>
 							</div>
 						</a>
 						<a href="https://techlight.com.au" target="_blank" style="display: flex; align-items: center; gap: 12px; padding: 16px; background: var(--tl-bg); border-radius: var(--tl-radius); text-decoration: none; color: var(--tl-text); transition: var(--tl-transition);">

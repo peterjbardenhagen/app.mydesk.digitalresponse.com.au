@@ -186,7 +186,7 @@ If you get HTTPS errors locally:
 
 For issues or questions:
 - Contact: Techlight IT Administrator
-- Email: support@techlight.com.au
+- Email: info@digitalresponse.com.au
 - Hours: Monday-Friday, 9am-5pm AEST
 
 ---
