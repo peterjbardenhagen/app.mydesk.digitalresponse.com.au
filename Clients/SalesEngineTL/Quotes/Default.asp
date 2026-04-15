@@ -43,7 +43,7 @@ End If
 
 intSelDivisionId = 555
 %>
-<!--#include virtual="/Clients/SalesEngine/ssi_Security.inc"-->
+<!--#include virtual="/System/ssi_Security.inc"-->
 <!--#include virtual="/System/ssi_Functions.asp"-->
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <!--#include virtual="/System/ssi_Dates.inc"-->
@@ -178,29 +178,18 @@ End If
 
 %>
 											</select>
-										</td>
-
-
-
-
-									</tr>
-									<tr>
-										<td style="font-weight:bold;">Date To</td>
-										<td valign="top"><input type="input" value="<%= dteDateTo %>" name="DateTo" readonly ID="Input2"> <a href="javascript:showCal('Calendar4')"><img src="/Images/Calendar.gif" border=0></a></td>
+										</div>
+									</div>
+									<div class="tl-form-row">
+										<div class="tl-form-group">
+											<label class="tl-form-label">Customer</label>
+											<select name="CompanyId" class="tl-form-select">
+												<option value="0">All companies</option>
+												<option value="142">Not an account</option>
 <%
-
 Set rsCompany = Server.CreateObject("ADODB.RecordSet")
 sql = "Select DistinctRow Companies.CompanyId, Companies.Company From Contacts Inner Join Companies On Companies.CompanyId = Contacts.CompanyId Where Companies.CompanyId <> 142 And (Companies.DivisionId In (" & Request.Cookies("DivisionIdsAccess")("Quotes") & ") Or Contacts.Code = '" & Request.Cookies("UserSettings")("Code") & "') Order By Companies.Company"
 Set rsCompany = dbConn.Execute(sql)
-
-%>
-										<td style="font-weight:bold;">Customer</td>
-										<td valign="top">
-										<select name="CompanyId" style="width:250px;" id="Select1">
-											<option value="0">All companies</option>
-											<option value="142">Not an account</option>
-											<option value="0"></option>
-<%
 
 If Not(rsCompany.BOF And rsCompany.EOF) Then
 	Do Until rsCompany.EOF
@@ -211,20 +200,20 @@ End If
 
 rsCompany.Close
 Set rsCompany = Nothing
-
 %>
-										</select>										
-										</td>
-									</tr>
-									<tr>
-										<td style="font-weight:bold;">Customer Search</td>
-										<td valign="top"><input type="text" value="<%= strCustomerSearch %>" name="CustomerSearch" placeholder="Search customer names..." style="width:200px;"></td>
-										<td style="font-weight:bold;">Division</td>
-										<td>
-										<select name="DivisionId" ID="Select3">
-											<option value="555" style="color:red;">Select a division</option>
+											</select>
+										</div>
+										<div class="tl-form-group">
+											<label class="tl-form-label">Customer Search</label>
+											<input type="text" value="<%= strCustomerSearch %>" name="CustomerSearch" class="tl-form-input" placeholder="Search customer names...">
+										</div>
+									</div>
+									<div class="tl-form-row">
+										<div class="tl-form-group">
+											<label class="tl-form-label">Division</label>
+											<select name="DivisionId" class="tl-form-select">
+												<option value="555" style="color:red;">Select a division</option>
 <%
-
 Set rsDiv = Server.CreateObject("ADODB.RecordSet")
 sql = "SELECT * FROM Divisions WHERE Quotes = True AND DivisionId In (" & Request.Cookies("DivisionIdsAccess")("Quotes") & ") ORDER BY Division"
 Set rsDiv = dbConn.Execute(sql)
@@ -250,15 +239,14 @@ If IsObject(rsDiv) Then
 	rsDiv.Close
 	Set rsDiv = Nothing
 End If
-
 %>
-										</select>
-										</td>
-										<td style="font-weight:bold;">Status</td>
-										<td valign="top">
-										<select name="QuoteStatusId" style="width:280px;" id="Select2">
-											<option value="555">All (Active)</option>
-											<option value="0">All (Active & Complete)</option>
+											</select>
+										</div>
+										<div class="tl-form-group">
+											<label class="tl-form-label">Status</label>
+											<select name="QuoteStatusId" class="tl-form-select">
+												<option value="555">All (Active)</option>
+												<option value="0">All (Active & Complete)</option>
 <%
 
 sql = "Select * From QuoteStatus Order By QuoteStatus"
@@ -276,34 +264,29 @@ Set rsStatus = Nothing
 
 %>
 										</select>										
-										</td>
-									</tr>
-									<tr>
-										<td style="font-weight:bold;">Keyword</td>
-										<td><input type="text" name="Keyword" style="width:280px;"></td>
-										<td colspan=2 align="right">
-										<input type="button" onclick="document.location.href='../Invoices';" value="Invoices" ID="Button3" NAME="Button1">
-										<input type="button" onclick="if(document.FormReport.DivisionId.value == 555){alert('Please select a division before generating a report.');}else{FormReport.action='Report.asp';FormReport.target='MyIFrame';this.form.submit();}" value="Generate Report" ID="Button1" NAME="Button1">
-										<input type="submit" value="Filter" ID="Submit2" NAME="Submit2" onclick="FormReport.action='IFrame.asp';FormReport.target='MyIFrame';">
-										</td>
-									</tr>
+										</div>
+									</div>
+									<div class="tl-form-row">
+										<div class="tl-form-group">
+											<label class="tl-form-label">Keyword</label>
+											<input type="text" name="Keyword" class="tl-form-input" placeholder="Search keywords...">
+										</div>
+										<div class="tl-form-group" style="display: flex; align-items: flex-end; gap: 8px;">
+											<button type="submit" class="tl-btn-primary" onclick="FormReport.action='IFrame.asp';FormReport.target='MyIFrame';">
+												Filter
+											</button>
+											<button type="button" class="tl-btn-secondary" onclick="if(document.FormReport.DivisionId.value == 555){alert('Please select a division before generating a report.');}else{FormReport.action='Report.asp';FormReport.target='MyIFrame';this.form.submit();}">
+												Generate Report
+											</button>
+										</div>
+									</div>
 								</form>
-								</table>
-							</fieldset>
-						</td>
-					</tr>
-				</table>
-				<table width=100% height=500 cellpadding=0 cellspacing=0 border=0 ID="Table2">
-					<tr>
-						<td>
-						<iframe scrolling="yes" style="width:100%;height:550px;overflow:scroll;" name="MyIFrame" id="MyIFrame" src="IFrame.asp?Cache=<%= rnd() %>&Sort=<%= strSort %>&CurPage=<%= CurPage %>&Code=All&Company=All&DateFrom=<%= dteDateFrom %>&DateTo=<%= dteDateTo %>&DivisionId=<%= intSelDivisionId %>&QuoteStatusId=555&CustomerSearch=<%= Server.URLEncode(strCustomerSearch) %>"></iframe>
-						</td>
-					</tr>
-				</table>
-			</td>
-		</tr>
-	</table>
-	</center>
-	</body>
+							</div>
+		<!-- Results Grid -->
+		<div class="tl-grid-container">
+			<iframe scrolling="yes" style="width:100%;height:600px;border:none;" name="MyIFrame" id="MyIFrame" src="IFrame.asp?Cache=<%= rnd() %>&Sort=<%= strSort %>&CurPage=<%= CurPage %>&Code=All&Company=All&DateFrom=<%= dteDateFrom %>&DateTo=<%= dteDateTo %>&DivisionId=<%= intSelDivisionId %>&QuoteStatusId=555&CustomerSearch=<%= Server.URLEncode(strCustomerSearch) %>"></iframe>
+		</div>
+	</div>
+</body>
 </html>
 <!--#include virtual="/System/ssi_dbConn_close.inc"-->
