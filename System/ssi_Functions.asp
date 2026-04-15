@@ -1376,11 +1376,11 @@ Function GetUserContactDetails(lngDivisionId, strCode)
 			s = s & "						<tr>" & vbcrlf
 			s = s & "							<td width=50 style=""width:50px;""><b>Email: </b></td>" & vbcrlf
 			s = s & "							<td>" & rs("userEmail") & "</td>" & vbcrlf
-			s = s & "						</tr>" & vbcrlf
 			s = s & "					</table>" & vbcrlf
 			s = s & "					<table cellpadding=2 cellspacing=0 border=0>" & vbcrlf
 			s = s & "						<tr>" & vbcrlf
 			s = s & "							<td style=""font-size:12px;"" colspan=2><img src=""" & GetProtocol() & Request.ServerVariables("SERVER_NAME") & Request.Cookies("ClientSettings")("WorkingDir") & "/Images/" & Replace(rs("Logo"),".","_footer.") & """></td>" & vbcrlf
+		End If
 	End If
 	GetUserContactDetails = s
 End Function
