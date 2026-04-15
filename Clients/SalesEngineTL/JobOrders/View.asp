@@ -178,7 +178,7 @@ End If
 		<br class="NoPrint">
 		<table align="center" width="595" border="0" cellpadding="0" cellspacing="0" ID="Table1">
 			<tr>
-				<td valign="top"><img src="https://<%= Request.ServerVariables("SERVER_NAME") %><%= Request.Cookies("ClientSettings")("WorkingDir") %>/images/<%= strLogo %>" border=0 alt=""><br><br></td>
+				<td valign="top"><img src="<%= GetProtocol() %><%= Request.ServerVariables("SERVER_NAME") %><%= Request.Cookies("ClientSettings")("WorkingDir") %>/images/<%= strLogo %>" border=0 alt=""><br><br></td>
 				<td valign="top" align="right">
 					<br>
 					<table cellpadding=3 cellspacing=0 border=0>

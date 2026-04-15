@@ -249,7 +249,7 @@ If Not(rsPO.BOF and rsPO.EOF) Then
 %>
 		<table align="center" width="595" border="0" cellpadding="0" cellspacing="0" ID="Table1">
 			<tr>
-				<td valign="top"><img src="https://<%= Request.ServerVariables("SERVER_NAME") %><%= Request.Cookies("ClientSettings")("WorkingDir") %>/images/<%= strLogo %>" border=0 alt=""></td>
+				<td valign="top"><img src="<%= GetProtocol() %><%= Request.ServerVariables("SERVER_NAME") %><%= Request.Cookies("ClientSettings")("WorkingDir") %>/images/<%= strLogo %>" border=0 alt=""></td>
 				<td valign="top" align="right">
 					<br>
 					<table cellpadding=3 cellspacing=0 border=0 ID="Table9">

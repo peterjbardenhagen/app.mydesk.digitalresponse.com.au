@@ -32,12 +32,5 @@ Response.End
 		</style>
 	</head>
 	<body marginheight=0 marginwidth=0 topmargin=0 leftmargin=0 onload="openManagementSystem()">
-		<table bgcolor="#666666" width="100%" height="100%">
-			<tr>
-				<td align="center" valign="middle">
-				<a href="#" onclick="openManagementSystem();"><img src="/Images/MyDesk.gif" border=0 alt="MyDesk"></a>				
-				</td>
-			</tr>
-		</table>
 	</body>
 </html>

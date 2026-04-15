@@ -126,7 +126,7 @@ boolDivisionManager = SearchArray(Request.Cookies("DivisionIdsAccess")("ArrDivis
 							<td valign="top" colspan=4 align="right" class="FormBtmTD"><input type="button" value="Cancel" onclick="document.location.href='default.asp';" ID="Button1" NAME="Button1"> <input type="submit" value="Save" ID="Submit1" NAME="Submit1"></td>
 						</tr>
 						<tr>
-							<td valign="top" colspan=4><img src="https://<%= Request.ServerVariables("SERVER_NAME") %><%= Request.Cookies("ClientSettings")("WorkingDir") %>/images/<%= strLogo %>" border=0 alt=""></td>
+							<td valign="top" colspan=4><img src="<%= GetProtocol() %><%= Request.ServerVariables("SERVER_NAME") %><%= Request.Cookies("ClientSettings")("WorkingDir") %>/images/<%= strLogo %>" border=0 alt=""></td>
 						</tr>
 <%
 If Request.Cookies("UserSettings")("UserTypeId") = 6 Then

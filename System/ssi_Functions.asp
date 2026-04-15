@@ -3,6 +3,40 @@
 <!--#include virtual="System/ssi_Alerts.asp"-->
 <%
 
+' Returns the appropriate protocol (http or https) based on the hostname
+' Production (techlight.digitalresponse.com.au) requires HTTPS
+' Local/UAT environments can use HTTP or HTTPS
+Function GetProtocol()
+	Dim serverName
+	serverName = LCase(Request.ServerVariables("SERVER_NAME"))
+	
+	' Production hostname - must use HTTPS
+	If serverName = "techlight.digitalresponse.com.au" Then
+		GetProtocol = "https://"
+	Else
+		' Local/UAT environments - use current protocol
+		Dim currentProtocol
+		currentProtocol = Request.ServerVariables("HTTPS")
+		If currentProtocol = "on" Then
+			GetProtocol = "https://"
+		Else
+			GetProtocol = "http://"
+		End If
+	End If
+End Function
+
+' Returns the full base URL with protocol and hostname
+Function GetBaseURL()
+	GetBaseURL = GetProtocol() & Request.ServerVariables("SERVER_NAME")
+End Function
+
+' Returns true if running on production
+Function IsProduction()
+	Dim serverName
+	serverName = LCase(Request.ServerVariables("SERVER_NAME"))
+	IsProduction = (serverName = "techlight.digitalresponse.com.au")
+End Function
+
 Function BackToList
 	If Request("SortIndex") <> "" Then
 		BackToList = "Default.asp?" & BackToListQS
@@ -1298,7 +1332,7 @@ Function GetUserContactDetails(lngDivisionId, strCode)
 			"e: jamesh@georgetraffic.com.au<br><br>" &_
 			"</span>" &_
 			"</span>" &_
-			"<img src='https://" & Request.ServerVariables("SERVER_NAME") & Request.Cookies("ClientSettings")("WorkingDir") & "/Images/Logo_GIT2.jpg' border=0 alt='George Industries Traffic'>" &_
+			"<img src='" & GetProtocol() & Request.ServerVariables("SERVER_NAME") & Request.Cookies("ClientSettings")("WorkingDir") & "/Images/Logo_GIT2.jpg' border=0 alt='George Industries Traffic'>" &_
 			"<br><br>" &_
 			"<span style='color:#999999'>" &_
 			"57 Campbell Ave Wacol QLD 4076<br>" &_
@@ -1346,7 +1380,7 @@ Function GetUserContactDetails(lngDivisionId, strCode)
 			s = s & "					</table>" & vbcrlf
 			s = s & "					<table cellpadding=2 cellspacing=0 border=0>" & vbcrlf
 			s = s & "						<tr>" & vbcrlf
-			s = s & "							<td style=""font-size:12px;"" colspan=2><img src=""https://" & Request.ServerVariables("SERVER_NAME") & Request.Cookies("ClientSettings")("WorkingDir") & "/Images/" & Replace(rs("Logo"),".","_footer.") & """></td>" & vbcrlf
+			s = s & "							<td style=""font-size:12px;"" colspan=2><img src=""" & GetProtocol() & Request.ServerVariables("SERVER_NAME") & Request.Cookies("ClientSettings")("WorkingDir") & "/Images/" & Replace(rs("Logo"),".","_footer.") & """></td>" & vbcrlf
 			s = s & "						</tr>" & vbcrlf
 			s = s & "					</table>" & vbcrlf
 		End If
@@ -1409,7 +1443,7 @@ Function GetUserContactDetailsFax(lngDivisionId, strCode)
 			s = s & "							<td style=""font-size:12px;""><b>Email:</b> <a href=""mailto:" & rs("userEmail") & """>" & rs("userEmail") & "</a></td>" & vbcrlf
 			s = s & "						</tr>" & vbcrlf
 	'		s = s & "						<tr>" & vbcrlf
-	'		s = s & "							<td style=""font-size:12px;""><img src=""https://" & Request.ServerVariables("SERVER_NAME") & "/" & Request.Cookies("ClientSettings")("WorkingDir") & "/Images/" & Replace(rs("Logo"),".gif","_footer.gif") & """></td>" & vbcrlf
+	'		s = s & "							<td style=""font-size:12px;""><img src=""" & GetProtocol() & Request.ServerVariables("SERVER_NAME") & "/" & Request.Cookies("ClientSettings")("WorkingDir") & "/Images/" & Replace(rs("Logo"),".gif","_footer.gif") & """></td>" & vbcrlf
 	'		s = s & "						</tr>" & vbcrlf
 			s = s & "					</table>" & vbcrlf
 		End If

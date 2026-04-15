@@ -437,7 +437,7 @@ If Not(rsInv.BOF And rsInv.EOF) Then
 %>
 		<table align="center" width="595" border="0" cellpadding="0" cellspacing="0" ID="Table1">
 			<tr>
-				<td valign="top"><img src="https://<%= Request.ServerVariables("SERVER_NAME") %><%= Request.Cookies("ClientSettings")("WorkingDir") %>/images/<%= strLogo %>" border=0 alt=""><br><br></td>
+				<td valign="top"><img src="<%= GetProtocol() %><%= Request.ServerVariables("SERVER_NAME") %><%= Request.Cookies("ClientSettings")("WorkingDir") %>/images/<%= strLogo %>" border=0 alt=""><br><br></td>
 				<td valign="top" align="right">
 <%
 	If rsDi("DivisionId") = 6 Then

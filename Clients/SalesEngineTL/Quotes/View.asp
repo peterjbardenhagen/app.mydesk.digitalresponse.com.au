@@ -606,7 +606,7 @@ End If
 		<div id="FinalTable" style="position:relative;">
 		<table align="center" width="595" cellpadding="5" cellspacing="0">
 			<tr>
-				<td colspan=5><img src="https://<%= Request.ServerVariables("SERVER_NAME") %>/images/Spacer.gif" width=595 height=1 border=0 /></td>
+				<td colspan=5><img src="<%= GetProtocol() %><%= Request.ServerVariables("SERVER_NAME") %>/images/Spacer.gif" width=595 height=1 border=0 /></td>
 			</tr>
 			<tr>
 				<td>

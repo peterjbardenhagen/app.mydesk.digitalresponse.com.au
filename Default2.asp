@@ -109,25 +109,13 @@ End If
 								    <!--There are currently difficulties with the 3rd Party hosting providers for MyDesk. <br /> As such MyDesk is currently offline. Please check back for updates.-->
 								    <input type="image" name="Submit" src="/Images/Login.gif" value="Login" ID="Submit1">
 								 </div>
-								<div style="position:absolute;top:205px;left:680px;"><a href="http://webmail.mydesk.com.au" target="_Blank"><img src="/Images/MyDesk_Webmail.gif" border=0 alt="MyDesk Webmail"></a></div>
 								</form>
 							</td>
 						</tr>
 					</table>
 				</td>
 			</tr>
-			<tr>
-				<td colspan=2>
-					<table width="100%" cellpadding=0 cellspacing=0 border=0>
-						<tr>
-							<td valign="top" background="/Images/FP_Footer.gif"><img src="/Images/FP_Footer.gif" border=0 alt=""></td>
-							<td valign="top" align="right" width=439><a href="mailto:answers@solutionscorp.com.au"><img src="/Images/FP_Footer_2.gif" border=0 alt=""></a></td>
-						</tr>
-					</table>		
-				</td>
-			</tr>
 		</table>
-
 	</body>
 </html>
 <!--#include virtual="/System/ssi_dbConn_close.inc"-->
