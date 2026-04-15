@@ -2,7 +2,7 @@
 <%
 'On Error Resume Next
 %>
-<!--#include virtual="System/ssi_Errors.asp"-->
+<!--#include virtual="/System/ssi_Errors.asp"-->
 <%
 
 Dim MyDB
