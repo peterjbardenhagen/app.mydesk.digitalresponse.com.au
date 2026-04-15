@@ -195,4 +195,24 @@ Sub SetWorkingDir(strUrl)
 	Response.Cookies("ClientSettings").Expires = Date() + 1
 End Sub
 
+Function SearchArray(arrArray, strFind)
+	If Not IsArray(arrArray) Then
+		arrArray = Split(arrArray, ",")
+	End If
+
+	Dim i
+	Dim boolFind
+	i = 0
+	boolFind = False
+	If Not IsEmpty(arrArray) Then
+		For i = 0 To UBound(arrArray)
+			If CStr(Trim(arrArray(i))) = CStr(Trim(strFind&"")) Then
+				boolFind = True
+				Exit For
+			End If
+		Next
+	End If
+	SearchArray = boolFind
+End Function
+
 %>
