@@ -431,7 +431,8 @@ function Install-IIS {
                     Enable-WindowsOptionalFeature -Online -FeatureName $feature -NoRestart -ErrorAction SilentlyContinue | Out-Null
                 }
                 catch {
-                    Write-Warning "Could not enable $feature: ${_}"
+                    $errorMsg = $_.Exception.Message
+                    Write-Warning ("Could not enable " + $feature + ": " + $errorMsg)
                 }
             }
             
@@ -443,7 +444,8 @@ function Install-IIS {
                     Enable-WindowsOptionalFeature -Online -FeatureName $feature -NoRestart -ErrorAction SilentlyContinue | Out-Null
                 }
                 catch {
-                    Write-Warning "Could not enable $feature: ${_}"
+                    $errorMsg = $_.Exception.Message
+                    Write-Warning ("Could not enable " + $feature + ": " + $errorMsg)
                 }
             }
             
