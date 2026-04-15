@@ -7,6 +7,11 @@ Else
 	strWorkingDir = Session("WorkingDir")
 End If
 
+' Fallback to ensure WorkingDir is never empty
+If strWorkingDir = "" Or IsNull(strWorkingDir) Then
+	strWorkingDir = "/Clients/SalesEngineTL"
+End If
+
 ' Get current page for active nav highlighting
 Dim currentPage
 currentPage = LCase(Request.ServerVariables("SCRIPT_NAME"))
