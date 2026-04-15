@@ -2,17 +2,17 @@
 <%
 
 ' Returns the appropriate protocol (http or https) based on the hostname
-' Production (techlight.digitalresponse.com.au) requires HTTPS
+' Production (techlight.digitalresponse.com.au) requires HTTPS if cForceHTTPS is True
 ' Local/UAT environments can use HTTP or HTTPS
 Function GetProtocol()
 	Dim serverName
 	serverName = LCase(Request.ServerVariables("SERVER_NAME"))
 	
-	' Production hostname - must use HTTPS
-	If serverName = "techlight.digitalresponse.com.au" Then
+	' Production hostname - force HTTPS only if cForceHTTPS is enabled
+	If serverName = "techlight.digitalresponse.com.au" And cForceHTTPS Then
 		GetProtocol = "https://"
 	Else
-		' Local/UAT environments - use current protocol (could be HTTP or HTTPS)
+		' Local/UAT environments or HTTPS enforcement disabled - use current protocol (could be HTTP or HTTPS)
 		Dim currentProtocol
 		currentProtocol = Request.ServerVariables("HTTPS")
 		If currentProtocol = "on" Then
