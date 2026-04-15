@@ -40,7 +40,7 @@ End Function
 <header class="tl-header">
 	<div class="tl-header-top">
 		<!-- Logo -->
-		<a href="<%= strWorkingDir %>/PortalFrame.asp" target="_parent" class="tl-logo" style="text-decoration: none;">
+		<a href="<%= strWorkingDir %>/Default.asp" target="_top" class="tl-logo" style="text-decoration: none;" onclick="if(window.top.location.href.indexOf('Default.asp')>-1){window.top.location.reload();return false;}">
 			<svg viewBox="0 0 340 80" xmlns="http://www.w3.org/2000/svg" style="width: 180px; height: 42px;">
 				<defs>
 					<filter id="cyanGlow" x="-50%" y="-50%" width="200%" height="200%">
@@ -123,7 +123,7 @@ End Function
 	<nav class="tl-nav">
 		<ul class="tl-nav-list">
 			<li class="tl-nav-item">
-				<a href="<%= strWorkingDir %>/PortalFrame.asp" target="_parent" class="tl-nav-link <%= IsActive("PortalFrame") %>">
+				<a href="<%= strWorkingDir %>/Dashboard.asp" target="MainFrame" class="tl-nav-link <%= IsActive("Dashboard") %>">
 					<svg class="tl-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
 						<polyline points="9 22 9 12 15 12 15 22"></polyline>
@@ -205,31 +205,31 @@ End Function
 					</svg>
 				</button>
 				<div class="tl-dropdown-menu">
-					<a href="<%= strWorkingDir %>/PortalFrame.asp" target="_parent" class="tl-dropdown-item">
+					<a href="<%= strWorkingDir %>/Dashboard.asp" target="MainFrame" class="tl-dropdown-item">
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
 						Dashboard
 					</a>
-					<a href="<%= strWorkingDir %>/Contacts/" target="_parent" class="tl-dropdown-item">
+					<a href="<%= strWorkingDir %>/Contacts/" target="MainFrame" class="tl-dropdown-item">
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
 						Contacts
 					</a>
-					<a href="<%= strWorkingDir %>/Quotes/" target="_parent" class="tl-dropdown-item">
+					<a href="<%= strWorkingDir %>/Quotes/" target="MainFrame" class="tl-dropdown-item">
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
 						Quotes
 					</a>
-					<a href="<%= strWorkingDir %>/Invoices/" target="_parent" class="tl-dropdown-item">
+					<a href="<%= strWorkingDir %>/Invoices/" target="MainFrame" class="tl-dropdown-item">
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line></svg>
 						Invoices
 					</a>
-					<a href="<%= strWorkingDir %>/PurchaseOrders/" target="_parent" class="tl-dropdown-item">
+					<a href="<%= strWorkingDir %>/PurchaseOrders/" target="MainFrame" class="tl-dropdown-item">
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line></svg>
 						Purchase Orders
 					</a>
-					<a href="<%= strWorkingDir %>/Setup/" target="_parent" class="tl-dropdown-item">
+					<a href="<%= strWorkingDir %>/Setup/" target="MainFrame" class="tl-dropdown-item">
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle></svg>
 						Setup
 					</a>
-					<a href="<%= strWorkingDir %>/Users/" target="_parent" class="tl-dropdown-item">
+					<a href="<%= strWorkingDir %>/Users/" target="MainFrame" class="tl-dropdown-item">
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
 						Users
 					</a>
