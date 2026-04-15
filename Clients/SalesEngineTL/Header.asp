@@ -24,11 +24,14 @@ End Function
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>MyDesk - Techlight CRM</title>
+	<title>Techlight MyDesk</title>
 	<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
 	<meta http-equiv="Expires" content="0">
 	<meta http-equiv="Pragma" content="no-store">
-	<link rel="stylesheet" type="text/css" href="<%= strWorkingDir %>/System/Style_Modern.css">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" type="text/css" href="<%= strWorkingDir %>/System/Style_Techlight.css">
 	<script language="javascript" src="<%= strWorkingDir %>/System/Global.js"></script>
 </head>
 <body>
@@ -62,23 +65,29 @@ End Function
 				<text x="92" y="52" font-family="Arial Black, Arial Bold, Arial, sans-serif" font-weight="900" font-size="32" letter-spacing="-0.5" fill="#ffffff">Techlight</text>
 			</svg>
 			<div class="tl-logo-text">
-				<span class="tl-logo-product">MyDesk CRM</span>
+				<span class="tl-logo-brand">Techlight</span>
+				<span class="tl-logo-product">MyDesk</span>
 			</div>
 		</a>
 		
 		<!-- User Info -->
 		<% If Request.Cookies("LoggedIn")&"" <> "" Then
-			If CBool(Request.Cookies("LoggedIn")) Then %>
-		<div class="tl-header-right">
+			If CBool(Request.Cookies("LoggedIn")) Then 
+				Dim userInitials, userName, userRole
+				userName = Request.Cookies("UserSettings")("Name")
+				userInitials = Left(userName, 1)
+				If Request.Cookies("UserSettings")("Admin") Then
+					userRole = "Administrator"
+				Else
+					userRole = "User"
+				End If
+		%>
+		<div class="tl-user-panel">
 			<div class="tl-user-info">
-				<span class="tl-user-name"><%= Request.Cookies("UserSettings")("Name") %></span>
-				<span class="tl-user-meta">
-					<% If Request.Cookies("UserSettings")("LineManagerName") <> "" Then %>
-						Manager: <%= Request.Cookies("UserSettings")("LineManagerName") %>
-						<a href="mailto:<%= Request.Cookies("UserSettings")("LineManagerEmail") %>">Email</a>
-					<% End If %>
-				</span>
+				<span class="tl-user-name"><%= userName %></span>
+				<span class="tl-user-role"><%= userRole %></span>
 			</div>
+			<div class="tl-user-avatar"><%= userInitials %></div>
 		</div>
 		<% End If
 		End If %>

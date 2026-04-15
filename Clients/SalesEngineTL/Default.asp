@@ -28,7 +28,7 @@ If page <> "" Then
 <%
 Else
 %>
-      <frame src="DefaultFrame.asp<% If Request("Msg") <> "" Then %>?Msg=<%= Trim(Request("Msg")) %><% End If %>" id="MainFrame" frameborder=No noresize scrolling=yes>
+      <frame src="Dashboard.asp<% If Request("Msg") <> "" Then %>?Msg=<%= Trim(Request("Msg")) %><% End If %>" id="MainFrame" frameborder=No noresize scrolling=yes>
 <%
 End If
 %>
