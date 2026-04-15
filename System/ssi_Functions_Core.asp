@@ -12,7 +12,7 @@ Function GetProtocol()
 	If serverName = "techlight.digitalresponse.com.au" Then
 		GetProtocol = "https://"
 	Else
-		' Local/UAT environments - use current protocol
+		' Local/UAT environments - use current protocol (could be HTTP or HTTPS)
 		Dim currentProtocol
 		currentProtocol = Request.ServerVariables("HTTPS")
 		If currentProtocol = "on" Then
@@ -32,6 +32,7 @@ End Function
 Function IsProduction()
 	Dim serverName
 	serverName = LCase(Request.ServerVariables("SERVER_NAME"))
+	' Production is only the live domain
 	IsProduction = (serverName = "techlight.digitalresponse.com.au")
 End Function
 
@@ -39,7 +40,10 @@ End Function
 Function IsDevelopment()
 	Dim serverName
 	serverName = LCase(Request.ServerVariables("SERVER_NAME"))
-	IsDevelopment = (InStr(serverName, "localhost") > 0 Or InStr(serverName, "dev") > 0)
+	' Development includes localhost and .local domains
+	IsDevelopment = (InStr(serverName, "localhost") > 0 Or _
+	                 InStr(serverName, ".local") > 0 Or _
+	                 InStr(serverName, "dev") > 0)
 End Function
 
 Function BackToList
