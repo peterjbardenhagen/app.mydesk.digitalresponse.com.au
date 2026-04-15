@@ -157,6 +157,7 @@ End If
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 	<link rel="stylesheet" type="text/css" href="<%= strWorkingDir %>/System/Style_Techlight.css">
+	<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 	<% If isDirector Then %>
 	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 	<% End If %>
@@ -192,6 +193,14 @@ End If
 					</svg>
 					Techlight MyDesk
 				</span>
+				<a href="https://techlight.com.au" target="_blank" class="tl-meta-item" style="text-decoration: none; color: var(--tl-primary);">
+					<svg class="tl-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+						<polyline points="15 3 21 3 21 9"></polyline>
+						<line x1="10" y1="14" x2="21" y2="3"></line>
+					</svg>
+					Visit Techlight Website
+				</a>
 			</div>
 			
 			<!-- Quick Navigation Search -->
