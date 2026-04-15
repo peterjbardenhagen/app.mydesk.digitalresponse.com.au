@@ -10,7 +10,7 @@ Dim strMsg
 strMsg = Trim(Request("Msg"))
 
 %>
-<!--#include virtual="/System/ssi_Functions.asp"-->
+<!--#include virtual="System/ssi_Functions.asp"-->
 <html>
 	<head>
 		<title>SalesEngine</title>
@@ -63,7 +63,7 @@ strMsg = Trim(Request("Msg"))
 		<tr>
 			<td>
 				<br/><br/>
-				<form action="/Clients/SalesEngine/Portal/Validate_Portal.asp" method="post" name="Form1" ID="Form1" onSubmit="return checkForm();">
+				<form action="/Clients/SalesEngine/Portal/Validate.asp" method="post" name="Form1" ID="Form1" onSubmit="return checkForm();">
 <%
 
 If strMsg <> "" Then

@@ -8,7 +8,6 @@ Response.CacheControl = "no-store, private, must-revalidate"
 
 %>
 <!--#include virtual="/System/ssi_Functions.asp"-->
-<!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <%
 
 If InStr(Request.ServerVariables("SERVER_NAME"),"dev") > 0 Or InStr(Request.ServerVariables("SERVER_NAME"),"stage") > 0 Then
@@ -26,8 +25,8 @@ Session("BgColor3") = "#005b89"
 Session("Prefix") = "TL"
 Session("State") = "ALL"
 Session("PortalCompany") = "Techlight"
-Session("WorkingDir") = "/Clients/SalesEngine"
+Session("WorkingDir") = "/Clients/SalesEngineTL"
 Session("HomeColor1") = "#005b89"
-MyRedirect("/Clients/SalesEngine")
+MyRedirect("/Clients/SalesEngineTL")
 
 %>

@@ -1,13 +1,19 @@
 <%
+
+On Error Resume Next
+
+Dim strMsg
+strMsg = Request("Msg")
+
 ' Techlight MyDesk - Modern Dashboard
 ' Check authentication
 If Not Session("LoggedIn") Then
 	If Request.Cookies("LoggedIn") <> "" Then
 		If Not CBool(Request.Cookies("LoggedIn")) Then
-			Response.Redirect("Default.asp")
+			Response.Redirect("DefaultFrame.asp")
 		End If
 	Else
-		Response.Redirect("Default.asp")
+		Response.Redirect("DefaultFrame.asp")
 	End If
 End If
 
@@ -32,9 +38,7 @@ ElseIf Session("Manager") Then
 Else
 	userRole = "User"
 End If
-%>
-<!--#include virtual="/System/ssi_dbConn_open.inc"-->
-<%
+
 ' Get business metrics for Directors
 Dim isDirector, currentMonth, currentYear, lastYear
 currentMonth = Month(Date())

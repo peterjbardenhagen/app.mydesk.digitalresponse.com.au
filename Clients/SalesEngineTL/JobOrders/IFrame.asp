@@ -5,7 +5,7 @@ Option Explicit
 Response.AddHeader "Pragma", "No-Store"
 Response.AddHeader "cache-control", "no-store, private, must-revalidate"
 Response.AddHeader "pragma","no-cache"
-Response.ExpiresAbsolute = DateAdd("Y", -10, ServerToEST(Now()))
+Response.ExpiresAbsolute = DateAdd("Y", -10, Now())
 Response.CacheControl = "no-cache"
 
 If Not Request.Cookies("DivisionIdsAccess")("Quotes") <> "0" Then Response.Redirect("../Portal/AccessDenied.asp")

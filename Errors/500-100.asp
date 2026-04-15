@@ -1,185 +1,225 @@
-<!--METADATA TYPE="typelib" UUID="CD000000-8B95-11D1-82DB-00C04FB1625D" NAME="CDO for Windows Library" -->
 <%@Language="VBSCRIPT"%>
+<!--#include virtual="/System/ssi_Logging.asp"-->
 <%
   Option Explicit
-'  On Error Resume Next
-'  Response.Clear
+  On Error Resume Next
+  
   Dim objError
   Set objError = Server.GetLastError()
+  
+  ' Capture request details for debugging
+  Dim strRequestURL, strQueryString, strFormData, strSessionVars, strCookies
+  strRequestURL = Request.ServerVariables("URL")
+  strQueryString = Request.QueryString
+  
+  ' Log the error to file
+  Call LogASPError()
 %>
+<!DOCTYPE html>
 <html>
 <head>
-<title>ASP 500 Error</title>
+<title>Application Error</title>
 <style>
-BODY  { FONT-FAMILY: Arial; FONT-SIZE: 10pt;
-        BACKGROUND: #ffffff; COLOR: #000000;
-        MARGIN: 15px; }
-H2    { FONT-SIZE: 16pt; COLOR: #ff0000; }
-TABLE { BACKGROUND: #000000; PADDING: 5px; }
-TH    { BACKGROUND: #0000ff; COLOR: #ffffff; }
-TR    { BACKGROUND: #cccccc; COLOR: #000000; }
+BODY { 
+    FONT-FAMILY: Arial, sans-serif; 
+    FONT-SIZE: 11pt;
+    BACKGROUND: #f5f5f5; 
+    COLOR: #333;
+    MARGIN: 20px;
+    LINE-HEIGHT: 1.5;
+}
+H2 { 
+    FONT-SIZE: 20pt; 
+    COLOR: #c00; 
+    MARGIN-BOTTOM: 10px;
+}
+H3 {
+    FONT-SIZE: 14pt;
+    COLOR: #333;
+    BORDER-BOTTOM: 2px solid #c00;
+    PADDING-BOTTOM: 5px;
+    MARGIN-TOP: 30px;
+}
+.error-box {
+    BACKGROUND: #ffebee;
+    BORDER: 1px solid #c00;
+    PADDING: 15px;
+    MARGIN: 20px 0;
+    BORDER-RADIUS: 4px;
+}
+TABLE { 
+    WIDTH: 100%;
+    BORDER-COLLAPSE: collapse;
+    MARGIN: 10px 0;
+}
+TH { 
+    BACKGROUND: #c00; 
+    COLOR: #ffffff;
+    PADDING: 8px;
+    TEXT-ALIGN: left;
+}
+TD {
+    BACKGROUND: #fff;
+    COLOR: #333;
+    PADDING: 8px;
+    BORDER-BOTTOM: 1px solid #ddd;
+}
+TR:nth-child(even) TD {
+    BACKGROUND: #f9f9f9;
+}
+.code {
+    FONT-FAMILY: Consolas, monospace;
+    FONT-SIZE: 10pt;
+    BACKGROUND: #f4f4f4;
+    PADDING: 2px 4px;
+    BORDER-RADIUS: 3px;
+}
+.debug-section {
+    BACKGROUND: #fff;
+    BORDER: 1px solid #ddd;
+    PADDING: 15px;
+    MARGIN: 10px 0;
+    BORDER-RADIUS: 4px;
+}
+.back-link {
+    DISPLAY: inline-block;
+    MARGIN-TOP: 20px;
+    PADDING: 10px 20px;
+    BACKGROUND: #c00;
+    COLOR: #fff;
+    TEXT-DECORATION: none;
+    BORDER-RADIUS: 4px;
+}
+.back-link:hover {
+    BACKGROUND: #a00;
+}
 </style>
 </head>
 <body>
 
-<h2 align="center">An error has occurred</h2>
+<h2>An error has occurred</h2>
 
-<p align="center">An error occurred processing the page you requested.<br>
-Please see the details below for more information.</p>
+<div class="error-box">
+    <strong>Error Location:</strong> <span class="code"><%=strRequestURL%></span><br>
+    <% If strQueryString <> "" Then %>
+    <strong>Query String:</strong> <span class="code"><%=strQueryString%></span>
+    <% End If %>
+</div>
 
-<center>
+<h3>Error Details</h3>
 <table>
-<tr>
-<td>
-<%
-  Response.Write("An Error Occurred.<br/>")
-  Response.Write("<strong>Err</strong>" & Err & "<br/>")
-  Response.Write("<strong>Desc</strong>" & Err.Description & "<br/>")
-'  Response.Write("<strong>Info</strong>" & Err.Information & "<br/>")
-  Response.Write("<strong>Number</strong>" & Err.Number & "<br/>")
-%>
-</td>
-</tr>
+  <tr>
+    <th width="150">Property</th>
+    <th>Value</th>
+  </tr>
+  
+  <% If objError.Number <> 0 Then %>
+  <tr>
+    <td><strong>Error Number</strong></td>
+    <td class="code"><%=objError.Number%> (0x<%=Hex(objError.Number)%>)</td>
+  </tr>
+  <% End If %>
+  
+  <% If objError.Source <> "" Then %>
+  <tr>
+    <td><strong>Error Source</strong></td>
+    <td><%=objError.Source%></td>
+  </tr>
+  <% End If %>
+  
+  <% If objError.File <> "" Then %>
+  <tr>
+    <td><strong>File Name</strong></td>
+    <td class="code"><%=objError.File%></td>
+  </tr>
+  <% End If %>
+  
+  <% If objError.Line > 0 Then %>
+  <tr>
+    <td><strong>Line Number</strong></td>
+    <td class="code"><%=objError.Line%></td>
+  </tr>
+  <% End If %>
+  
+  <% If objError.Description <> "" Then %>
+  <tr>
+    <td><strong>Description</strong></td>
+    <td><%=objError.Description%></td>
+  </tr>
+  <% End If %>
+  
+  <% If objError.ASPDescription <> "" Then %>
+  <tr>
+    <td><strong>ASP Description</strong></td>
+    <td><%=objError.ASPDescription%></td>
+  </tr>
+  <% End If %>
+  
+  <% If objError.Number = 0 And objError.Description = "" Then %>
+  <tr>
+    <td colspan="2" style="color: #c00;">
+      <strong>No detailed error information available.</strong><br>
+      This may be a connection error, missing file, or IIS configuration issue.<br>
+      Check that all include files exist and paths are correct.
+    </td>
+  </tr>
+  <% End If %>
+  
+  <% ' Also check for Err object which may have different info %>
+  <% If Err.Number <> 0 Then %>
+  <tr>
+    <td><strong>Err.Number</strong></td>
+    <td class="code"><%=Err.Number%></td>
+  </tr>
+  <tr>
+    <td><strong>Err.Description</strong></td>
+    <td><%=Err.Description%></td>
+  </tr>
+  <tr>
+    <td><strong>Err.Source</strong></td>
+    <td><%=Err.Source%></td>
+  </tr>
+  <% End If %>
 </table>
-</center>
 
-<div align="center"><center>
+<div class="debug-section">
+    <h3>Request Information</h3>
+    <table>
+        <tr><th width="150">Property</th><th>Value</th></tr>
+        <tr><td>Request Method</td><td><%=Request.ServerVariables("REQUEST_METHOD")%></td></tr>
+        <tr><td>User Agent</td><td><%=Request.ServerVariables("HTTP_USER_AGENT")%></td></tr>
+        <tr><td>Remote Address</td><td><%=Request.ServerVariables("REMOTE_ADDR")%></td></tr>
+        <% If Session("Name") <> "" Then %>
+        <tr><td>User</td><td><%=Session("Name")%></td></tr>
+        <% End If %>
+    </table>
+</div>
 
-<table>
-<% If Len(CStr(objError.ASPCode)) > 0 Then %>
-  <tr>
-    <th nowrap align="left" valign="top">IIS Error Number</th>
-    <td align="left" valign="top"><%=objError.ASPCode%></td>
-  </tr>
-<% End If %>
-<% If Len(CStr(objError.Number)) > 0 Then %>
-  <tr>
-    <th nowrap align="left" valign="top">COM Error Number</th>
-    <td align="left" valign="top"><%=objError.Number%>
-    <%=" (0x" & Hex(objError.Number) & ")"%></td>
-  </tr>
-<% End If %>
-<% If Len(CStr(objError.Source)) > 0 Then %>
-  <tr>
-    <th nowrap align="left" valign="top">Error Source</th>
-    <td align="left" valign="top"><%=objError.Source%></td>
-  </tr>
-<% End If %>
-<% If Len(CStr(objError.File)) > 0 Then %>
-  <tr>
-    <th nowrap align="left" valign="top">File Name</th>
-    <td align="left" valign="top"><%=objError.File%></td>
-  </tr>
-<% End If %>
-<% If Len(CStr(objError.Line)) > 0 Then %>
-  <tr>
-    <th nowrap align="left" valign="top">Line Number</th>
-    <td align="left" valign="top"><%=objError.Line%></td>
-  </tr>
-<% End If %>
-<% If Len(CStr(objError.Description)) > 0 Then %>
-  <tr>
-    <th nowrap align="left" valign="top">Brief Description</th>
-    <td align="left" valign="top"><%=objError.Description%></td>
-  </tr>
-<% End If %>
-<% If Len(CStr(objError.ASPDescription)) > 0 Then %>
-  <tr>
-    <th nowrap align="left" valign="top">Full Description</th>
-    <td align="left" valign="top"><%=objError.ASPDescription%></td>
-  </tr>
-<% End If %>
-</table>
-</center></div>
+<div class="debug-section">
+    <h3>Session State</h3>
+    <table>
+        <tr><th width="150">Property</th><th>Value</th></tr>
+        <tr><td>LoggedIn</td><td><%=Session("LoggedIn")%></td></tr>
+        <tr><td>WorkingDir</td><td><%=Session("WorkingDir")%></td></tr>
+        <tr><td>Code</td><td><%=Session("Code")%></td></tr>
+        <tr><td>Name</td><td><%=Session("Name")%></td></tr>
+        <tr><td>Prefix</td><td><%=Session("Prefix")%></td></tr>
+        <tr><td>State</td><td><%=Session("State")%></td></tr>
+    </table>
+</div>
+
+<div class="debug-section">
+    <h3>Cookies (ClientSettings)</h3>
+    <table>
+        <tr><th width="150">Property</th><th>Value</th></tr>
+        <tr><td>WorkingDir</td><td><%=Request.Cookies("ClientSettings")("WorkingDir")%></td></tr>
+        <tr><td>Prefix</td><td><%=Request.Cookies("ClientSettings")("Prefix")%></td></tr>
+        <tr><td>State</td><td><%=Request.Cookies("ClientSettings")("State")%></td></tr>
+        <tr><td>Stylesheet</td><td><%=Request.Cookies("ClientSettings")("Stylesheet")%></td></tr>
+    </table>
+</div>
+
+<a href="javascript:history.go(-1);" class="back-link">Go Back</a>
+
 </body>
 </html>
-<%
-Dim strSubject
-strSubject = "Mydesk Error Notification (" & Request.ServerVariables("Server_Name") & ")"
-Dim strBody
-strBody = "<html><head><style>body,p,td{font-family:arial;font-size:10pt;}</style></head><body>"
-If Len(CStr(objError.ASPCode)) > 0 Then
-    strBody = strBody & "<p>IIS Error Number : " & objError.ASPCode & "</p>"
-End If
-If Len(CStr(objError.Number)) > 0 Then
-    strBody = strBody & "<p>COM Error Number : " & objError.Number & " (0x" & Hex(objError.Number) & ")" & "</p>"
-End If
-If Len(CStr(objError.Source)) > 0 Then
-    strBody = strBody & "<p>Error Source : " & objError.Source &  "</p>"
-End If
-If Len(CStr(objError.File)) > 0 Then
-    strBody = strBody & "<p>File Name : " & objError.File &  "</p>"
-End If
-If Len(CStr(objError.Line)) > 0 Then
-    strBody = strBody & "<p>Line Number : " & objError.Line &  "</p>"
-End If
-If Len(CStr(objError.Description)) > 0 Then
-    strBody = strBody & "<p>Brief Description : " & objError.Description &  "</p>"
-End If
-If Len(CStr(objError.ASPDescription)) > 0 Then
-    strBody = strBody & "<p>Full Description : " & objError.ASPDescription &  "</p>"
-End If
-If Len(Request.Cookies("UserSettings")("UserTypeId")) Then
-    strBody = strBody & "<p>User Type Id : " & Request.Cookies("UserSettings")("UserTypeId") &  "</p>"
-End If
-If Len(Request.Cookies("UserSettings")("Name")) Then
-    strBody = strBody & "<p>User Name : " & Request.Cookies("UserSettings")("Name") &  "</p>"
-Else
-    If Len(Session("Name")) Then
-        strBody = strBody & "<p>User Name : " & Session("Name") &  "</p>"
-    End If
-End If
-
-strBody = strBody & "</body></html>"
-
-Sub SendMail(strFromEmail, strToEmail, strSubject, strBody)
-	Dim objCDO
-	Dim iConf
-	Dim Flds
-
-	Const cdoSendUsingPort = 2
-
-	Set objCDO = Server.CreateObject("CDO.Message")
-	Set iConf = Server.CreateObject("CDO.Configuration")
-
-	Set Flds = iConf.Fields
-	With Flds
-        .Item("http://schemas.microsoft.com/cdo/configuration/sendusing") = 2
-        .Item("http://schemas.microsoft.com/cdo/configuration/smtpserver") = "smtp.sendgrid.net"
-        .Item("http://schemas.microsoft.com/cdo/configuration/smtpserverport") = 587
-        .Item("http://schemas.microsoft.com/cdo/configuration/smtpconnectiontimeout") = 60
-        .Item("http://schemas.microsoft.com/cdo/configuration/smtpauthenticate") = 1
-        .Item("http://schemas.microsoft.com/cdo/configuration/sendusername") = "apikey"
-        .Item("http://schemas.microsoft.com/cdo/configuration/sendpassword") = "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"
-		.Item("http://schemas.microsoft.com/cdo/configuration/sendtls") = true
-		.Update
-	End With
-
-	Set objCDO.Configuration = iConf
-	With objCDO
-		.From = strFromEmail
-		.To = strToEmail
-		.Subject = strSubject
-		.HtmlBody = strBody
-		.Send
-	End With
-    Response.Write "<p align=""center"">Email has been sent to IT Support.</p><p align=""center""><a href=""javascript:history.go(-1);"">Click here to go back</a></p>"
-    'Cleanup
-    Set ObjCDO = Nothing
-    Set iConf = Nothing
-    Set Flds = Nothing
-End Sub
-
-Dim strFromEmail
-strFromEmail = "peterb@digitalresponse.com.au"
-
-Dim strToEmail
-strToEmail = "peterb@digitalresponse.com.au"
-
-If Session("Name") <> "Peter Bardenhagen" Then
-    If strFromEmail <> "" Then
-	    SendMail strFromEmail, strToEmail, strSubject, strBody
-    End If
-End If
-
-%>

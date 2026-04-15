@@ -19,7 +19,7 @@ page = Request("Page")
 	<title>MyDesk</title>
 	<script language="javascript" src="<%= Session("WorkingDir") %>/System/Global.js"></script>
 </head>
-<frameset rows="150,*" frameborder=0 framespacing=0>
+<frameset rows="70,*" frameborder=0 framespacing=0>
       <frame src="Header.asp" id="HeaderFrame" frameborder=No noresize scrolling=no>
 <%
 If page <> "" Then

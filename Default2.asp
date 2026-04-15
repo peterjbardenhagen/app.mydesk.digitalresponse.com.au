@@ -1,4 +1,5 @@
 <% 
+
 On Error Resume Next
 
 Response.AddHeader "Pragma", "No-Store"
@@ -15,35 +16,7 @@ For Each Item In Request.Cookies
 	Response.Cookies(Item) = ""
 Next
 
-If Err.Number <> 0 Then
-	Response.Clear
-	Response.Write("<html><head><title>Error</title></head><body>")
-	Response.Write("<h1>Error in Default2.asp</h1>")
-	Response.Write("<p><strong>Error Number:</strong> " & Err.Number & "</p>")
-	Response.Write("<p><strong>Error Description:</strong> " & Err.Description & "</p>")
-	Response.Write("<p><strong>Error Source:</strong> " & Err.Source & "</p>")
-	Response.Write("<p><strong>Line Number:</strong> " & Err.Line & "</p>")
-	Response.Write("<hr>")
-	Response.Write("<p><a href=""javascript:history.back()"">Go Back</a></p>")
-	Response.Write("</body></html>")
-	Response.End
-End If
-
-Response.Redirect("/Clients/SalesEngine/Portal/Validate_Portal.asp")
-If Err.Number <> 0 Then
-	Response.Clear
-	Response.Write("<html><head><title>Error</title></head><body>")
-	Response.Write("<h1>Redirect Error in Default2.asp</h1>")
-	Response.Write("<p><strong>Error Number:</strong> " & Err.Number & "</p>")
-	Response.Write("<p><strong>Error Description:</strong> " & Err.Description & "</p>")
-	Response.Write("<p><strong>Error Source:</strong> " & Err.Source & "</p>")
-	Response.Write("<p><strong>Redirect Target:</strong> /Clients/SalesEngine/Portal/Validate_Portal.asp</p>")
-	Response.Write("<hr>")
-	Response.Write("<p><a href=""javascript:history.back()"">Go Back</a></p>")
-	Response.Write("</body></html>")
-	Response.End
-End If
-
+Response.Redirect("/Clients/SalesEngine/Portal/Validate_Portal.asp?ClientId=Techlight&AccessCode=2984")
 Response.End
 
 %>
@@ -138,13 +111,25 @@ End If
 								    <!--There are currently difficulties with the 3rd Party hosting providers for MyDesk. <br /> As such MyDesk is currently offline. Please check back for updates.-->
 								    <input type="image" name="Submit" src="/Images/Login.gif" value="Login" ID="Submit1">
 								 </div>
+								<div style="position:absolute;top:205px;left:680px;"><a href="http://webmail.mydesk.com.au" target="_Blank"><img src="/Images/MyDesk_Webmail.gif" border=0 alt="MyDesk Webmail"></a></div>
 								</form>
 							</td>
 						</tr>
 					</table>
 				</td>
 			</tr>
+			<tr>
+				<td colspan=2>
+					<table width="100%" cellpadding=0 cellspacing=0 border=0>
+						<tr>
+							<td valign="top" background="/Images/FP_Footer.gif"><img src="/Images/FP_Footer.gif" border=0 alt=""></td>
+							<td valign="top" align="right" width=439><a href="mailto:answers@solutionscorp.com.au"><img src="/Images/FP_Footer_2.gif" border=0 alt=""></a></td>
+						</tr>
+					</table>		
+				</td>
+			</tr>
 		</table>
+
 	</body>
 </html>
 <!--#include virtual="/System/ssi_dbConn_close.inc"-->
