@@ -18,6 +18,13 @@ Function IsActive(pageName)
 		IsActive = ""
 	End If
 End Function
+
+Function IsDirector()
+	Dim userTypeId
+	userTypeId = Request.Cookies("UserSettings")("UserTypeID") & ""
+	' UserTypeID 1 = Director, 2 = Manager, 3 = Standard User
+	IsDirector = (userTypeId = "1")
+End Function
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -192,6 +199,16 @@ End Function
 					Users
 				</a>
 			</li>
+			<% If IsDirector() Then %>
+			<li class="tl-nav-item">
+				<a href="<%= strWorkingDir %>/Admin/" target="_parent" class="tl-nav-link <%= IsActive("admin") %>">
+					<svg class="tl-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+					</svg>
+					Admin
+				</a>
+			</li>
+			<% End If %>
 			<li class="tl-nav-item tl-nav-dropdown">
 				<button class="tl-nav-link tl-dropdown-toggle" onclick="toggleDropdown(event)">
 					<svg class="tl-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -224,22 +241,6 @@ End Function
 					<a href="<%= strWorkingDir %>/PurchaseOrders/" target="MainFrame" class="tl-dropdown-item">
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line></svg>
 						Purchase Orders
-					</a>
-					<a href="<%= strWorkingDir %>/Setup/" target="MainFrame" class="tl-dropdown-item">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle></svg>
-						Setup
-					</a>
-					<a href="<%= strWorkingDir %>/Users/" target="MainFrame" class="tl-dropdown-item">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-						Users
-					</a>
-					<div class="tl-dropdown-divider"></div>
-					<a href="<%= strWorkingDir %>/Portal/LogOff.asp" target="_parent" class="tl-dropdown-item tl-dropdown-item-danger">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline></svg>
-						Log Out
-					</a>
-				</div>
-			</li>
 			<li class="tl-nav-item tl-nav-logout">
 				<a href="<%= strWorkingDir %>/Portal/LogOff.asp" target="_parent" class="tl-btn-logout">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
