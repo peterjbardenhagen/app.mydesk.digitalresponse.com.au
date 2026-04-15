@@ -1,6 +1,6 @@
 <%@ Language=VBScript %>
 <!--#include virtual="/System/ssi_functions.asp"-->
-<!--#include virtual="/System/ssi_dbConn_open_dev.inc"-->
+<!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <HTML>
 <HEAD>
 <LINK REL='Stylesheet' HREF='Style.css'>

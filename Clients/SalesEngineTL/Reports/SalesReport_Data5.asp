@@ -1,6 +1,6 @@
 <%@ Language=VBScript %>
 <!--#include virtual="/System/ssi_functions.asp"-->
-<!--#include virtual="/System/ssi_dbConn_open_dev.inc"-->
+<!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <!--#include virtual="/FusionChart/FC_Colors.asp" --><%
 
 dteBegin = CStr(Trim(Request("Begin")))
