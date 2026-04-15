@@ -180,4 +180,20 @@ Sub SendMail(fromWho, toWho, Subject, Body)
 	Set Flds = Nothing
 End Sub
 
+Sub SetWorkingDir(strUrl)
+	Dim strPath
+	Dim intSalesEngine
+	strPath = Request.ServerVariables("Url")
+	intSalesEngine = InStr(strPath, "SalesEngine")
+	strPath = Mid(strPath, 1, intSalesEngine+12)
+	Session("WorkingDir") = strPath
+	Session("State") = "NA"
+	Session("Prefix") = Right(strPath,2)
+	Response.Cookies("WorkingDir") = strPath
+	Response.Cookies("WorkingDir").Expires = Date() + 1
+	Response.Cookies("ClientSettings")("State") = "NA"
+	Response.Cookies("ClientSettings")("Prefix") = Right(strPath,2)
+	Response.Cookies("ClientSettings").Expires = Date() + 1
+End Sub
+
 %>
