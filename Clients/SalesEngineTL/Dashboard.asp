@@ -134,6 +134,11 @@ Dim ytdQuotesWon, ytdQuotesValue, ytdInvoices, ytdInvoiceValue
 Dim lastYearYTDQuotesWon, lastYearYTDQuotesValue, lastYearYTDInvoices, lastYearYTDInvoiceValue
 Dim pendingQuotesOver30Days, invoicesOverdue, pendingApprovalPOs
 
+' Initialize monthly chart data arrays
+Dim monthlyQuotesThisYear(12), monthlyQuotesLastYear(12)
+Dim monthlyInvoicesThisYear(12)
+Dim m
+
 ' Set default values
 thisMonthQuotes = 0
 thisMonthQuotesWon = 0
@@ -156,6 +161,13 @@ lastYearYTDInvoiceValue = 0
 pendingQuotesOver30Days = 0
 invoicesOverdue = 0
 pendingApprovalPOs = 0
+
+' Initialize monthly arrays to 0
+For m = 1 To 12
+	monthlyQuotesThisYear(m) = 0
+	monthlyQuotesLastYear(m) = 0
+	monthlyInvoicesThisYear(m) = 0
+Next
 
 If isDirector1 Then
 	Dim sql, rs
@@ -267,6 +279,47 @@ If isDirector1 Then
 	rs.Close
 	Set rs = Nothing
 	Err.Clear
+	On Error Resume Next
+	
+	' Get monthly quote data for current year
+	For m = 1 To 12
+		sql = "SELECT COUNT(*) as cnt, SUM(CASE WHEN QuoteStatusId = 2 THEN 1 ELSE 0 END) as won, SUM(NettPriceTotal) as val FROM Quotes WHERE Month(QuoteDate) = " & m & " AND Year(QuoteDate) = " & currentYear & " AND Deleted = 0"
+		Set rs = dbConn.Execute(sql)
+		If Err.Number = 0 And Not rs.EOF Then
+			If Not IsNull(rs("won")) And IsNumeric(rs("won")) Then monthlyQuotesThisYear(m) = CLng(rs("won"))
+		End If
+		rs.Close
+		Set rs = Nothing
+		Err.Clear
+		On Error Resume Next
+	Next
+	
+	' Get monthly quote data for last year
+	For m = 1 To 12
+		sql = "SELECT COUNT(*) as cnt, SUM(CASE WHEN QuoteStatusId = 2 THEN 1 ELSE 0 END) as won, SUM(NettPriceTotal) as val FROM Quotes WHERE Month(QuoteDate) = " & m & " AND Year(QuoteDate) = " & lastYear & " AND Deleted = 0"
+		Set rs = dbConn.Execute(sql)
+		If Err.Number = 0 And Not rs.EOF Then
+			If Not IsNull(rs("won")) And IsNumeric(rs("won")) Then monthlyQuotesLastYear(m) = CLng(rs("won"))
+		End If
+		rs.Close
+		Set rs = Nothing
+		Err.Clear
+		On Error Resume Next
+	Next
+	
+	' Get monthly invoice data for current year
+	For m = 1 To 12
+		sql = "SELECT COUNT(*) as cnt, SUM(AmountIncGST) as val FROM Invoices WHERE Month(InvoiceDate) = " & m & " AND Year(InvoiceDate) = " & currentYear
+		Set rs = dbConn.Execute(sql)
+		If Err.Number = 0 And Not rs.EOF Then
+			If Not IsNull(rs("cnt")) And IsNumeric(rs("cnt")) Then monthlyInvoicesThisYear(m) = CLng(rs("cnt"))
+		End If
+		rs.Close
+		Set rs = Nothing
+		Err.Clear
+		On Error Resume Next
+	Next
+	
 	On Error GoTo 0
 End If
 %>
@@ -851,7 +904,7 @@ if (monthlyCtx) {
             datasets: [
                 {
                     label: '<%= currentYear %> Quotes Won',
-                    data: [<%= thisMonthQuotesWon %>, <%= lastMonthQuotesWon %>, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    data: [<%= monthlyQuotesThisYear(1) %>, <%= monthlyQuotesThisYear(2) %>, <%= monthlyQuotesThisYear(3) %>, <%= monthlyQuotesThisYear(4) %>, <%= monthlyQuotesThisYear(5) %>, <%= monthlyQuotesThisYear(6) %>, <%= monthlyQuotesThisYear(7) %>, <%= monthlyQuotesThisYear(8) %>, <%= monthlyQuotesThisYear(9) %>, <%= monthlyQuotesThisYear(10) %>, <%= monthlyQuotesThisYear(11) %>, <%= monthlyQuotesThisYear(12) %>],
                     borderColor: '#00a8b5',
                     backgroundColor: 'rgba(0, 168, 181, 0.1)',
                     fill: true,
@@ -859,7 +912,7 @@ if (monthlyCtx) {
                 },
                 {
                     label: '<%= lastYear %> Quotes Won',
-                    data: [<%= lastYearYTDQuotesWon %>, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    data: [<%= monthlyQuotesLastYear(1) %>, <%= monthlyQuotesLastYear(2) %>, <%= monthlyQuotesLastYear(3) %>, <%= monthlyQuotesLastYear(4) %>, <%= monthlyQuotesLastYear(5) %>, <%= monthlyQuotesLastYear(6) %>, <%= monthlyQuotesLastYear(7) %>, <%= monthlyQuotesLastYear(8) %>, <%= monthlyQuotesLastYear(9) %>, <%= monthlyQuotesLastYear(10) %>, <%= monthlyQuotesLastYear(11) %>, <%= monthlyQuotesLastYear(12) %>],
                     borderColor: '#d4a574',
                     backgroundColor: 'rgba(212, 165, 116, 0.1)',
                     fill: true,
@@ -898,14 +951,22 @@ if (revenueCtx) {
     new Chart(revenueCtx, {
         type: 'doughnut',
         data: {
-            labels: ['Quotes Won', 'Invoices Issued', 'Pending Quotes', 'Other'],
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
             datasets: [{
-                data: [<%= thisMonthQuotesValue %>, <%= thisMonthInvoiceValue %>, 0, 0],
+                data: [<%= monthlyInvoicesThisYear(1) %>, <%= monthlyInvoicesThisYear(2) %>, <%= monthlyInvoicesThisYear(3) %>, <%= monthlyInvoicesThisYear(4) %>, <%= monthlyInvoicesThisYear(5) %>, <%= monthlyInvoicesThisYear(6) %>, <%= monthlyInvoicesThisYear(7) %>, <%= monthlyInvoicesThisYear(8) %>, <%= monthlyInvoicesThisYear(9) %>, <%= monthlyInvoicesThisYear(10) %>, <%= monthlyInvoicesThisYear(11) %>, <%= monthlyInvoicesThisYear(12) %>],
                 backgroundColor: [
                     '#00a8b5',
                     '#d4a574',
                     '#667eea',
-                    '#11998e'
+                    '#11998e',
+                    '#38ef7d',
+                    '#00c4d3',
+                    '#e8c088',
+                    '#764ba2',
+                    '#f093fb',
+                    '#f5576c',
+                    '#4facfe',
+                    '#00f2fe'
                 ],
                 borderWidth: 0
             }]
