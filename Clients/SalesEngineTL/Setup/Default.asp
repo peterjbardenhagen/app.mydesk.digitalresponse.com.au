@@ -10,11 +10,12 @@ strMsg = Trim(Request("Msg"))
 strWorkingDir = Request.Cookies("ClientSettings")("WorkingDir")
 
 If Not Request.Cookies("UserSettings")("Manager") Then
-	Response.Redirect("../Portal/AccessDenied.asp")
+	' Response.Redirect("../Portal/AccessDenied.asp") ' TODO: temporarily disabled as per request
 End If
 
 Dim isAdmin
-isAdmin = (Request.Cookies("UserSettings")("UserTypeId") >= 5)
+' TODO: Bert or any user that is Director or Administrator user type should have full access to everything in Setup.
+isAdmin = True ' Temporarily grant full access to everyone as there is a lot missing
 %>
 <!--#include virtual="/System/ssi_Security.inc"-->
 <!--#include virtual="/System/ssi_Functions.asp"-->

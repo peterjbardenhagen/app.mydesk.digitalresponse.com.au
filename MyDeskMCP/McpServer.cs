@@ -438,7 +438,7 @@ public class McpServer
     {
         var invoiceId = Convert.ToInt32(args["invoice_id"]);
         var invoice = await _invoiceService.GetInvoiceByIdAsync(invoiceId, context);
-        return invoice ?? new { error = "Invoice not found" };
+        return invoice != null ? invoice : new { error = "Invoice not found" };
     }
 
     private async Task<object?> HandleListInvoicesAsync(Dictionary<string, object> args, McpContext context)
@@ -485,7 +485,7 @@ public class McpServer
     {
         var poId = Convert.ToInt32(args["po_id"]);
         var po = await _poService.GetPurchaseOrderByIdAsync(poId, context);
-        return po ?? new { error = "Purchase Order not found" };
+        return po != null ? po : new { error = "Purchase Order not found" };
     }
 
     private async Task<object?> HandleListPurchaseOrdersAsync(Dictionary<string, object> args, McpContext context)
@@ -515,7 +515,7 @@ public class McpServer
     {
         var contactId = Convert.ToInt32(args["contact_id"]);
         var contact = await _contactService.GetContactByIdAsync(contactId, context);
-        return contact ?? new { error = "Contact not found" };
+        return contact != null ? contact : new { error = "Contact not found" };
     }
 
     private async Task<object?> HandleSearchContactsAsync(Dictionary<string, object> args, McpContext context)

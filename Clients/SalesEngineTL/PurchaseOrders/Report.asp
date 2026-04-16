@@ -59,12 +59,24 @@ Set rsDivP = Nothing
 		<link rel="stylesheet" type="text/css" href="/System/Style2.css">
 		<link rel="Stylesheet" type="text/css" href="/System/Style_Print.css" media="print">
 	</head>
-	<body style="background-color:#ffffff;" Marginheight=0 Marginwidth=2 topMargin=0 leftMargin=2>
-		<table width="100%" bgcolor="#DDDDDD" class="NoPrint" width="100%" cellpadding=5 cellspacing=0 border=0 ID="Table3">
-			<tr>
-				<td><% If (strCode = Request.Cookies("UserSettings")("Code")) Or Request.Cookies("UserSettings")("Manager") Then %><input type="button" value=" Print " onclick="print();" ID="Button2" NAME="Button1"> (Make sure that you set the orientation to landscape)<% End If %></td>
-			</tr>
-		</table>
+	<body style="background-color:#ffffff;" Marginheight=0 Marginwidth=0 topMargin=0 leftMargin=0>
+		<div class="NoPrint" style="background-color: #f8fafc; padding: 16px; border-bottom: 1px solid #e2e8f0; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+			<div style="flex: 1;"></div>
+			<div style="display: flex; gap: 12px; align-items: center;">
+				<button type="button" class="tl-btn-secondary" onclick="parent.document.location.href=parent.document.location.href;">Close [x]</button>
+				<% If (strCode = Request.Cookies("UserSettings")("Code")) Or Request.Cookies("UserSettings")("Manager") Then %>
+				<button type="button" class="tl-btn-primary" onclick="print();">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:middle;margin-right:6px;">
+						<polyline points="6 9 6 2 18 2 18 9"></polyline>
+						<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+						<rect x="6" y="14" width="12" height="8"></rect>
+					</svg>
+					Print Report
+				</button>
+				<span style="font-size: 13px; color: #64748b;">(Landscape)</span>
+				<% End If %>
+			</div>
+		</div>
 		<br>
 <%
 If strCode <> "All" Then
@@ -116,18 +128,16 @@ ElseIf intPOStatusId = 555 Then
 End If
 boolDivisionManager = SearchArray(Request.Cookies("DivisionIdsAccess")("ArrDivisionIdsManager"), intDivisionId)
 %>
-		<table width=1000 cellpadding=3 cellspacing=0 border=0 ID="Table1">
-			<tr>
-				<td valign="top"><span class="TimesHeader">My Purchase Orders Report for <%= strName %></span><br><br>
-				<span class="TimesItalicBold">Includes <% If intCompanyId = 0 Then Response.Write("All companies") Else Response.Write(strCustomer) %>&nbsp;<% If intDivisionId = 0 Then Response.Write("and all divisions") Else Response.Write("at " & strDivision) %><br>
+		<div style="margin-bottom: 32px; padding: 0 24px;">
+			<h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px 0; font-family: 'Inter', sans-serif;">My Purchase Orders Report for <%= strName %></h1>
+			<p style="font-size: 14px; color: #64748b; margin: 0; font-family: 'Inter', sans-serif;">
+				<strong>Includes <% If intCompanyId = 0 Then Response.Write("All companies") Else Response.Write(strCustomer) %>&nbsp;<% If intDivisionId = 0 Then Response.Write("and all divisions") Else Response.Write("at " & strDivision) %></strong><br>
 				<% If intPOStatusId > 0 Then %>Of the status <%= strPOStatus %><br><% End If %>
-				Occuring between <%= FormatDateTime(dteDateFrom, 1) %> and <%= FormatDateTime(dteDateTo, 1) %> as at <%= FormatDateTime(ServerToEST(Now()),1) %></span>
-				</td>
-			</tr>
-			<tr>
-				<td style="font-style:italic;"><br>All prices are ex. GST.<br><br></td>
-			</tr>
-		</table>
+				Occuring between <%= FormatDateTime(dteDateFrom, 1) %> and <%= FormatDateTime(dteDateTo, 1) %><br>
+				As at <%= FormatDateTime(ServerToEST(Now()),1) %>
+			</p>
+			<p style="font-size: 12px; font-style: italic; color: #94a3b8; margin-top: 8px;">All prices are ex. GST.</p>
+		</div>
 <%
 Set rsQu = Server.CreateObject("ADODB.RecordSet")
 sql = "SELECT Contacts_WithCustomersAndSuppliers_V2.CompanyName, PO.*, PO.IntroText AS IT, PO.InternalNotes AS [IN], Users.*, PurchaseOrderStatus.POStatus, PurchaseOrderPaymentTypes.POPaymentType FROM PurchaseOrderStatus INNER JOIN (PurchaseOrderPaymentTypes INNER JOIN (Contacts_WithCustomersAndSuppliers_V2 INNER JOIN (Users INNER JOIN PurchaseOrders AS PO ON Users.Code = PO.Code) ON Contacts_WithCustomersAndSuppliers_V2.ContactId = PO.ContactId) ON PurchaseOrderPaymentTypes.POPaymentTypeId = PO.POPaymentTypeId) ON PurchaseOrderStatus.POStatusId = PO.POStatusId" &_
@@ -151,88 +161,89 @@ sql = sql & " PO.Code = '" & Request.Cookies("UserSettings")("Code") & "') ORDER
 Set rsQu = dbConn.Execute(sql)
 If Not(rsQu.BOF And rsQu.EOF) Then
 %>
-		<table width="1000" cellpadding=3 cellspacing=0 border=0 ID="Table2">
-			<tr>
+		<div style="padding: 0 24px;">
+			<table class="tl-data-grid" style="width: 100%; border-collapse: collapse;">
+				<thead>
+					<tr>
 <%
 	If intDivisionId = 0 Then
 %>
-				<td class="HeaderRow">Division</td>
+						<th style="text-align: left; padding: 12px; border-bottom: 2px solid #e2e8f0; font-family: 'Inter', sans-serif; font-weight: 600; color: #475569;">Division</th>
 <%
 	End If
 	If intCompanyId = 0 Then
 %>
-				<td class="HeaderRow">Supplier</td>
+						<th style="text-align: left; padding: 12px; border-bottom: 2px solid #e2e8f0; font-family: 'Inter', sans-serif; font-weight: 600; color: #475569;">Supplier</th>
 <%
 	End If
 	If strCode = "All" Then
 %>
-				<td class="HeaderRow">User</td>
+						<th style="text-align: left; padding: 12px; border-bottom: 2px solid #e2e8f0; font-family: 'Inter', sans-serif; font-weight: 600; color: #475569;">User</th>
 <%
 	End If
 %>
-				<td class="HeaderRow" style="width:40px;">PO #</td>
-				<td class="HeaderRow" style="width:80px;">Date</td>
-				<td class="HeaderRow" style="width:120px;">Status</td>
-				<td class="HeaderRow" style="text-align:right;" width=100>Total Ex.</td>
-			</tr>
+						<th style="text-align: left; padding: 12px; border-bottom: 2px solid #e2e8f0; font-family: 'Inter', sans-serif; font-weight: 600; color: #475569; width: 60px;">PO #</th>
+						<th style="text-align: left; padding: 12px; border-bottom: 2px solid #e2e8f0; font-family: 'Inter', sans-serif; font-weight: 600; color: #475569; width: 100px;">Date</th>
+						<th style="text-align: left; padding: 12px; border-bottom: 2px solid #e2e8f0; font-family: 'Inter', sans-serif; font-weight: 600; color: #475569; width: 120px;">Status</th>
+						<th style="text-align: right; padding: 12px; border-bottom: 2px solid #e2e8f0; font-family: 'Inter', sans-serif; font-weight: 600; color: #475569; width: 120px;">Total Ex.</th>
+					</tr>
+				</thead>
+				<tbody>
 <%
 	decRunningExTotal = 0
 	Do Until rsQu.EOF
 		decRunningExTotal = decRunningExTotal + rsQu("PriceExTotal")
 %>
-			<tr>
+					<tr style="border-bottom: 1px solid #e2e8f0;">
 <%
 		If intDivisionId = 0 Then
 %>
-				<td><%= rsQu("DivisionCode") %></td>
+						<td style="padding: 12px; font-family: 'Inter', sans-serif; font-size: 13px; vertical-align: top;"><%= rsQu("DivisionCode") %></td>
 <%
 		End If
 		If intCompanyId = 0 Then
 %>
-				<td><%= rsQu("CompanyName") %></td>
+						<td style="padding: 12px; font-family: 'Inter', sans-serif; font-size: 13px; vertical-align: top;"><strong style="color: #0f172a;"><%= rsQu("CompanyName") %></strong></td>
 <%
 		End If
 		If strCode = "All" Then
 %>
-				<td><%= rsQu("Name") %></td>
+						<td style="padding: 12px; font-family: 'Inter', sans-serif; font-size: 13px; vertical-align: top;"><%= rsQu("Name") %></td>
 <%
 		End If
 %>
-				<td style="width:40px;"><a href="#" onclick="ViewPurchaseOrder('<%= Request.Cookies("ClientSettings")("WorkingDir") %>', <%= rsQu("POid") %>);"><%= rsQu("POid") %></a></td>
-				<td style="width:80px;"><%= FormatDateU(rsQu("PODate"),False) %></td>
-				<td style="width:120px;"><%= rsQu("POStatus") %></td>
-				<td style="text-align:right;" width=100><%= FormatCurrency(rsQu("PriceExTotal"),2) %></td>
-			</tr>
+						<td style="padding: 12px; font-family: 'Inter', sans-serif; font-size: 13px; vertical-align: top;"><a href="#" onclick="ViewPurchaseOrder('<%= Request.Cookies("ClientSettings")("WorkingDir") %>', <%= rsQu("POid") %>);" style="color: #007bff; text-decoration: none; font-weight: 500;"><%= rsQu("POid") %></a></td>
+						<td style="padding: 12px; font-family: 'Inter', sans-serif; font-size: 13px; vertical-align: top; white-space: nowrap;"><%= FormatDateU(rsQu("PODate"),False) %></td>
+						<td style="padding: 12px; font-family: 'Inter', sans-serif; font-size: 13px; vertical-align: top;"><span class="tl-badge tl-badge-info"><%= rsQu("POStatus") %></span></td>
+						<td style="padding: 12px; font-family: 'Inter', sans-serif; font-size: 13px; vertical-align: top; text-align: right; font-weight: 600;"><%= FormatCurrency(rsQu("PriceExTotal"),2) %></td>
+					</tr>
 <%
 		Set rsComments = Server.CreateObject("ADODB.RecordSet")
 		sql = "Select Comments.*, Users.Name From Comments Inner Join Users On Users.Code = Comments.FromCode Where TableId = 8 And ItemId = " & rsQu("POid")
 		Set rsComments = dbConn.Execute(sql)
 		If Not(rsComments.BOF And rsComments.EOF) Then
 %>
-			<tr>
-				<td colspan=10>
-					<table bgcolor="#ffffff" width="100%" cellpadding=3 cellspacing=0 border=0 ID="Table5">
-						<tr>
-							<td><b>The following comments have been made:</b><br></td>
-						</tr>
+					<tr style="border-bottom: 2px solid #cbd5e1; background-color: #f8fafc;">
+						<td colspan=10 style="padding: 12px 24px;">
+							<div style="font-family: 'Inter', sans-serif; font-size: 12px; color: #475569;">
+								<strong style="color: #0f172a; margin-bottom: 8px; display: block;">The following comments have been made:</strong>
 <%
 			Do Until rsComments.EOF
 %>
-						<tr>
-							<td>On <%= FormatDateU(rsComments("DateEntered"), False) %> by <%= rsComments("Name") %>: <%= Replace(rsComments("Comment"), Chr(39), "<br>") %>
+								<div style="margin-bottom: 6px; padding-left: 12px; border-left: 2px solid #cbd5e1;">
+									<span style="font-weight: 500;"><%= rsComments("Name") %> (<%= FormatDateU(rsComments("DateEntered"), False) %>):</span> <%= Replace(rsComments("Comment"), Chr(39), "<br>") %>
 <%
 				If CBool(rsComments("FollowUpRequired")) Then
 %>
-							Follow up is required <% If CBool(rsComments("FollowUpComplete")) Then %>and is complete<% Else %>and is not complete<% End If %>
+									<br><span style="color: #c53030; font-size: 11px;">Follow up is required <% If CBool(rsComments("FollowUpComplete")) Then %>and is complete<% Else %>and is not complete<% End If %></span>
 <%
 				Else
 %>
-							No follow up was required.
+									<br><span style="color: #38a169; font-size: 11px;">No follow up was required.</span>
 <%
 				End If
 %>
-							</td>
-						</tr>
+								</div>
 <%
 				rsComments.MoveNext
 			Loop
@@ -241,47 +252,40 @@ If Not(rsQu.BOF And rsQu.EOF) Then
 				Set rsComments = Nothing
 			End If
 %>
-					</table><br>
-				</td>
-			</tr>
+							</div>
+						</td>
+					</tr>
 <%
 		End If
 %>
-			<tr height=2>
-				<td colspan=8>
-					<table width="100%" height=2 cellpadding=0 cellspacing=0 border=0 ID="Table4">
-						<tr>
-							<td bgcolor="#000000"><img src="/Images/Black.gif" width=994 height=1 border=0 alt=""></td>
-						</tr>
-					</table>
-				</td>
-			</tr>
 <%
 		rsQu.MoveNext
 	Loop
 %>
-			<tr>
+					<tr style="background-color: #f1f5f9; font-weight: 700;">
 <%
 		If intCompanyId = 0 Then
 %>
-				<td></td>
+						<td></td>
 <%
 		End If
 		If intDivisionId = 0 Then
 %>
-				<td></td>
+						<td></td>
 <%
 		End If
 		If strCode = "All" Then
 %>
-				<td></td>
+						<td></td>
 <%
 		End If
 %>
-				<td colspan=3 align="right"><b>Totals:</b>&nbsp;</td>
-				<td style="border-bottom:2px solid black;text-align:right;width:100px;"><%= FormatCurrency(decRunningExTotal,2) %></td>
-			</tr>
-		</table>
+						<td colspan=3 style="text-align: right; padding: 16px 12px; font-family: 'Inter', sans-serif; font-size: 14px;">Totals:</td>
+						<td style="text-align: right; padding: 16px 12px; font-family: 'Inter', sans-serif; font-size: 14px;"><%= FormatCurrency(decRunningExTotal,2) %></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
 <%
 End If
 rsQu.Close

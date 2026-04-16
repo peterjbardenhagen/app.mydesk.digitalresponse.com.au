@@ -1,6 +1,6 @@
 <%@Language="VBSCRIPT"%>
+<!--#include virtual="/System/ssi_Logging.asp"-->
 <%
-' I have disabled ssi_Logging.asp for now
   'Option Explicit
   On Error Resume Next
   
@@ -14,6 +14,11 @@
   
   ' Log the error to file
   Call LogASPError(objError)
+
+  ' Clear any existing response to ensure clean error page display
+  Response.Clear
+  Response.Status = "500 Internal Server Error"
+  Response.ContentType = "text/html"
 %>
 <!DOCTYPE html>
 <html lang="en">

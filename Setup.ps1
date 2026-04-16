@@ -318,6 +318,42 @@ function New-MyDeskASPNetApplication {
     }
 }
 
+function New-MyDeskMCPApplication {
+    Write-Status "Creating MyDeskMCP Application..." $Cyan
+    
+    $appCmd = "$env:SystemRoot\System32\inetsrv\appcmd.exe"
+    $physicalPath = Join-Path $SitePath "MyDeskMCP"
+    
+    # Check if application exists
+    $appList = & $appCmd list app /site.name:$SiteName /path:/MyDeskMCP 2>$null
+    if ($appList -and $appList -match "MyDeskMCP") {
+        if ($Force) {
+            Write-Status "  Removing existing MCP application..." $Yellow
+            & $appCmd delete app "/$SiteName/MyDeskMCP" 2>$null
+        } else {
+            Write-WarningStatus "Application 'MyDeskMCP' already exists. Use -Force to recreate."
+            return
+        }
+    }
+    
+    # Check physical path exists
+    if (-not (Test-Path $physicalPath)) {
+        Write-ErrorStatus "MyDeskMCP path does not exist: $physicalPath"
+        return
+    }
+    
+    # Create application using appcmd - sharing the ASPNet application pool
+    try {
+        & $appCmd add app /site.name:$SiteName /path:/MyDeskMCP /physicalPath:$physicalPath 2>$null
+        & $appCmd set app "/$SiteName/MyDeskMCP" /applicationPool:TechlightMyDeskNet 2>$null
+        
+        Write-Status "  MyDeskMCP application created successfully" $Green
+    }
+    catch {
+        Write-ErrorStatus "Failed to create MCP application: $_"
+    }
+}
+
 function Set-WebsitePermissions {
     Write-Status "Setting Directory Permissions..." $Cyan
     
@@ -501,6 +537,7 @@ function Show-Summary {
     Write-Host "Website:        http://localhost/" -ForegroundColor White
     Write-Host "                 http://localhost/Clients/SalesEngineTL/" -ForegroundColor White
     Write-Host "MyDeskASPNet:   http://localhost/MyDeskASPNet/" -ForegroundColor White
+    Write-Host "MyDeskMCP:      http://localhost/MyDeskMCP/" -ForegroundColor White
     Write-Host "Local domains:  http://techlight.local/" -ForegroundColor White
     Write-Host ""
     Write-Host "Physical Path:  $SitePath" -ForegroundColor Gray
@@ -571,6 +608,9 @@ New-TechlightWebsite
 
 # Create MyDeskASPNet Application
 New-MyDeskASPNetApplication
+
+# Create MyDeskMCP Application
+New-MyDeskMCPApplication
 
 # Configure Authentication
 Set-Authentication

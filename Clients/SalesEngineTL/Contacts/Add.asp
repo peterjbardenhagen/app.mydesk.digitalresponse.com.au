@@ -95,18 +95,23 @@ Response.CacheControl = "no-store, private, must-revalidate"
 		
 		</script>
 	</head>
-	<body bgcolor="#dddddd">
+	<body class="tl-bg-light">
 <!--#include virtual="/Clients/SalesEngineTL/Header.asp"-->
-	<table width=95% align="center" cellpadding=0 cellspacing=0 border=0 ID="Table4">
-		<tr>
-			<td>
-				<br/>
-				<span class="Header2"><a href="/Portal.asp" class="Header2">Home</a> / <a href="Default.asp" class="Header2">Contacts</a> / Add Contact /></span>
-				<br/><br/>
-				<table width=100% align="center" ID="Table1">
-					<tr>
-						<td>
-							<table cellpadding=3 cellspacing=0 border=0 ID="Table2">
+	<div class="tl-main">
+		<div class="tl-page-header">
+			<div class="tl-breadcrumb">
+				<a href="/Portal.asp">Home</a>
+				<span class="tl-breadcrumb-separator">/</span>
+				<a href="Default.asp">Contacts</a>
+				<span class="tl-breadcrumb-separator">/</span>
+				<span class="tl-breadcrumb-current">New Contact</span>
+			</div>
+			<h1 class="tl-page-title">Create Contact</h1>
+		</div>
+
+		<div class="tl-card" style="max-width: 800px; margin: 0 auto;">
+			<div class="tl-card-body">
+							<table cellpadding=3 cellspacing=0 border=0 ID="Table2" width="100%">
 								<form action="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Contacts/Add_Proc.asp" method="post" name="Form1" ID="Form1" onSubmit="return checkForm();">
 								<tr>
 									<td valign="top" class="Req">*</td>
@@ -287,16 +292,16 @@ End If
 									<textarea name="Notes" id="Notes" rows="5" cols="30" onkeyup="parent.TrackCount(this,'textcount3',500)" onkeypress="parent.LimitText(this,500)"></textarea><br/>Characters Remaining: <input type="text" name="textcount3" size="4" value="500" readonly ID="Text4"></td>								
 								</tr>
 								<tr>
-									<td colspan=3 valign="top" align="right"><input type="button" value="Cancel" onclick="if(confirm('Are you sure you want to cancel?')){document.location.href='default.asp';};">&nbsp;<input type="submit" value="Submit" id="Submit" NAME="Submit"></td>
+									<td colspan=3 valign="top" align="right" style="padding-top:20px; border-top: 1px solid #eee;">
+									    <input type="button" class="tl-btn tl-btn-secondary" value="Cancel" onclick="if(confirm('Are you sure you want to cancel?')){document.location.href='default.asp';};">&nbsp;
+									    <input type="submit" class="tl-btn tl-btn-primary" value="Submit" id="Submit" NAME="Submit">
+									</td>
 								</tr>
 								</form>
 							</table>
-						</td>
-					</tr>
-				</table>
-			</td>
-		</tr>
-	</table>
+			</div>
+		</div>
+	</div>
 	</body>
 </html>
 <script language="javascript">

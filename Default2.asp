@@ -97,39 +97,14 @@ If strMsg <> "" Then
 	Response.Write("<div style=""position:absolute;top:180px;left:240px;""><p class=""Error"">" & strMsg & "</p></div>")
 End If
 %>
-
 								<form action="/Clients/SalesEngine/Portal/Validate_Portal.asp" method="post" name="Form1" ID="Form1" onSubmit="return checkForm();">
-								
-
-								<!--<div style="position:absolute;top:150px;left:130px;color:white;z-index:50;font-weight:bold;font-size:14px;"><span style="color:white;font-weight:bold;font-size:36px;">*</span>&nbsp;&nbsp;MyDesk will be offline for scheduled maintenance between 6pm and 8pm AEST 13/11/2008.</div>-->
-
-								<div style="position:absolute;top:251px;left:240px;"><span style="font-weight:bold;color:white;">Client Id : </span></div>
-								<div style="position:absolute;top:248px;left:340px;"><input type="text" name="ClientId" id="ClientId" size=20 maxlength=50></div>
-								<div style="position:absolute;top:305px;left:240px;"><span style="font-weight:bold;color:white;">Access Code : </span></div>
-								<div style="position:absolute;top:302px;left:340px;"><input type="password" name="AccessCode" id="AccessCode" size=20 maxlength=50></div>
-								<div style="position:absolute;top:270px;left:540px;font-weight:bold;font-size:larger;">
-								    <!--There are currently difficulties with the 3rd Party hosting providers for MyDesk. <br /> As such MyDesk is currently offline. Please check back for updates.-->
-								    <input type="image" name="Submit" src="/Images/Login.gif" value="Login" ID="Submit1">
-								 </div>
-								<div style="position:absolute;top:205px;left:680px;"><a href="http://webmail.mydesk.com.au" target="_Blank"><img src="/Images/MyDesk_Webmail.gif" border=0 alt="MyDesk Webmail"></a></div>
 								</form>
 							</td>
 						</tr>
 					</table>
 				</td>
 			</tr>
-			<tr>
-				<td colspan=2>
-					<table width="100%" cellpadding=0 cellspacing=0 border=0>
-						<tr>
-							<td valign="top" background="/Images/FP_Footer.gif"><img src="/Images/FP_Footer.gif" border=0 alt=""></td>
-							<td valign="top" align="right" width=439><a href="mailto:answers@solutionscorp.com.au"><img src="/Images/FP_Footer_2.gif" border=0 alt=""></a></td>
-						</tr>
-					</table>		
-				</td>
-			</tr>
 		</table>
-
 	</body>
 </html>
 <!--#include virtual="/System/ssi_dbConn_close.inc"-->

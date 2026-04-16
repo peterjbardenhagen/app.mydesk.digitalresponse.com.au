@@ -2,32 +2,11 @@
 <!-- Techlight Modern Header -->
 <header class="tl-header">
 	<div class="tl-header-top">
-		<!-- Logo -->
-		<a href="<%= strWorkingDir %>/Default.asp" target="_top" class="tl-logo" style="text-decoration: none;" onclick="if(window.top.location.href.indexOf('Default.asp')>-1){window.top.location.reload();return false;}">
-			<svg viewBox="0 0 340 80" xmlns="http://www.w3.org/2000/svg" style="width: 180px; height: 42px;">
-				<defs>
-					<filter id="cyanGlow" x="-50%" y="-50%" width="200%" height="200%">
-						<feGaussianBlur stdDeviation="2" result="blur"/>
-						<feMerge>
-							<feMergeNode in="blur"/>
-							<feMergeNode in="SourceGraphic"/>
-						</feMerge>
-					</filter>
-					<linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-						<stop offset="0%" style="stop-color:#00e0e0"/>
-						<stop offset="100%" style="stop-color:#00c8c8"/>
-					</linearGradient>
-				</defs>
-				<g transform="translate(40,40)">
-					<circle cx="0" cy="0" r="34" fill="none" stroke="#00c0c0" stroke-width="1.5" opacity="0.35" filter="url(#cyanGlow)"/>
-					<circle cx="0" cy="0" r="30" fill="none" stroke="#ffffff" stroke-width="3" opacity="0.95"/>
-					<circle cx="0" cy="0" r="20" fill="none" stroke="url(#logoGradient)" stroke-width="2.5" opacity="0.9"/>
-					<circle cx="0" cy="0" r="12" fill="#08121a" stroke="#00c8c8" stroke-width="2" opacity="1"/>
-					<circle cx="0" cy="0" r="5" fill="#00e0e0" opacity="0.95"/>
-				</g>
-				<text x="92" y="52" font-family="Arial Black, Arial Bold, Arial, sans-serif" font-weight="900" font-size="32" letter-spacing="-0.5" fill="#ffffff">Techlight</text>
-			</svg>
-		</a>
+		<div class="tl-container" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+			<!-- Logo -->
+			<a href="<%= strWorkingDir %>/Default.asp" target="_top" class="tl-logo" style="text-decoration: none;" onclick="if(window.top.location.href.indexOf('Default.asp')>-1){window.top.location.reload();return false;}">
+				<img src="/images/techlight-logo.svg" alt="Techlight" style="height: 42px; width: auto; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,200,200,0.3));" />
+			</a>
 		
 		<!-- Decorative Elements -->
 		<div class="tl-header-decor">
@@ -86,15 +65,18 @@
 			</div>
 			<div class="tl-user-avatar"><%= userInitials %></div>
 		</div>
+		</div>
 		<% End If
 		End If %>
+		</div>
 	</div>
 	
 	<!-- Navigation -->
 	<% If Request.Cookies("LoggedIn")&"" <> "" Then
 		If CBool(Request.Cookies("LoggedIn")) Then %>
 	<nav class="tl-nav">
-		<ul class="tl-nav-list">
+		<div class="tl-container">
+			<ul class="tl-nav-list" style="margin: 0; padding: 0;">
 			<li class="tl-nav-item">
 				<a href="<%= strWorkingDir %>/Dashboard.asp" target="MainFrame" class="tl-nav-link <%= IsActive("Dashboard") %>">
 					<svg class="tl-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -210,7 +192,18 @@
 					</a>
 				</div>
 			</li>
-			<li class="tl-nav-item tl-nav-logout">
+		<!-- Ask AI -->
+			<li class="tl-nav-item">
+				<a href="#" onclick="openAskAI(); return false;" class="tl-nav-link" style="background: linear-gradient(135deg, #00c8c8 0%, #008b8b 100%); color: white; padding: 6px 14px; border-radius: 8px; font-weight: 600;">
+					<svg class="tl-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+						<circle cx="9" cy="10" r="1" fill="currentColor"></circle>
+						<circle cx="15" cy="10" r="1" fill="currentColor"></circle>
+					</svg>
+					Ask AI
+				</a>
+			</li>
+			<li class="tl-nav-item tl-nav-logout" style="margin-left: auto;">
 				<a href="<%= strWorkingDir %>/Portal/LogOff.asp" target="_top" class="tl-btn-logout">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -221,6 +214,7 @@
 				</a>
 			</li>
 		</ul>
+		</div>
 	</nav>
 	<script>
 		function toggleDropdown(e) {
@@ -238,13 +232,13 @@
 				}
 			});
 		});
+
+		function openAskAI() {
+			window.open('<%= strWorkingDir %>/AskAI.asp', 'AskAI', 'width=450,height=600,scrollbars=yes,resizable=yes,status=no,toolbar=no,menubar=no');
+		}
 	</script>
 	<% End If
 	End If %>
 </header>
-
 <!-- Spacer for fixed header -->
 <div style="height: 0;"></div>
-
-</body>
-</html>

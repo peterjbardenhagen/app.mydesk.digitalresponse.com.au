@@ -135,15 +135,23 @@ End If
 		</script>						
 		<script language="javascript" src="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/Global.js"></script>
 	</head>
-	<body bgcolor="#dddddd">
+	<body class="tl-bg-light">
 <!--#include virtual="/Clients/SalesEngineTL/Header.asp"-->
-	<table width=95% align="center" cellpadding=0 cellspacing=0 border=0 ID="Table4">
-		<tr>
-			<td>
-				<br/>
-				<span class="Header2"><a href="/Portal.asp">Home</a> / <a href="Default.asp" class="Header2">Invoices</a> / Add Invoice</span>
-				<br/><br/>
-					<table width=770 cellpadding=5 cellspacing=0 border=0 ID="Table2">
+	<div class="tl-main">
+		<div class="tl-page-header">
+			<div class="tl-breadcrumb">
+				<a href="/Portal.asp">Home</a>
+				<span class="tl-breadcrumb-separator">/</span>
+				<a href="Default.asp">Invoices</a>
+				<span class="tl-breadcrumb-separator">/</span>
+				<span class="tl-breadcrumb-current">New Invoice</span>
+			</div>
+			<h1 class="tl-page-title">Create Invoice</h1>
+		</div>
+
+		<div class="tl-card" style="max-width: 1000px; margin: 0 auto;">
+			<div class="tl-card-body">
+					<table width=100% cellpadding=5 cellspacing=0 border=0 ID="Table2" class="tl-table-raw">
 						<form method="post" name="Form1" action="Add_Proc.asp" onSubmit="return checkForm();">
 						<input type="hidden" name="Qid" value="<%= lngQid %>">
 						<input type="hidden" name="JobOrderId" value="<%= lngJobOrderId %>">
@@ -436,20 +444,23 @@ Dim dblNettPriceTotal
 										<td width=100 valign="top" style="font-weight:bold;">Total Inc. GST ($)</td>
 										<td valign="top"><input tabindex=32 readonly type="text" name="NettPriceTotalInc" style="width:100px;text-align:right;" tabindex=4 ID="NettPriceTotalInc" maxlength=50 value="0.00" style="text-align:right;"></td>
 									</tr>
-								</table>
+									</table>
 							</td>
 						</tr>
 						<tr>
 							<td colspan=4><br></td>
 						</tr>
 						<tr>
-							<td colspan=4 valign="top" align="right"><input tabindex=33 type="button" value="Cancel" onclick="if(confirm('Are you sure you want to cancel?')){document.location.href='default.asp';};"> <input tabindex=34 type="submit" value="Next" ID="Submit2" NAME="Submit1"></td>
+							<td colspan=4 valign="top" align="right" style="padding-top:20px; border-top:1px solid #eee;">
+							    <input tabindex=33 class="tl-btn tl-btn-secondary" type="button" value="Cancel" onclick="if(confirm('Are you sure you want to cancel?')){document.location.href='default.asp';};"> 
+							    <input tabindex=34 class="tl-btn tl-btn-primary" type="submit" value="Submit Invoice" ID="Submit2" NAME="Submit1">
+							</td>
 						</tr>
 						</form>
 					</table>
-				</td>
-			</tr>
-		</table>
+			</div>
+		</div>
+	</div>
 <script language="javascript">
 	function calculateAll() {
 		var i = 0.00;

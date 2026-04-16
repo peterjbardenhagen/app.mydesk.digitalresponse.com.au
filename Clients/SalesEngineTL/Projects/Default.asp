@@ -15,17 +15,24 @@ strMsg = Trim(Request("Msg"))
 <!--#include virtual="/System/ssi_Functions.asp"-->
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <!--#include virtual="/System/ssi_Dates.inc"-->
-<html>
+<!DOCTYPE html>
+<html lang="en">
 	<head>
-		<title>MyDesk</title>
-		<META http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, pre-check=0">
-		<META http-equiv="Expires" content="0">
-		<META http-equiv="Pragma" content="no-store, private, must-revalidate">
-		<link rel="stylesheet" type="text/css" href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/<%= Request.Cookies("ClientSettings")("Stylesheet") %>">
+		<title>Projects - Techlight MyDesk</title>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+		<meta http-equiv="Expires" content="0">
+		<meta http-equiv="Pragma" content="no-store, private, must-revalidate">
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+		<link rel="stylesheet" type="text/css" href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/Style_Techlight.css">
+		<link rel="stylesheet" type="text/css" href="/System/Style_Modern.css">
 	</head>
-	<body bgcolor="#dddddd">
+	<body class="tl-bg-light">
 
-<!--#include virtual="/System/ssi_Header.inc"-->
+<!--#include virtual="/Clients/SalesEngineTL/Header.asp"-->
 
 	<table width=95% align="center" cellpadding=0 cellspacing=0 border=0 ID="Table4">
 		<tr>

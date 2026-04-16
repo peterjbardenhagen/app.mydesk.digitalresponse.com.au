@@ -111,32 +111,72 @@ If Not(rsCheck.BOF And rsCheck.EOF) Then
 '	Next
 
 	Do Until rsAccess.EOF
-		If rsAccess("Visible") Then strDivisionIdsVisible = strDivisionIdsVisible & rsAccess("DivisionId") & ", "
-		If rsAccess("Manager") Then
-			strDivisionIdsManager = strDivisionIdsManager & rsAccess("DivisionId") & ", "
-			Session("Manager") = True
+		If Not IsNull(rsAccess("Visible")) Then
+			If rsAccess("Visible") Then strDivisionIdsVisible = strDivisionIdsVisible & rsAccess("DivisionId") & ", "
 		End If
-		If rsAccess("Quotes") Then
-			strDivisionIdsQuotes = strDivisionIdsQuotes & rsAccess("DivisionId") & ", "
-			Session("Quotes") = True
+		If Not IsNull(rsAccess("Manager")) Then
+			If rsAccess("Manager") Then
+				strDivisionIdsManager = strDivisionIdsManager & rsAccess("DivisionId") & ", "
+				Session("Manager") = True
+			End If
 		End If
-		If rsAccess("RFQ") Then
-			strDivisionIdsRFQ = strDivisionIdsRFQ & rsAccess("DivisionId") & ", "
-			Session("RFQ") = True
+		If Not IsNull(rsAccess("Quotes")) Then
+			If rsAccess("Quotes") Then
+				strDivisionIdsQuotes = strDivisionIdsQuotes & rsAccess("DivisionId") & ", "
+				Session("Quotes") = True
+			End If
 		End If
-		If rsAccess("PurchaseOrders") Then
-			strDivisionIdsPurchaseOrders = strDivisionIdsPurchaseOrders & rsAccess("DivisionId") & ", "
-			Session("PurchaseOrders") = True
+		If Not IsNull(rsAccess("RFQ")) Then
+			If rsAccess("RFQ") Then
+				strDivisionIdsRFQ = strDivisionIdsRFQ & rsAccess("DivisionId") & ", "
+				Session("RFQ") = True
+			End If
 		End If
-		If rsAccess("Payroll") Then
-			strDivisionIdsPayroll = strDivisionIdsPayroll & rsAccess("DivisionId") & ", "
-			Session("Payroll") = True
+		If Not IsNull(rsAccess("PurchaseOrders")) Then
+			If rsAccess("PurchaseOrders") Then
+				strDivisionIdsPurchaseOrders = strDivisionIdsPurchaseOrders & rsAccess("DivisionId") & ", "
+				Session("PurchaseOrders") = True
+			End If
+		End If
+		If Not IsNull(rsAccess("Payroll")) Then
+			If rsAccess("Payroll") Then
+				strDivisionIdsPayroll = strDivisionIdsPayroll & rsAccess("DivisionId") & ", "
+				Session("Payroll") = True
+			End If
 		End If
 		rsAccess.MoveNext
 	Loop
 	
 	rsAccess.Close
 	Set rsAccess = Nothing
+
+	If Session("UserTypeId") = 1 Or Session("UserTypeId") >= 5 Then
+		Session("Manager") = True
+		Session("Quotes") = True
+		Session("RFQ") = True
+		Session("PurchaseOrders") = True
+		Session("Payroll") = True
+		
+		strDivisionIdsVisible = ""
+		strDivisionIdsManager = ""
+		strDivisionIdsQuotes = ""
+		strDivisionIdsRFQ = ""
+		strDivisionIdsPurchaseOrders = ""
+		strDivisionIdsPayroll = ""
+		Dim rsAllDivs
+		Set rsAllDivs = dbConn.Execute("SELECT DivisionId FROM Divisions")
+		Do Until rsAllDivs.EOF
+			strDivisionIdsVisible = strDivisionIdsVisible & rsAllDivs("DivisionId") & ", "
+			strDivisionIdsManager = strDivisionIdsManager & rsAllDivs("DivisionId") & ", "
+			strDivisionIdsQuotes = strDivisionIdsQuotes & rsAllDivs("DivisionId") & ", "
+			strDivisionIdsRFQ = strDivisionIdsRFQ & rsAllDivs("DivisionId") & ", "
+			strDivisionIdsPurchaseOrders = strDivisionIdsPurchaseOrders & rsAllDivs("DivisionId") & ", "
+			strDivisionIdsPayroll = strDivisionIdsPayroll & rsAllDivs("DivisionId") & ", "
+			rsAllDivs.MoveNext
+		Loop
+		rsAllDivs.Close
+		Set rsAllDivs = Nothing
+	End If
 
 	If Right(strDivisionIdsVisible, 2) = ", " Then strDivisionIdsVisible = Left(strDivisionIdsVisible, Len(strDivisionIdsVisible)-2)
 	If Right(strDivisionIdsManager, 2) = ", " Then strDivisionIdsManager = Left(strDivisionIdsManager, Len(strDivisionIdsManager)-2)
@@ -145,12 +185,12 @@ If Not(rsCheck.BOF And rsCheck.EOF) Then
 	If Right(strDivisionIdsPurchaseOrders, 2) = ", " Then strDivisionIdsPurchaseOrders = Left(strDivisionIdsPurchaseOrders, Len(strDivisionIdsPurchaseOrders)-2)
 	If Right(strDivisionIdsPayroll, 2) = ", " Then strDivisionIdsPayroll = Left(strDivisionIdsPayroll, Len(strDivisionIdsPayroll)-2)
 
-	If strDivisionIdsVisible = "" Then strDivisionIdsVisible = 0
-	If strDivisionIdsManager = "" Then strDivisionIdsManager = 0
-	If strDivisionIdsQuotes = "" Then strDivisionIdsQuotes = 0
-	If strDivisionIdsRFQ = "" Then strDivisionIdsRFQ = 0
-	If strDivisionIdsPurchaseOrders = "" Then strDivisionIdsPurchaseOrders = 0
-	If strDivisionIdsPayroll = "" Then strDivisionIdsPayroll = 0
+	If strDivisionIdsVisible = "" Then strDivisionIdsVisible = "0"
+	If strDivisionIdsManager = "" Then strDivisionIdsManager = "0"
+	If strDivisionIdsQuotes = "" Then strDivisionIdsQuotes = "0"
+	If strDivisionIdsRFQ = "" Then strDivisionIdsRFQ = "0"
+	If strDivisionIdsPurchaseOrders = "" Then strDivisionIdsPurchaseOrders = "0"
+	If strDivisionIdsPayroll = "" Then strDivisionIdsPayroll = "0"
 
 	Session("DivisionIdsVisible") = strDivisionIdsVisible
 	Session("DivisionIdsManager") = strDivisionIdsManager

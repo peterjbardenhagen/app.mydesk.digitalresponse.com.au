@@ -60,26 +60,34 @@ If intCompanyId <> 0 Then
 End If
 
 %>
-		<table bgcolor="#DDDDDD" class="NoPrint" width="100%" cellpadding=5 cellspacing=0 border=0 ID="Table1">
-			<form method="post" action="?" name="Form1">
+		<div class="NoPrint" style="background-color: #f8fafc; padding: 16px; border-bottom: 1px solid #e2e8f0; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+			<form method="post" action="?" name="Form1" style="margin: 0; display: flex; gap: 12px; align-items: center;">
 			<input type="hidden" name="OrderBy" value="<%= strOrderBy %>" ID="Hidden1">
 			<input type="hidden" name="CompanyId" value="<%= intCompanyId %>" ID="Hidden2">
 			<input type="hidden" name="Code" value="<%= strCode %>" ID="Hidden3">
-			<tr>
-				<td><input type="button" value="Order by Company" ID="Button3" NAME="Button3" onclick="document.Form1.OrderBy.value='C.CompanyName';document.Form1.submit();"> <input type="button" value="Order by Name" ID="Button4" NAME="Button4" onclick="document.Form1.OrderBy.value='C.Surname,C.FirstName';document.Form1.submit();"> <% If (strCode = Request.Cookies("UserSettings")("Code")) Or Request.Cookies("UserSettings")("Manager") Then %><input type="button" value=" Print " onclick="print();" ID="Button2" NAME="Button1"> (Make sure that you set the orientation to landscape)<% End If %></td>
-			</tr>
+			<button type="button" class="tl-btn-secondary" onclick="document.Form1.OrderBy.value='C.CompanyName';document.Form1.submit();">Order by Company</button>
+			<button type="button" class="tl-btn-secondary" onclick="document.Form1.OrderBy.value='C.Surname,C.FirstName';document.Form1.submit();">Order by Name</button>
+			<% If (strCode = Request.Cookies("UserSettings")("Code")) Or Request.Cookies("UserSettings")("Manager") Then %>
+			<button type="button" class="tl-btn-primary" onclick="print();">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:middle;margin-right:6px;">
+					<polyline points="6 9 6 2 18 2 18 9"></polyline>
+					<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+					<rect x="6" y="14" width="12" height="8"></rect>
+				</svg>
+				Print Report
+			</button>
+			<span style="font-size: 13px; color: #64748b;">(Set orientation to landscape)</span>
+			<% End If %>
 			</form>
-		</table>
-		<br>
-		<table width="1000" cellpadding=3 cellspacing=0 border=0 ID="Table2">
-			<tr>
-				<td valign="top">
-				<span class="TimesHeader">My Contacts Report for <%= strName %></span><br><br>
-				<span class="TimesItalicBold"><% If intCompanyId <> 0 Then %><strong>Includes <%= strCustomer %><% Else %>Includes All companies<% End If %><br>
-				As at <%= FormatDateTime(ServerToEST(Now()),1) %></span>
-				</td>
-			</tr>
-		</table>	
+		</div>
+
+		<div style="margin-bottom: 32px; padding: 0 24px;">
+			<h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px 0; font-family: 'Inter', sans-serif;">My Contacts Report for <%= strName %></h1>
+			<p style="font-size: 14px; color: #64748b; margin: 0; font-family: 'Inter', sans-serif;">
+				<strong><% If intCompanyId <> 0 Then %>Includes <%= strCustomer %><% Else %>Includes All companies<% End If %></strong><br>
+				As at <%= FormatDateTime(ServerToEST(Now()),1) %>
+			</p>
+		</div>
 <%
 
 Set rs = Server.CreateObject("ADODB.RecordSet")
@@ -100,23 +108,17 @@ If Not(rs.BOF And rs.EOF) Then
 
 %>
 
-		<br>
-		<table width=100 cellpadding=3 cellspacing=0 border=0 ID="Table3">
-			<tr>
-				<td class="TimesItalicBold" width=300>Full Name</td>
-				<td class="TimesItalicBold" width=300>Company & Address</td>
-				<td class="TimesItalicBold" width=170>Contact</td>
-				<td class="TimesItalicBold" width=230>Email</td>
-			</tr>
-			<tr height=1>
-				<td colspan=12>
-					<table width="100%" height=1 cellpadding=0 cellspacing=0 border=0 ID="Table4">
-						<tr>
-							<td bgcolor="#000000"><img src="/Images/Black.gif" width=994 height=1 border=0 alt=""></td>
-						</tr>
-					</table>
-				</td>
-			</tr>
+		<div style="padding: 0 24px;">
+			<table class="tl-data-grid" style="width: 100%; border-collapse: collapse;">
+				<thead>
+					<tr>
+						<th style="text-align: left; padding: 12px; border-bottom: 2px solid #e2e8f0; font-family: 'Inter', sans-serif; font-weight: 600; color: #475569; width: 25%;">Full Name</th>
+						<th style="text-align: left; padding: 12px; border-bottom: 2px solid #e2e8f0; font-family: 'Inter', sans-serif; font-weight: 600; color: #475569; width: 35%;">Company & Address</th>
+						<th style="text-align: left; padding: 12px; border-bottom: 2px solid #e2e8f0; font-family: 'Inter', sans-serif; font-weight: 600; color: #475569; width: 15%;">Contact</th>
+						<th style="text-align: left; padding: 12px; border-bottom: 2px solid #e2e8f0; font-family: 'Inter', sans-serif; font-weight: 600; color: #475569; width: 25%;">Email</th>
+					</tr>
+				</thead>
+				<tbody>
 <%
 
 	Do Until rs.EOF
@@ -139,32 +141,33 @@ If Not(rs.BOF And rs.EOF) Then
 		strAddress = Trim(strAddress)
 
 %>
-			<tr>
-				<td style="font-size:10px;vertical-align:top;" width=300><b><% If Not(Trim(strContactName)&"" = "" Or IsNull(strContactName)) Then Response.Write(strContactName) Else Response.Write("Name entered") %></b><br><% If Not(Trim(rs("Position"))&"" = "" Or IsNull(rs("Position"))) Then Response.Write(rs("Position")) Else Response.Write("Position not entered") %></td>
-				<td style="font-size:10px;vertical-align:top;" width=300><b><% If Not(Trim(rs("CompanyName"))&"" = "" Or IsNull(rs("CompanyName"))) Then Response.Write(rs("CompanyName")) Else Response.Write("Company not entered") %></b><br><% If Not(Trim(strAddress)&"" = "" Or IsNull(strAddress)) Then Response.Write(strAddress) Else Response.Write("Address not entered") %></td>
-				<td style="font-size:10px;vertical-align:top;" width=170>
-				P: <% If Not(Trim(rs("Phone"))&"" = "" Or IsNull(rs("Phone"))) Then Response.Write(rs("Phone")) Else Response.Write("Phone not entered") %><br>
-				F: <% If Not(Trim(rs("Fax"))&"" = "" Or IsNull(rs("Fax"))) Then Response.Write(rs("Fax")) Else Response.Write("Fax not entered") %><br>
-				M: <% If Not(Trim(rs("Mobile"))&"" = "" Or IsNull(rs("Mobile"))) Then Response.Write(rs("Mobile")) Else Response.Write("Mobile not entered") %><br>
-				</td>
-				<td style="font-size:10px;vertical-align:top;" width=230><% If Not(Trim(rs("Email"))&"" = "" Or IsNull(rs("Email"))) Then Response.Write(ConvertToEmail(rs("Email"))) Else Response.Write("Email not entered") %></td>
-			</tr>
-			<tr height=1>
-				<td colspan=12>
-					<table width="100%" height=1 cellpadding=0 cellspacing=0 border=0 ID="Table5">
-						<tr>
-							<td bgcolor="#000000"><img src="/Images/Black.gif" width=994 height=1 border=0 alt=""></td>
-						</tr>
-					</table>
-				</td>
-			</tr>
+					<tr>
+						<td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-family: 'Inter', sans-serif; font-size: 13px; vertical-align: top;">
+							<strong style="color: #0f172a;"><% If Not(Trim(strContactName)&"" = "" Or IsNull(strContactName)) Then Response.Write(strContactName) Else Response.Write("Name not entered") %></strong><br>
+							<span style="color: #64748b;"><% If Not(Trim(rs("Position"))&"" = "" Or IsNull(rs("Position"))) Then Response.Write(rs("Position")) Else Response.Write("Position not entered") %></span>
+						</td>
+						<td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-family: 'Inter', sans-serif; font-size: 13px; vertical-align: top;">
+							<strong style="color: #0f172a;"><% If Not(Trim(rs("CompanyName"))&"" = "" Or IsNull(rs("CompanyName"))) Then Response.Write(rs("CompanyName")) Else Response.Write("Company not entered") %></strong><br>
+							<span style="color: #64748b;"><% If Not(Trim(strAddress)&"" = "" Or IsNull(strAddress)) Then Response.Write(strAddress) Else Response.Write("Address not entered") %></span>
+						</td>
+						<td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-family: 'Inter', sans-serif; font-size: 13px; color: #475569; vertical-align: top;">
+							<div><span style="font-weight: 500; color: #0f172a;">P:</span> <% If Not(Trim(rs("Phone"))&"" = "" Or IsNull(rs("Phone"))) Then Response.Write(rs("Phone")) Else Response.Write("Not entered") %></div>
+							<div><span style="font-weight: 500; color: #0f172a;">F:</span> <% If Not(Trim(rs("Fax"))&"" = "" Or IsNull(rs("Fax"))) Then Response.Write(rs("Fax")) Else Response.Write("Not entered") %></div>
+							<div><span style="font-weight: 500; color: #0f172a;">M:</span> <% If Not(Trim(rs("Mobile"))&"" = "" Or IsNull(rs("Mobile"))) Then Response.Write(rs("Mobile")) Else Response.Write("Not entered") %></div>
+						</td>
+						<td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-family: 'Inter', sans-serif; font-size: 13px; vertical-align: top;">
+							<% If Not(Trim(rs("Email"))&"" = "" Or IsNull(rs("Email"))) Then Response.Write(ConvertToEmail(rs("Email"))) Else Response.Write("<span style='color: #94a3b8;'>Email not entered</span>") %>
+						</td>
+					</tr>
 <%
 		
 		rs.MoveNext
 	Loop
 	
 %>
-		</table>
+				</tbody>
+			</table>
+		</div>
 <%
 
 Else

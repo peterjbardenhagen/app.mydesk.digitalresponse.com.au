@@ -427,6 +427,73 @@ strMsg = Trim(Request("Msg"))
                 font-size: 1.5rem;
             }
         }
+
+        /* Modals */
+        .tl-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .tl-modal {
+            background: var(--tl-white);
+            border-radius: var(--tl-radius);
+            padding: 32px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: var(--tl-shadow-lg);
+            position: relative;
+            animation: modalFadeIn 0.3s ease;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .tl-modal h3 {
+            font-size: 1.25rem;
+            color: var(--tl-dark);
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        .tl-modal p {
+            font-size: 0.9375rem;
+            color: var(--tl-text-light);
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+        .tl-close-btn {
+            position: absolute;
+            top: 16px; right: 16px;
+            background: none; border: none;
+            font-size: 1.25rem; color: var(--tl-text-muted);
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        .tl-close-btn:hover { color: var(--tl-dark); }
+        
+        .support-info {
+            background: var(--tl-bg);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+            border: 1px solid #e2e8f0;
+        }
+        .support-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 0.9375rem;
+        }
+        .support-row:last-child { margin-bottom: 0; }
+        .support-row i { color: var(--tl-primary); width: 20px; text-align: center; }
+        .support-row a { color: var(--tl-dark); text-decoration: none; font-weight: 500; }
+        .support-row a:hover { color: var(--tl-primary); }
     </style>
 </head>
 <body>
@@ -436,9 +503,34 @@ strMsg = Trim(Request("Msg"))
         <div class="login-container">
             <div class="logo-section">
                 <div class="logo-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" style="width: 48px; height: 48px;">
+                      <defs>
+                        <filter id="tealGlow" x="-80%" y="-80%" width="260%" height="260%">
+                          <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                          <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                          </feMerge>
+                        </filter>
+                        <radialGradient id="innerDot" cx="50%" cy="50%" r="50%">
+                          <stop offset="0%" stop-color="#ffffff"/>
+                          <stop offset="60%" stop-color="#c0f0f0"/>
+                          <stop offset="100%" stop-color="#40d8d8"/>
+                        </radialGradient>
+                      </defs>
+                      <g transform="translate(40,40)" filter="url(#tealGlow)">
+                        <circle cx="0" cy="0" r="30" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.3"/>
+                        <circle cx="0" cy="0" r="33" fill="none" stroke="#ffffff" stroke-width="0.8" opacity="0.2"/>
+                        <circle cx="0" cy="0" r="26" fill="none" stroke="#ffffff" stroke-width="2.5" opacity="0.9"/>
+                        <circle cx="0" cy="0" r="20.5" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.8"/>
+                        <circle cx="0" cy="0" r="16.5" fill="#048894" opacity="0.95"/>
+                        <circle cx="0" cy="0" r="16" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.9"/>
+                        <circle cx="0" cy="0" r="12" fill="#036a73"/>
+                        <circle cx="0" cy="0" r="11.5" fill="none" stroke="#e0ffff" stroke-width="1.5" opacity="0.8"/>
+                        <circle cx="0" cy="0" r="8" fill="#024147"/>
+                        <circle cx="0" cy="0" r="5.5" fill="url(#innerDot)" opacity="1"/>
+                      </g>
                     </svg>
                 </div>
                 <div class="logo-title">Techlight <span>MyDesk</span></div>
@@ -487,12 +579,54 @@ strMsg = Trim(Request("Msg"))
             </form>
 
             <div class="login-footer">
+                <div class="footer-links" style="display: flex; justify-content: center; gap: 20px; margin-bottom: 16px;">
+                    <a href="javascript:void(0)" onclick="document.getElementById('forgotModal').style.display='flex'" style="color: var(--tl-text-light); text-decoration: none; font-size: 0.875rem; font-weight: 500;">Forgot Password?</a>
+                    <a href="javascript:void(0)" onclick="document.getElementById('supportModal').style.display='flex'" style="color: var(--tl-text-light); text-decoration: none; font-size: 0.875rem; font-weight: 500;">Support</a>
+                </div>
                 <div class="security-badge">
                     <i class="fas fa-shield-alt"></i>
                     <span>Secure Connection</span>
                 </div>
                 <div class="copyright">
                     &copy; <%= Year(Now()) %> Techlight. All rights reserved.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div id="forgotModal" class="tl-modal-overlay">
+        <div class="tl-modal">
+            <button class="tl-close-btn" onclick="document.getElementById('forgotModal').style.display='none'"><i class="fas fa-times"></i></button>
+            <h3>Reset Password</h3>
+            <p>Enter your email address and we'll send you a secure link to log you in automatically.</p>
+            <form action="/ForgotPassword_Proc.asp" method="post" id="forgotForm">
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <div class="input-wrapper">
+                        <input type="email" name="ResetEmail" class="form-input" placeholder="Enter your email" required>
+                        <i class="fas fa-envelope input-icon"></i>
+                    </div>
+                </div>
+                <button type="submit" class="login-btn" style="margin-top:20px;">Send Secure Link</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Support Modal -->
+    <div id="supportModal" class="tl-modal-overlay">
+        <div class="tl-modal">
+            <button class="tl-close-btn" onclick="document.getElementById('supportModal').style.display='none'"><i class="fas fa-times"></i></button>
+            <h3>Technical Support</h3>
+            <p>If you're having trouble accessing Techlight MyDesk, please contact Digital Response for assistance.</p>
+            <div class="support-info">
+                <div class="support-row">
+                    <i class="fas fa-mobile-alt"></i>
+                    <a href="tel:0452491013">0452 491 013</a>
+                </div>
+                <div class="support-row">
+                    <i class="fas fa-envelope"></i>
+                    <a href="mailto:info@digitalresponse.com.au">info@digitalresponse.com.au</a>
                 </div>
             </div>
         </div>
@@ -544,8 +678,13 @@ strMsg = Trim(Request("Msg"))
                 document.getElementById('RememberMe').checked = true;
             }
             
-            // Focus on username field
-            document.getElementById('Username').focus();
+            // Close modals when clicking outside
+            window.onclick = function(event) {
+                var forgotModal = document.getElementById('forgotModal');
+                var supportModal = document.getElementById('supportModal');
+                if (event.target == forgotModal) forgotModal.style.display = "none";
+                if (event.target == supportModal) supportModal.style.display = "none";
+            }
         });
     </script>
 </body>

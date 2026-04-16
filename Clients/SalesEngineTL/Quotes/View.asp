@@ -317,7 +317,7 @@ If Not(rsQu.BOF And rsQu.EOF) Then
 %>
 		<table align="center" width="595" border="0" cellpadding="0" cellspacing="0" ID="Table1">
 			<tr>
-				<td valign="top"><img src="/images/logo_techlight.jpg" width="300" height="127" border=0 alt=""><br><br></td>
+				<td valign="top"><img src="/images/techlight-logo.svg" width="300" height="127" border=0 alt="" style="object-fit:contain; object-position:left;"><br><br></td>
 				<td valign="top" align="right">
 					<table cellpadding=3 cellspacing=0 border=0 ID="Table2">
 						<tr>
@@ -410,28 +410,48 @@ End If
 				</td>
 				<td valign="top" width="50%">
 					<table align="center" width="100%" border="0" borderwidth=1 bordercolor="#00000" cellpadding="3" cellspacing="0" ID="Table5">
+                        <%
+                        Dim strSenderName, strSenderEmail, strSenderPhone, strSenderMobile
+                        strSenderName = rsQu("Name") & ""
+                        strSenderEmail = rsQu("Email") & ""
+                        strSenderPhone = rsQu("Phone") & ""
+                        strSenderMobile = rsQu("Mobile") & ""
+
+                        If rsQu("SenderCode") & "" <> "" Then
+                            Dim rsSender
+                            Set rsSender = dbConn.Execute("SELECT Name, Email, Phone, Mobile FROM Users WHERE Code = '" & rsQu("SenderCode") & "'")
+                            If Not rsSender.EOF Then
+                                strSenderName = rsSender("Name") & ""
+                                strSenderEmail = rsSender("Email") & ""
+                                strSenderPhone = rsSender("Phone") & ""
+                                strSenderMobile = rsSender("Mobile") & ""
+                            End If
+                            rsSender.Close()
+                            Set rsSender = Nothing
+                        End If
+                        %>
 						<tr>
 							<td style="font-weight:bold;vertical-align:top;width:60px;">From:</td>
-							<td><%= rsQu("Name") %></td>
+							<td><%= strSenderName %></td>
 						</tr>
 						<tr>
 							<td style="font-weight:bold;vertical-align:top;width:60px;">Email:</td>
-							<td><%= rsQu("Email") %></td>
+							<td><%= strSenderEmail %></td>
 						</tr>
 						<%
-						If rsQu("Phone") <> "" Then
+						If strSenderPhone <> "" Then
 						%>
 						<tr>
 							<td style="font-weight:bold;vertical-align:top;width:60px;">Phone:</td>
-							<td><%= rsQu("Phone") %></td>
+							<td><%= strSenderPhone %></td>
 						</tr>
 						<%
 						End If
-						If rsQu("Mobile") <> "" Then
+						If strSenderMobile <> "" Then
 						%>
 						<tr>
 							<td style="font-weight:bold;vertical-align:top;width:60px;">Mobile:</td>
-							<td><%= rsQu("Mobile") %></td>
+							<td><%= strSenderMobile %></td>
 						</tr>
 						<%
 						End If

@@ -284,7 +284,7 @@ End If
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 	<link rel="stylesheet" type="text/css" href="<%= strWorkingDir %>/System/Style_Techlight.css">
 	<link rel="stylesheet" type="text/css" href="/System/Style_Modern.css">
-	<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+	<link rel="icon" type="image/x-icon" href="/favicon.ico">
 	<% If isDirector1 Then %>
 	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 	<% End If %>

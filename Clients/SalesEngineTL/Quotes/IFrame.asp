@@ -312,9 +312,17 @@ Do While Not (oRecordset.EOF)
 	Response.Write("<td>" & oRecordset("CompanyName") & "</td>")
 	Response.Write("<td>" & oRecordset("Project") & "</td>")
 	Response.Write("<td><span class='tl-badge " & StatusClass & "'>" & oRecordset("Quote Status") & "</span></td>")
-	Response.Write("<td>$" & FormatNumber(oRecordset("UnitCostTotal"),2) & "</td>")
-	Response.Write("<td>$" & FormatNumber(oRecordset("NettPriceTotal"),2) & "</td>")
-	Response.Write("<td>" & FormatNumber(oRecordset("Margin"),2) & "%</td>")
+	Dim unitCost, nettPrice, margin
+	unitCost = oRecordset("UnitCostTotal")
+	If IsNull(unitCost) Or IsEmpty(unitCost) Then unitCost = 0
+	nettPrice = oRecordset("NettPriceTotal")
+	If IsNull(nettPrice) Or IsEmpty(nettPrice) Then nettPrice = 0
+	margin = oRecordset("Margin")
+	If IsNull(margin) Or IsEmpty(margin) Then margin = 0
+
+	Response.Write("<td>$" & FormatNumber(unitCost,2) & "</td>")
+	Response.Write("<td>$" & FormatNumber(nettPrice,2) & "</td>")
+	Response.Write("<td>" & FormatNumber(margin,2) & "%</td>")
 	Response.Write("<td nowrap>" & FormatDateU2(oRecordset("Quote Date"), False) & "</td>")
 	Response.Write("<td nowrap>" & Action & "</td>")
 	Response.Write("</tr>")

@@ -97,7 +97,15 @@ For i = 2 To intItemLinesVal
 			If intDays = "" Then intDays = 0
 			If intUnits = "" Then intUnits = 0
 		    
-			If decNettPrice < decMinNettPrice Then
+			If CDbl(intDays) > 0 And CDbl(intUnits) > 0 Then
+				decUnitCostSubTotal = CDbl(intDays) * CDbl(intUnits) * CDbl(decUnitCost)
+				decExtNettPrice = CDbl(intDays) * CDbl(intUnits) * CDbl(decNettPrice)
+			Else
+				decUnitCostSubTotal = CDbl(intQuantity) * CDbl(decUnitCost)
+				decExtNettPrice = CDbl(intQuantity) * CDbl(decNettPrice)
+			End If
+
+			If CDbl(decNettPrice) < CDbl(decMinNettPrice) Then
 				boolNotApproved = True
 			End If
 		    
@@ -123,7 +131,7 @@ For i = 2 To intThirdPartyLinesVal
 			decUnitCost = Replace(Request("TP_UnitCost" & i),"'","''")
 			decNettPrice = Replace(Request("TP_NettPrice" & i),"'","''")
 			decMargin = Replace(Request("TP_Margin" & i),"'","''")
-			decExtNettPrice = Replace(Request("TP_ExtNettPrice" & i),"'","''")
+			decExtNettPrice = CDbl(intQuantity) * CDbl(decNettPrice)
 
 			strSql = "Insert Into QuoteThirdPartyContents (QuoteId, Description, Supplier, QuoteNumber, QuoteDate, ExpiryDate, SupplierPartNumber, OurPartNumber, Quantity, Type, UnitCost, NettPrice, Margin, ExtNettPrice) Values (" & lngQid & ", '" & strDescription & "', '" & strSupplier & "', '" & strQuoteNumber & "', '" & strQuoteDate & "', '" & strExpiryDate & "', '" & strSupplierPartNumber & "', '" & strOurPartNumber & "', " & intQuantity & ", '" & strType & "', " & decUnitCost & ", " & decNettPrice & ", " & decMargin & ", " & decExtNettPrice & ")"
 			dbConn.Execute(strSql)
@@ -154,7 +162,7 @@ rsCalc.Close
 Set rsCalc = Nothing
 
 ' Get totals from QuoteThirdPartyContents (third party items)
-sql = "SELECT SUM(UnitCost * Quantity) AS UnitCostTotal, SUM(ExtNettPrice) AS NettPriceTotal FROM QuoteThirdPartyContents WHERE QuoteId = " & lngQid
+sql = "SELECT SUM(UnitCost * Quantity) AS UnitCostTotal, SUM(NettPrice * Quantity) AS NettPriceTotal FROM QuoteThirdPartyContents WHERE QuoteId = " & lngQid
 Set rsCalc = dbConn.Execute(sql)
 If Not (rsCalc.BOF And rsCalc.EOF) Then
     decTPUnitCostTotal = CDbl(rsCalc("UnitCostTotal") & "")
