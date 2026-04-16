@@ -144,7 +144,7 @@ End Function
 				</a>
 			</li>
 			<li class="tl-nav-item">
-				<a href="<%= strWorkingDir %>/Contacts/" target="_parent" class="tl-nav-link <%= IsActive("contacts") %>">
+				<a href="<%= strWorkingDir %>/Contacts/" target="_top" class="tl-nav-link <%= IsActive("contacts") %>">
 					<svg class="tl-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
 						<circle cx="9" cy="7" r="4"></circle>
@@ -155,7 +155,7 @@ End Function
 				</a>
 			</li>
 			<li class="tl-nav-item">
-				<a href="<%= strWorkingDir %>/Quotes/" target="_parent" class="tl-nav-link <%= IsActive("quotes") %>">
+				<a href="<%= strWorkingDir %>/Quotes/" target="_top" class="tl-nav-link <%= IsActive("quotes") %>">
 					<svg class="tl-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
 						<polyline points="14 2 14 8 20 8"></polyline>
@@ -167,7 +167,7 @@ End Function
 				</a>
 			</li>
 			<li class="tl-nav-item">
-				<a href="<%= strWorkingDir %>/Invoices/" target="_parent" class="tl-nav-link <%= IsActive("invoices") %>">
+				<a href="<%= strWorkingDir %>/Invoices/" target="_top" class="tl-nav-link <%= IsActive("invoices") %>">
 					<svg class="tl-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
 						<line x1="3" y1="9" x2="21" y2="9"></line>
@@ -177,7 +177,7 @@ End Function
 				</a>
 			</li>
 			<li class="tl-nav-item">
-				<a href="<%= strWorkingDir %>/Purchasing/" target="_parent" class="tl-nav-link <%= IsActive("purchasing") %>">
+				<a href="<%= strWorkingDir %>/Purchasing/" target="_top" class="tl-nav-link <%= IsActive("purchasing") %>">
 					<svg class="tl-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
 						<line x1="3" y1="6" x2="21" y2="6"></line>
@@ -187,7 +187,7 @@ End Function
 				</a>
 			</li>
 			<li class="tl-nav-item">
-				<a href="<%= strWorkingDir %>/Setup/" target="_parent" class="tl-nav-link <%= IsActive("setup") %>">
+				<a href="<%= strWorkingDir %>/Setup/" target="_top" class="tl-nav-link <%= IsActive("setup") %>">
 					<svg class="tl-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<circle cx="12" cy="12" r="3"></circle>
 						<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
@@ -196,7 +196,7 @@ End Function
 				</a>
 			</li>
 			<li class="tl-nav-item">
-				<a href="<%= strWorkingDir %>/Users/" target="_parent" class="tl-nav-link <%= IsActive("users") %>">
+				<a href="<%= strWorkingDir %>/Users/" target="_top" class="tl-nav-link <%= IsActive("users") %>">
 					<svg class="tl-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
 						<circle cx="12" cy="7" r="4"></circle>
@@ -206,7 +206,7 @@ End Function
 			</li>
 			<% If IsDirector() Then %>
 			<li class="tl-nav-item">
-				<a href="<%= strWorkingDir %>/Admin/" target="_parent" class="tl-nav-link <%= IsActive("admin") %>">
+				<a href="<%= strWorkingDir %>/Admin/" target="_top" class="tl-nav-link <%= IsActive("admin") %>">
 					<svg class="tl-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
 					</svg>
@@ -247,7 +247,7 @@ End Function
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line></svg>
 						Purchase Orders
 			<li class="tl-nav-item tl-nav-logout">
-				<a href="<%= strWorkingDir %>/Portal/LogOff.asp" target="_parent" class="tl-btn-logout">
+				<a href="<%= strWorkingDir %>/Portal/LogOff.asp" target="_top" class="tl-btn-logout">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
 						<polyline points="16 17 21 12 16 7"></polyline>

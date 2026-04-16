@@ -64,7 +64,7 @@ isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
 	<!-- Header -->
 	<div class="setup-header">
 		<nav class="tl-breadcrumb" style="margin-bottom: 16px;">
-			<a href="<%= strWorkingDir %>/Dashboard.asp" target="_parent">Home</a>
+			<a href="<%= strWorkingDir %>/Dashboard.asp" target="_top">Home</a>
 			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
 			<span>Setup</span>
 		</nav>
@@ -107,7 +107,7 @@ isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
 		<div class="setup-grid">
 			
 			<!-- Activity Types -->
-			<a href="../ActivityTypes" class="setup-card" target="_parent">
+			<a href="../ActivityTypes" class="setup-card" target="_top">
 				<div class="setup-card-header">
 					<div class="setup-card-icon" style="background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);">
 						<svg viewBox="0 0 24 24" fill="none" stroke="#00a8b5" stroke-width="2">
@@ -128,7 +128,7 @@ isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
 			</a>
 
 			<!-- Conditions of Sale -->
-			<a href="../QuoteCOS" class="setup-card" target="_parent">
+			<a href="../QuoteCOS" class="setup-card" target="_top">
 				<div class="setup-card-header">
 					<div class="setup-card-icon" style="background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);">
 						<svg viewBox="0 0 24 24" fill="none" stroke="#8e24aa" stroke-width="2">
@@ -149,7 +149,7 @@ isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
 			</a>
 
 			<!-- Copy Contacts -->
-			<a href="../CopyContacts" class="setup-card" target="_parent">
+			<a href="../CopyContacts" class="setup-card" target="_top">
 				<div class="setup-card-header">
 					<div class="setup-card-icon" style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);">
 						<svg viewBox="0 0 24 24" fill="none" stroke="#43a047" stroke-width="2">
@@ -169,7 +169,7 @@ isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
 			</a>
 
 			<!-- Currency Rates -->
-			<a href="../CurrencyRates" class="setup-card" target="_parent">
+			<a href="../CurrencyRates" class="setup-card" target="_top">
 				<div class="setup-card-header">
 					<div class="setup-card-icon" style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);">
 						<svg viewBox="0 0 24 24" fill="none" stroke="#ef6c00" stroke-width="2">
@@ -191,7 +191,7 @@ isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
 			</a>
 
 			<!-- Divisions -->
-			<a href="../Divisions" class="setup-card" target="_parent">
+			<a href="../Divisions" class="setup-card" target="_top">
 				<div class="setup-card-header">
 					<div class="setup-card-icon" style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);">
 						<svg viewBox="0 0 24 24" fill="none" stroke="#1976d2" stroke-width="2">
@@ -218,7 +218,7 @@ isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
 			</a>
 
 			<!-- Expense Types -->
-			<a href="../ExpenseTypes" class="setup-card" target="_parent">
+			<a href="../ExpenseTypes" class="setup-card" target="_top">
 				<div class="setup-card-header">
 					<div class="setup-card-icon" style="background: linear-gradient(135deg, #fce4ec 0%, #f8bbd9 100%);">
 						<svg viewBox="0 0 24 24" fill="none" stroke="#c2185b" stroke-width="2">
@@ -238,7 +238,7 @@ isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
 			</a>
 
 			<!-- Expense Type Groups -->
-			<a href="../ExpenseTypeGroups" class="setup-card" target="_parent">
+			<a href="../ExpenseTypeGroups" class="setup-card" target="_top">
 				<div class="setup-card-header">
 					<div class="setup-card-icon" style="background: linear-gradient(135deg, #f1f8e9 0%, #dcedc8 100%);">
 						<svg viewBox="0 0 24 24" fill="none" stroke="#689f38" stroke-width="2">
@@ -259,7 +259,7 @@ isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
 			</a>
 
 			<!-- Files Categories -->
-			<a href="../FilesCategories" class="setup-card" target="_parent">
+			<a href="../FilesCategories" class="setup-card" target="_top">
 				<div class="setup-card-header">
 					<div class="setup-card-icon" style="background: linear-gradient(135deg, #e0e0e0 0%, #bdbdbd 100%);">
 						<svg viewBox="0 0 24 24" fill="none" stroke="#616161" stroke-width="2">
@@ -279,7 +279,7 @@ isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
 			</a>
 
 			<!-- Import Data -->
-			<a href="../ImportData" class="setup-card" target="_parent">
+			<a href="../ImportData" class="setup-card" target="_top">
 				<div class="setup-card-header">
 					<div class="setup-card-icon" style="background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%);">
 						<svg viewBox="0 0 24 24" fill="none" stroke="#3f51b5" stroke-width="2">
@@ -299,7 +299,7 @@ isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
 			</a>
 
 			<!-- Locations -->
-			<a href="../Locations" class="setup-card" target="_parent">
+			<a href="../Locations" class="setup-card" target="_top">
 				<div class="setup-card-header">
 					<div class="setup-card-icon" style="background: linear-gradient(135deg, #e1f5fe 0%, #b3e5fc 100%);">
 						<svg viewBox="0 0 24 24" fill="none" stroke="#0288d1" stroke-width="2">
@@ -318,7 +318,7 @@ isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
 			</a>
 
 			<!-- Maintenance -->
-			<a href="Maintenance.asp" class="setup-card" target="_parent">
+			<a href="Maintenance.asp" class="setup-card" target="_top">
 				<div class="setup-card-header">
 					<div class="setup-card-icon" style="background: linear-gradient(135deg, #fff9c4 0%, #fff59d 100%);">
 						<svg viewBox="0 0 24 24" fill="none" stroke="#f9a825" stroke-width="2">
@@ -337,7 +337,7 @@ isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
 			</a>
 
 			<!-- Part Codes -->
-			<a href="../PartCodes" class="setup-card" target="_parent">
+			<a href="../PartCodes" class="setup-card" target="_top">
 				<div class="setup-card-header">
 					<div class="setup-card-icon" style="background: linear-gradient(135deg, #efebe9 0%, #d7ccc8 100%);">
 						<svg viewBox="0 0 24 24" fill="none" stroke="#5d4037" stroke-width="2">
@@ -355,7 +355,7 @@ isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
 			</a>
 
 			<!-- SQL Query -->
-			<a href="../SQLQuery" class="setup-card" target="_parent">
+			<a href="../SQLQuery" class="setup-card" target="_top">
 				<div class="setup-card-header">
 					<div class="setup-card-icon" style="background: linear-gradient(135deg, #263238 0%, #37474f 100%);">
 						<svg viewBox="0 0 24 24" fill="none" stroke="#eceff1" stroke-width="2">
@@ -377,7 +377,7 @@ isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
 			</a>
 
 			<!-- User Roles -->
-			<a href="../UserRoles" class="setup-card" target="_parent">
+			<a href="../UserRoles" class="setup-card" target="_top">
 				<div class="setup-card-header">
 					<div class="setup-card-icon" style="background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);">
 						<svg viewBox="0 0 24 24" fill="none" stroke="#c62828" stroke-width="2">
@@ -398,7 +398,7 @@ isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
 			</a>
 
 			<!-- API Keys -->
-			<a href="APIKeys/Default.asp" class="setup-card" target="_parent">
+			<a href="APIKeys/Default.asp" class="setup-card" target="_top">
 				<div class="setup-card-header">
 					<div class="setup-card-icon" style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);">
 						<svg viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2">
@@ -432,7 +432,7 @@ isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
 		<div class="setup-grid" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));">
 			
 			<!-- Companies -->
-			<a href="../Companies" class="setup-card" target="_parent" style="border-left: 4px solid #00a8b5;">
+			<a href="../Companies" class="setup-card" target="_top" style="border-left: 4px solid #00a8b5;">
 				<div class="setup-card-header">
 					<div class="setup-card-icon" style="background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);">
 						<svg viewBox="0 0 24 24" fill="none" stroke="#00a8b5" stroke-width="2">
@@ -451,7 +451,7 @@ isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
 			</a>
 
 			<!-- Projects -->
-			<a href="../Projects" class="setup-card" target="_parent" style="border-left: 4px solid #d4a574;">
+			<a href="../Projects" class="setup-card" target="_top" style="border-left: 4px solid #d4a574;">
 				<div class="setup-card-header">
 					<div class="setup-card-icon" style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);">
 						<svg viewBox="0 0 24 24" fill="none" stroke="#ef6c00" stroke-width="2">

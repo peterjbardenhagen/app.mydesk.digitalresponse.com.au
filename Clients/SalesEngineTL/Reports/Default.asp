@@ -66,7 +66,7 @@ End If
 	<!-- Header -->
 	<div class="reports-header">
 		<nav class="tl-breadcrumb" style="margin-bottom: 16px;">
-			<a href="<%= strWorkingDir %>/Dashboard.asp" target="_parent">Home</a>
+			<a href="<%= strWorkingDir %>/Dashboard.asp" target="_top">Home</a>
 			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
 			<span>Reports</span>
 		</nav>
@@ -112,7 +112,7 @@ End If
 		
 		<div class="reports-grid">
 			<!-- Sales Report Generator -->
-			<a href="SalesReportGen.asp" class="reports-card" target="_parent">
+			<a href="SalesReportGen.asp" class="reports-card" target="_top">
 				<div class="reports-card-header">
 					<div class="reports-card-icon" style="background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);">
 						<svg viewBox="0 0 24 24" fill="none" stroke="#00a8b5" stroke-width="2">
@@ -147,7 +147,7 @@ End If
 		
 		<div class="reports-grid">
 			<!-- Purchase Orders By Month By Division -->
-			<a href="PurchaseOrders_ByMonth_ByDivision.asp" class="reports-card" target="_parent">
+			<a href="PurchaseOrders_ByMonth_ByDivision.asp" class="reports-card" target="_top">
 				<div class="reports-card-header">
 					<div class="reports-card-icon" style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);">
 						<svg viewBox="0 0 24 24" fill="none" stroke="#ef6c00" stroke-width="2">

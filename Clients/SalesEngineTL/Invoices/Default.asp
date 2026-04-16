@@ -62,7 +62,7 @@ intSelDivisionId = 555
 <div class="tl-page-container">
 	<!-- Breadcrumb -->
 	<nav class="tl-breadcrumb">
-		<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Dashboard.asp" target="_parent">Home</a>
+		<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Dashboard.asp" target="_top">Home</a>
 		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
 		<span>Invoices</span>
 	</nav>
@@ -78,7 +78,7 @@ intSelDivisionId = 555
 			Invoices
 		</h1>
 		<div class="tl-btn-group">
-			<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Invoices/Add.asp" class="tl-btn-primary" target="_parent">
+			<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Invoices/Add.asp" class="tl-btn-primary" target="_top">
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
 					<line x1="12" y1="5" x2="12" y2="19"></line>
 					<line x1="5" y1="12" x2="19" y2="12"></line>

@@ -43,9 +43,9 @@ dteDateTo = FormatDateU(DateAdd("D", -1, DateAdd("M", 1, DateSerial(Year(Date())
 <div class="tl-page-container">
     <!-- Breadcrumb -->
     <nav class="tl-breadcrumb">
-        <a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Dashboard.asp" target="_parent">Home</a>
+        <a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Dashboard.asp" target="_top">Home</a>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        <a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Admin/" target="_parent">Admin</a>
+        <a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Admin/" target="_top">Admin</a>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
         <span>MYOB Data</span>
     </nav>

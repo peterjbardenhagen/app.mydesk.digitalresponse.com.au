@@ -143,7 +143,7 @@ End If
 													</tr>
 													<tr>
 														
-														<td valign="top" style="font-size:16px !important;"><a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Portal/LogOff.asp" target="_parent">Log Off</a></td>
+														<td valign="top" style="font-size:16px !important;"><a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Portal/LogOff.asp" target="_top">Log Off</a></td>
 													</tr>
 												</table>
 											</td>

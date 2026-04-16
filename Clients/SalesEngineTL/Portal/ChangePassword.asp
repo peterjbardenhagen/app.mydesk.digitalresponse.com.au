@@ -99,7 +99,7 @@ End If
 					<tr>
 						<td>
 							<table>
-								<form action="ChangePassword_Proc.asp" method="post" onSubmit="return checkForm();" target="_parent" name="Form1">
+								<form action="ChangePassword_Proc.asp" method="post" onSubmit="return checkForm();" target="_top" name="Form1">
 								<tr>
 									<td class="Req">*</td>
 									<td style="font-weight:bold;">Current Password:</td>

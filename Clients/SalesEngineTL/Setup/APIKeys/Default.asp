@@ -89,7 +89,7 @@ strWorkingDir = Request.Cookies("ClientSettings")("WorkingDir")
 
 <div class="apikeys-container">
 	<nav class="tl-breadcrumb">
-		<a href="<%= strWorkingDir %>/Dashboard.asp" target="_parent">Home</a>
+		<a href="<%= strWorkingDir %>/Dashboard.asp" target="_top">Home</a>
 		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
 		<a href="<%= strWorkingDir %>/Setup/Default.asp">Setup</a>
 		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
