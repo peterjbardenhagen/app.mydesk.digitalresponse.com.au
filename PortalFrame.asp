@@ -1,4 +1,20 @@
 <%
+' ===============================================================================
+' Techlight MyDesk - Portal Frame
+' ===============================================================================
+
+Option Explicit
+%>
+
+<!--#include virtual="/System/ssi_ResponseHeaders.inc"-->
+<!--#include virtual="/System/ssi_dbConn_open.inc"-->
+<!--#include virtual="/System/ssi_Functions.asp"-->
+<!--#include virtual="/System/ssi_Security.inc"-->
+<!--#include virtual="/System/ssi_Dates.inc"-->
+
+<%
+Dim strMsg
+strMsg = Trim(Request("Msg"))
 
 Response.AddHeader "Pragma", "No-Store"
 Response.AddHeader "cache-control", "no-store, private, must-revalidate"
@@ -6,22 +22,15 @@ Response.Expires = -1
 Response.ExpiresAbsolute = DateAdd("Y", -10, Now())
 Response.CacheControl = "no-store, private, must-revalidate"
 
-Dim strMsg
-strMsg = Trim(Request("Msg"))
-
 %>
-<!--#include virtual="/System/ssi_Security.inc"-->
-<!--#include virtual="/System/ssi_Functions.asp"-->
-<!--#include virtual="/System/ssi_dbConn_open.inc"-->
-<!--#include virtual="/System/ssi_Dates.inc"-->
 <html>
 	<head>
 		<title>MyDesk</title>
 		<META http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, pre-check=0">
 		<META http-equiv="Expires" content="0">
 		<META http-equiv="Pragma" content="no-store, private, must-revalidate">
-		<link rel="stylesheet" type="text/css" href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/<%= Request.Cookies("ClientSettings")("Stylesheet") %>">
-		<script language="javascript" src="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/Global.js"></script>
+		<link rel="stylesheet" type="text/css" href="<%= TL_WORKING_DIR %>/System/<%= TL_STYLESHEET %>">
+		<script language="javascript" src="<%= TL_WORKING_DIR %>/System/Global.js"></script>
 		<script language="javascript">	
 		function MM_swapImgRestore() { //v3.0
 		var i,x,a=document.MM_sr; for(i=0;a&&i<a.length&&(x=a[i])&&x.oSrc;i++) x.src=x.oSrc;
