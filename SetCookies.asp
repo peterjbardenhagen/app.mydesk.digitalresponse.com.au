@@ -7,7 +7,7 @@ Response.CacheControl = "no-store, private, must-revalidate"
 
 %>
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
-<!--#include virtual="System/ssi_Functions.asp"-->
+<!--#include virtual="/System/ssi_Functions.asp"-->
 <%
 
 Response.Redirect("/Portal.asp")
