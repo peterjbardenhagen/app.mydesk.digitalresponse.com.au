@@ -1,16 +1,28 @@
 <%
-'Dim strWorkingDir
+On Error Resume Next
 
+' strWorkingDir is defined in the parent page (Dashboard.asp, etc.)
+' This file assumes strWorkingDir is already declared in the parent
+
+' Get working directory with null checks
+On Error Resume Next
 If Request.Cookies("LoggedIn")&"" <> "" Then
-	strWorkingDir = Request.Cookies("ClientSettings")("WorkingDir")
+	If Not Request.Cookies("ClientSettings") Is Nothing Then
+		If Not IsEmpty(Request.Cookies("ClientSettings")("WorkingDir")) Then
+			strWorkingDir = Request.Cookies("ClientSettings")("WorkingDir")
+		End If
+	End If
 Else
-	strWorkingDir = Session("WorkingDir")
+	If Not IsEmpty(Session("WorkingDir")) Then
+		strWorkingDir = Session("WorkingDir")
+	End If
 End If
 
 ' Fallback to ensure WorkingDir is never empty
 If strWorkingDir = "" Or IsNull(strWorkingDir) Then
 	strWorkingDir = "/Clients/SalesEngineTL"
 End If
+On Error GoTo 0
 
 ' Get current page for active nav highlighting
 Dim currentPage
