@@ -1,4 +1,5 @@
 <%
+Option Explicit
 
 Response.AddHeader "cache-control", "no-store, private, must-revalidate"
 

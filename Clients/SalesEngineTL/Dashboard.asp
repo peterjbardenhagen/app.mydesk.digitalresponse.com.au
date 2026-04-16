@@ -1,4 +1,7 @@
-<% ' Techlight MyDesk - Modern Dashboard
+<%
+Option Explicit
+
+' Techlight MyDesk - Modern Dashboard
 '===============================================================================' REDESIGNED: Modular architecture for stability and maintainability.
 ' Widgets are located in /Clients/SalesEngineTL/Dashboard/Widgets/ ' ===============================================================================
 %>

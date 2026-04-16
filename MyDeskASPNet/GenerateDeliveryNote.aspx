@@ -1,1 +1,1 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="GenerateDeliveryNote.aspx.cs" Inherits="MyDeskASPNet.GenerateDeliveryNote" %>
+<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="GenerateDeliveryNote.aspx.cs" Inherits="MyDeskASPNet.GenerateDeliveryNote" %>

@@ -1,4 +1,6 @@
 <%
+Option Explicit
+
 ' Techlight MyDesk - API Keys Management
 ' List, add, edit, and delete API keys for system integration
 

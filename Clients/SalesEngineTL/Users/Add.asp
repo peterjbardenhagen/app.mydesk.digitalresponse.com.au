@@ -1,4 +1,5 @@
-<% 
+<%
+Option Explicit
 
 Dim strCode
 strCode = Trim(Request("Code"))

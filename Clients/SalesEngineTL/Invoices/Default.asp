@@ -1,4 +1,6 @@
-<% 
+<%
+Option Explicit
+
 ' Techlight MyDesk - Modern Invoices List - Hardened for Stability
 On Error Resume Next
 

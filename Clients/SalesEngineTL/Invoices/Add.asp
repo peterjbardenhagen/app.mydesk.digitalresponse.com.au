@@ -1,4 +1,6 @@
 <%
+Option Explicit
+
 ' using Days from quoteordercontents as # Invoiced
 Response.AddHeader "Pragma", "No-Store"
 Response.AddHeader "cache-control", "no-store, private, must-revalidate"

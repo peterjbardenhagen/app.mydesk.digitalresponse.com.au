@@ -1,4 +1,6 @@
-<% 
+<%
+Option Explicit
+
 ' Techlight MyDesk - Modern Contacts List - Hardened for Stability
 On Error Resume Next
 

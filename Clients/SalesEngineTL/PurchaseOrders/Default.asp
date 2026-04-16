@@ -1,4 +1,6 @@
-<% 
+<%
+Option Explicit
+
 ' Techlight MyDesk - Modern Purchase Orders List - Hardened for Stability
 On Error Resume Next
 

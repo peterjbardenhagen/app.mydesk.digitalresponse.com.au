@@ -1,4 +1,5 @@
-<% 
+<%
+Option Explicit
 
 Response.AddHeader "Pragma", "No-Store"
 Response.ExpiresAbsolute = ServerToEST(Now()) - 1

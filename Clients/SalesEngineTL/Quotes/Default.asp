@@ -1,4 +1,6 @@
-<% 
+<%
+Option Explicit
+
 ' Techlight MyDesk - Modern Quotes List
 Response.AddHeader "Pragma", "No-Store"
 Response.ExpiresAbsolute = ServerToEST(Now()) - 1

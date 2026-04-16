@@ -1,4 +1,5 @@
 <%
+Option Explicit
 
 Dim dteCurrentUTC
 dteCurrentUTC = currentUTC

@@ -1,4 +1,5 @@
-<% 
+<%
+Option Explicit
 
 Response.Buffer = True
 Response.AddHeader "Pragma", "No-Store"

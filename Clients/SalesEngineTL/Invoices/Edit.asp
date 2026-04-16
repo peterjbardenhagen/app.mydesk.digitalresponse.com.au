@@ -1,4 +1,5 @@
 <%
+Option Explicit
 
 ' using Days from quoteordercontents as # Invoiced
 

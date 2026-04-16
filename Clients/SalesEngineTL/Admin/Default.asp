@@ -1,4 +1,6 @@
-<% 
+<%
+Option Explicit
+
 ' Techlight MyDesk - Admin Dashboard (Director Only)
 Response.AddHeader "Pragma", "No-Store"
 Response.ExpiresAbsolute = ServerToEST(Now()) - 1

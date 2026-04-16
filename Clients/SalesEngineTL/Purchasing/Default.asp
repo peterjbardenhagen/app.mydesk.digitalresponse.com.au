@@ -1,4 +1,6 @@
-<% 
+<%
+Option Explicit
+
 ' Techlight MyDesk - Modern Purchasing Navigation Hub - Hardened for Stability
 On Error Resume Next
 

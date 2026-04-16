@@ -1,4 +1,6 @@
 <%
+Option Explicit
+
 ' Techlight MyDesk - Dashboard Data Fetching Logic (Modernized)
 ' ===============================================================================
 

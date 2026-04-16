@@ -1,4 +1,6 @@
-<% 
+<%
+Option Explicit
+
 ' Techlight MyDesk - Login Validation
 ' ===============================================================================
 ' Validates user credentials and sets up session

@@ -1,4 +1,5 @@
 <%
+Option Explicit
 
 lngQid = CLng(Request("Qid"))
 

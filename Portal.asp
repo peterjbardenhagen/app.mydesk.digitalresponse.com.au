@@ -1,4 +1,6 @@
-<% 
+<%
+Option Explicit
+
 ' Techlight MyDesk - Portal Cookie Setting and Redirect
 ' ===============================================================================
 ' This file is called after successful login to set cookies and redirect

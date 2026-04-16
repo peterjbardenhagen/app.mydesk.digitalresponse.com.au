@@ -1,4 +1,6 @@
-<% 
+<%
+Option Explicit
+
 Response.AddHeader "Pragma", "No-Store"
 Response.AddHeader "cache-control", "no-store, private, must-revalidate"
 Response.Expires = -1

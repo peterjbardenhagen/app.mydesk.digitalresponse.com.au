@@ -1,4 +1,6 @@
-<% 
+<%
+Option Explicit
+
 ' Techlight MyDesk - Modern Users List - Hardened for Stability
 On Error Resume Next
 

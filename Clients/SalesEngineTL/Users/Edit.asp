@@ -1,4 +1,5 @@
-<% 
+<%
+Option Explicit
 
 If Not Request.Cookies("UserSettings")("UserTypeId") => 4 Then
 	Response.Redirect("../Portal/AccessDenied.asp")

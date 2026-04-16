@@ -1,4 +1,5 @@
 <%
+Option Explicit
 
 lngInvoiceId = CLng(Request("InvoiceId"))
 lngDivisionId = CLng(Request("DivisionId"))

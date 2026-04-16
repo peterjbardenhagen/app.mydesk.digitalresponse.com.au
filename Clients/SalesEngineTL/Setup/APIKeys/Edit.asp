@@ -1,4 +1,6 @@
 <%
+Option Explicit
+
 ' Techlight MyDesk - Edit API Key
 
 Response.AddHeader "Pragma", "No-Store"

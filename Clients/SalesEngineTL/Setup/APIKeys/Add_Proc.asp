@@ -1,4 +1,6 @@
 <%
+Option Explicit
+
 ' Techlight MyDesk - Add API Key Process
 
 Response.AddHeader "Pragma", "No-Store"

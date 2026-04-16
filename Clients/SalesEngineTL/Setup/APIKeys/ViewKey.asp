@@ -1,4 +1,6 @@
 <%
+Option Explicit
+
 ' Techlight MyDesk - View Newly Created API Key
 ' This page displays the newly generated API key to the user
 
