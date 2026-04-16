@@ -21,7 +21,7 @@ Dim dbConn2
 Dim strConn
 Dim strGlobalState
 Dim strGlobalPrefix
-Dim strWorkingDir
+'Dim strWorkingDir
 
 ' Initialize variables to prevent null reference errors
 MyDB = ""
