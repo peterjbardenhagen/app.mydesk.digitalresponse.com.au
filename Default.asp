@@ -1,47 +1,32 @@
 <%
 ' ===============================================================================
-' Techlight MyDesk - Unified Entry Point
+' Techlight MyDesk - Login Entry Point
 ' ===============================================================================
-' Simplified workflow:
-' 1. This is the ONLY entry point for the application
-' 2. Checks if user is already logged in (Session + Cookies)
-' 3. If logged in: Redirects to main application
-' 4. If not logged in: Shows unified login page
+' STANDARD INCLUDES: Constants → ResponseHeaders → Functions (no DB needed for login)
 ' ===============================================================================
 
-On Error Resume Next
+Option Explicit
 
-' Cache control headers
+' Layer 1: Constants (no dependencies)
+%>
+<!--#include virtual="/System/Constants.asp"-->
+<%
+
+' Layer 2: Response Headers (no dependencies)
 Response.AddHeader "Pragma", "No-Store"
 Response.AddHeader "cache-control", "no-store, private, must-revalidate"
 Response.Expires = -1
 Response.ExpiresAbsolute = DateAdd("Y", -10, Now())
 Response.CacheControl = "no-store, private, must-revalidate"
 
-' Include required system files - Var.asp MUST be first to set WorkingDir
+' Layer 3: Functions (no DB connection needed for login page)
 %>
-<!--#include virtual="/System/Var.asp"-->
 <!--#include virtual="/System/ssi_Functions.asp"-->
 <%
 
-' Initialize session variables for Techlight (always the same)
-' Var.asp already sets WorkingDir cookie, now set session if needed
-If Session("WorkingDir") = "" Then
-    Session("Stylesheet") = "Style.css"
-    Session("MainBgColor") = "#cccccc"
-    Session("BgColor2") = "#005b89"
-    Session("BgColor3") = "#005b89"
-    Session("Prefix") = "TL"
-    Session("State") = "ALL"
-    Session("PortalCompany") = "Techlight"
-    Session("WorkingDir") = "/Clients/SalesEngineTL"
-    Session("HomeColor1") = "#005b89"
-End If
-
-' HARDEN: Always ensure WorkingDir is set - never allow null or empty
-If Session("WorkingDir") = "" Or IsNull(Session("WorkingDir")) Then
-    Session("WorkingDir") = "/Clients/SalesEngineTL"
-End If
+' Legacy session vars for backward compatibility (only set if missing)
+If Session("Stylesheet") = "" Then Session("Stylesheet") = TL_STYLESHEET
+If Session("HomeColor1") = "" Then Session("HomeColor1") = TL_COLOR_HOME
 
 ' Check if user is already logged in
 Dim isLoggedIn
@@ -92,23 +77,10 @@ If Not isLoggedIn Then
     On Error GoTo 0
 End If
 
-' If already logged in, redirect to main application
+' If already logged in, redirect to Dashboard
 If isLoggedIn Then
-    ' Ensure WorkingDir is set before redirect
-    Dim redirectPath
-    redirectPath = ""
-    On Error Resume Next
-    If Session("WorkingDir") <> "" And Not IsNull(Session("WorkingDir")) Then
-        redirectPath = Session("WorkingDir") & "/Dashboard.asp"
-    Else
-        redirectPath = "/Clients/SalesEngineTL/Dashboard.asp"
-    End If
-    On Error GoTo 0
-    
-    If redirectPath <> "" Then
-        Response.Redirect redirectPath
-        Response.End
-    End If
+    Response.Redirect TL_WORKING_DIR & "/Dashboard.asp"
+    Response.End
 End If
 
 ' Not logged in - show the unified login page

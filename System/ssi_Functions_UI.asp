@@ -64,15 +64,8 @@ Function GetUserContactDetails(lngDivisionId, strCode)
 		lngDivisionId = CLng(lngDivisionId)
 	End If
 	
-	' Get working directory with error handling
-	workingDir = ""
-	On Error Resume Next
-	If Not Request.Cookies("ClientSettings") Is Nothing Then
-		workingDir = Request.Cookies("ClientSettings")("WorkingDir")
-	End If
-	If workingDir = "" Then workingDir = "/Clients/SalesEngineTL"
-	Err.Clear
-	On Error GoTo 0
+	' Get working directory from constant (was previously cookie/session)
+	workingDir = TL_WORKING_DIR
 	
 	If lngDivisionId = 7 And strCode = "MD0029" Then
 		s = "<br><br><br>" &_

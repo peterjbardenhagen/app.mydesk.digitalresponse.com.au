@@ -360,36 +360,13 @@ Sub SendMail(fromWho, toWho, Subject, Body)
 End Sub
 
 Sub SetWorkingDir(strUrl)
-	On Error Resume Next
-	
-	Dim strPath, intSalesEngine
-	
-	' Get URL path with error handling
-	strPath = Request.ServerVariables("Url")
-	If Err.Number <> 0 Or IsNull(strPath) Then strPath = ""
-	On Error Resume Next
-	
-	intSalesEngine = InStr(strPath, "SalesEngine")
-	
-	If intSalesEngine > 0 Then
-		strPath = Mid(strPath, 1, intSalesEngine + 12)
-	Else
-		strPath = "/Clients/SalesEngineTL"
-	End If
-	
-	' Set session variables
-	Session("WorkingDir") = strPath
-	Session("State") = "NA"
-	Session("Prefix") = Right(strPath, 2)
-	
-	' Set cookies with error handling
-	On Error Resume Next
-	Response.Cookies("ClientSettings")("WorkingDir") = strPath
-	Response.Cookies("ClientSettings")("State") = "NA"
-	Response.Cookies("ClientSettings")("Prefix") = Right(strPath, 2)
-	Response.Cookies("ClientSettings").Expires = Date() + 1
-	
-	On Error GoTo 0
+' ===============================================================================
+' DEPRECATED: WorkingDir now uses TL_WORKING_DIR constant from Constants.asp
+' PURPOSE: Kept for backward compatibility. Does NOT set session/cookies anymore.
+' ===============================================================================
+    On Error Resume Next
+    ' No-op: All WorkingDir/State/Prefix values now come from Constants.asp
+    On Error GoTo 0
 End Sub
 
 Function SearchArray(arrArray, strFind)

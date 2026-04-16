@@ -1,53 +1,55 @@
 <!--#include file="ADOVBS.inc"-->
 <%
 ' ============================================================================
-' Database Connection - Simplified for Techlight Single Client
+' Database Connection - Uses Constants.asp (must be included BEFORE this file)
+' ============================================================================
+' REQUIREMENTS: Constants.asp must be included first
+' DEPENDENCIES: TL_DATABASE_PATH, TL_DB_FILENAME, TL_WORKING_DIR
 ' ============================================================================
 
 On Error Resume Next
 
-Dim MyDB, MyFSO, dbConn, strConn
+' Explicit variable declarations
+Dim strDbPath, objFSO, objConn, strConnString
 
-' Hardcoded values for Techlight (single client system)
-strWorkingDir = "/Clients/SalesEngineTL"
-strGlobalPrefix = "TL"
-strGlobalState = "AUS"
+' Build database path using constants
+strDbPath = Server.MapPath(TL_DATABASE_PATH) & "\" & TL_DB_FILENAME
+If Err.Number <> 0 Then strDbPath = Server.MapPath(".") & "\" & TL_DB_FILENAME
 
-' Get database path
-MyDB = Server.MapPath("/Database") & "\Techlight2.mdb"
-If Err.Number <> 0 Then MyDB = Server.MapPath(".") & "\Techlight2.mdb"
-
-' Check database exists
-Set MyFSO = Server.CreateObject("Scripting.FileSystemObject")
-If Err.Number <> 0 Or MyFSO Is Nothing Then
+' Verify database file exists
+Set objFSO = Server.CreateObject("Scripting.FileSystemObject")
+If Err.Number <> 0 Or objFSO Is Nothing Then
     Response.Write "Error: Unable to access file system."
     Response.End
 End If
 
-If Not MyFSO.FileExists(MyDB) Then
-    Response.Redirect(strWorkingDir & "/Updating.asp")
+If Not objFSO.FileExists(strDbPath) Then
+    Response.Redirect(TL_WORKING_DIR & "/Updating.asp")
     Response.End
 End If
 
 ' Create and open connection
-Set dbConn = Server.CreateObject("ADODB.Connection")
-If Err.Number <> 0 Or dbConn Is Nothing Then
+Set objConn = Server.CreateObject("ADODB.Connection")
+If Err.Number <> 0 Or objConn Is Nothing Then
     Response.Write "Error: Unable to create database connection."
     Response.End
 End If
 
-strConn = "Driver={Microsoft Access Driver (*.mdb)};DBQ=" & MyDB & ";"
-dbConn.ConnectionTimeout = 15
-dbConn.CommandTimeout = 30
-dbConn.ConnectionString = strConn
-dbConn.Mode = 3
-dbConn.Open
+strConnString = "Driver={Microsoft Access Driver (*.mdb)};DBQ=" & strDbPath & ";"
+objConn.ConnectionTimeout = TL_DB_TIMEOUT
+objConn.CommandTimeout = TL_CMD_TIMEOUT
+objConn.ConnectionString = strConnString
+objConn.Mode = 3
+objConn.Open
 
 If Err.Number <> 0 Then
     Response.Write "Database connection failed. Please contact administrator."
     Response.End
 End If
 
-Set MyFSO = Nothing
+' Export connection for use in parent page
+Set dbConn = objConn
+
+Set objFSO = Nothing
 On Error GoTo 0
 %>
