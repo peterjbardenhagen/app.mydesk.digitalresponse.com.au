@@ -1,11 +1,5 @@
 <% 
 
-Response.AddHeader "Pragma", "No-Store"
-Response.AddHeader "cache-control", "no-store, private, must-revalidate"
-Response.Expires = -1
-Response.ExpiresAbsolute = DateAdd("Y", -10, Now())
-Response.CacheControl = "no-store, private, must-revalidate"
-
 If Not Request.Cookies("UserSettings")("UserTypeId") => 4 Then
 	Response.Redirect("../Portal/AccessDenied.asp")
 End If
@@ -13,17 +7,32 @@ End If
 Dim intUserId
 intUserId = Trim(Request("UserId"))
 
+Dim strWorkingDir
+strWorkingDir = ""
+On Error Resume Next
+If Not Request.Cookies("ClientSettings") Is Nothing Then
+	If Not IsEmpty(Request.Cookies("ClientSettings")("WorkingDir")) And Request.Cookies("ClientSettings")("WorkingDir") <> "" Then
+		strWorkingDir = Request.Cookies("ClientSettings")("WorkingDir")
+	End If
+End If
+If Err.Number <> 0 Or strWorkingDir = "" Then
+	strWorkingDir = "/Clients/SalesEngineTL"
+End If
+On Error GoTo 0
+
 %>
+<!--#include virtual="/System/ssi_ResponseHeaders.inc"-->
 <!--#include virtual="/System/ssi_Security.inc"-->
 <!--#include virtual="/System/ssi_Functions.asp"-->
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
-<html>
+<html lang="en">
 	<head>
-		<title>MyDesk</title>
-		<META http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, pre-check=0">
-		<META http-equiv="Expires" content="0">
-		<META http-equiv="Pragma" content="no-store, private, must-revalidate">
-		<link rel="stylesheet" type="text/css" href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/<%= Request.Cookies("ClientSettings")("Stylesheet") %>">
+		<title>Edit User - Techlight MyDesk</title>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link rel="stylesheet" type="text/css" href="<%= strWorkingDir %>/System/Style_Techlight.css">
+		<link rel="stylesheet" type="text/css" href="/System/Style_Modern.css">
+		<link rel="icon" type="image/x-icon" href="/favicon.ico">
 		<script language="JavaScript">
 
 		function emptyField(textObj) {
@@ -156,7 +165,7 @@ intUserId = Trim(Request("UserId"))
 			}
 		</style>
 	</head>
-	<body bgcolor="#dddddd">
+	<body class="tl-bg-light">
 
 <!--#include virtual="/Clients/SalesEngineTL/Header.asp"-->
 
