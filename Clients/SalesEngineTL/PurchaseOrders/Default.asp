@@ -1,44 +1,119 @@
 <% 
-' Techlight MyDesk - Modern Purchase Orders List
+' Techlight MyDesk - Modern Purchase Orders List - Hardened for Stability
+On Error Resume Next
+
 Response.AddHeader "Pragma", "No-Store"
 Response.ExpiresAbsolute = ServerToEST(Now()) - 1
 Response.AddHeader "pragma","no-cache"
 Response.AddHeader "cache-control","private"
 Response.CacheControl = "no-cache"
 
-If Not Request.Cookies("DivisionIdsAccess")("PurchaseOrders") <> "0" Then Response.Redirect("../Portal/AccessDenied.asp")
+' Access check with null checks
+Dim hasAccess
+hasAccess = False
+On Error Resume Next
+If Not Request.Cookies("DivisionIdsAccess") Is Nothing Then
+	If Not IsEmpty(Request.Cookies("DivisionIdsAccess")("PurchaseOrders")) Then
+		hasAccess = (Request.Cookies("DivisionIdsAccess")("PurchaseOrders") <> "0")
+	End If
+End If
+On Error GoTo 0
 
-Dim strSort, strFilter_Code, intDivisionId, strCode
-
-If Request.Cookies("UserSettings")("Manager") Then
-	strCode = Trim(Request("Code"))
-	If strCode = "" Then strCode = "All"
-Else
-	strCode = Request.Cookies("UserSettings")("Code")
+If Not hasAccess Then
+	Response.Redirect("../Portal/AccessDenied.asp")
+	Response.End
 End If
 
-If Request.QueryString("Sort") = "" Then
+Dim strSort, strFilter_Code, intDivisionId, strCode, dteDateFrom, dteDateTo, intSelDivisionId
+Dim strWorkingDir
+
+' Get working directory with fallback
+strWorkingDir = ""
+On Error Resume Next
+If Not Request.Cookies("ClientSettings") Is Nothing Then
+	If Not IsEmpty(Request.Cookies("ClientSettings")("WorkingDir")) And Request.Cookies("ClientSettings")("WorkingDir") <> "" Then
+		strWorkingDir = Request.Cookies("ClientSettings")("WorkingDir")
+	End If
+End If
+If Err.Number <> 0 Or strWorkingDir = "" Then strWorkingDir = "/Clients/SalesEngineTL"
+On Error GoTo 0
+
+' Get user code with null checks
+strCode = ""
+On Error Resume Next
+If Not Request.Cookies("UserSettings") Is Nothing Then
+	If Not IsEmpty(Request.Cookies("UserSettings")("Manager")) Then
+		If CBool(Request.Cookies("UserSettings")("Manager")) Then
+			strCode = Trim(Request("Code"))
+			If strCode = "" Then strCode = "All"
+		Else
+			If Not IsEmpty(Request.Cookies("UserSettings")("Code")) Then
+				strCode = Request.Cookies("UserSettings")("Code")
+			End If
+		End If
+	End If
+End If
+If Err.Number <> 0 Or strCode = "" Then strCode = "All"
+On Error GoTo 0
+
+' Get sort order with null check
+strSort = ""
+On Error Resume Next
+If Request.QueryString("Sort") = "" Or IsNull(Request.QueryString("Sort")) Then
 	strSort = "PurchaseOrders.Date DESC"
 Else
 	strSort = Trim(Request.QueryString("Sort"))
 End If
+If Err.Number <> 0 Then strSort = "PurchaseOrders.Date DESC"
+On Error GoTo 0
 
-If Request.Cookies("UserSettings")("Manager") Then
-	strFilter_Code = Trim(Request("Filter_Code"))
-	If strFilter_Code = "" Then strFilter_Code = Request.Cookies("UserSettings")("Code")
-Else
-	strFilter_Code = Request.Cookies("UserSettings")("Code")
+' Get filter code with null checks
+strFilter_Code = ""
+On Error Resume Next
+If Not Request.Cookies("UserSettings") Is Nothing Then
+	If Not IsEmpty(Request.Cookies("UserSettings")("Manager")) Then
+		If CBool(Request.Cookies("UserSettings")("Manager")) Then
+			strFilter_Code = Trim(Request("Filter_Code"))
+			If strFilter_Code = "" Then
+				If Not IsEmpty(Request.Cookies("UserSettings")("Code")) Then
+					strFilter_Code = Request.Cookies("UserSettings")("Code")
+				End If
+			End If
+		Else
+			If Not IsEmpty(Request.Cookies("UserSettings")("Code")) Then
+				strFilter_Code = Request.Cookies("UserSettings")("Code")
+			End If
+		End If
+	End If
 End If
+If Err.Number <> 0 Or strFilter_Code = "" Then strFilter_Code = "All"
+On Error GoTo 0
 
+' Date calculations with error handling
+On Error Resume Next
 dteDateFrom = FormatDateU(DateAdd("M", -3, ServerToEST(Now())), False)
-dteDateTo = FormatDateU(DateAdd("D", 1, ServerToEST(Now())), False)
-intDivisionId = Request("DivisionId")
+If Err.Number <> 0 Then dteDateFrom = FormatDateU(Now(), False)
+On Error Resume Next
 
+dteDateTo = FormatDateU(DateAdd("D", 1, ServerToEST(Now())), False)
+If Err.Number <> 0 Then dteDateTo = FormatDateU(Now(), False)
+On Error GoTo 0
+
+' Division ID with validation
+intDivisionId = 0
+On Error Resume Next
+intDivisionId = Request("DivisionId")
 If IsNumeric(intDivisionId) Then
 	intDivisionId = CInt(intDivisionId)
 Else
-	intDivisionId = Request.Cookies("DivisionId")
+	If Not Request.Cookies("ClientSettings") Is Nothing Then
+		If Not IsEmpty(Request.Cookies("DivisionId")) And IsNumeric(Request.Cookies("DivisionId")) Then
+			intDivisionId = CInt(Request.Cookies("DivisionId"))
+		End If
+	End If
 End If
+If Err.Number <> 0 Then intDivisionId = 0
+On Error GoTo 0
 
 intSelDivisionId = 555
 %>
@@ -58,7 +133,7 @@ intSelDivisionId = 555
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-	<link rel="stylesheet" type="text/css" href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/Style_Techlight.css">
+	<link rel="stylesheet" type="text/css" href="<%= strWorkingDir %>/System/Style_Techlight.css">
 	<script language="javascript" src="/System/cal2.js"></script>
 	<script language="javascript" src="/System/cal_conf2.js"></script>
 </head>
@@ -68,7 +143,7 @@ intSelDivisionId = 555
 <div class="tl-page-container">
 	<!-- Breadcrumb -->
 	<nav class="tl-breadcrumb">
-		<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Dashboard.asp" target="_top">Home</a>
+		<a href="<%= strWorkingDir %>/Dashboard.asp" target="_top">Home</a>
 		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
 		<span>Purchase Orders</span>
 	</nav>
@@ -84,7 +159,7 @@ intSelDivisionId = 555
 			Purchase Orders
 		</h1>
 		<div class="tl-btn-group">
-			<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/PurchaseOrders/Add.asp" class="tl-btn-primary" target="_top">
+			<a href="<%= strWorkingDir %>/PurchaseOrders/Add.asp" class="tl-btn-primary" target="_top">
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
 					<line x1="12" y1="5" x2="12" y2="19"></line>
 					<line x1="5" y1="12" x2="19" y2="12"></line>
@@ -117,7 +192,7 @@ End If
 			</svg>
 			Filter Purchase Orders
 		</div>
-		<form name="FormReport" id="FormReport" method="post" action="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/PurchaseOrders/IFrame.asp" target="MyIFrame">
+		<form name="FormReport" id="FormReport" method="post" action="<%= strWorkingDir %>/PurchaseOrders/IFrame.asp" target="MyIFrame">
 			<div class="tl-form-row">
 				<div class="tl-form-group">
 					<label class="tl-form-label">Date From</label>
