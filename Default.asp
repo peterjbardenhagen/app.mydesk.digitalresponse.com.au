@@ -74,7 +74,21 @@ End If
 
 ' If already logged in, redirect to main application
 If isLoggedIn Then
-    MyRedirect(Session("WorkingDir") & "/Dashboard.asp")
+    ' Ensure WorkingDir is set before redirect
+    Dim redirectPath
+    redirectPath = ""
+    On Error Resume Next
+    If Session("WorkingDir") <> "" And Not IsNull(Session("WorkingDir")) Then
+        redirectPath = Session("WorkingDir") & "/Dashboard.asp"
+    Else
+        redirectPath = "/Clients/SalesEngineTL/Dashboard.asp"
+    End If
+    On Error GoTo 0
+    
+    If redirectPath <> "" Then
+        Response.Redirect redirectPath
+        Response.End
+    End If
 End If
 
 ' Not logged in - show the unified login page
