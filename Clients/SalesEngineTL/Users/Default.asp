@@ -1,16 +1,49 @@
 <% 
-' Techlight MyDesk - Modern Users List
+' Techlight MyDesk - Modern Users List - Hardened for Stability
+On Error Resume Next
+
 Response.AddHeader "Pragma", "No-Store"
 Response.AddHeader "cache-control", "no-store, private, must-revalidate"
 Response.Expires = -1
 Response.ExpiresAbsolute = DateAdd("Y", -10, Now())
 Response.CacheControl = "no-store, private, must-revalidate"
 
-Dim strMsg
-strMsg = Trim(Request("Msg"))
+Dim strMsg, strWorkingDir, userTypeId, userCode
+strMsg = ""
+strWorkingDir = ""
+userTypeId = ""
+userCode = ""
 
-If Not Request.Cookies("UserSettings")("UserTypeId") => 4 Then
+' Get message with null check
+If Not IsNull(Request("Msg")) Then strMsg = Trim(Request("Msg"))
+
+' Get working directory with fallback
+On Error Resume Next
+If Not Request.Cookies("ClientSettings") Is Nothing Then
+	If Not IsEmpty(Request.Cookies("ClientSettings")("WorkingDir")) And Request.Cookies("ClientSettings")("WorkingDir") <> "" Then
+		strWorkingDir = Request.Cookies("ClientSettings")("WorkingDir")
+	End If
+End If
+If Err.Number <> 0 Or strWorkingDir = "" Then strWorkingDir = "/Clients/SalesEngineTL"
+On Error GoTo 0
+
+' Access check with null checks
+Dim hasAccess
+hasAccess = False
+On Error Resume Next
+If Not Request.Cookies("UserSettings") Is Nothing Then
+	If Not IsEmpty(Request.Cookies("UserSettings")("UserTypeId")) Then
+		userTypeId = Request.Cookies("UserSettings")("UserTypeId")
+		If IsNumeric(userTypeId) Then
+			hasAccess = (CLng(userTypeId) >= 4)
+		End If
+	End If
+End If
+On Error GoTo 0
+
+If Not hasAccess Then
 	Response.Redirect("../Portal/AccessDenied.asp")
+	Response.End
 End If
 
 %>
@@ -19,7 +52,19 @@ End If
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <%
 
-GetAccessCodesList Request.Cookies("UserSettings")("Code"), Request.Cookies("UserSettings")("UserTypeId")
+' Get user code with null check
+On Error Resume Next
+If Not Request.Cookies("UserSettings") Is Nothing Then
+	If Not IsEmpty(Request.Cookies("UserSettings")("Code")) Then
+		userCode = Request.Cookies("UserSettings")("Code")
+	End If
+End If
+If Err.Number <> 0 Or userCode = "" Then userCode = ""
+On Error Resume Next
+
+' Call GetAccessCodesList with error handling
+GetAccessCodesList userCode, userTypeId
+On Error GoTo 0
 
 %>
 <!DOCTYPE html>
@@ -34,7 +79,7 @@ GetAccessCodesList Request.Cookies("UserSettings")("Code"), Request.Cookies("Use
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-	<link rel="stylesheet" type="text/css" href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/Style_Techlight.css">
+	<link rel="stylesheet" type="text/css" href="<%= strWorkingDir %>/System/Style_Techlight.css">
 </head>
 <body>
 <!--#include virtual="/System/ssi_Header.inc"-->
@@ -42,7 +87,7 @@ GetAccessCodesList Request.Cookies("UserSettings")("Code"), Request.Cookies("Use
 <div class="tl-page-container">
 	<!-- Breadcrumb -->
 	<nav class="tl-breadcrumb">
-		<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Dashboard.asp" target="_top">Home</a>
+		<a href="<%= strWorkingDir %>/Dashboard.asp" target="_top">Home</a>
 		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
 		<span>Users</span>
 	</nav>
@@ -57,7 +102,7 @@ GetAccessCodesList Request.Cookies("UserSettings")("Code"), Request.Cookies("Use
 			Manage Users
 		</h1>
 		<div class="tl-btn-group">
-			<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Users/Add.asp" class="tl-btn-primary" target="_top">
+			<a href="<%= strWorkingDir %>/Users/Add.asp" class="tl-btn-primary" target="_top">
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
 					<line x1="12" y1="5" x2="12" y2="19"></line>
 					<line x1="5" y1="12" x2="19" y2="12"></line>
