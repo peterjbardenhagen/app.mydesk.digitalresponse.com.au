@@ -1,6 +1,85 @@
 ================================================================================
-TIMESTAMP: 2026-04-16 12:07:27
+TIMESTAMP: 2026-04-16 20:46:05
 USER: 
+IP ADDRESS: ::1
+URL: /Clients/SalesEngineTL/Dashboard.asp
+SOURCE: 
+ERROR: 
+LINE: 6
+================================================================================
+
+================================================================================
+TIMESTAMP: 2026-04-16 20:46:54
+USER: 
+IP ADDRESS: ::1
+URL: /Clients/SalesEngineTL/Portal/Validate.asp
+SOURCE: 
+ERROR: 
+LINE: 6
+================================================================================
+
+================================================================================
+TIMESTAMP: 2026-04-16 20:47:26
+USER: 
+IP ADDRESS: ::1
+URL: /Clients/SalesEngineTL/Portal/Validate.asp
+SOURCE: 
+ERROR: 
+LINE: 6
+================================================================================
+
+================================================================================
+TIMESTAMP: 2026-04-16 20:48:32
+USER: 
+IP ADDRESS: ::1
+URL: /Clients/SalesEngineTL/Portal/Validate.asp
+SOURCE: 
+ERROR: 
+LINE: 16
+================================================================================
+
+================================================================================
+TIMESTAMP: 2026-04-16 20:48:52
+USER: 
+IP ADDRESS: ::1
+URL: /Clients/SalesEngineTL/Dashboard.asp
+SOURCE: 
+ERROR: 
+LINE: 1118
+================================================================================
+
+================================================================================
+TIMESTAMP: 2026-04-16 20:48:54
+USER: 
+IP ADDRESS: ::1
+URL: /Clients/SalesEngineTL/Dashboard.asp
+SOURCE: 
+ERROR: 
+LINE: 1118
+================================================================================
+
+================================================================================
+TIMESTAMP: 2026-04-16 21:04:16
+USER: 
+IP ADDRESS: ::1
+URL: /Clients/SalesEngineTL/Portal/Validate.asp
+SOURCE: 
+ERROR: 
+================================================================================
+
+================================================================================
+TIMESTAMP: 2026-04-16 21:05:33
+USER: Peter Bardenhagen
+IP ADDRESS: ::1
+URL: /Clients/SalesEngineTL/Dashboard.asp
+SOURCE: 
+ERROR: 
+LINE: 11
+================================================================================
+
+================================================================================
+TIMESTAMP: 2026-04-16 21:07:44
+USER: Peter Bardenhagen
 IP ADDRESS: ::1
 URL: /Default.asp
 SOURCE: 
@@ -8,1019 +87,354 @@ ERROR:
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:08:39
-USER: 
+TIMESTAMP: 2026-04-16 21:09:58
+USER: Peter Bardenhagen
 IP ADDRESS: ::1
 URL: /Default.asp
 SOURCE: 
 ERROR: 
+LINE: 591
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:08:44
-USER: 
+TIMESTAMP: 2026-04-16 21:13:27
+USER: Peter Bardenhagen
 IP ADDRESS: ::1
 URL: /Default.asp
 SOURCE: 
 ERROR: 
+LINE: 591
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:11:10
-USER: 
+TIMESTAMP: 2026-04-16 21:14:01
+USER: Peter Bardenhagen
 IP ADDRESS: ::1
 URL: /Default.asp
 SOURCE: 
 ERROR: 
+LINE: 591
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:12:51
-USER: 
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:14:19
+TIMESTAMP: 2026-04-16 21:14:06
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/SetCookies.asp
+URL: /Default.asp
 SOURCE: 
 ERROR: 
+LINE: 591
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:14:32
-USER: 
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:16:02
+TIMESTAMP: 2026-04-16 21:14:10
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Default.asp
+URL: /Default.asp
 SOURCE: 
 ERROR: 
+LINE: 591
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:16:11
-USER: 
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Portal/Validate.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:16:11
-USER: 
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:16:35
+TIMESTAMP: 2026-04-16 21:15:13
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Setup/Default.asp
+URL: /Clients/SalesEngineTL/PurchaseOrders/IFrame.asp
 SOURCE: 
 ERROR: 
+LINE: 11
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:18:05
+TIMESTAMP: 2026-04-16 21:15:23
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/PurchaseOrders/Default.asp
+URL: /Clients/SalesEngineTL/Invoices/IFrame.asp
 SOURCE: 
 ERROR: 
+LINE: 11
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:18:06
+TIMESTAMP: 2026-04-16 21:15:45
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Invoices/IFrame.asp
+URL: /Clients/SalesEngineTL/PurchaseOrders/Default.asp
 SOURCE: 
 ERROR: 
+LINE: 11
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:18:07
+TIMESTAMP: 2026-04-16 21:16:02
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/PurchaseOrders/IFrame.asp
+URL: /Clients/SalesEngineTL/PurchaseOrders/Default.asp
 SOURCE: 
 ERROR: 
+LINE: 11
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:18:09
+TIMESTAMP: 2026-04-16 21:21:16
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/PurchaseOrders/Default.asp
+URL: /Default.asp
 SOURCE: 
 ERROR: 
+LINE: 591
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:18:13
+TIMESTAMP: 2026-04-16 21:23:48
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Invoices/Default.asp
+URL: /Default.asp
 SOURCE: 
 ERROR: 
+LINE: 591
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:18:13
+TIMESTAMP: 2026-04-16 21:27:47
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Quotes/IFrame.asp
+URL: /Default.asp
 SOURCE: 
 ERROR: 
+LINE: 591
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:18:18
+TIMESTAMP: 2026-04-16 21:28:48
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Contacts/Default.asp
+URL: /Default.asp
 SOURCE: 
 ERROR: 
+LINE: 591
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:18:36
+TIMESTAMP: 2026-04-16 21:30:05
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Portalframe.asp
+URL: /Default.asp
 SOURCE: 
 ERROR: 
+LINE: 550
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:18:40
-USER: 
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:18:55
-USER: 
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Portal/Validate.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:18:55
-USER: 
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:19:08
+TIMESTAMP: 2026-04-16 21:30:29
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Users/Default.asp
+URL: /Default.asp
 SOURCE: 
 ERROR: 
+LINE: 116
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:19:22
+TIMESTAMP: 2026-04-16 21:31:01
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Portal/LogOff.asp
+URL: /Default.asp
 SOURCE: 
 ERROR: 
+LINE: 550
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:19:23
-USER: 
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:19:31
-USER: 
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Portal/Validate.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:19:31
-USER: 
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:20:02
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Users/Edit.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:20:10
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Invoices/IFrame.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:21:26
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/PurchaseOrders/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:22:28
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/PurchaseOrders/IFrame.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:23:08
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Contacts/IFrame.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:24:26
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Setup/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:25:31
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Portal/AccessDenied.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:27:19
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /Clients/SalesEngineTL/Reports/Default.asp
-SOURCE: 
-ERROR: 
-LINE: 85
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:27:21
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Contacts/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:28:19
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Users/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:28:22
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/PurchaseOrders/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:28:23
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Invoices/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:28:23
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Quotes/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:28:24
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Contacts/IFrame.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:32:56
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/PurchaseOrders/IFrame.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:32:56
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Invoices/IFrame.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:32:57
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Quotes/IFrame.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:36:05
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Quotes/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:37:10
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Users/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:37:15
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Users/Edit.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:38:02
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/PurchaseOrders/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:38:07
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Contacts/IFrame.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:38:21
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Users/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:38:24
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/PurchaseOrders/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:39:33
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Contacts/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:39:35
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Setup/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:39:37
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Quotes/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:42:32
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:42:35
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Portal/LogOff.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:42:51
-USER: 
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Portal/AccessDenied.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:42:56
+TIMESTAMP: 2026-04-16 21:32:12
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/SetCookies.asp
+URL: /Clients/SalesEngineTL/Dashboard.asp
 SOURCE: 
 ERROR: 
+LINE: 11
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:43:08
+TIMESTAMP: 2026-04-16 21:32:54
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Default.asp
+URL: /Clients/SalesEngineTL/Dashboard.asp
 SOURCE: 
 ERROR: 
+LINE: 11
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:43:09
+TIMESTAMP: 2026-04-16 21:33:42
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Users/Default.asp
+URL: /Clients/SalesEngineTL/Dashboard.asp
 SOURCE: 
 ERROR: 
+LINE: 11
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:43:12
+TIMESTAMP: 2026-04-16 21:33:43
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Default.asp
+URL: /Clients/SalesEngineTL/Dashboard.asp
 SOURCE: 
 ERROR: 
+LINE: 11
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:43:13
+TIMESTAMP: 2026-04-16 21:34:04
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Invoices/Default.asp
+URL: /Clients/SalesEngineTL/Dashboard.asp
 SOURCE: 
 ERROR: 
+LINE: 37
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:43:15
+TIMESTAMP: 2026-04-16 21:35:43
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Users/Default.asp
+URL: /Clients/SalesEngineTL/Dashboard.asp
 SOURCE: 
 ERROR: 
+LINE: 16
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:44:00
+TIMESTAMP: 2026-04-16 21:36:07
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Portal/LogOff.asp
+URL: /Clients/SalesEngineTL/Dashboard.asp
 SOURCE: 
 ERROR: 
+LINE: 4
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 12:44:40
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/PurchaseOrders/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:44:41
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Quotes/IFrame.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:44:48
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Contacts/IFrame.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:44:51
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Users/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:44:53
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Setup/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:44:57
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Invoices/IFrame.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:44:58
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/PurchaseOrders/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:45:00
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Invoices/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:45:02
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/PurchaseOrders/IFrame.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:45:03
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Invoices/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:45:40
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /Clients/SalesEngineTL/Invoices/ExportToMYOB_Proc.asp
-SOURCE: 
-ERROR: 
-LINE: 22
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:45:43
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Users/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:49:29
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Users/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:49:30
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Setup/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:57:04
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/PurchaseOrders/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:58:11
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Setup/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:58:12
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Users/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:58:17
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/PurchaseOrders/IFrame.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 12:58:17
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Invoices/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 13:00:30
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Portal/LogOff.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 13:01:10
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Users/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 13:01:52
+TIMESTAMP: 2026-04-16 21:37:09
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Portal/LogOff.asp
+URL: /Clients/SalesEngineTL/Dashboard.asp
 SOURCE: 
 ERROR: 
+LINE: 16
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 13:03:41
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Contacts/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 13:03:45
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Contacts/IFrame.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 13:03:51
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Quotes/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 13:03:53
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Portal/LogOff.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 13:04:57
+TIMESTAMP: 2026-04-16 21:39:54
 USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Users/Default.asp
+URL: /Clients/SalesEngineTL/Dashboard.asp
 SOURCE: 
 ERROR: 
+LINE: 88
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 13:06:45
-USER: Bert Beijnon
+TIMESTAMP: 2026-04-16 21:42:08
+USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Portal/LogOff.asp
+URL: /Default.asp
 SOURCE: 
 ERROR: 
+LINE: 550
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 13:06:52
-USER: Bert Beijnon
+TIMESTAMP: 2026-04-16 21:43:19
+USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Portal/LogOff.asp
+URL: /Default.asp
 SOURCE: 
 ERROR: 
+LINE: 550
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 13:07:00
-USER: Bert Beijnon
+TIMESTAMP: 2026-04-16 21:43:52
+USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Portal/LogOff.asp
+URL: /Default.asp
+QUERY STRING: msg=hello
 SOURCE: 
 ERROR: 
+LINE: 550
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 13:07:05
-USER: Bert Beijnon
+TIMESTAMP: 2026-04-16 21:45:20
+USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Default.asp
+URL: /Default.asp
+QUERY STRING: msg=hello
 SOURCE: 
 ERROR: 
+LINE: 550
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 13:11:52
-USER: Bert Beijnon
+TIMESTAMP: 2026-04-16 21:51:45
+USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Setup/Default.asp
+URL: /Default.asp
 SOURCE: 
 ERROR: 
+LINE: 550
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 13:11:58
-USER: Bert Beijnon
+TIMESTAMP: 2026-04-16 21:55:06
+USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Contacts/Default.asp
+URL: /Default.asp
 SOURCE: 
 ERROR: 
+LINE: 550
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 13:14:09
-USER: Bert Beijnon
+TIMESTAMP: 2026-04-16 21:55:42
+USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/PurchaseOrders/IFrame.asp
+URL: /Default.asp
 SOURCE: 
 ERROR: 
+LINE: 550
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 13:16:32
-USER: Bert Beijnon
+TIMESTAMP: 2026-04-16 21:56:21
+USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/PurchaseOrders/Default.asp
+URL: /Default.asp
 SOURCE: 
 ERROR: 
+LINE: 550
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 13:16:35
-USER: Bert Beijnon
+TIMESTAMP: 2026-04-16 22:10:12
+USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/PurchaseOrders/Default.asp
+URL: /Default.asp
 SOURCE: 
 ERROR: 
+LINE: 550
 ================================================================================
 
 ================================================================================
-TIMESTAMP: 2026-04-16 13:23:30
-USER: Bert Beijnon
+TIMESTAMP: 2026-04-16 22:14:19
+USER: Peter Bardenhagen
 IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Users/Add.asp
+URL: /Default.asp
 SOURCE: 
 ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 13:24:06
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Users/Default.asp
-SOURCE: 
-ERROR: 
-================================================================================
-
-================================================================================
-TIMESTAMP: 2026-04-16 13:24:14
-USER: Bert Beijnon
-IP ADDRESS: ::1
-URL: /errors/500-100.asp
-QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Users/Default.asp
-SOURCE: 
-ERROR: 
+LINE: 550
 ================================================================================
 

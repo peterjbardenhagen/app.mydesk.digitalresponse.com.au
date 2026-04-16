@@ -107,7 +107,7 @@ boolDivisionManager = SearchArray(Request.Cookies("DivisionIdsAccess")("ArrDivis
 			<!--#include virtual="/Clients/SalesEngineTL/System/Quotes.js"-->
 		</script>
 	</head>
-	<body bgcolor="#ffffff" onload="">
+	<body class="tl-bg-light" onload="">
 <!--#include virtual="/Clients/SalesEngineTL/Header.asp"-->
 	<form action="Edit_Proc.asp" method="post" name="Form1" ID="Form1" onSubmit="return checkForm();">
 	<table width=95% align="center" cellpadding=0 cellspacing=0 border=0 ID="Table4">
@@ -123,10 +123,13 @@ boolDivisionManager = SearchArray(Request.Cookies("DivisionIdsAccess")("ArrDivis
 						<input type="hidden" name="ExtraLinesVal" value=1 ID="Hidden7">
 						<input type="hidden" name="ThirdPartyLinesVal" value=1 ID="Hidden8">
 						<tr>
-							<td valign="top" colspan=4 align="right" class="FormBtmTD"><input type="button" value="Cancel" onclick="document.location.href='default.asp';" ID="Button1" NAME="Button1"> <input type="submit" value="Save" ID="Submit1" NAME="Submit1"></td>
+							<td valign="top" colspan=4 align="right" class="FormBtmTD" style="padding-bottom: 16px;">
+								<input type="button" value="Cancel" class="tl-btn tl-btn-secondary" onclick="document.location.href='default.asp';" ID="Button1" NAME="Button1"> 
+								<input type="submit" value="Save" class="tl-btn tl-btn-primary" ID="Submit1" NAME="Submit1">
+							</td>
 						</tr>
 						<tr>
-							<td valign="top" colspan=4><img src="<%= GetProtocol() %><%= Request.ServerVariables("SERVER_NAME") %><%= Request.Cookies("ClientSettings")("WorkingDir") %>/images/<%= strLogo %>" border=0 alt=""></td>
+							<td valign="top" colspan=4><img src="/images/techlight-logo.svg" border=0 alt="Techlight" style="height: 60px; width: auto; object-fit: contain;"></td>
 						</tr>
 <%
 If Request.Cookies("UserSettings")("UserTypeId") = 6 Then
@@ -164,7 +167,7 @@ If Request.Cookies("UserSettings")("UserTypeId") = 6 Then
 						<tr>
 							<td valign="top" style="font-weight:bold;">Quote From</td>
 							<td>
-								<select name="SenderCode" ID="SenderCode" style="width:280px;">
+								<select name="SenderCode" class="tl-select" ID="SenderCode" style="width:280px;">
 <%
 	' Get list of active users who can be senders
 	Set rsSenders = Server.CreateObject("ADODB.RecordSet")
@@ -206,7 +209,7 @@ End If
 						<tr>
 							<td valign="top" class="TDAReq" style="font-weight:bold;">Contact</td>
 							<td valign="top" colspan=3>
-							<select name="ContactId" style="width:280px;" ID="Select1">
+							<select name="ContactId" class="tl-select" style="width:280px;" ID="Select1">
 								<option value="">- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - </option>
 <%
 Set rsContacts = Server.CreateObject("ADODB.RecordSet")
@@ -244,7 +247,7 @@ Set rsContacts = dbConn.Execute(sql)
 						<tr>
 							<td valign="top" style="font-weight:bold;">Status</td>
 							<td valign="top">
-							<select name="QuoteStatusId" style="width:280px;" ID="QuoteStatusId">
+							<select name="QuoteStatusId" class="tl-select" style="width:280px;" ID="QuoteStatusId">
 <%
 
 Set rsStatus = Server.CreateObject("ADODB.RecordSet")
@@ -300,9 +303,9 @@ strTerms = rsQu("Terms")
 						</tr>
 						<tr>
 							<td valign="top" style="font-weight:bold;">Project</td>
-							<td valign="top"><input type="text" name="Reference" style="width:180px;" tabindex=4 value="<%= rsQu("Reference") %>" maxlength=50></td>
+							<td valign="top"><input type="text" name="Reference" class="tl-input" style="width:180px;" tabindex=4 value="<%= rsQu("Reference") %>" maxlength=50></td>
 							<td valign="top" style="font-weight:bold;" class="TDAReq">Validity</td>
-							<td valign="top"><input type="text" name="Validity" style="width:120px;" tabindex=10 value="<%= rsQu("Validity") %>" ID="Text7" maxlength=3> days</td>
+							<td valign="top"><input type="text" name="Validity" class="tl-input" style="width:120px;" tabindex=10 value="<%= rsQu("Validity") %>" ID="Text7" maxlength=3> <span style="font-size:13px; color:#64748b;">days</span></td>
 						</tr>
 						<tr>
 <%
@@ -310,7 +313,7 @@ If Request.Cookies("ClientSettings")("HasQuoteCOS") = "true" Then
 %>
 							<td valign="top" style="font-weight:bold;">Conditions of Sale</td>
 							<td valign="top">
-							<select name="QuoteCOSId" style="width:280px;" ID="Select3">
+							<select name="QuoteCOSId" class="tl-select" style="width:280px;" ID="Select3">
 								<option value="0"></option>
 <%
 
@@ -360,11 +363,11 @@ strInternalNotes = rsQu("InternalNotes")&""
 
 %>
 						<tr>
-							<td valign="top" colspan=2 width=50%><span style="font-weight:bold;">Notes</span><br><small>These notes will be visible to the customer</small><br><textarea name="CustomerNotes" rows="5" cols="30" onkeyup="parent.TrackCount(this,'textcount2',1500)" onkeypress="parent.LimitText(this,1500)" ID="Textarea4" style="width:100%;"><%= strCustomerNotes %></textarea><br/>Characters Remaining: <input type="text" name="textcount2" size="4" value="<% If Len(strCustomerNotes) > 0 Then Response.Write 1500-Len(strCustomerNotes) Else Response.Write 1500 %>" readonly ID="Text5"></td>
+							<td valign="top" colspan=2 width=50%><span style="font-weight:bold;">Notes</span><br><small>These notes will be visible to the customer</small><br><textarea name="CustomerNotes" rows="5" cols="30" class="tl-input" onkeyup="parent.TrackCount(this,'textcount2',1500)" onkeypress="parent.LimitText(this,1500)" ID="Textarea4" style="width:100%;"><%= strCustomerNotes %></textarea><br/>Characters Remaining: <input type="text" name="textcount2" size="4" value="<% If Len(strCustomerNotes) > 0 Then Response.Write 1500-Len(strCustomerNotes) Else Response.Write 1500 %>" readonly ID="Text5" style="border:none;background:transparent;color:#64748b;"></td>
 							<%
 							If Request.Cookies("ClientSettings")("HasInternalNotes") = "true" Then
 							%>
-							<td valign="top" colspan=2 width=50%><span style="font-weight:bold;">Internal Notes</span><br><small>These notes will not be visible to the customer</small><br><textarea name="InternalNotes" rows="5" cols="30" onkeyup="parent.TrackCount(this,'textcount1',1500)" onkeypress="parent.LimitText(this,1500)" ID="Textarea3" style="width:100%;"><%= strInternalNotes %></textarea><br/>Characters Remaining: <input type="text" name="textcount1" size="4" value="<% If Len(strInternalNotes) > 0 Then Response.Write 1500-Len(strInternalNotes) Else Response.Write 1500 %>" readonly ID="Text2"></td>
+							<td valign="top" colspan=2 width=50%><span style="font-weight:bold;">Internal Notes</span><br><small>These notes will not be visible to the customer</small><br><textarea name="InternalNotes" rows="5" cols="30" class="tl-input" onkeyup="parent.TrackCount(this,'textcount1',1500)" onkeypress="parent.LimitText(this,1500)" ID="Textarea3" style="width:100%;"><%= strInternalNotes %></textarea><br/>Characters Remaining: <input type="text" name="textcount1" size="4" value="<% If Len(strInternalNotes) > 0 Then Response.Write 1500-Len(strInternalNotes) Else Response.Write 1500 %>" readonly ID="Text2" style="border:none;background:transparent;color:#64748b;"></td>
 							<%
 							End If
 							%>
@@ -383,8 +386,8 @@ strInternalNotes = rsQu("InternalNotes")&""
 													<td colspan=2><p style="font-style:italic;">All prices are ex. GST.</p></td>
 												</tr>
 												<tr>
-													<td class="Quote_TD1"><b>Items</b></td>
-													<td class="Quote_TD1" align="right"><input type="button" value="Insert Item Line" onclick="Items_InsertLine();" ID="Button3" NAME="Button2"></td>
+													<td class="Quote_TD1"><b style="font-size: 1.1rem;">Items</b></td>
+													<td class="Quote_TD1" align="right"><input type="button" class="tl-btn tl-btn-secondary tl-btn-sm" value="Insert Item Line" onclick="Items_InsertLine();" ID="Button3" NAME="Button2"></td>
 												</tr>
 												<tr>
 													<td valign="top" colspan=2>
@@ -488,7 +491,10 @@ End If
 							</td>
 						</tr>
 						<tr>
-							<td colspan=3 valign="top" align="right"><input type="button" value="Cancel" onclick="document.location.href='default.asp';" ID="Button4" NAME="Button4"> <input type="submit" value="Save" ID="Submit2" NAME="Submit1" onclick="Quotes_CalcAll()"></td>
+							<td colspan=3 valign="top" align="right" style="padding-top: 24px;">
+								<input type="button" value="Cancel" class="tl-btn tl-btn-secondary" onclick="document.location.href='default.asp';" ID="Button4" NAME="Button4"> 
+								<input type="submit" value="Save Quote" class="tl-btn tl-btn-primary" ID="Submit2" NAME="Submit1" onclick="Quotes_CalcAll()">
+							</td>
 						</tr>
 					</table>
 				</td>

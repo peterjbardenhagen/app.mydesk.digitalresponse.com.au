@@ -1,3 +1,5 @@
+<!--#include virtual="/System/ssi_Errors.asp"-->
+<!--#include virtual="/System/ssi_SafeExecute.inc"-->
 <!--#include virtual="/Timezone.asp"-->
 <!--#include virtual="/System/ssi_Alerts.asp"-->
 <!--#include virtual="/System/ssi_Functions_Core.asp"-->

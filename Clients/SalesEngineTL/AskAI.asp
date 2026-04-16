@@ -245,6 +245,11 @@ Response.Expires = -1
     const AZURE_OPENAI_KEY = "B2R52mT8Ifegc2rcLsUBo0hLq1IEiK4fr6ne7ZVdQPd9LsoWrBSzJQQJ99CCACHYHv6XJ3w3AAAAACOG1Sbr";
     const AZURE_OPENAI_ENDPOINT = "https://techlight-ai.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-02-15-preview";
     
+    // MCP Settings
+    const MCP_LIST_URL = "http://localhost/MyDeskMCP/mcp/v1/tools/list";
+    const MCP_CALL_URL = "http://localhost/MyDeskMCP/mcp/v1/tools/call";
+    const USER_CODE = '<%= Session("Code") %>';
+
     let chatHistory = [
         { role: "system", content: "You are Techlight MyDesk AI, a helpful, deeply integrated AI assistant for the Techlight portal. You help users manage Quotes, Invoices, Purchase Orders, and MYOB synchronization. Be concise, professional, and use modern formatting." }
     ];
@@ -300,38 +305,133 @@ Response.Expires = -1
         appendMessage('assistant', '', true);
 
         try {
-            const response = await fetch(AZURE_OPENAI_ENDPOINT, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'api-key': AZURE_OPENAI_KEY
-                },
-                body: JSON.stringify({
+            // 1. Fetch available MCP tools
+            let openaiTools = [];
+            try {
+                const mcpListRes = await fetch(MCP_LIST_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-User-Code': USER_CODE },
+                    body: JSON.stringify({ "jsonrpc": "2.0", "id": "1", "method": "tools/list", "params": {} })
+                });
+                
+                if (mcpListRes.ok) {
+                    const mcpListData = await mcpListRes.json();
+                    if (mcpListData.result && mcpListData.result.tools) {
+                        openaiTools = mcpListData.result.tools.map(t => ({
+                            type: "function",
+                            function: {
+                                name: t.name,
+                                description: t.description,
+                                parameters: t.inputSchema
+                            }
+                        }));
+                    }
+                }
+            } catch (err) {
+                console.warn("Could not load MCP tools:", err);
+            }
+
+            let keepGoing = true;
+            let finalResponseText = null;
+
+            while (keepGoing) {
+                keepGoing = false;
+
+                // Send to Azure OpenAI
+                const payload = {
                     messages: chatHistory,
                     temperature: 0.7,
                     max_tokens: 800,
                     stream: false
-                })
-            });
+                };
+                if (openaiTools.length > 0) {
+                    payload.tools = openaiTools;
+                }
 
-            const data = await response.json();
+                const response = await fetch(AZURE_OPENAI_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'api-key': AZURE_OPENAI_KEY
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                
+                if (data.choices && data.choices.length > 0) {
+                    const message = data.choices[0].message;
+                    chatHistory.push(message);
+
+                    // Check if AI called any tools
+                    if (message.tool_calls && message.tool_calls.length > 0) {
+                        keepGoing = true;
+                        
+                        for (let t of message.tool_calls) {
+                            if (t.type === "function") {
+                                try {
+                                    // Call the MCP tool
+                                    const mcpCallRes = await fetch(MCP_CALL_URL, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json', 'X-User-Code': USER_CODE },
+                                        body: JSON.stringify({
+                                            "jsonrpc": "2.0",
+                                            "id": t.id,
+                                            "method": "tools/call",
+                                            "params": {
+                                                "name": t.function.name,
+                                                "arguments": JSON.parse(t.function.arguments)
+                                            }
+                                        })
+                                    });
+                                    let toolContent = "Tool failed";
+                                    if (mcpCallRes.ok) {
+                                        const mcpCallData = await mcpCallRes.json();
+                                        if (mcpCallData.result && mcpCallData.result.content && mcpCallData.result.content.length > 0) {
+                                            toolContent = mcpCallData.result.content[0].text;
+                                        }
+                                    }
+                                    chatHistory.push({
+                                        role: "tool",
+                                        tool_call_id: t.id,
+                                        name: t.function.name,
+                                        content: toolContent
+                                    });
+                                } catch (err) {
+                                    chatHistory.push({
+                                        role: "tool",
+                                        tool_call_id: t.id,
+                                        name: t.function.name,
+                                        content: "Error executing tool"
+                                    });
+                                }
+                            }
+                        }
+                        // Loop continues to let AI respond to tool output
+                    } else {
+                        // AI provided a text response
+                        finalResponseText = message.content;
+                    }
+                } else {
+                    finalResponseText = "I'm sorry, I couldn't process that request at the moment.";
+                }
+            } // end while
+
             document.getElementById('loadingMessage').remove();
 
-            if (data.choices && data.choices.length > 0) {
-                const aiResponse = data.choices[0].message.content;
-                chatHistory.push({ role: "assistant", content: aiResponse });
-                // Simple markdown conversion for bolding and line breaks
-                const formattedResponse = aiResponse
+            if (finalResponseText) {
+                // Formatting
+                const formattedResponse = finalResponseText
                     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                     .replace(/\n/g, '<br>');
                 appendMessage('assistant', formattedResponse);
-            } else {
-                appendMessage('assistant', "I'm sorry, I couldn't process that request at the moment.");
             }
+
         } catch (error) {
             console.error("AI Error:", error);
-            document.getElementById('loadingMessage').remove();
-            appendMessage('assistant', "I encountered a connection error navigating to MyDesk MCP server. Please try again.");
+            const loadingMsg = document.getElementById('loadingMessage');
+            if (loadingMsg) loadingMsg.remove();
+            appendMessage('assistant', "I encountered an error getting a response. Please try again.");
         } finally {
             userInput.disabled = false;
             sendBtn.disabled = false;

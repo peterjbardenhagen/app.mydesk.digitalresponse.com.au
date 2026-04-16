@@ -41,52 +41,42 @@ If strLetter = "" Then strLetter = "A"
 	</head>
 	<body class="tl-bg-light">
 <!--#include virtual="/Clients/SalesEngineTL/Header.asp"-->
-	<center>
-	<table width=95% align="center" cellpadding=0 cellspacing=0 border=0 ID="Table3">
-		<tr>
-			<td>
-				<br>
-				<table width="100%" cellpadding=0 cellspacing=0 border=0 ID="Table4">
-					<tr>
-						<td><span class="Header2"><a href="/Portal.asp" class="Header2">Home</a> / <a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Setup">Setup</a> / Companies /></span></td>
-						<td align="right"><a href="Add.asp" class="Header2">Add Company</a></td>
-					</tr>
-					<tr>
-						<td colspan=2>
-<%
+	<div class="tl-page-container">
+		<nav class="tl-breadcrumb">
+			<a href="/Portal.asp">Home</a>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+			<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Setup">Setup</a>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+			<span>Companies</span>
+		</nav>
 
+		<div class="tl-action-bar">
+			<h1 class="tl-page-title">Companies</h1>
+			<a href="Add.asp" class="tl-btn tl-btn-primary">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+				Add Company
+			</a>
+		</div>
+
+		<div class="tl-main">
+<%
 strMsg = Trim(Request("Msg"))
 If strMsg <> "" Then
-
 %>
-							<br>
-							<table width="100%" cellpadding=3 cellspacing=0 border=0 bgcolor="#ffffff" ID="Table5">
-								<tr>
-									<td><span style="color:red;"><%= strMsg %></span></td>
-								</tr>
-							</table>
+						<div class="tl-alert tl-alert-info" style="margin-bottom: 20px;">
+							<%= strMsg %>
+						</div>
 <%
-
 End If
-
 %>
-						</td>
-					</tr>
-				</table>
-				<table width=760>
-					<tr>
-						<td>
-							<fieldset style="width:760px;">
-								<legend style="font-weight:bold;">Filter</legend>
-								<table width="100%" cellpadding=5 cellspacing=0 border=0 ID="Table1">
-									<form name="FormReport" id="FormReport" method="post" action="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/SalesProjects/Report.asp" target="winResults">
-									<tr>
-										<td style="font-weight:bold;" width=50>Division</td>
-										<td>
-										<select name="DivisionId" ID="Select1">
-											<option value="555">Select a division</option>
+						<div class="tl-card" style="margin-bottom: 24px;">
+							<form name="FormReport" id="FormReport" method="post" action="IFrame.asp" target="MyIFrame" style="padding: 24px;">
+								<div style="display: flex; gap: 24px; align-items: flex-end;">
+									<div class="tl-form-group" style="flex: 1; margin-bottom: 0;">
+										<label class="tl-label">Division</label>
+										<select name="DivisionId" ID="Select1" class="tl-input">
+											<option value="555">All Divisions</option>
 <%
-
 Set rsDiv = Server.CreateObject("ADODB.RecordSet")
 sql = "SELECT * FROM Divisions WHERE DivisionId In (" & Request.Cookies("DivisionIdsAccess")("Manager") & ") ORDER BY Division"
 Set rsDiv = dbConn.Execute(sql)
@@ -101,77 +91,41 @@ If Not(rsDiv.BOF And rsDiv.EOF) Then
 		rsDiv.MoveNext
 	Loop
 End If
-
-If IsObject(rsDiv) Then
-	rsDiv.Close
-	Set rsDiv = Nothing
-End If
-
+rsDiv.Close
+Set rsDiv = Nothing
 %>
-										</select>	
-										</td>
-										<td style="font-weight:bold;" width=50>Letter</td>
-										<td>
-										<select name="Letter" ID="Select2">
-											<option value="">Select a letter</option>
-											<option value="A">A</option>
-											<option value="B">B</option>
-											<option value="C">C</option>
-											<option value="D">D</option>
-											<option value="E">E</option>
-											<option value="F">F</option>
-											<option value="G">G</option>
-											<option value="H">H</option>
-											<option value="I">I</option>
-											<option value="J">J</option>
-											<option value="K">K</option>
-											<option value="L">L</option>
-											<option value="M">M</option>
-											<option value="N">N</option>
-											<option value="O">O</option>
-											<option value="P">P</option>
-											<option value="Q">Q</option>
-											<option value="R">R</option>
-											<option value="S">S</option>
-											<option value="T">T</option>
-											<option value="U">U</option>
-											<option value="V">V</option>
-											<option value="W">W</option>
-											<option value="X">X</option>
-											<option value="Y">Y</option>
-											<option value="0">0</option>
-											<option value="1">1</option>
-											<option value="2">2</option>
-											<option value="3">3</option>
-											<option value="4">4</option>
-											<option value="5">5</option>
-											<option value="6">6</option>
-											<option value="7">7</option>
-											<option value="8">8</option>
-											<option value="9">9</option>
 										</select>
-										</td>
-										<td align="right">
-										<input type="submit" value="Filter" ID="Submit2" NAME="Submit2" onclick="FormReport.action='IFrame.asp';FormReport.target='MyIFrame';">
-										</td>
-									</tr>
-								</form>
-								</table>
-							</fieldset>
-						</td>
-					</tr>
-				</table>
-				<table width=100% cellpadding=0 cellspacing=0 border=0 ID="Table2">
-					<tr>
-						<td>
-						<iframe width=100% height=250 name="MyIFrame" src="IFrame.asp?Cache=<%= rnd() %>&CurPage=<%= CurPage %>&Letter=<%= strLetter %>&DivisionId=<%= intDivisionId %>"></iframe>
-						</td>
-					</tr>
-				</table>
-			</td>
-		</tr>
-	</table>
-	</center>
+									</div>
+
+									<div class="tl-form-group" style="width: 200px; margin-bottom: 0;">
+										<label class="tl-label">Starts With</label>
+										<select name="Letter" ID="Select2" class="tl-input">
+											<option value="">Any</option>
+											<%
+											For i = 65 To 90
+												char = Chr(i)
+												Response.Write("<option value=""" & char & """" & IIf(strLetter = char, " selected", "") & ">" & char & "</option>" & vbNewLine)
+											Next
+											For i = 0 To 9
+												Response.Write("<option value=""" & i & """" & IIf(strLetter = CStr(i), " selected", "") & ">" & i & "</option>" & vbNewLine)
+											Next
+											%>
+										</select>
+									</div>
+
+									<button type="submit" class="tl-btn tl-btn-primary" style="height: 42px;">
+										<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+										Filter
+									</button>
+								</div>
+							</form>
+						</div>
+
+						<div class="tl-card" style="padding: 0; overflow: hidden; height: calc(100vh - 350px); min-height: 400px;">
+							<iframe width="100%" height="100%" name="MyIFrame" id="MyIFrame" src="IFrame.asp?Cache=<%= rnd() %>&CurPage=<%= CurPage %>&Letter=<%= strLetter %>&DivisionId=<%= intDivisionId %>" style="border: none;"></iframe>
+						</div>
+		</div>
+	</div>
 	</body>
 </html>
 <!--#include virtual="/System/ssi_dbConn_close.inc"-->

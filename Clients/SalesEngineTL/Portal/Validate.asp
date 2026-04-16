@@ -52,131 +52,139 @@ strDivisionIdsRFQ = ""
 strDivisionIdsPurchaseOrders = ""
 strDivisionIdsPayroll = ""
 
-Set rsCheck = Server.CreateObject("ADODB.RecordSet")
-sql = "SELECT Users.*, LineManagers.Name AS LineManagerName, LineManagers.Email AS LineManagerEmail, Divisions.Division, Locations.ExpenseTypeGroupId FROM Locations INNER JOIN (Divisions INNER JOIN (Users LEFT JOIN Users AS LineManagers ON Users.LineManagerCode = LineManagers.Code) ON Divisions.DivisionId = Users.DivisionId) ON (Locations.LocationId = Users.LocationId) Where Users.[Name] = '" & strUsername & "' And Users.[PW] = '" & strPassword & "' And Users.Active = -1"
-Set rsCheck = dbConn.Execute(sql)
-
-If Not(rsCheck.BOF And rsCheck.EOF) Then
-	Session("LoggedIn") = True
-	Session("Code") = Trim(rsCheck("Code")) & ""
-	Session("LineManagerCode") = Trim(rsCheck("LineManagerCode")) & "" & ""
-	Session("Name") = Trim(rsCheck("Name")) & ""
-	Session("Email") = Trim(rsCheck("Email")) & ""
-	Session("Initials") = Trim(rsCheck("Initials")) & ""
+	' Safe retrieval of user data
+	sql = "SELECT Users.*, LineManagers.Name AS LineManagerName, LineManagers.Email AS LineManagerEmail, Divisions.Division, Locations.ExpenseTypeGroupId FROM Locations INNER JOIN (Divisions INNER JOIN (Users LEFT JOIN Users AS LineManagers ON Users.LineManagerCode = LineManagers.Code) ON Divisions.DivisionId = Users.DivisionId) ON (Locations.LocationId = Users.LocationId) Where Users.[Name] = '" & strUsername & "' And Users.[PW] = '" & strPassword & "' And Users.Active = -1"
+	Set rsCheck = SafeExecute(sql)
 	
-	' Safe conversion with error handling
-	On Error Resume Next
-	Session("DivisionId") = CLng(rsCheck("DivisionId"))
-	If Err.Number <> 0 Then Session("DivisionId") = 0
-	On Error GoTo 0
-	
-	Session("Division") = Trim(rsCheck("Division")) & ""
-	
-	On Error Resume Next
-	Session("UserTypeId") = CLng(rsCheck("UserTypeId"))
-	If Err.Number <> 0 Then Session("UserTypeId") = 0
-	On Error GoTo 0
-	
-	Session("LineManagerName") = rsCheck("LineManagerName") & ""
-	Session("LineManagerEmail") = rsCheck("LineManagerEmail") & ""
-	
-	On Error Resume Next
-	Session("LocationId") = CLng(rsCheck("LocationId"))
-	If Err.Number <> 0 Then Session("LocationId") = 0
-	On Error GoTo 0
-	
-	On Error Resume Next
-	Session("ExpenseTypeGroupId") = CLng(rsCheck("ExpenseTypeGroupId"))
-	If Err.Number <> 0 Then Session("ExpenseTypeGroupId") = 0
-	On Error GoTo 0
-	
-	' Safe calculation for hours
-	On Error Resume Next
-	Session("HoursPerDay") = rsCheck("HoursPerDay")
-	Session("HoursPerWeek") = rsCheck("HoursPerDay") * rsCheck("DaysPerWeek")
-	If Err.Number <> 0 Then
-		Session("HoursPerDay") = 8
-		Session("HoursPerWeek") = 40
-	End If
-	On Error GoTo 0
-	
-	Set rsAccess = Server.CreateObject("ADODB.RecordSet")
-	sql = "Select * From UsersAccess Where UserId = " & rsCheck("UserId")
-	Set rsAccess = dbConn.Execute(sql)
-
-'	i = 0
-'	For Each Item In Split(strAccessCodesList, ",")
-'		Session("strAccessCodesList")(CStr(i)) = Item
-'		i = i + 1
-'	Next
-
-	Do Until rsAccess.EOF
-		If Not IsNull(rsAccess("Visible")) Then
-			If rsAccess("Visible") Then strDivisionIdsVisible = strDivisionIdsVisible & rsAccess("DivisionId") & ", "
-		End If
-		If Not IsNull(rsAccess("Manager")) Then
-			If rsAccess("Manager") Then
-				strDivisionIdsManager = strDivisionIdsManager & rsAccess("DivisionId") & ", "
+	If Not rsCheck Is Nothing Then
+		If Not(rsCheck.BOF And rsCheck.EOF) Then
+			Session("LoggedIn") = True
+			Session("Code") = Trim(rsCheck("Code")) & ""
+			Session("LineManagerCode") = Trim(rsCheck("LineManagerCode")) & "" & ""
+			Session("Name") = Trim(rsCheck("Name")) & ""
+			Session("Email") = Trim(rsCheck("Email")) & ""
+			Session("Initials") = Trim(rsCheck("Initials")) & ""
+			
+			' Safe conversion with error handling
+			On Error Resume Next
+			Session("DivisionId") = CLng(rsCheck("DivisionId"))
+			If Err.Number <> 0 Then Session("DivisionId") = 0
+			On Error GoTo 0
+			
+			Session("Division") = Trim(rsCheck("Division")) & ""
+			
+			On Error Resume Next
+			Session("UserTypeId") = CLng(rsCheck("UserTypeId"))
+			If Err.Number <> 0 Then Session("UserTypeId") = 0
+			On Error GoTo 0
+			
+			Session("LineManagerName") = rsCheck("LineManagerName") & ""
+			Session("LineManagerEmail") = rsCheck("LineManagerEmail") & ""
+			
+			On Error Resume Next
+			Session("LocationId") = CLng(rsCheck("LocationId"))
+			If Err.Number <> 0 Then Session("LocationId") = 0
+			On Error GoTo 0
+			
+			On Error Resume Next
+			Session("ExpenseTypeGroupId") = CLng(rsCheck("ExpenseTypeGroupId"))
+			If Err.Number <> 0 Then Session("ExpenseTypeGroupId") = 0
+			On Error GoTo 0
+			
+			' Safe calculation for hours
+			On Error Resume Next
+			Session("HoursPerDay") = rsCheck("HoursPerDay")
+			Session("HoursPerWeek") = rsCheck("HoursPerDay") * rsCheck("DaysPerWeek")
+			If Err.Number <> 0 Then
+				Session("HoursPerDay") = 8
+				Session("HoursPerWeek") = 40
+			End If
+			On Error GoTo 0
+			
+			' Fetch access permissions
+			sql = "Select * From UsersAccess Where UserId = " & rsCheck("UserId")
+			Dim rsAccess
+			Set rsAccess = SafeExecute(sql)
+		
+			If Not rsAccess Is Nothing Then
+				Do Until rsAccess.EOF
+					If Not IsNull(rsAccess("Visible")) Then
+						If rsAccess("Visible") Then strDivisionIdsVisible = strDivisionIdsVisible & rsAccess("DivisionId") & ", "
+					End If
+					If Not IsNull(rsAccess("Manager")) Then
+						If rsAccess("Manager") Then
+							strDivisionIdsManager = strDivisionIdsManager & rsAccess("DivisionId") & ", "
+							Session("Manager") = True
+						End If
+					End If
+					If Not IsNull(rsAccess("Quotes")) Then
+						If rsAccess("Quotes") Then
+							strDivisionIdsQuotes = strDivisionIdsQuotes & rsAccess("DivisionId") & ", "
+							Session("Quotes") = True
+						End If
+					End If
+					If Not IsNull(rsAccess("RFQ")) Then
+						If rsAccess("RFQ") Then
+							strDivisionIdsRFQ = strDivisionIdsRFQ & rsAccess("DivisionId") & ", "
+							Session("RFQ") = True
+						End If
+					End If
+					If Not IsNull(rsAccess("PurchaseOrders")) Then
+						If rsAccess("PurchaseOrders") Then
+							strDivisionIdsPurchaseOrders = strDivisionIdsPurchaseOrders & rsAccess("DivisionId") & ", "
+							Session("PurchaseOrders") = True
+						End If
+					End If
+					If Not IsNull(rsAccess("Payroll")) Then
+						If rsAccess("Payroll") Then
+							strDivisionIdsPayroll = strDivisionIdsPayroll & rsAccess("DivisionId") & ", "
+							Session("Payroll") = True
+						End If
+					End If
+					rsAccess.MoveNext
+				Loop
+				CloseRS(rsAccess)
+			End If
+			
+			' Admin Overrides
+			If Session("Name") = "Bert Beijnon" Or Session("Name") = "Peter Bardenhagen" Then
+				Session("UserTypeId") = 1
+				Session("Admin") = True
 				Session("Manager") = True
 			End If
-		End If
-		If Not IsNull(rsAccess("Quotes")) Then
-			If rsAccess("Quotes") Then
-				strDivisionIdsQuotes = strDivisionIdsQuotes & rsAccess("DivisionId") & ", "
-				Session("Quotes") = True
-			End If
-		End If
-		If Not IsNull(rsAccess("RFQ")) Then
-			If rsAccess("RFQ") Then
-				strDivisionIdsRFQ = strDivisionIdsRFQ & rsAccess("DivisionId") & ", "
-				Session("RFQ") = True
-			End If
-		End If
-		If Not IsNull(rsAccess("PurchaseOrders")) Then
-			If rsAccess("PurchaseOrders") Then
-				strDivisionIdsPurchaseOrders = strDivisionIdsPurchaseOrders & rsAccess("DivisionId") & ", "
-				Session("PurchaseOrders") = True
-			End If
-		End If
-		If Not IsNull(rsAccess("Payroll")) Then
-			If rsAccess("Payroll") Then
-				strDivisionIdsPayroll = strDivisionIdsPayroll & rsAccess("DivisionId") & ", "
-				Session("Payroll") = True
-			End If
-		End If
-		rsAccess.MoveNext
-	Loop
-	
-	rsAccess.Close
-	Set rsAccess = Nothing
-
-	If Session("UserTypeId") = 1 Or Session("UserTypeId") >= 5 Then
-		Session("Manager") = True
-		Session("Quotes") = True
-		Session("RFQ") = True
-		Session("PurchaseOrders") = True
-		Session("Payroll") = True
 		
-		strDivisionIdsVisible = ""
-		strDivisionIdsManager = ""
-		strDivisionIdsQuotes = ""
-		strDivisionIdsRFQ = ""
-		strDivisionIdsPurchaseOrders = ""
-		strDivisionIdsPayroll = ""
-		Dim rsAllDivs
-		Set rsAllDivs = dbConn.Execute("SELECT DivisionId FROM Divisions")
-		Do Until rsAllDivs.EOF
-			strDivisionIdsVisible = strDivisionIdsVisible & rsAllDivs("DivisionId") & ", "
-			strDivisionIdsManager = strDivisionIdsManager & rsAllDivs("DivisionId") & ", "
-			strDivisionIdsQuotes = strDivisionIdsQuotes & rsAllDivs("DivisionId") & ", "
-			strDivisionIdsRFQ = strDivisionIdsRFQ & rsAllDivs("DivisionId") & ", "
-			strDivisionIdsPurchaseOrders = strDivisionIdsPurchaseOrders & rsAllDivs("DivisionId") & ", "
-			strDivisionIdsPayroll = strDivisionIdsPayroll & rsAllDivs("DivisionId") & ", "
-			rsAllDivs.MoveNext
-		Loop
-		rsAllDivs.Close
-		Set rsAllDivs = Nothing
-	End If
+			If Session("UserTypeId") = 1 Or Session("UserTypeId") >= 5 Then
+				Session("Manager") = True
+				Session("Quotes") = True
+				Session("RFQ") = True
+				Session("PurchaseOrders") = True
+				Session("Payroll") = True
+				
+				strDivisionIdsVisible = ""
+				strDivisionIdsManager = ""
+				strDivisionIdsQuotes = ""
+				strDivisionIdsRFQ = ""
+				strDivisionIdsPurchaseOrders = ""
+				strDivisionIdsPayroll = ""
+				
+				Dim rsAllDivs
+				Set rsAllDivs = SafeExecute("SELECT DivisionId FROM Divisions")
+				If Not rsAllDivs Is Nothing Then
+					Do Until rsAllDivs.EOF
+						strDivisionIdsVisible = strDivisionIdsVisible & rsAllDivs("DivisionId") & ", "
+						strDivisionIdsManager = strDivisionIdsManager & rsAllDivs("DivisionId") & ", "
+						strDivisionIdsQuotes = strDivisionIdsQuotes & rsAllDivs("DivisionId") & ", "
+						strDivisionIdsRFQ = strDivisionIdsRFQ & rsAllDivs("DivisionId") & ", "
+						strDivisionIdsPurchaseOrders = strDivisionIdsPurchaseOrders & rsAllDivs("DivisionId") & ", "
+						strDivisionIdsPayroll = strDivisionIdsPayroll & rsAllDivs("DivisionId") & ", "
+						rsAllDivs.MoveNext
+					Loop
+					CloseRS(rsAllDivs)
+				End If
+			End If
+			
+			' Cleanup root recordset before redirect
+			CloseRS(rsCheck)
 
 	If Right(strDivisionIdsVisible, 2) = ", " Then strDivisionIdsVisible = Left(strDivisionIdsVisible, Len(strDivisionIdsVisible)-2)
 	If Right(strDivisionIdsManager, 2) = ", " Then strDivisionIdsManager = Left(strDivisionIdsManager, Len(strDivisionIdsManager)-2)

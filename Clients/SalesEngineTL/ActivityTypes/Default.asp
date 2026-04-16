@@ -14,44 +14,45 @@ strMsg = Trim(Request("Msg"))
 <!--#include virtual="/System/ssi_Functions.asp"-->
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <!--#include virtual="/System/ssi_Dates.inc"-->
-<html>
-	<head>
-		<title>MyDesk</title>
-		<META http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, pre-check=0">
-		<META http-equiv="Expires" content="0">
-		<META http-equiv="Pragma" content="no-store, private, must-revalidate">
-		<link rel="stylesheet" type="text/css" href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/<%= Request.Cookies("ClientSettings")("Stylesheet") %>">
-	</head>
-	<body bgcolor="#dddddd">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Activity Types - Techlight MyDesk</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" type="text/css" href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/Style_Techlight.css">
+	<link rel="stylesheet" type="text/css" href="/System/Style_Modern.css">
+</head>
+<body class="tl-bg-light">
+<!--#include virtual="/Clients/SalesEngineTL/Header.asp"-->
+	<div class="tl-page-container">
+		<nav class="tl-breadcrumb">
+			<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Dashboard.asp" target="_top">Home</a>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+			<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Setup">Setup</a>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+			<span>Activity Types</span>
+		</nav>
 
-<!--#include virtual="/System/ssi_Header.inc"-->
+		<div class="tl-action-bar">
+			<h1 class="tl-page-title">Activity Types</h1>
+			<a href="Add.asp" class="tl-btn tl-btn-primary">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+				Add Activity Type
+			</a>
+		</div>
 
-	<table width=95% align="center" cellpadding=0 cellspacing=0 border=0 ID="Table4">
-		<tr>
-			<td>
-				<br/>
-				<table width="100%" cellpadding=0 cellspacing=0 border=0>
-					<tr>
-						<td><span class="Header2"><a href="/Portal.asp" class="Header2">Home</a> / <a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Setup">Setup</a> / Activity Types /></span></td>
-						<td align="right"><a href="Add.asp" class="Header2">Add Activity Type</a></td>
-					</tr>
-				</table>
-				<table width=100% cellpadding=0 cellspacing=0 border=0 ID="Table1">
-					<tr>
-						<td>
+		<div class="tl-main">
 <%
-
 If strMsg <> "" Then
-
 %>
-							<br>
-							<table width="100%" cellpadding=3 cellspacing=0 border=0 bgcolor="#ffffff" ID="Table2">
-								<tr>
-									<td><span style="color:red;"><%= strMsg %></span></td>
-								</tr>
-							</table>
+						<div class="tl-alert tl-alert-info" style="margin-bottom: 20px;">
+							<%= strMsg %>
+						</div>
 <%
-
 End If
 
 Set rs = Server.CreateObject("ADODB.RecordSet")
@@ -59,56 +60,54 @@ sql = "Select * From ActivityTypes Order By InOrder, ActivityType, ActivityCode"
 Set rs = dbConn.Execute(sql)
 
 If Not(rs.BOF And rs.EOF) Then
-
 %>
-							<br/>
-							<table width="100%" cellpadding=10 cellspacing=0 border=0 ID="Table3">
-								<tr>
-									<td class="ListHeaderRow" width=50><b>Order</b></td>
-									<td class="ListHeaderRow" width=130><b>Activity Code</b></td>
-									<td class="ListHeaderRow"><b>Activity Type</b></td>
-									<td class="ListHeaderRow" align="right" width=75><b>Action</b></td>
-								</tr>
+						<div class="tl-card">
+							<table class="tl-data-table">
+								<thead>
+									<tr>
+										<th width="80">Order</th>
+										<th width="150">Activity Code</th>
+										<th>Activity Type</th>
+										<th width="120" style="text-align: right;">Action</th>
+									</tr>
+								</thead>
+								<tbody>
 <%
-
 	Do Until rs.EOF
-
 %>
-								<tr bgcolor="#ffffff">
-									<td style="color:black;border-bottom:1px solid black;" width=50 valign="top"><%= rs("InOrder") %></td>
-									<td style="color:black;border-bottom:1px solid black;" width=130 valign="top"><%= rs("ActivityCode") %></td>
-									<td style="color:black;border-bottom:1px solid black;" valign="top"><%= rs("ActivityType") %></td>
-									<td style="color:black;border-bottom:1px solid black;text-align:right;" width=75 valign="top"><a href="Edit.asp?ActivityTypeId=<%= rs("ActivityTypeId") %>">Edit</a> | <a href="Del_Proc.asp?ActivityTypeId=<%= rs("ActivityTypeId") %>">Delete</a></td>
+								<tr>
+									<td><span class="tl-badge"><%= rs("InOrder") %></span></td>
+									<td><strong><%= rs("ActivityCode") %></strong></td>
+									<td><%= rs("ActivityType") %></td>
+									<td style="text-align: right;">
+										<div class="tl-btn-group">
+											<a href="Edit.asp?ActivityTypeId=<%= rs("ActivityTypeId") %>" class="tl-btn-icon" title="Edit">
+												<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+											</a>
+											<a href="Del_Proc.asp?ActivityTypeId=<%= rs("ActivityTypeId") %>" class="tl-btn-icon tl-btn-icon-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this activity type?');">
+												<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+											</a>
+										</div>
+									</td>
 								</tr>
 <%
-
 		rs.MoveNext
 	Loop
-
 %>
+								</tbody>
 							</table>
+						</div>
 <%
-
 Else
-
 %>
-							<br><p>There are no Activity types</p>
+						<div class="tl-empty-state">
+							<p>There are no Activity types</p>
+						</div>
 <%
-
 End If
-
-If IsObject(rs) Then
-	rs.Close
-	Set rs = Nothing
-End If
-
-%>	
-						</td>
-					</tr>
-				</table>
-			</td>
-		</tr>
-	</table>
+%>
+		</div>
+	</div>
 
 	</body>
 </html>

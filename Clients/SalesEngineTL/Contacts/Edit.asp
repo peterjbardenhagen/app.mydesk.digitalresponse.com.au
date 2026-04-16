@@ -96,7 +96,7 @@ lngContactId = CLng(Request("ContactId"))
 
 		</script>
 	</head>
-	<body bgcolor="#dddddd">
+	<body class="tl-bg-light">
 
 <!--#include virtual="/Clients/SalesEngineTL/Header.asp"-->
 
@@ -110,17 +110,21 @@ sql = "Select C.*, Users.DivisionId, Users.UserId From Contacts_WithCustomersAnd
 Set rs = dbConn.Execute(sql)
 
 %>
+	<div class="tl-main">
+		<div class="tl-page-header">
+			<div class="tl-breadcrumb">
+				<a href="/Portal.asp">Home</a>
+				<span class="tl-breadcrumb-separator">/</span>
+				<a href="Default.asp">Contacts</a>
+				<span class="tl-breadcrumb-separator">/</span>
+				<span class="tl-breadcrumb-current">Edit Contact</span>
+			</div>
+			<h1 class="tl-page-title">Edit Contact</h1>
+		</div>
 
-	<table width=95% align="center" cellpadding=0 cellspacing=0 border=0 ID="Table4">
-		<tr>
-			<td>
-				<br/>
-				<span class="Header2"><a href="/Portal.asp" class="Header2">Home</a> / <a href="Default.asp" class="Header2">Contacts</a> / Edit Contact /></span>
-				<br/><br/>
-				<table width=100% align="center" ID="Table1">
-					<tr>
-						<td>
-							<table cellpadding=3 cellspacing=0 border=0 ID="Table2">
+		<div class="tl-card" style="max-width: 800px; margin: 0 auto;">
+			<div class="tl-card-body">
+							<table cellpadding=3 cellspacing=0 border=0 ID="Table2" width="100%">
 								<form action="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Contacts/Edit_Proc.asp" method="post" name="Form1" ID="Form1" onSubmit="return checkForm();">
 								<input type="hidden" name="ContactId" value="<%= rs("ContactId") %>" ID="Hidden1">
 								<tr>
@@ -299,20 +303,20 @@ End If
 									<td valign="top"></td>
 									<td valign="top" style="font-weight:bold;">Notes<br>I.e. Hobbies, birthdays etc</td>
 									<td valign="top">
-									<textarea name="Notes" id="Notes" rows="5" cols="30" onkeyup="parent.TrackCount(this,'textcount3',500)" onkeypress="parent.LimitText(this,500)"><%= rs("Notes") %></textarea><br/>Characters Remaining: <input type="text" name="textcount3" size="4" value="<% If Len(rs("Notes")) > 0 Then Response.Write 500-Len(rs("Notes")) Else Response.Write 500 %>" readonly ID="Text4">
+									<textarea name="Notes" id="Notes" rows="5" cols="30" onkeyup="parent.TrackCount(this,'textcount3',500)" onkeypress="parent.LimitText(this,500)"><%= rs("Notes") %></textarea><br/>Characters Remaining: <input type="text" name="textcount3" size="4" value="<% If Len(rs("Notes")) > 0 Then Response.Write 500-Len(rs("Notes")) Else Response.Write 500 %>" readonly ID="Text4" style="border:none;background:transparent;color:#64748b;">
 									</td>
 								</tr>
 								<tr>
-									<td colspan=3 valign="top" align="right"><input type="button" value="Cancel" onclick="if(confirm('Are you sure you want to cancel?')){document.location.href='default.asp';};">&nbsp;<input type="submit" value="Submit" id="Submit" NAME="Submit"></td>
+									<td colspan=3 valign="top" align="right" style="padding-top:20px; border-top: 1px solid #eee;">
+									    <input type="button" class="tl-btn tl-btn-secondary" value="Cancel" onclick="if(confirm('Are you sure you want to cancel?')){document.location.href='default.asp';};">&nbsp;
+									    <input type="submit" class="tl-btn tl-btn-primary" value="Submit" id="Submit" NAME="Submit">
+									</td>
 								</tr>
 								</form>
 							</table>
-						</td>
-					</tr>
-				</table>
-			</td>
-		</tr>
-	</table>
+			</div>
+		</div>
+	</div>
 <script language="javascript">
 	function toggleState() {
 		if(document.Form1.StateId.value == 9) {

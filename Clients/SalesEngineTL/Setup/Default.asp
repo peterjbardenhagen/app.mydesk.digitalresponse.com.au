@@ -407,7 +407,20 @@ isAdmin = True ' Temporarily grant full access to everyone as there is a lot mis
 				<p class="setup-card-desc">Define user permissions, access levels, and role-based security</p>
 			</a>
 
-			<!-- API Keys -->
+			<!-- System Health & Activity -->
+		<a href="CreateTableHistory.asp" class="tl-setup-card tl-card-highlight">
+			<div class="tl-setup-icon" style="background: linear-gradient(135deg, #10b981 0%, #34d399 100%);">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+				</svg>
+			</div>
+			<div class="tl-setup-content">
+				<h3 class="tl-setup-title">Initialize Activity Tracking</h3>
+				<p class="tl-setup-desc">Create the necessary tables to track user history and navigation activity.</p>
+			</div>
+		</a>
+
+		<!-- API Keys -->
 			<a href="APIKeys/Default.asp" class="setup-card" target="_top">
 				<div class="setup-card-header">
 					<div class="setup-card-icon" style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);">

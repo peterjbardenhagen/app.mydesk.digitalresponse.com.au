@@ -18,13 +18,11 @@ End If
 <!--#include virtual="/System/ssi_Functions.asp"-->
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <!--#include virtual="/System/ssi_Dates.inc"-->
-<html>
-	<head>
-		<title>MyDesk</title>
-		<META http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, pre-check=0">
-		<META http-equiv="Expires" content="0">
-		<META http-equiv="Pragma" content="no-store, private, must-revalidate">
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 		<link rel="stylesheet" type="text/css" href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/<%= Request.Cookies("ClientSettings")("Stylesheet") %>">
+		<link rel="stylesheet" type="text/css" href="/System/Style_Modern.css">
 		<script language="JavaScript">
 
 		function emptyField(textObj) {
@@ -59,122 +57,103 @@ End If
 
 		</script>
 	</head>
-	<body bgcolor="#dddddd">
+	<body class="tl-bg-light">
+<!--#include virtual="/Clients/SalesEngineTL/Header.asp"-->
+	<div class="tl-page-container">
+		<nav class="tl-breadcrumb">
+			<a href="/Portal.asp">Home</a>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+			<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Setup">Setup</a>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+			<a href="Default.asp">Divisions</a>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+			<span>Edit Division</span>
+		</nav>
 
-<!--#include virtual="/System/ssi_Header.inc"-->
+		<div class="tl-action-bar">
+			<h1 class="tl-page-title">Edit Division: <%= rs("Division") %></h1>
+		</div>
 
-<%
+		<div class="tl-main">
+			<div class="tl-card">
+				<form action="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Divisions/Edit_Proc.asp" method="post" name="Form1" ID="Form1" onSubmit="return checkForm();" class="tl-form">
+					<input type="hidden" value="<%= rs("DivisionId") %>" name="DivisionId">
+					
+					<div class="tl-form-row">
+						<div class="tl-form-group">
+							<label class="tl-label">Division Name <span class="tl-required">*</span></label>
+							<input type="text" name="Division" id="Text1" class="tl-input" value="<%= rs("Division") %>">
+						</div>
+						<div class="tl-form-group">
+							<label class="tl-label">Division Code <span class="tl-required">*</span></label>
+							<input type="text" name="DivisionCode" id="DivisionCode" class="tl-input" value="<%= rs("DivisionCode") %>">
+						</div>
+					</div>
 
-Dim rs
-Dim sql
+					<div class="tl-form-row">
+						<div class="tl-form-group">
+							<label class="tl-label">ACN</label>
+							<input type="text" name="ACN" class="tl-input" value="<%= rs("ACN") %>">
+						</div>
+						<div class="tl-form-group">
+							<label class="tl-label">ABN</label>
+							<input type="text" name="ABN" class="tl-input" value="<%= rs("ABN") %>">
+						</div>
+					</div>
 
-Set rs = Server.CreateObject("ADODB.RecordSet")
-sql = "Select * From Divisions Where DivisionId = " & intDivisionId
-Set rs = dbConn.Execute(sql)
+					<div class="tl-form-row">
+						<div class="tl-form-group">
+							<label class="tl-label">Minimum Quote Margin (%) <span class="tl-required">*</span></label>
+							<div style="display: flex; align-items: center; gap: 8px;">
+								<input type="number" name="MinimumMargin" class="tl-input" value="<% If rs("MinimumMargin") <> "" Then Response.Write(FormatNumber(rs("MinimumMargin"),2)) Else Response.Write("40.00") %>" step="0.01" style="width: 120px;">
+								<span style="color: var(--tl-text-light);">%</span>
+							</div>
+							<p style="font-size: 12px; color: var(--tl-text-light); margin-top: 4px;">Approval required if margin falls below this value.</p>
+						</div>
+						<div class="tl-form-group">
+							<label class="tl-label">Company Logo Path</label>
+							<input type="text" name="Logo" class="tl-input" value="<%= rs("Logo") %>">
+						</div>
+					</div>
 
-%>
+					<div class="tl-form-group">
+						<label class="tl-label">Enabled Features</label>
+						<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--tl-border);">
+							<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+								<input type="checkbox" name="Quotes" value="-1" style="width: 18px; height: 18px;" <% If rs("Quotes") Then Response.Write "checked" %>>
+								<span>Quotes</span>
+							</label>
+							<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+								<input type="checkbox" name="RFQ" value="-1" style="width: 18px; height: 18px;" <% If rs("RFQ") Then Response.Write "checked" %>>
+								<span>RFQ</span>
+							</label>
+							<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+								<input type="checkbox" name="Prospects" value="-1" style="width: 18px; height: 18px;" <% If rs("Prospects") Then Response.Write "checked" %>>
+								<span>Prospects</span>
+							</label>
+							<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+								<input type="checkbox" name="PurchaseOrders" value="-1" style="width: 18px; height: 18px;" <% If rs("PurchaseOrders") Then Response.Write "checked" %>>
+								<span>Purchase Orders</span>
+							</label>
+							<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+								<input type="checkbox" name="PurchaseRequests" value="-1" style="width: 18px; height: 18px;" <% If rs("PurchaseRequests") Then Response.Write "checked" %>>
+								<span>Purchase Requests</span>
+							</label>
+							<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+								<input type="checkbox" name="UsersAccessAll" value="-1" style="width: 18px; height: 18px;" <% If rs("UsersAccessAll") Then Response.Write "checked" %>>
+								<span>Users Access All</span>
+							</label>
+						</div>
+					</div>
 
-	<table width=95% align="center" cellpadding=0 cellspacing=0 border=0 ID="Table4">
-		<tr>
-			<td>
-				<br/>
-				<span class="Header2"><a href="/Portal.asp" class="Header2">Home</a> / <a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Setup">Setup</a> / <a href="Default.asp">Divisions</a> / Edit Division /></span>
-				<br/><br/>
-				<table width=100% align="center" ID="Table1">
-					<tr>
-						<td>
-							<table cellpadding=3 cellspacing=0 border=0 ID="Table2">
-								<form action="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Divisions/Edit_Proc.asp" method="post" name="Form1" ID="Form1" onSubmit="return checkForm();">
-								<input type="hidden" value="<%= rs("DivisionId") %>" name="DivisionId">
-								<tr>
-									<td valign="top"></td>
-									<td valign="top" style="font-weight:bold;">ACN</td>
-									<td valign="top"><input type="text" name="ACN" style="width:280px;" maxlength=50 ID="Text11" value="<%= rs("ACN") %>"></td>
-								</tr>
-								<tr>
-									<td valign="top"></td>
-									<td valign="top" style="font-weight:bold;">ABN</td>
-									<td valign="top"><input type="text" name="ABN" style="width:280px;" maxlength=50 ID="Text10" value="<%= rs("ABN") %>"></td>
-								</tr>
-								<tr>
-									<td valign="top" class="Req">*</td>
-									<td valign="top" style="font-weight:bold;">Division Code</td>
-									<td valign="top"><input type="text" size=50 maxlength=50 name="DivisionCode" id="DivisionCode" style="width:280px;" value="<%= rs("DivisionCode") %>"></td>
-								</tr>
-								<tr>
-									<td valign="top" class="Req">*</td>
-									<td valign="top" style="font-weight:bold;">Division</td>
-									<td valign="top"><input type="text" size=50 maxlength=100 name="Division" id="Text1" style="width:280px;" value="<%= rs("Division") %>"></td>
-								</tr>
-								<tr>
-									<td valign="top"></td>
-									<td valign="top"><b>Quotes</b></td>
-									<td valign="top">
-										<input type="radio" name="Quotes" id="Radio5" value="-1" <% If rs("Quotes") Then Response.Write "checked" %>> Yes<br/>
-										<input type="radio" name="Quotes" id="Radio6" value="0" <% If Not rs("Quotes") Then Response.Write "checked" %>> No
-									</td>
-								</tr>
-								<tr>
-									<td valign="top"></td>
-									<td valign="top" style="font-weight:bold;">Minimum Quote Margin<br><small>Before having to be approved.</small></td>
-									<td valign="top"><input type="text" name="MinimumMargin" style="width:50px;" maxlength=50 value="<% If rs("MinimumMargin") <> "" Then Response.Write(FormatNumber(rs("MinimumMargin"),2)) Else Response.Write("40.00") %>" ID="Text3">%</td>
-								</tr>
-								<tr>
-									<td valign="top"></td>
-									<td valign="top"><b>RFQ</b></td>
-									<td valign="top">
-										<input type="radio" name="RFQ" id="RFQ1" value="-1" <% If rs("RFQ") Then Response.Write "checked" %>> Yes<br/>
-										<input type="radio" name="RFQ" id="RFQ2" value="0" <% If Not rs("RFQ") Then Response.Write "checked" %>> No
-									</td>
-								</tr>
-								<tr>
-									<td valign="top"></td>
-									<td valign="top"><b>Prospects</b></td>
-									<td valign="top">
-										<input type="radio" name="Prospects" id="Prospects1" value="-1" <% If rs("Prospects") Then Response.Write "checked" %>> Yes<br/>
-										<input type="radio" name="Prospects" id="Prospects2" value="0" <% If Not rs("Prospects") Then Response.Write "checked" %>> No
-									</td>
-								</tr>
-								<tr>
-									<td valign="top"></td>
-									<td valign="top"><b>Purchase Orders</b></td>
-									<td valign="top">
-										<input type="radio" name="PurchaseOrders" id="PurchaseOrders1" value="-1" <% If rs("PurchaseOrders") Then Response.Write "checked" %>> Yes<br/>
-										<input type="radio" name="PurchaseOrders" id="PurchaseOrders2" value="0" <% If Not rs("PurchaseOrders") Then Response.Write "checked" %>> No
-									</td>
-								</tr>
-								<tr>
-									<td valign="top"></td>
-									<td valign="top"><b>Purchase Requests</b></td>
-									<td valign="top">
-										<input type="radio" name="PurchaseRequests" id="Radio1" value="-1" <% If rs("PurchaseRequests") Then Response.Write "checked" %>> Yes<br/>
-										<input type="radio" name="PurchaseRequests" id="Radio2" value="0"  <% If Not rs("PurchaseRequests") Then Response.Write "checked" %>> No
-									</td>
-								</tr>
-								<tr>
-									<td valign="top"></td>
-									<td valign="top"><b>Users Access All</b></td>
-									<td valign="top">
-										<input type="radio" name="UsersAccessAll" id="Radio3" value="-1" <% If rs("UsersAccessAll") Then Response.Write "checked" %>> Yes<br/>
-										<input type="radio" name="UsersAccessAll" id="Radio4" value="0"  <% If Not rs("UsersAccessAll") Then Response.Write "checked" %>> No
-									</td>
-								</tr>
-								<tr>
-									<td valign="top"></td>
-									<td valign="top"><b>Logo</b></td>
-									<td valign="top"><input type="text" name="Logo" style="width:280px;" maxlength=50 ID="Text2" value="<%= rs("Logo") %>"></td>
-								</tr>
-								<tr>
-									<td colspan=3 valign="top" align="right"><input type="button" value="Cancel" onclick="if(confirm('Are you sure you want to cancel?')){document.location.href='default.asp';};">&nbsp;<input type="submit" value="Submit" id="Submit" NAME="Submit"></td>
-								</tr>
-								</form>
-							</table>
-						</td>
-					</tr>
-				</table>
-			</td>
-		</tr>
-	</table>
+					<div class="tl-form-actions" style="border-top: 1px solid var(--tl-border); padding-top: 24px; margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+						<button type="button" class="tl-btn" onclick="if(confirm('Are you sure you want to cancel?')){document.location.href='default.asp';};">Cancel</button>
+						<button type="submit" class="tl-btn tl-btn-primary">Save Changes</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
 
 	</body>
 </html>

@@ -15,44 +15,39 @@ strMsg = Trim(Request("Msg"))
 <!--#include virtual="/System/ssi_Functions.asp"-->
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <!--#include virtual="/System/ssi_Dates.inc"-->
-<html>
-	<head>
-		<title>MyDesk</title>
-		<META http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, pre-check=0">
-		<META http-equiv="Expires" content="0">
-		<META http-equiv="Pragma" content="no-store, private, must-revalidate">
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 		<link rel="stylesheet" type="text/css" href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/<%= Request.Cookies("ClientSettings")("Stylesheet") %>">
+		<link rel="stylesheet" type="text/css" href="/System/Style_Modern.css">
 	</head>
-	<body bgcolor="#dddddd">
+	<body class="tl-bg-light">
+<!--#include virtual="/Clients/SalesEngineTL/Header.asp"-->
+	<div class="tl-page-container">
+		<nav class="tl-breadcrumb">
+			<a href="/Portal.asp">Home</a>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+			<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Setup">Setup</a>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+			<span>Conditions of Sale</span>
+		</nav>
 
-<!--#include virtual="/System/ssi_Header.inc"-->
+		<div class="tl-action-bar">
+			<h1 class="tl-page-title">Conditions of Sale</h1>
+			<a href="Add.asp" class="tl-btn tl-btn-primary">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+				Add File
+			</a>
+		</div>
 
-	<table width=95% align="center" cellpadding=0 cellspacing=0 border=0 ID="Table4">
-		<tr>
-			<td>
-				<br/>
-				<table width="100%" cellpadding=0 cellspacing=0 border=0 ID="Table5">
-					<tr>
-						<td><span class="Header2"><span class="Header2"><a href="/Portal.asp" class="Header2">Home</a> / <a href="../Setup">Setup</a> / Conditions of Sale /></span></td>
-						<td align="right"><a href="Add.asp" class="Header2">Add File</a></td>
-					</tr>
-				</table>
-				<table width=100% cellpadding=0 cellspacing=0 border=0 ID="Table1">
-					<tr>
-						<td>
+		<div class="tl-main">
 <%
-
 If strMsg <> "" Then
-
 %>
-							<br>
-							<table width="100%" cellpadding=3 cellspacing=0 border=0 bgcolor="#ffffff" ID="Table2">
-								<tr>
-									<td><span style="color:red;"><%= strMsg %></span></td>
-								</tr>
-							</table>
+						<div class="tl-alert tl-alert-info" style="margin-bottom: 20px;">
+							<%= strMsg %>
+						</div>
 <%
-
 End If
 
 Set rs = Server.CreateObject("ADODB.RecordSet")
@@ -60,46 +55,60 @@ sql = "Select * From QuoteCOS Order By QuoteCOS"
 Set rs = dbConn.Execute(sql)
 
 If Not(rs.BOF And rs.EOF) Then
-
 %>
-							<br/>
-							<table width="100%" cellpadding=10 cellspacing=0 border=0 ID="Table3">
+						<div class="tl-card">
+							<table class="tl-data-table">
+								<thead>
+									<tr>
+										<th>Document Name</th>
+										<th width="180" style="text-align: right;">Action</th>
+									</tr>
+								</thead>
+								<tbody>
 <%
-
 	Do Until rs.EOF
 %>
-								<tr bgcolor="#ffffff">
-									<td style="color:black;border-bottom:1px solid black;" valign="top"><%= rs("QuoteCOS") %></td>
-									<td style="color:black;border-bottom:1px solid black;" width=150 valign="top" align="right"><a href="../FilesLibrary/Files/<%= rs("QuoteCOSFile") %>" target="_blank">Download</a> | <a href="Edit.asp?QuoteCOSId=<%= rs("QuoteCOSId") %>">Edit</a> | <a href="Del_Proc.asp?QuoteCOSId=<%= rs("QuoteCOSId") %>">Delete</a></td>
+								<tr>
+									<td>
+										<div style="display: flex; align-items: center; gap: 12px;">
+											<div style="color: #ef4444;">
+												<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+											</div>
+											<strong><%= rs("QuoteCOS") %></strong>
+										</div>
+									</td>
+									<td style="text-align: right;">
+										<div class="tl-btn-group">
+											<a href="../FilesLibrary/Files/<%= rs("QuoteCOSFile") %>" target="_blank" class="tl-btn-icon" title="Download">
+												<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+											</a>
+											<a href="Edit.asp?QuoteCOSId=<%= rs("QuoteCOSId") %>" class="tl-btn-icon" title="Edit">
+												<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+											</a>
+											<a href="Del_Proc.asp?QuoteCOSId=<%= rs("QuoteCOSId") %>" class="tl-btn-icon tl-btn-icon-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this document?');">
+												<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+											</a>
+										</div>
+									</td>
 								</tr>
 <%
 		rs.MoveNext
 	Loop
-
 %>
+								</tbody>
 							</table>
+						</div>
 <%
-
 Else
-
 %>
-							<br><p>There are no Conditions of Sale documents</p>
+						<div class="tl-empty-state">
+							<p>There are no Conditions of Sale documents</p>
+						</div>
 <%
-
 End If
-
-If IsObject(rs) Then
-	rs.Close
-	Set rs = Nothing
-End If
-
-%>	
-						</td>
-					</tr>
-				</table>
-			</td>
-		</tr>
-	</table>
+%>
+		</div>
+	</div>
 
 	</body>
 </html>

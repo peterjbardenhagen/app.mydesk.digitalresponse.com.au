@@ -14,13 +14,17 @@ intActivityTypeId = CLng(Request("ActivityTypeId"))
 <!--#include virtual="/System/ssi_Functions.asp"-->
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <!--#include virtual="/System/ssi_Dates.inc"-->
-<html>
-	<head>
-		<title>MyDesk</title>
-		<META http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, pre-check=0">
-		<META http-equiv="Expires" content="0">
-		<META http-equiv="Pragma" content="no-store, private, must-revalidate">
-		<link rel="stylesheet" type="text/css" href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/<%= Request.Cookies("ClientSettings")("Stylesheet") %>">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Edit Activity Type - Techlight MyDesk</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" type="text/css" href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/Style_Techlight.css">
+	<link rel="stylesheet" type="text/css" href="/System/Style_Modern.css">
 		<script language="JavaScript">
 
 		function emptyField(textObj) {
@@ -55,62 +59,68 @@ intActivityTypeId = CLng(Request("ActivityTypeId"))
 
 		</script>
 	</head>
-	<body bgcolor="#dddddd">
-
-<!--#include virtual="/System/ssi_Header.inc"-->
+	<body class="tl-bg-light">
+<!--#include virtual="/Clients/SalesEngineTL/Header.asp"-->
 
 <%
-
 Dim rs
 Dim sql
 
 Set rs = Server.CreateObject("ADODB.RecordSet")
 sql = "Select * From ActivityTypes Where ActivityTypeId = " & intActivityTypeId
 Set rs = dbConn.Execute(sql)
-
 %>
 
-	<table width=95% align="center" cellpadding=0 cellspacing=0 border=0 ID="Table4">
-		<tr>
-			<td>
-				<br/>
-				<span class="Header2"><a href="/Portal.asp" class="Header2">Home</a> / <a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Setup">Setup</a> / <a href="Default.asp">Activity Types</a> / Edit Activity Type /></span>
-				<br/><br/>
-				<table width=100% align="center" ID="Table1">
-					<tr>
-						<td>
-							<table cellpadding=3 cellspacing=0 border=0 ID="Table2">
-								<form action="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/ActivityTypes/Edit_Proc.asp" method="post" name="Form1" ID="Form1" onSubmit="return checkForm();">
-								<input type="hidden" value="<%= rs("ActivityTypeId") %>" name="ActivityTypeId">
-								<tr>
-									<td valign="top" class="Req">*</td>
-									<td valign="top" style="font-weight:bold;">Activity Code</td>
-									<td valign="top"><input type="text" size=50 maxlength=50 name="ActivityCode" id="ActivityCode" style="width:280px;" value="<%= rs("ActivityCode") %>"></td>
-								</tr>
-								<tr>
-									<td valign="top" class="Req">*</td>
-									<td valign="top" style="font-weight:bold;">Activity Type</td>
-									<td valign="top"><input type="text" size=50 maxlength=50 name="ActivityType" id="Text1" style="width:280px;" value="<%= rs("ActivityType") %>"></td>
-								</tr>
-								<tr>
-									<td valign="top"></td>
-									<td valign="top" style="font-weight:bold;">Form Required</td>
-									<td valign="top">
-										<input type="radio" name="FormRequired" value="-1" ID="Radio3" <% If rs("FormRequired") Then %>checked<% End If %>> Yes<br/>
-										<input type="radio" name="FormRequired" value="0" ID="Radio4" <% If Not rs("FormRequired") Then %>checked<% End If %>> No
-									</td>
-								</tr>
-								<tr>
-									<td colspan=3 valign="top" align="right"><input type="button" value="Cancel" onclick="if(confirm('Are you sure you want to cancel?')){document.location.href='default.asp';};">&nbsp;<input type="submit" value="Submit" id="Submit" NAME="Submit"></td>
-								</tr>
-								</form>
-							</table>
-						</td>
-					</tr>
-				</table>
-			</td>
-		</tr>
-	</table>
+	<div class="tl-page-container">
+		<nav class="tl-breadcrumb">
+			<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Dashboard.asp" target="_top">Home</a>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+			<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Setup">Setup</a>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+			<a href="Default.asp">Activity Types</a>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+			<span>Edit Activity Type</span>
+		</nav>
+
+		<div class="tl-action-bar">
+			<h1 class="tl-page-title">Edit Activity Type</h1>
+		</div>
+
+		<div class="tl-main">
+			<div class="tl-card">
+				<form action="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/ActivityTypes/Edit_Proc.asp" method="post" name="Form1" ID="Form1" onSubmit="return checkForm();" class="tl-form">
+					<input type="hidden" value="<%= rs("ActivityTypeId") %>" name="ActivityTypeId">
+					
+					<div class="tl-form-row">
+						<div class="tl-form-group">
+							<label class="tl-label">Activity Type <span class="tl-required">*</span></label>
+							<input type="text" name="ActivityType" id="Text1" class="tl-input" placeholder="e.g. On-site Support" value="<%= rs("ActivityType") %>">
+						</div>
+						<div class="tl-form-group">
+							<label class="tl-label">Activity Code <span class="tl-required">*</span></label>
+							<input type="text" name="ActivityCode" id="ActivityCode" class="tl-input" placeholder="e.g. OSS01" value="<%= rs("ActivityCode") %>">
+						</div>
+					</div>
+
+					<div class="tl-form-group">
+						<label class="tl-label">Configuration</label>
+						<div class="tl-checkbox-group" style="padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--tl-border);">
+							<label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+								<input type="checkbox" name="FormRequired" value="-1" style="width: 18px; height: 18px;" <% If rs("FormRequired") Then %>checked<% End If %>>
+								<span>Form Submission Required</span>
+							</label>
+							<p style="font-size: 12px; color: var(--tl-text-light); margin-top: 4px; margin-left: 26px;">Specifies if a detailed activity form must be completed when using this type.</p>
+						</div>
+					</div>
+
+					<div class="tl-form-actions" style="border-top: 1px solid var(--tl-border); padding-top: 24px; margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+						<button type="button" class="tl-btn" onclick="if(confirm('Are you sure you want to cancel?')){document.location.href='default.asp';};">Cancel</button>
+						<button type="submit" class="tl-btn tl-btn-primary">Save Changes</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
 
 	</body>
 </html>

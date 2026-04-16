@@ -24,30 +24,33 @@ public class AuthenticationMiddleware
         }
 
         // Get API Key from header
-        if (!context.Request.Headers.TryGetValue("X-API-Key", out var apiKeyValues) || 
-            string.IsNullOrEmpty(apiKeyValues.FirstOrDefault()))
+        string? userCode = null;
+        if (context.Request.Headers.TryGetValue("X-User-Code", out var codeValues))
         {
-            // Also try Authorization header
-            if (!context.Request.Headers.TryGetValue("Authorization", out var authHeader) ||
-                !authHeader.FirstOrDefault()?.StartsWith("Bearer ") == true)
-            {
-                context.Response.StatusCode = 401;
-                await context.Response.WriteAsJsonAsync(new { error = "API Key or Authorization header required" });
-                return;
-            }
-            
-            apiKeyValues = authHeader.FirstOrDefault()![7..]; // Remove "Bearer "
+            userCode = codeValues.FirstOrDefault();
+        }
+        
+        User? user = null;
+        if (!string.IsNullOrEmpty(userCode))
+        {
+            user = await userService.GetUserByCodeAsync(userCode);
+        }
+        else if (context.Request.Headers.TryGetValue("X-API-Key", out var apiKeyValues) && 
+                 !string.IsNullOrEmpty(apiKeyValues.FirstOrDefault()))
+        {
+            user = await userService.GetUserFromApiKeyAsync(apiKeyValues.FirstOrDefault()!);
+        }
+        else if (context.Request.Headers.TryGetValue("Authorization", out var authHeader) &&
+                 authHeader.FirstOrDefault()?.StartsWith("Bearer ") == true)
+        {
+            var apiKey = authHeader.FirstOrDefault()![7..]; // Remove "Bearer "
+            user = await userService.GetUserFromApiKeyAsync(apiKey);
         }
 
-        var apiKey = apiKeyValues.FirstOrDefault();
-
-        // Validate API Key
-        var user = await userService.GetUserFromApiKeyAsync(apiKey!);
-        
         if (user == null)
         {
             context.Response.StatusCode = 401;
-            await context.Response.WriteAsJsonAsync(new { error = "Invalid API Key" });
+            await context.Response.WriteAsJsonAsync(new { error = "Authentication required (X-API-Key, Authorization, or X-User-Code header)" });
             return;
         }
 

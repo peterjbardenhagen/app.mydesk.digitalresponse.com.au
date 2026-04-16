@@ -125,15 +125,23 @@ delAddress = rsInv("DelAddress") & ""
 		</script>
 		<script language="javascript" src="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/Global.js"></script>
 	</head>
-	<body bgcolor="#dddddd">
+	<body class="tl-bg-light">
 <!--#include virtual="/Clients/SalesEngineTL/Header.asp"-->
-	<table width=95% align="center" cellpadding=0 cellspacing=0 border=0 ID="Table4">
-		<tr>
-			<td>
-				<br/>
-				<span class="Header2"><a href="/Portal.asp">Home</a> / <a href="Default.asp" class="Header2">Invoices</a> / Edit Invoice</span>
-				<br/><br/>
-					<table width=770 cellpadding=5 cellspacing=0 border=0 ID="Table2">
+	<div class="tl-main">
+		<div class="tl-page-header">
+			<div class="tl-breadcrumb">
+				<a href="/Portal.asp">Home</a>
+				<span class="tl-breadcrumb-separator">/</span>
+				<a href="Default.asp">Invoices</a>
+				<span class="tl-breadcrumb-separator">/</span>
+				<span class="tl-breadcrumb-current">Edit Invoice</span>
+			</div>
+			<h1 class="tl-page-title">Edit Invoice</h1>
+		</div>
+
+		<div class="tl-card" style="max-width: 1000px; margin: 0 auto;">
+			<div class="tl-card-body">
+					<table width=100% cellpadding=5 cellspacing=0 border=0 ID="Table2" class="tl-table-raw">
 						<form method="post" name="Form1" action="Edit_Proc.asp" onSubmit="return checkForm();">
 						<input type="hidden" name="InvoiceId" value="<%= lngInvoiceId %>">
 						<input type="hidden" name="Qid" value="<%= lngQid %>">
@@ -207,14 +215,14 @@ delAddress = rsInv("DelAddress") & ""
 							<td valign="top"><textarea name="Terms" rows="3" cols="30" onkeyup="parent.TrackCount(this,'textcount999',500)" onkeypress="parent.LimitText(this,500)" style="width:100%;" ID="Textarea2"><%= rsInv("Terms") %></textarea><br/>Characters Remaining: <input type="text" name="textcount999" size="4" value="500" readonly ID="Text3"></td>
 						</tr>
 						<tr>
-							<td valign="top" colspan=4 width=50%><span style="font-weight:bold;">Notes</span><br><small>These notes will be visible to the customer</small><br><textarea name="CustomerNotes" rows="5" cols="30" onkeyup="parent.TrackCount(this,'textcount2',500)" onkeypress="parent.LimitText(this,500)" style="width:100%;" ID="Textarea4"><%= rsInv("CustomerNotes") %></textarea><br/>Characters Remaining: <input type="text" name="textcount2" size="4" value="500" readonly ID="Text6"></td>
+							<td valign="top" colspan=4 width=50%><span style="font-weight:bold;">Notes</span><br><small>These notes will be visible to the customer</small><br><textarea name="CustomerNotes" rows="5" cols="30" onkeyup="parent.TrackCount(this,'textcount2',500)" onkeypress="parent.LimitText(this,500)" style="width:100%;" ID="Textarea4"><%= rsInv("CustomerNotes") %></textarea><br/>Characters Remaining: <input type="text" name="textcount2" size="4" value="500" readonly ID="Text6" style="border:none;background:transparent;color:#64748b;"></td>
 						</tr>
 
 <%
 If Request.Cookies("ClientSettings")("HasInternalNotes") = "true" Then
 %>
 						<tr>
-							<td valign="top" colspan=2 width=50%><span style="font-weight:bold;">Internal Notes</span><br><small>These notes will not be visible to the customer</small><br><textarea name="InternalNotes" rows="5" cols="30" onkeyup="parent.TrackCount(this,'textcount1',500)" onkeypress="parent.LimitText(this,500)" style="width:100%;" ID="Textarea5"><%= rsInv("InternalNotes") %></textarea><br/>Characters Remaining: <input type="text" name="textcount1" size="4" value="500" readonly ID="Text7"></td>
+							<td valign="top" colspan=2 width=50%><span style="font-weight:bold;">Internal Notes</span><br><small>These notes will not be visible to the customer</small><br><textarea name="InternalNotes" rows="5" cols="30" onkeyup="parent.TrackCount(this,'textcount1',500)" onkeypress="parent.LimitText(this,500)" style="width:100%;" ID="Textarea5"><%= rsInv("InternalNotes") %></textarea><br/>Characters Remaining: <input type="text" name="textcount1" size="4" value="500" readonly ID="Text7" style="border:none;background:transparent;color:#64748b;"></td>
 						</tr>
 <%
 End If
@@ -226,13 +234,16 @@ End If
 							<td colspan=2><br></td>
 						</tr>
 						<tr>
-							<td colspan=4 valign="top" align="right"><input type="button" value="Cancel" onclick="if(confirm('Are you sure you want to cancel?')){document.location.href='default.asp';};"> <input type="submit" value="Next" ID="Submit2" NAME="Submit1"></td>
+							<td colspan=4 valign="top" align="right" style="padding-top:20px; border-top:1px solid #eee;">
+								<input type="button" class="tl-btn tl-btn-secondary" value="Cancel" onclick="if(confirm('Are you sure you want to cancel?')){document.location.href='default.asp';};">&nbsp;
+								<input type="submit" class="tl-btn tl-btn-primary" value="Next" ID="Submit2" NAME="Submit1">
+							</td>
 						</tr>
 						</form>
 					</table>
-				</td>
-			</tr>
-		</table>
+			</div>
+		</div>
+	</div>
 <script language="javascript">
 	function deliveryAddress() {
 		var s;

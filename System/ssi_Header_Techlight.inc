@@ -1,6 +1,5 @@
-<%
-On Error Resume Next
 
+<%
 ' strWorkingDir is defined in the parent page (Dashboard.asp, etc.)
 ' This file assumes strWorkingDir is already declared in the parent
 

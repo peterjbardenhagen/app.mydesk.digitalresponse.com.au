@@ -1,12 +1,11 @@
 <%
 ' Techlight MyDesk - Single client configuration
 
-'If InStr(Request.ServerVariables("URL"), "SalesEngineTL") > 0 Then
-	Response.Cookies("ClientSettings")("Prefix") = "TL"
-	Response.Cookies("ClientSettings")("State") = "AUS"
-	Response.Cookies("ClientSettings")("WorkingDir") = "/Clients/SalesEngineTL"
-	Response.Cookies("ClientSettings").Expires = Date() + 1000
-	Response.Cookies("ApprovalPassword") = "approveme"
-	Response.Cookies("ApprovalPassword").Expires = Date() + 1000
-'End If
+' Techlight MyDesk - Single Client Configuration
+' Values are hardcoded where needed to reduce session/cookie overhead
+' Only set essential cookies that change per user
+
+' Approval password cookie (rarely changes)
+Response.Cookies("ApprovalPassword") = "approveme"
+Response.Cookies("ApprovalPassword").Expires = Date() + 365
 %>

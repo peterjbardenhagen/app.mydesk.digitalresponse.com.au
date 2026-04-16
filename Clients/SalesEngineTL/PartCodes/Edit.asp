@@ -14,13 +14,11 @@ intPartCodeId = CLng(Request("PartCodeId"))
 <!--#include virtual="/System/ssi_Functions.asp"-->
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <!--#include virtual="/System/ssi_Dates.inc"-->
-<html>
-	<head>
-		<title>MyDesk</title>
-		<META http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, pre-check=0">
-		<META http-equiv="Expires" content="0">
-		<META http-equiv="Pragma" content="no-store, private, must-revalidate">
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 		<link rel="stylesheet" type="text/css" href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/<%= Request.Cookies("ClientSettings")("Stylesheet") %>">
+		<link rel="stylesheet" type="text/css" href="/System/Style_Modern.css">
 		<!--<script language="javascript" src="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/Global.js"></script>-->
 		<script language="JavaScript">
 
@@ -49,40 +47,43 @@ intPartCodeId = CLng(Request("PartCodeId"))
 
 		</script>
 	</head>
-	<body bgcolor="#dddddd">
-
-<!--#include virtual="/System/ssi_Header.inc"-->
+	<body class="tl-bg-light">
+<!--#include virtual="/Clients/SalesEngineTL/Header.asp"-->
 
 <%
-
 Dim rs
 Dim sql
 
 Set rs = Server.CreateObject("ADODB.RecordSet")
 sql = "Select * From PartCodes Where PartCodeId = " & intPartCodeId
 Set rs = dbConn.Execute(sql)
-
 %>
 
-	<table width=95% align="center" cellpadding=0 cellspacing=0 border=0 ID="Table4">
-		<tr>
-			<td>
-				<br/>
-				<span class="Header2"><a href="/Portal.asp" class="Header2">Home</a> / <a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Setup">Setup</a> / <a href="Default.asp">Part Codes</a> / Edit Part Code /></span>
-				<br/><br/>
-				<table width=100% align="center" ID="Table1">
-					<tr>
-						<td>
-							<table cellpadding=3 cellspacing=0 border=0 ID="Table2">
-								<form action="Edit_Proc.asp" method="post" name="Form1" ID="Form1" onSubmit="return checkForm();">
-								<input type="hidden" value="<%= rs("PartCodeId") %>" name="PartCodeId">
-								<tr>
-									<td valign="top" class="Req">*</td>
-									<td valign="top"><span style="font-weight:bold;">Division</span></td>
-									<td valign="top">
-									<select name="DivisionId">
-<%
+	<div class="tl-page-container">
+		<nav class="tl-breadcrumb">
+			<a href="/Portal.asp">Home</a>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+			<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Setup">Setup</a>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+			<a href="Default.asp">Part Codes</a>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+			<span>Edit Part Code</span>
+		</nav>
 
+		<div class="tl-action-bar">
+			<h1 class="tl-page-title">Edit Part Code</h1>
+		</div>
+
+		<div class="tl-main">
+			<div class="tl-card">
+				<form action="Edit_Proc.asp" method="post" name="Form1" ID="Form1" onSubmit="return checkForm();" class="tl-form">
+					<input type="hidden" value="<%= rs("PartCodeId") %>" name="PartCodeId">
+					
+					<div class="tl-form-row">
+						<div class="tl-form-group">
+							<label class="tl-label">Division <span class="tl-required">*</span></label>
+							<select name="DivisionId" class="tl-input">
+<%
 Set rsDivisions = Server.CreateObject("ADODB.RecordSet")
 sql = "SELECT * FROM Divisions ORDER BY Division"
 Set rsDivisions = dbConn.Execute(sql)
@@ -90,39 +91,34 @@ Set rsDivisions = dbConn.Execute(sql)
 Do Until rsDivisions.EOF
 	If CInt(rsDivisions("DivisionId")) = CInt(rs("DivisionId")) Then
 %>
-										<option selected value="<%= rsDivisions("DivisionId") %>"><%= rsDivisions("Division") %></option>
+								<option selected value="<%= rsDivisions("DivisionId") %>"><%= rsDivisions("Division") %></option>
 <%
 	Else
 %>
-										<option value="<%= rsDivisions("DivisionId") %>"><%= rsDivisions("Division") %></option>
+								<option value="<%= rsDivisions("DivisionId") %>"><%= rsDivisions("Division") %></option>
 <%
 	End If
 	rsDivisions.MoveNext
 Loop
-
 rsDivisions.Close
 Set rsDivisions = Nothing
-
 %>
-									</select>
-									</td>
-								</tr>
-								<tr>
-									<td valign="top" class="Req">*</td>
-									<td valign="top" style="font-weight:bold;">Part Code</td>
-									<td valign="top"><input type="text" size=50 maxlength=20 name="PartCode" id="PartCode" style="width:280px;" value="<%= rs("PartCode") %>"></td>
-								</tr>
-								<tr>
-									<td colspan=3 valign="top" align="right"><input type="button" value="Cancel" onclick="if(confirm('Are you sure you want to cancel?')){document.location.href='default.asp';};">&nbsp;<input type="submit" value="Submit" id="Submit" NAME="Submit"></td>
-								</tr>
-								</form>
-							</table>
-						</td>
-					</tr>
-				</table>
-			</td>
-		</tr>
-	</table>
+							</select>
+						</div>
+						<div class="tl-form-group">
+							<label class="tl-label">Part Code <span class="tl-required">*</span></label>
+							<input type="text" name="PartCode" id="PartCode" class="tl-input" placeholder="e.g. TL-001" value="<%= rs("PartCode") %>">
+						</div>
+					</div>
+
+					<div class="tl-form-actions" style="border-top: 1px solid var(--tl-border); padding-top: 24px; margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+						<button type="button" class="tl-btn" onclick="if(confirm('Are you sure you want to cancel?')){document.location.href='default.asp';};">Cancel</button>
+						<button type="submit" class="tl-btn tl-btn-primary">Save Changes</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
 
 	</body>
 </html>

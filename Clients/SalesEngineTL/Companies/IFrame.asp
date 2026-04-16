@@ -31,34 +31,16 @@ strLetter = Trim(Request("Letter"))
 
 %>
 <!--#include virtual="/System/ssi_dbConn_Open.inc"-->
-<html>
-<head>
-	<title>MyDesk</title>
-	<META http-equiv="Cache-Control" content="no-cache">
-	<META http-equiv="Expires" content="0">
-	<META http-equiv="Pragma" content="no-cache">
-	<style> body, html {Margin:0px; padding: 0px; overflow: hidden;font: menu;border: none;} </style>
-	<link href="/System/Style2.css" rel="stylesheet" type="text/css" ></link>
-	<link href="/System/grid.css" rel="stylesheet" type="text/css" ></link>
-	<script src="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/Global.js"></script>
-	<script src="/System/grid.js"></script>
-	<script src="/System/paging1.js"></script>
-
-	<!-- grid format -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" type="text/css" href="/System/Style_Modern.css">
 	<style>
-		.active-controls-grid {height: 210px; font: menu;}
-		.active-column-0 {width: 0px;}
-		.active-column-1 {width: 200px;}
-		.active-column-2 {width: 75px; text-align: left;}
-		.active-column-3 {width: 75px; text-align: left;}
-		.active-column-4 {width: 75px; text-align: left;}
-		.active-column-5 {width: 75px; text-align: left;}
-		.active-column-6 {width: 75px; text-align: left;}
-		.active-column-7 {width: 75px; text-align: left;}
-		.active-column-8 {width: 75px; text-align: left;}
-		.active-column-9 {width: 75px; text-align: left;}
-		.active-grid-column {border-right: 1px solid threedshadow;}
-		.active-grid-row {border-bottom: 1px solid threedlightshadow;}
+		body { background: white; padding: 0; margin: 0; font-family: 'Inter', sans-serif; }
+		.tl-data-table { border-collapse: separate; border-spacing: 0; width: 100%; border: none; }
+		.tl-data-table th { background: #f8fafc; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid var(--tl-border); }
+		.tl-data-table td { border-bottom: 1px solid var(--tl-border); }
+		.pagination-container { position: sticky; bottom: 0; background: white; border-top: 1px solid var(--tl-border); padding: 12px 24px; display: flex; justify-content: center; align-items: center; gap: 16px; box-shadow: 0 -4px 12px rgba(0,0,0,0.05); }
 	</style>
 
 <%
@@ -136,79 +118,65 @@ end function
 
 %>
 
-</head>
-<body style="background-color:#eeeeee;">
+<div style="height: 100vh; display: flex; flex-direction: column;">
+	<div style="flex: 1; overflow: auto; padding-bottom: 60px;">
+		<table class="tl-data-table">
+			<thead>
+				<tr>
+					<th>Company</th>
+					<th>Customer Code</th>
+					<th>Location</th>
+					<th>Contact</th>
+					<th>Phone</th>
+					<th style="text-align: right;">Action</th>
+				</tr>
+			</thead>
+			<tbody id="tableBody">
+<%
+Dim sql
+sql = "SELECT CompanyId, Company, CustomerCode, Suburb, State, ContactName, Phone FROM Companies WHERE Left(Company,1) = '" & strLetter & "' AND DivisionId = " & lngDivisionId & " ORDER BY Company"
+Set rs = dbConn.Execute(sql)
+
+If rs.BOF And rs.EOF Then
+%>
+				<tr>
+					<td colspan="6" style="text-align: center; padding: 48px; color: var(--tl-text-light);">
+						No companies found starting with "<%= strLetter %>"
+					</td>
+				</tr>
+<%
+Else
+	Do Until rs.EOF
+%>
+				<tr class="company-row">
+					<td><strong><%= rs("Company") %></strong></td>
+					<td><span class="tl-badge tl-badge-info"><%= rs("CustomerCode") %></span></td>
+					<td><%= rs("Suburb") %>, <%= rs("State") %></td>
+					<td><%= rs("ContactName") %></td>
+					<td><%= rs("Phone") %></td>
+					<td style="text-align: right;">
+						<div class="tl-btn-group">
+							<a href="Edit.asp?CompanyId=<%= rs("CompanyId") %>" target="_parent" class="tl-btn-icon" title="Edit">
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+							</a>
+						</div>
+					</td>
+				</tr>
+<%
+		rs.MoveNext
+	Loop
+End If
+rs.Close
+%>
+			</tbody>
+		</table>
+	</div>
+</div>
 
 <script>
-<%
-
-Dim oRecordset
-Dim sql
-
-' Execute a SQL query
-sql = "SELECT CompanyId, Company, CustomerCode AS [Customer Code], SupplierCode AS [Supplier Code], Address1 AS [Address 1], Address2 AS [Address 2], Suburb, State, PostCode As [Post Code], ContactName AS [Contact Name], Phone, Fax, Website, 'ACTION' AS Action FROM Companies WHERE Left(Company,1) = '" & strLetter & "' AND DivisionId = " & lngDivisionId
-Set oRecordset = dbConn.Execute(sql)
-
-If oRecordset.BOF And oRecordset.EOF Then MyRedirect(Request.Cookies("ClientSettings")("WorkingDir") & "/NoRecords.asp")
-
-' Write grid to the page
-Response.write(activewidgets_grid("my", oRecordset))
-
-' Close recordset and connection
-oRecordset.close
-dbConn.close
-
-%>
-
-	//	create the grid object
-	var obj = new Active.Controls.Grid;
-
-	//	replace the built-in row model with the new one (defined in the patch)
-	obj.setModel("row", new Active.Rows.Page);
-
-	obj.setProperty("row/count", <%= nRows %>);
-	obj.setProperty("column/count", <%= nColumns %>);
-	obj.setProperty("data/text", function(i, j){return myData[i][j]});
-	obj.setProperty("column/texts", myColumns);
-
-	//	set page size
-	obj.setProperty("row/pageSize", 10);
-
-	//	write grid html to the page
-	document.write(obj);
-
-	</script>
-
-	<table width="100%" cellspacing=0 cellpadding=5 height=40 bgcolor="#ebeadb">
-		<tr>
-			<td style="border-top:1px solid #cbc7b8;border-bottom:1px solid #cbc7b8;" valign="middle">
-				<!-- bottom page control buttons -->
-				<center>
-					<div>
-						<button onclick='goToPage(-Infinity)' ID="Button1" style="font-size:10px;">&lt;&lt;</button>&nbsp;
-						<button onclick='goToPage(-1)' ID="Button2" style="font-size:10px;">&lt;</button>
-						&nbsp;&nbsp;<span id='pageLabel' style="font-size:10px;"></span>&nbsp;&nbsp;
-						<button onclick='goToPage(1)' ID="Button3" style="font-size:10px;">&gt;</button>&nbsp;
-						<button  onclick='goToPage(Infinity)' ID="Button4" style="font-size:10px;">&gt;&gt;</button>
-					</div>
-				</center>
-			</td>
-		</tr>
-	</table>
-
-	<!-- button click handler -->
-	<script>
-	function goToPage(delta){
-		var count = obj.getProperty("row/pageCount");
-		var number = obj.getProperty("row/pageNumber");
-		number += delta;
-		if (number < 0) {number = 0}
-		if (number > count-1) {number = count-1}
-		document.getElementById('pageLabel').innerHTML = "Page " + (number + 1) + " of " + count + " ";
-		obj.setProperty("row/pageNumber", number);
-		obj.refresh();
-	}
-	goToPage(0);
-	</script>
-</body>
+	// Simple client-side search across visible rows
+	window.parent.document.getElementById('Select2').addEventListener('change', function() {
+		// Parent form will submit and reload this iframe
+	});
+</script>
 </html>

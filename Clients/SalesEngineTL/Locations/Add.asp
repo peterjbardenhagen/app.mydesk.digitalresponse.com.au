@@ -11,13 +11,11 @@ Response.CacheControl = "no-store, private, must-revalidate"
 <!--#include virtual="/System/ssi_Functions.asp"-->
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <!--#include virtual="/System/ssi_Dates.inc"-->
-<html>
-	<head>
-		<title>MyDesk</title>
-		<META http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, pre-check=0">
-		<META http-equiv="Expires" content="0">
-		<META http-equiv="Pragma" content="no-store, private, must-revalidate">
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 		<link rel="stylesheet" type="text/css" href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/<%= Request.Cookies("ClientSettings")("Stylesheet") %>">
+		<link rel="stylesheet" type="text/css" href="/System/Style_Modern.css">
 		<script language="JavaScript">
 
 		function emptyField(textObj) {
@@ -149,218 +147,196 @@ Response.CacheControl = "no-store, private, must-revalidate"
 
 		</script>
 	</head>
-	<body bgcolor="#dddddd">
+	<body class="tl-bg-light">
+<!--#include virtual="/Clients/SalesEngineTL/Header.asp"-->
+	<div class="tl-page-container">
+		<nav class="tl-breadcrumb">
+			<a href="/Portal.asp">Home</a>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+			<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Setup">Setup</a>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+			<a href="Default.asp">Locations</a>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+			<span>Add Location</span>
+		</nav>
 
-<!--#include virtual="/System/ssi_Header.inc"-->
+		<div class="tl-action-bar">
+			<h1 class="tl-page-title">Add Location</h1>
+		</div>
 
-	<table width=95% align="center" cellpadding=0 cellspacing=0 border=0 ID="Table4">
-		<tr>
-			<td>
-				<br/>
-				<span class="Header2"><a href="/Portal.asp" class="Header2">Home</a> / <a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Setup">Setup</a> / <a href="Default.asp">Locations</a> / Add Location /></span>
-				<br/><br/>
-				<table width=100% align="center" ID="Table1">
-					<tr>
-						<td>
-							<table cellpadding=3 cellspacing=0 border=0 ID="Table2">
-								<form action="Add_Proc.asp" method="post" name="Form1" ID="Form1" onSubmit="return checkForm();">
-								<tr>
-									<td valign="top" class="Req">*</td>
-									<td valign="top" style="font-weight:bold;">Company</td>
-									<td valign="top"><input type="text" name="Company" style="width:280px;" maxlength=50 ID="Text7"></td>
-								</tr>
-								<tr>
-									<td valign="top"></td>
-									<td valign="top" style="font-weight:bold;">ACN</td>
-									<td valign="top"><input type="text" name="ACN" style="width:280px;" maxlength=50 ID="Text11"></td>
-								</tr>
-								<tr>
-									<td valign="top"></td>
-									<td valign="top" style="font-weight:bold;">ABN</td>
-									<td valign="top"><input type="text" name="ABN" style="width:280px;" maxlength=50 ID="Text10"></td>
-								</tr>
-								<tr>
-									<td colspan=3 valign="top"><br><b>Office Address Details</b></td>
-								</tr>
-								<tr>
-									<td valign="top" class="Req">*</td>
-									<td valign="top" style="font-weight:bold;">Address 1</td>
-									<td valign="top"><input type="text" name="Address1" style="width:280px;" maxlength=50 ID="Text1"></td>
-								</tr>
-								<tr>
-									<td valign="top"></td>
-									<td valign="top" style="font-weight:bold;">Address 2</td>
-									<td valign="top"><input type="text" name="Address2" style="width:280px;" maxlength=50 ID="Text2"></td>
-								</tr>
-								<tr>
-									<td valign="top" class="Req">*</td>
-									<td valign="top" style="font-weight:bold;">Suburb</td>
-									<td valign="top"><input type="text" name="Suburb" style="width:280px;" maxlength=50 ID="Text3"></td>
-								</tr>
-								<tr>
-									<td valign="top" class="Req">*</td>
-									<td valign="top" style="font-weight:bold;">State</td>
-									<td valign="top">
-										<select name="StateId" ID="Select1" style="width:280px;">
-											<option value="">- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - </option>
+		<div class="tl-main">
+			<div class="tl-card">
+				<form action="Add_Proc.asp" method="post" name="Form1" ID="Form1" onSubmit="return checkForm();" class="tl-form">
+					<!-- General Details -->
+					<div class="tl-card-header" style="padding-left: 0;">
+						<h3 class="tl-card-title">General Details</h3>
+					</div>
+					<div class="tl-form-group">
+						<label class="tl-label">Company <span class="tl-required">*</span></label>
+						<input type="text" name="Company" class="tl-input" placeholder="e.g. Techlight Pty Ltd">
+					</div>
+					<div class="tl-form-row">
+						<div class="tl-form-group">
+							<label class="tl-label">ACN</label>
+							<input type="text" name="ACN" class="tl-input" placeholder="Australian Company Number">
+						</div>
+						<div class="tl-form-group">
+							<label class="tl-label">ABN</label>
+							<input type="text" name="ABN" class="tl-input" placeholder="Australian Business Number">
+						</div>
+					</div>
+
+					<!-- Office Address -->
+					<div class="tl-card-header" style="padding-left: 0; margin-top: 32px;">
+						<h3 class="tl-card-title">Office Address</h3>
+					</div>
+					<div class="tl-form-row">
+						<div class="tl-form-group">
+							<label class="tl-label">Address 1 <span class="tl-required">*</span></label>
+							<input type="text" name="Address1" class="tl-input">
+						</div>
+						<div class="tl-form-group">
+							<label class="tl-label">Address 2</label>
+							<input type="text" name="Address2" class="tl-input">
+						</div>
+					</div>
+					<div class="tl-form-row">
+						<div class="tl-form-group">
+							<label class="tl-label">Suburb <span class="tl-required">*</span></label>
+							<input type="text" name="Suburb" class="tl-input">
+						</div>
+						<div class="tl-form-group">
+							<label class="tl-label">State <span class="tl-required">*</span></label>
+							<select name="StateId" class="tl-input">
+								<option value="">- - Select State - -</option>
 <%
-
 Set rsStates = Server.CreateObject("ADODB.RecordSet")
 sql = "SELECT * FROM States ORDER BY State"
 Set rsStates = dbConn.Execute(sql)
-
-If Not(rsStates.BOF And rsStates.EOF) Then
-	Do Until rsStates.EOF
-		Response.Write ("								<option value=""" & rsStates("StateId") & """>" & rsStates("State") & "</option>" & vbNewLine)
-		rsStates.MoveNext
-	Loop
-End If
-
-If IsObject(rsStates) Then
-	rsStates.Close
-	Set rsStates = Nothing
-End If
-
+Do Until rsStates.EOF
+	Response.Write ("								<option value=""" & rsStates("StateId") & """>" & rsStates("State") & "</option>" & vbNewLine)
+	rsStates.MoveNext
+Loop
+rsStates.Close
+Set rsStates = Nothing
 %>
-										</select>									
-									</td>
-								</tr>
-								<tr>
-									<td valign="top" class="Req">*</td>
-									<td valign="top" style="font-weight:bold;">Post Code</td>
-									<td valign="top"><input type="text" name="PostCode" style="width:280px;" maxlength=50 ID="Text4"></td>
-								</tr>
-								<tr>
-									<td valign="top" class="Req">*</td>
-									<td valign="top" style="font-weight:bold;">Country</td>
-									<td valign="top"><input type="text" name="Country" style="width:280px;" maxlength=50 ID="Text12"></td>
-								</tr>
-								<tr>
-									<td colspan=3 valign="top"><br><b>Postal Address Details</b></td>
-								</tr>
-								<tr>
-									<td valign="top" class="Req">*</td>
-									<td valign="top" style="font-weight:bold;">Display On Statements</td>
-									<td valign="top">
-									<input type="radio" name="PODisplay" value="-1" checked ID="Radio1"> Yes<br/>
-									<input type="radio" name="PODisplay" value="0" ID="Radio2"> No
-									</td>
-								</tr>
-								<tr>
-									<td valign="top" class="Req">*</td>
-									<td valign="top" style="font-weight:bold;">Address 1</td>
-									<td valign="top"><input type="text" name="POAddress1" style="width:280px;" maxlength=50 ID="Text13"></td>
-								</tr>
-								<tr>
-									<td valign="top"></td>
-									<td valign="top" style="font-weight:bold;">Address 2</td>
-									<td valign="top"><input type="text" name="POAddress2" style="width:280px;" maxlength=50 ID="Text14"></td>
-								</tr>
-								<tr>
-									<td valign="top" class="Req">*</td>
-									<td valign="top" style="font-weight:bold;">Suburb</td>
-									<td valign="top"><input type="text" name="POSuburb" style="width:280px;" maxlength=50 ID="Text15"></td>
-								</tr>
-								<tr>
-									<td valign="top" class="Req">*</td>
-									<td valign="top" style="font-weight:bold;">State</td>
-									<td valign="top">
-										<select name="POStateId" ID="Select2" style="width:280px;">
-											<option value="">- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - </option>
-<%
+							</select>
+						</div>
+						<div class="tl-form-group">
+							<label class="tl-label">Post Code <span class="tl-required">*</span></label>
+							<input type="text" name="PostCode" class="tl-input">
+						</div>
+					</div>
+					<div class="tl-form-group">
+						<label class="tl-label">Country <span class="tl-required">*</span></label>
+						<input type="text" name="Country" class="tl-input" value="Australia">
+					</div>
 
+					<!-- Postal Address -->
+					<div class="tl-card-header" style="padding-left: 0; margin-top: 32px; display: flex; justify-content: space-between; align-items: center;">
+						<h3 class="tl-card-title">Postal Address</h3>
+						<div style="display: flex; align-items: center; gap: 12px; font-size: 14px;">
+							<span>Display on Statements?</span>
+							<label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+								<input type="radio" name="PODisplay" value="-1" checked> Yes
+							</label>
+							<label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+								<input type="radio" name="PODisplay" value="0"> No
+							</label>
+						</div>
+					</div>
+					<div class="tl-form-row">
+						<div class="tl-form-group">
+							<label class="tl-label">PO Address 1 <span class="tl-required">*</span></label>
+							<input type="text" name="POAddress1" class="tl-input">
+						</div>
+						<div class="tl-form-group">
+							<label class="tl-label">PO Address 2</label>
+							<input type="text" name="POAddress2" class="tl-input">
+						</div>
+					</div>
+					<div class="tl-form-row">
+						<div class="tl-form-group">
+							<label class="tl-label">PO Suburb <span class="tl-required">*</span></label>
+							<input type="text" name="POSuburb" class="tl-input">
+						</div>
+						<div class="tl-form-group">
+							<label class="tl-label">PO State <span class="tl-required">*</span></label>
+							<select name="POStateId" class="tl-input">
+								<option value="">- - Select State - -</option>
+<%
 Set rsStates = Server.CreateObject("ADODB.RecordSet")
 sql = "SELECT * FROM States ORDER BY State"
 Set rsStates = dbConn.Execute(sql)
-
-If Not(rsStates.BOF And rsStates.EOF) Then
-	Do Until rsStates.EOF
-		Response.Write ("								<option value=""" & rsStates("StateId") & """>" & rsStates("State") & "</option>" & vbNewLine)
-		rsStates.MoveNext
-	Loop
-End If
-
-If IsObject(rsStates) Then
-	rsStates.Close
-	Set rsStates = Nothing
-End If
-
+Do Until rsStates.EOF
+	Response.Write ("								<option value=""" & rsStates("StateId") & """>" & rsStates("State") & "</option>" & vbNewLine)
+	rsStates.MoveNext
+Loop
+rsStates.Close
+Set rsStates = Nothing
 %>
-										</select>									
-									</td>
-								</tr>
-								<tr>
-									<td valign="top" class="Req">*</td>
-									<td valign="top" style="font-weight:bold;">Post Code</td>
-									<td valign="top"><input type="text" name="POPostCode" style="width:280px;" maxlength=50 ID="Text16"></td>
-								</tr>
-								<tr>
-									<td valign="top" class="Req">*</td>
-									<td valign="top" style="font-weight:bold;">Country</td>
-									<td valign="top"><input type="text" name="POCountry" style="width:280px;" maxlength=50 ID="Text17"></td>
-								</tr>
-								<tr>
-									<td colspan=3><br></td>
-								</tr>
-								<tr>
-									<td valign="top" class="Req">*</td>
-									<td valign="top" style="font-weight:bold;">Phone</td>
-									<td valign="top"><input type="text" name="Phone" style="width:280px;" maxlength=50 ID="Text5"></td>
-								</tr>
-								<tr>
-									<td valign="top" class="Req">*</td>
-									<td valign="top" style="font-weight:bold;">Fax</td>
-									<td valign="top"><input type="text" name="Fax" style="width:280px;" maxlength=50 ID="Text6"></td>
-								</tr>
-								<tr>
-									<td valign="top"></td>
-									<td valign="top" style="font-weight:bold;">Email</td>
-									<td valign="top"><input type="text" name="Email" style="width:280px;" maxlength=50 ID="Text8"></td>
-								</tr>
-								<tr>
-									<td valign="top"></td>
-									<td valign="top" style="font-weight:bold;">Website</td>
-									<td valign="top"><input type="text" name="Website" style="width:280px;" maxlength=50 ID="Text9"></td>
-								</tr>
-								<tr>
-									<td valign="top" class="Req">*</td>
-									<td valign="top" style="font-weight:bold;">Expense Type Group</td>
-									<td valign="top">
-										<select name="ExpenseTypeGroupId" ID="Select3" style="width:280px;">
-											<option value="">- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - </option>
-<%
+							</select>
+						</div>
+						<div class="tl-form-group">
+							<label class="tl-label">PO Post Code <span class="tl-required">*</span></label>
+							<input type="text" name="POPostCode" class="tl-input">
+						</div>
+					</div>
+					<div class="tl-form-group">
+						<label class="tl-label">PO Country <span class="tl-required">*</span></label>
+						<input type="text" name="POCountry" class="tl-input" value="Australia">
+					</div>
 
+					<!-- Contact & Other -->
+					<div class="tl-card-header" style="padding-left: 0; margin-top: 32px;">
+						<h3 class="tl-card-title">Contact & Classification</h3>
+					</div>
+					<div class="tl-form-row">
+						<div class="tl-form-group">
+							<label class="tl-label">Phone <span class="tl-required">*</span></label>
+							<input type="text" name="Phone" class="tl-input">
+						</div>
+						<div class="tl-form-group">
+							<label class="tl-label">Fax <span class="tl-required">*</span></label>
+							<input type="text" name="Fax" class="tl-input">
+						</div>
+					</div>
+					<div class="tl-form-row">
+						<div class="tl-form-group">
+							<label class="tl-label">Email</label>
+							<input type="email" name="Email" class="tl-input">
+						</div>
+						<div class="tl-form-group">
+							<label class="tl-label">Website</label>
+							<input type="text" name="Website" class="tl-input" placeholder="http://">
+						</div>
+					</div>
+					<div class="tl-form-group">
+						<label class="tl-label">Expense Type Group <span class="tl-required">*</span></label>
+						<select name="ExpenseTypeGroupId" class="tl-input">
+							<option value="">- - Select Expense Type Group - -</option>
+<%
 Set rsEx = Server.CreateObject("ADODB.RecordSet")
 sql = "SELECT * FROM ExpenseTypeGroups ORDER BY ExpenseTypeGroup"
 Set rsEx = dbConn.Execute(sql)
-
-If Not(rsEx.BOF And rsEx.EOF) Then
-	Do Until rsEx.EOF
-		Response.Write ("								<option value=""" & rsEx("ExpenseTypeGroupId") & """>" & rsEx("ExpenseTypeGroup") & "</option>" & vbNewLine)
-		rsEx.MoveNext
-	Loop
-End If
-
-If IsObject(rsEx) Then
-	rsEx.Close
-	Set rsEx = Nothing
-End If
-
+Do Until rsEx.EOF
+	Response.Write ("								<option value=""" & rsEx("ExpenseTypeGroupId") & """>" & rsEx("ExpenseTypeGroup") & "</option>" & vbNewLine)
+	rsEx.MoveNext
+Loop
+rsEx.Close
+Set rsEx = Nothing
 %>
-										</select>									
-									</td>
-								</tr>
-								<tr>
-									<td colspan=3 valign="top" align="right"><input type="button" value="Cancel" onclick="if(confirm('Are you sure you want to cancel?')){document.location.href='default.asp';};">&nbsp;<input type="submit" value="Submit" id="Submit" NAME="Submit"></td>
-								</tr>
-								</form>
-							</table>
-						</td>
-					</tr>
-				</table>
-			</td>
-		</tr>
-	</table>
+						</select>
+					</div>
+
+					<div class="tl-form-actions" style="border-top: 1px solid var(--tl-border); padding-top: 24px; margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+						<button type="button" class="tl-btn" onclick="if(confirm('Are you sure you want to cancel?')){document.location.href='default.asp';};">Cancel</button>
+						<button type="submit" class="tl-btn tl-btn-primary">Create Location</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
 	</body>
 </html>
 <!--#include virtual="/System/ssi_dbConn_close.inc"-->
