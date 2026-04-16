@@ -38,9 +38,19 @@ Dim strPassword
 Dim sql
 Dim intDaysSinceLastPasswordChange
 Dim strAccessCodesList
+Dim strDivisionIdsVisible, strDivisionIdsManager, strDivisionIdsQuotes
+Dim strDivisionIdsRFQ, strDivisionIdsPurchaseOrders, strDivisionIdsPayroll
 
 strUsername = Trim(Replace(Request("Username"),"'","''"))
 strPassword = Trim(Replace(Request("Password"),"'","''"))
+
+' Initialize division ID strings
+strDivisionIdsVisible = ""
+strDivisionIdsManager = ""
+strDivisionIdsQuotes = ""
+strDivisionIdsRFQ = ""
+strDivisionIdsPurchaseOrders = ""
+strDivisionIdsPayroll = ""
 
 Set rsCheck = Server.CreateObject("ADODB.RecordSet")
 sql = "SELECT Users.*, LineManagers.Name AS LineManagerName, LineManagers.Email AS LineManagerEmail, Divisions.Division, Locations.ExpenseTypeGroupId FROM Locations INNER JOIN (Divisions INNER JOIN (Users LEFT JOIN Users AS LineManagers ON Users.LineManagerCode = LineManagers.Code) ON Divisions.DivisionId = Users.DivisionId) ON (Locations.LocationId = Users.LocationId) Where Users.[Name] = '" & strUsername & "' And Users.[PW] = '" & strPassword & "' And Users.Active = -1"
@@ -49,21 +59,47 @@ Set rsCheck = dbConn.Execute(sql)
 If Not(rsCheck.BOF And rsCheck.EOF) Then
 	Session("LoggedIn") = True
 	Session("Code") = Trim(rsCheck("Code")) & ""
-	Session("LineManagerCode") = Trim(rsCheck("LineManagerCode") & "") & ""
+	Session("LineManagerCode") = Trim(rsCheck("LineManagerCode")) & "" & ""
 	Session("Name") = Trim(rsCheck("Name")) & ""
 	Session("Email") = Trim(rsCheck("Email")) & ""
 	Session("Initials") = Trim(rsCheck("Initials")) & ""
+	
+	' Safe conversion with error handling
+	On Error Resume Next
 	Session("DivisionId") = CLng(rsCheck("DivisionId"))
+	If Err.Number <> 0 Then Session("DivisionId") = 0
+	On Error GoTo 0
+	
 	Session("Division") = Trim(rsCheck("Division")) & ""
+	
+	On Error Resume Next
 	Session("UserTypeId") = CLng(rsCheck("UserTypeId"))
+	If Err.Number <> 0 Then Session("UserTypeId") = 0
+	On Error GoTo 0
+	
 	Session("LineManagerName") = rsCheck("LineManagerName") & ""
 	Session("LineManagerEmail") = rsCheck("LineManagerEmail") & ""
+	
+	On Error Resume Next
 	Session("LocationId") = CLng(rsCheck("LocationId"))
+	If Err.Number <> 0 Then Session("LocationId") = 0
+	On Error GoTo 0
+	
+	On Error Resume Next
 	Session("ExpenseTypeGroupId") = CLng(rsCheck("ExpenseTypeGroupId"))
-
+	If Err.Number <> 0 Then Session("ExpenseTypeGroupId") = 0
+	On Error GoTo 0
+	
+	' Safe calculation for hours
+	On Error Resume Next
 	Session("HoursPerDay") = rsCheck("HoursPerDay")
 	Session("HoursPerWeek") = rsCheck("HoursPerDay") * rsCheck("DaysPerWeek")
-
+	If Err.Number <> 0 Then
+		Session("HoursPerDay") = 8
+		Session("HoursPerWeek") = 40
+	End If
+	On Error GoTo 0
+	
 	Set rsAccess = Server.CreateObject("ADODB.RecordSet")
 	sql = "Select * From UsersAccess Where UserId = " & rsCheck("UserId")
 	Set rsAccess = dbConn.Execute(sql)
@@ -125,10 +161,10 @@ If Not(rsCheck.BOF And rsCheck.EOF) Then
 	Session("DivisionIdsPayroll") = strDivisionIdsPayroll
 	Session("ArrDivisionIdsPayroll") = strDivisionIdsPayroll
 
-	MyRedirect("/SetCookies.asp?WorkingDir=" & Session("WorkingDir"))
-
-	rsCheck.Close
-	Set rsCheck = Nothing
+	Dim redirectPath
+	redirectPath = "/SetCookies.asp?WorkingDir=" & Session("WorkingDir")
+	Response.Redirect redirectPath
+	Response.End
 Else
 	Session("LoggedIn") = False
 	Session("Code") = ""
@@ -147,7 +183,8 @@ Else
 	rsCheck.Close
 	Set rsCheck = Nothing	
 
-	MyRedirect("/?Msg=Login+failed,+incorrect+Username+and/or+Password.+Please+try+again.")
+	Response.Redirect "/?Msg=Login+failed,+incorrect+Username+and/or+Password.+Please+try+again."
+	Response.End
 End If
 
 %>
