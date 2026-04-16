@@ -3,41 +3,109 @@
 On Error Resume Next
 
 Dim strMsg
-strMsg = Request("Msg")
+strMsg = ""
+If Not IsNull(Request("Msg")) Then strMsg = Trim(Request("Msg"))
 
-' Techlight MyDesk - Modern Dashboard
-' Check authentication
-If Not Session("LoggedIn") Then
-	If Request.Cookies("LoggedIn") <> "" Then
-		If Not CBool(Request.Cookies("LoggedIn")) Then
+' Techlight MyDesk - Modern Dashboard - Hardened for Stability
+' Check authentication with null checks
+Dim isLoggedIn, cookieLoggedIn
+isLoggedIn = False
+cookieLoggedIn = False
+
+If Not IsEmpty(Session("LoggedIn")) Then
+	isLoggedIn = CBool(Session("LoggedIn"))
+Else
+	isLoggedIn = False
+End If
+
+If Not Request.Cookies("LoggedIn") Is Nothing Then
+	If Not IsEmpty(Request.Cookies("LoggedIn")) And Request.Cookies("LoggedIn") <> "" Then
+		If IsNumeric(Request.Cookies("LoggedIn")) Then
+			cookieLoggedIn = CBool(Request.Cookies("LoggedIn"))
+		Else
+			cookieLoggedIn = (LCase(Request.Cookies("LoggedIn")) = "true")
+		End If
+	End If
+End If
+
+If Not isLoggedIn Then
+	If cookieLoggedIn Then
+		If Not cookieLoggedIn Then
 			Response.Redirect("DefaultFrame.asp")
+			Response.End
 		End If
 	Else
 		Response.Redirect("DefaultFrame.asp")
+		Response.End
 	End If
 End If
 
 Dim strWorkingDir
-If Request.Cookies("ClientSettings")("WorkingDir") <> "" Then
-	strWorkingDir = Request.Cookies("ClientSettings")("WorkingDir")
-Else
-	strWorkingDir = Session("WorkingDir")
+strWorkingDir = ""
+On Error Resume Next
+If Not Request.Cookies("ClientSettings") Is Nothing Then
+	If Not IsEmpty(Request.Cookies("ClientSettings")("WorkingDir")) And Request.Cookies("ClientSettings")("WorkingDir") <> "" Then
+		strWorkingDir = Request.Cookies("ClientSettings")("WorkingDir")
+	End If
+End If
+If Err.Number <> 0 Or strWorkingDir = "" Then
+	If Not IsEmpty(Session("WorkingDir")) And Session("WorkingDir") <> "" Then
+		strWorkingDir = Session("WorkingDir")
+	Else
+		strWorkingDir = "/Clients/SalesEngineTL"
+	End If
+End If
+On Error GoTo 0
+
+' Get user info with null checks
+Dim userName, userRole, userCode
+userName = ""
+userCode = ""
+userRole = "User"
+
+On Error Resume Next
+If Not IsEmpty(Session("Name")) And Session("Name") <> "" Then
+	userName = Session("Name")
+ElseIf Not Request.Cookies("UserSettings") Is Nothing Then
+	If Not IsEmpty(Request.Cookies("UserSettings")("Name")) And Request.Cookies("UserSettings")("Name") <> "" Then
+		userName = Request.Cookies("UserSettings")("Name")
+	End If
+End If
+On Error Resume Next
+
+On Error Resume Next
+If Not IsEmpty(Session("Code")) And Session("Code") <> "" Then
+	userCode = Session("Code")
+ElseIf Not Request.Cookies("UserSettings") Is Nothing Then
+	If Not IsEmpty(Request.Cookies("UserSettings")("Code")) And Request.Cookies("UserSettings")("Code") <> "" Then
+		userCode = Request.Cookies("UserSettings")("Code")
+	End If
+End If
+On Error Resume Next
+
+On Error Resume Next
+Dim isAdmin, isManager
+isAdmin = False
+isManager = False
+
+If Not Request.Cookies("UserSettings") Is Nothing Then
+	If Not IsEmpty(Request.Cookies("UserSettings")("Admin")) Then
+		isAdmin = CBool(Request.Cookies("UserSettings")("Admin"))
+	End If
 End If
 
-' Get user info
-Dim userName, userRole, userCode
-userName = Session("Name")
-If userName = "" Then userName = Request.Cookies("UserSettings")("Name")
-userCode = Session("Code")
-If userCode = "" Then userCode = Request.Cookies("UserSettings")("Code")
+If Not IsEmpty(Session("Manager")) Then
+	isManager = CBool(Session("Manager"))
+End If
 
-If Request.Cookies("UserSettings")("Admin") Then
+If isAdmin Then
 	userRole = "Administrator"
-ElseIf Session("Manager") Then
+ElseIf isManager Then
 	userRole = "Manager"
 Else
 	userRole = "User"
 End If
+On Error GoTo 0
 
 ' Get business metrics for Directors
 Dim isDirector1, currentMonth, currentYear, lastYear
@@ -46,8 +114,16 @@ currentYear = Year(Date())
 lastYear = currentYear - 1
 
 Dim userTypeId
-userTypeId = Request.Cookies("UserSettings")("UserTypeID") & ""
-isDirector1 = (userTypeId = "1")
+userTypeId = ""
+On Error Resume Next
+If Not Request.Cookies("UserSettings") Is Nothing Then
+	If Not IsEmpty(Request.Cookies("UserSettings")("UserTypeID")) Then
+		userTypeId = CStr(Request.Cookies("UserSettings")("UserTypeID"))
+	End If
+End If
+On Error GoTo 0
+
+isDirector1 = (userTypeId = "1" Or userTypeId = "5")
 
 ' Initialize metrics
 Dim thisMonthQuotes, thisMonthQuotesWon, thisMonthQuotesValue
@@ -58,90 +134,140 @@ Dim ytdQuotesWon, ytdQuotesValue, ytdInvoices, ytdInvoiceValue
 Dim lastYearYTDQuotesWon, lastYearYTDQuotesValue, lastYearYTDInvoices, lastYearYTDInvoiceValue
 Dim pendingQuotesOver30Days, invoicesOverdue, pendingApprovalPOs
 
+' Set default values
+thisMonthQuotes = 0
+thisMonthQuotesWon = 0
+thisMonthQuotesValue = 0
+lastMonthQuotes = 0
+lastMonthQuotesWon = 0
+lastMonthQuotesValue = 0
+thisMonthInvoices = 0
+thisMonthInvoiceValue = 0
+lastMonthInvoices = 0
+lastMonthInvoiceValue = 0
+ytdQuotesWon = 0
+ytdQuotesValue = 0
+ytdInvoices = 0
+ytdInvoiceValue = 0
+lastYearYTDQuotesWon = 0
+lastYearYTDQuotesValue = 0
+lastYearYTDInvoices = 0
+lastYearYTDInvoiceValue = 0
+pendingQuotesOver30Days = 0
+invoicesOverdue = 0
+pendingApprovalPOs = 0
+
 If isDirector1 Then
 	Dim sql, rs
+	
+	On Error Resume Next
 	
 	' This month's quotes
 	sql = "SELECT COUNT(*) as cnt, SUM(CASE WHEN QuoteStatusId = 2 THEN 1 ELSE 0 END) as won, SUM(NettPriceTotal) as val FROM Quotes WHERE Month(QuoteDate) = " & currentMonth & " AND Year(QuoteDate) = " & currentYear & " AND Deleted = 0"
 	Set rs = dbConn.Execute(sql)
-	If Not rs.EOF Then
-		thisMonthQuotes = CLng(rs("cnt"))
-		thisMonthQuotesWon = CLng(rs("won"))
-		thisMonthQuotesValue = CDbl(rs("val"))
+	If Err.Number = 0 And Not rs.EOF Then
+		If Not IsNull(rs("cnt")) And IsNumeric(rs("cnt")) Then thisMonthQuotes = CLng(rs("cnt"))
+		If Not IsNull(rs("won")) And IsNumeric(rs("won")) Then thisMonthQuotesWon = CLng(rs("won"))
+		If Not IsNull(rs("val")) And IsNumeric(rs("val")) Then thisMonthQuotesValue = CDbl(rs("val"))
 	End If
 	rs.Close
+	Set rs = Nothing
+	Err.Clear
+	On Error Resume Next
 	
 	' Last month's quotes
 	sql = "SELECT COUNT(*) as cnt, SUM(CASE WHEN QuoteStatusId = 2 THEN 1 ELSE 0 END) as won, SUM(NettPriceTotal) as val FROM Quotes WHERE Month(QuoteDate) = " & IIf(currentMonth=1, 12, currentMonth-1) & " AND Year(QuoteDate) = " & IIf(currentMonth=1, currentYear-1, currentYear) & " AND Deleted = 0"
 	Set rs = dbConn.Execute(sql)
-	If Not rs.EOF Then
-		lastMonthQuotes = CLng(rs("cnt"))
-		lastMonthQuotesWon = CLng(rs("won"))
-		lastMonthQuotesValue = CDbl(rs("val"))
+	If Err.Number = 0 And Not rs.EOF Then
+		If Not IsNull(rs("cnt")) And IsNumeric(rs("cnt")) Then lastMonthQuotes = CLng(rs("cnt"))
+		If Not IsNull(rs("won")) And IsNumeric(rs("won")) Then lastMonthQuotesWon = CLng(rs("won"))
+		If Not IsNull(rs("val")) And IsNumeric(rs("val")) Then lastMonthQuotesValue = CDbl(rs("val"))
 	End If
 	rs.Close
+	Set rs = Nothing
+	Err.Clear
+	On Error Resume Next
 	
 	' This month's invoices
 	sql = "SELECT COUNT(*) as cnt, SUM(AmountIncGST) as val FROM Invoices WHERE Month(InvoiceDate) = " & currentMonth & " AND Year(InvoiceDate) = " & currentYear
 	Set rs = dbConn.Execute(sql)
-	If Not rs.EOF Then
-		thisMonthInvoices = CLng(rs("cnt"))
-		thisMonthInvoiceValue = CDbl(rs("val"))
+	If Err.Number = 0 And Not rs.EOF Then
+		If Not IsNull(rs("cnt")) And IsNumeric(rs("cnt")) Then thisMonthInvoices = CLng(rs("cnt"))
+		If Not IsNull(rs("val")) And IsNumeric(rs("val")) Then thisMonthInvoiceValue = CDbl(rs("val"))
 	End If
 	rs.Close
+	Set rs = Nothing
+	Err.Clear
+	On Error Resume Next
 	
 	' Last month's invoices
 	sql = "SELECT COUNT(*) as cnt, SUM(AmountIncGST) as val FROM Invoices WHERE Month(InvoiceDate) = " & IIf(currentMonth=1, 12, currentMonth-1) & " AND Year(InvoiceDate) = " & IIf(currentMonth=1, currentYear-1, currentYear)
 	Set rs = dbConn.Execute(sql)
-	If Not rs.EOF Then
-		lastMonthInvoices = CLng(rs("cnt"))
-		lastMonthInvoiceValue = CDbl(rs("val"))
+	If Err.Number = 0 And Not rs.EOF Then
+		If Not IsNull(rs("cnt")) And IsNumeric(rs("cnt")) Then lastMonthInvoices = CLng(rs("cnt"))
+		If Not IsNull(rs("val")) And IsNumeric(rs("val")) Then lastMonthInvoiceValue = CDbl(rs("val"))
 	End If
 	rs.Close
+	Set rs = Nothing
+	Err.Clear
+	On Error Resume Next
 	
 	' YTD Quotes (Won)
 	sql = "SELECT COUNT(*) as cnt, SUM(NettPriceTotal) as val FROM Quotes WHERE QuoteStatusId = 2 AND Year(QuoteDate) = " & currentYear & " AND Deleted = 0"
 	Set rs = dbConn.Execute(sql)
-	If Not rs.EOF Then
-		ytdQuotesWon = CLng(rs("cnt"))
-		ytdQuotesValue = CDbl(rs("val"))
+	If Err.Number = 0 And Not rs.EOF Then
+		If Not IsNull(rs("cnt")) And IsNumeric(rs("cnt")) Then ytdQuotesWon = CLng(rs("cnt"))
+		If Not IsNull(rs("val")) And IsNumeric(rs("val")) Then ytdQuotesValue = CDbl(rs("val"))
 	End If
 	rs.Close
+	Set rs = Nothing
+	Err.Clear
+	On Error Resume Next
 	
 	' Last Year YTD Quotes (Won) - same date range last year
 	sql = "SELECT COUNT(*) as cnt, SUM(NettPriceTotal) as val FROM Quotes WHERE QuoteStatusId = 2 AND QuoteDate >= DateSerial(" & lastYear & ", 1, 1) AND QuoteDate <= DateSerial(" & lastYear & ", " & currentMonth & ", " & Day(Date()) & ") AND Deleted = 0"
 	Set rs = dbConn.Execute(sql)
-	If Not rs.EOF Then
-		lastYearYTDQuotesWon = CLng(rs("cnt"))
-		lastYearYTDQuotesValue = CDbl(rs("val"))
+	If Err.Number = 0 And Not rs.EOF Then
+		If Not IsNull(rs("cnt")) And IsNumeric(rs("cnt")) Then lastYearYTDQuotesWon = CLng(rs("cnt"))
+		If Not IsNull(rs("val")) And IsNumeric(rs("val")) Then lastYearYTDQuotesValue = CDbl(rs("val"))
 	End If
 	rs.Close
+	Set rs = Nothing
+	Err.Clear
+	On Error Resume Next
 	
 	' Pending quotes over 30 days
 	sql = "SELECT COUNT(*) as cnt FROM Quotes WHERE QuoteStatusId = 1 AND QuoteDate < DateAdd('d', -30, Now()) AND Deleted = 0"
 	Set rs = dbConn.Execute(sql)
-	If Not rs.EOF Then
-		pendingQuotesOver30Days = CLng(rs("cnt"))
+	If Err.Number = 0 And Not rs.EOF Then
+		If Not IsNull(rs("cnt")) And IsNumeric(rs("cnt")) Then pendingQuotesOver30Days = CLng(rs("cnt"))
 	End If
 	rs.Close
+	Set rs = Nothing
+	Err.Clear
+	On Error Resume Next
 	
 	' Overdue invoices
 	sql = "SELECT COUNT(*) as cnt FROM Invoices WHERE Status = 'ISSUED' AND DueDate < Now() AND DueDate IS NOT NULL"
 	Set rs = dbConn.Execute(sql)
-	If Not rs.EOF Then
-		invoicesOverdue = CLng(rs("cnt"))
+	If Err.Number = 0 And Not rs.EOF Then
+		If Not IsNull(rs("cnt")) And IsNumeric(rs("cnt")) Then invoicesOverdue = CLng(rs("cnt"))
 	End If
 	rs.Close
+	Set rs = Nothing
+	Err.Clear
+	On Error Resume Next
 	
 	' Pending approval POs
 	sql = "SELECT COUNT(*) as cnt FROM PurchaseOrders WHERE Status IN ('Draft', 'Pending')"
 	Set rs = dbConn.Execute(sql)
-	If Not rs.EOF Then
-		pendingApprovalPOs = CLng(rs("cnt"))
+	If Err.Number = 0 And Not rs.EOF Then
+		If Not IsNull(rs("cnt")) And IsNumeric(rs("cnt")) Then pendingApprovalPOs = CLng(rs("cnt"))
 	End If
 	rs.Close
-	
 	Set rs = Nothing
+	Err.Clear
+	On Error GoTo 0
 End If
 %>
 <!DOCTYPE html>
