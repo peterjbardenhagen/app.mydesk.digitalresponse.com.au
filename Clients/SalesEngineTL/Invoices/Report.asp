@@ -41,7 +41,6 @@ intInvoiceStatusId = CInt(Request("InvoiceStatusId"))
 		<div class="NoPrint" style="background-color: #f8fafc; padding: 16px; border-bottom: 1px solid #e2e8f0; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
 			<div style="flex: 1;"></div>
 			<div style="display: flex; gap: 12px; align-items: center;">
-				<button type="button" class="tl-btn-secondary" onclick="parent.document.location.href=parent.document.location.href;">Close [x]</button>
 				<% If (strCode = Request.Cookies("UserSettings")("Code")) Or Request.Cookies("UserSettings")("Manager") Then %>
 				<button type="button" class="tl-btn-primary" onclick="print();">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:middle;margin-right:6px;">

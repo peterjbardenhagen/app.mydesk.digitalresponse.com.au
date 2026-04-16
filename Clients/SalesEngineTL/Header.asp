@@ -1,10 +1,11 @@
 <!--#include virtual="/System/ssi_Header_Techlight.inc"-->
+<% If strWorkingDir = "" Then strWorkingDir = "/Clients/SalesEngineTL" %>
 <!-- Techlight Modern Header -->
 <header class="tl-header">
 	<div class="tl-header-top">
 		<div class="tl-container" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
 			<!-- Logo -->
-			<a href="<%= strWorkingDir %>/Default.asp" target="_top" class="tl-logo" style="text-decoration: none;" onclick="if(window.top.location.href.indexOf('Default.asp')>-1){window.top.location.reload();return false;}">
+			<a href="<%= strWorkingDir %>/Default.asp" target="_parent" class="tl-logo" style="text-decoration: none;" onclick="if(window.parent.location.href.indexOf('Default.asp')>-1){window.parent.location.reload();return false;}">
 				<img src="/images/techlight-logo.svg" alt="Techlight" style="height: 42px; width: auto; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,200,200,0.3));" />
 			</a>
 		
@@ -160,33 +161,39 @@
 			<li class="tl-nav-item tl-nav-dropdown">
 				<button class="tl-nav-link tl-dropdown-toggle" onclick="toggleDropdown(event)">
 					<svg class="tl-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<line x1="3" y1="12" x2="21" y2="12"></line>
-						<line x1="3" y1="6" x2="21" y2="6"></line>
-						<line x1="3" y1="18" x2="21" y2="18"></line>
+						<circle cx="11" cy="11" r="8"></circle>
+						<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
 					</svg>
-					Quick Nav
+					Search
 					<svg class="tl-dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<polyline points="6 9 12 15 18 9"></polyline>
 					</svg>
 				</button>
-				<div class="tl-dropdown-menu">
-					<a href="<%= strWorkingDir %>/Dashboard.asp" target="_top" class="tl-dropdown-item">
+				<div class="tl-dropdown-menu" style="min-width: 300px; padding: 12px;">
+					<div style="margin-bottom: 12px;">
+						<form action="<%= strWorkingDir %>/GlobalSearch.asp" method="GET" target="_parent" style="display: flex; gap: 8px;">
+							<input type="text" name="q" placeholder="Search ID, Name, Keyword..." class="tl-input" style="flex: 1;" required>
+							<button type="submit" class="tl-btn-primary tl-btn-sm" style="padding: 6px 12px;">Search</button>
+						</form>
+					</div>
+					<div style="border-top: 1px solid var(--border); margin: 8px 0;"></div>
+					<a href="<%= strWorkingDir %>/Dashboard.asp" target="_parent" class="tl-dropdown-item">
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
 						Dashboard
 					</a>
-					<a href="<%= strWorkingDir %>/Contacts/" target="_top" class="tl-dropdown-item">
+					<a href="<%= strWorkingDir %>/Contacts/" target="_parent" class="tl-dropdown-item">
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
 						Contacts
 					</a>
-					<a href="<%= strWorkingDir %>/Quotes/" target="_top" class="tl-dropdown-item">
+					<a href="<%= strWorkingDir %>/Quotes/" target="_parent" class="tl-dropdown-item">
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
 						Quotes
 					</a>
-					<a href="<%= strWorkingDir %>/Invoices/" target="_top" class="tl-dropdown-item">
+					<a href="<%= strWorkingDir %>/Invoices/" target="_parent" class="tl-dropdown-item">
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line></svg>
 						Invoices
 					</a>
-					<a href="<%= strWorkingDir %>/PurchaseOrders/" target="_top" class="tl-dropdown-item">
+					<a href="<%= strWorkingDir %>/PurchaseOrders/" target="_parent" class="tl-dropdown-item">
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line></svg>
 						Purchase Orders
 					</a>

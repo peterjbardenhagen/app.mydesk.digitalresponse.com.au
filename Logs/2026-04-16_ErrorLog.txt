@@ -944,3 +944,83 @@ SOURCE:
 ERROR: 
 ================================================================================
 
+================================================================================
+TIMESTAMP: 2026-04-16 13:11:52
+USER: Bert Beijnon
+IP ADDRESS: ::1
+URL: /errors/500-100.asp
+QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Setup/Default.asp
+SOURCE: 
+ERROR: 
+================================================================================
+
+================================================================================
+TIMESTAMP: 2026-04-16 13:11:58
+USER: Bert Beijnon
+IP ADDRESS: ::1
+URL: /errors/500-100.asp
+QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Contacts/Default.asp
+SOURCE: 
+ERROR: 
+================================================================================
+
+================================================================================
+TIMESTAMP: 2026-04-16 13:14:09
+USER: Bert Beijnon
+IP ADDRESS: ::1
+URL: /errors/500-100.asp
+QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/PurchaseOrders/IFrame.asp
+SOURCE: 
+ERROR: 
+================================================================================
+
+================================================================================
+TIMESTAMP: 2026-04-16 13:16:32
+USER: Bert Beijnon
+IP ADDRESS: ::1
+URL: /errors/500-100.asp
+QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/PurchaseOrders/Default.asp
+SOURCE: 
+ERROR: 
+================================================================================
+
+================================================================================
+TIMESTAMP: 2026-04-16 13:16:35
+USER: Bert Beijnon
+IP ADDRESS: ::1
+URL: /errors/500-100.asp
+QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/PurchaseOrders/Default.asp
+SOURCE: 
+ERROR: 
+================================================================================
+
+================================================================================
+TIMESTAMP: 2026-04-16 13:23:30
+USER: Bert Beijnon
+IP ADDRESS: ::1
+URL: /errors/500-100.asp
+QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Users/Add.asp
+SOURCE: 
+ERROR: 
+================================================================================
+
+================================================================================
+TIMESTAMP: 2026-04-16 13:24:06
+USER: Bert Beijnon
+IP ADDRESS: ::1
+URL: /errors/500-100.asp
+QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Users/Default.asp
+SOURCE: 
+ERROR: 
+================================================================================
+
+================================================================================
+TIMESTAMP: 2026-04-16 13:24:14
+USER: Bert Beijnon
+IP ADDRESS: ::1
+URL: /errors/500-100.asp
+QUERY STRING: 500;http://localhost/Clients/SalesEngineTL/Users/Default.asp
+SOURCE: 
+ERROR: 
+================================================================================
+

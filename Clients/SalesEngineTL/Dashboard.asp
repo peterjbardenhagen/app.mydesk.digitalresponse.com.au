@@ -175,7 +175,7 @@ If isDirector1 Then
 	On Error Resume Next
 	
 	' This month's quotes
-	sql = "SELECT COUNT(*) as cnt, SUM(CASE WHEN QuoteStatusId = 2 THEN 1 ELSE 0 END) as won, SUM(NettPriceTotal) as val FROM Quotes WHERE Month(QuoteDate) = " & currentMonth & " AND Year(QuoteDate) = " & currentYear & " AND Deleted = 0"
+	sql = "SELECT COUNT(*) as cnt, SUM(IIf(QuoteStatusId = 2, 1, 0)) as won, SUM(NettPriceTotal) as val FROM Quotes WHERE Month(QuoteDate) = " & currentMonth & " AND Year(QuoteDate) = " & currentYear & " AND Deleted = 0"
 	Set rs = dbConn.Execute(sql)
 	If Err.Number = 0 And Not rs.EOF Then
 		If Not IsNull(rs("cnt")) And IsNumeric(rs("cnt")) Then thisMonthQuotes = CLng(rs("cnt"))
@@ -188,7 +188,7 @@ If isDirector1 Then
 	On Error Resume Next
 	
 	' Last month's quotes
-	sql = "SELECT COUNT(*) as cnt, SUM(CASE WHEN QuoteStatusId = 2 THEN 1 ELSE 0 END) as won, SUM(NettPriceTotal) as val FROM Quotes WHERE Month(QuoteDate) = " & IIf(currentMonth=1, 12, currentMonth-1) & " AND Year(QuoteDate) = " & IIf(currentMonth=1, currentYear-1, currentYear) & " AND Deleted = 0"
+	sql = "SELECT COUNT(*) as cnt, SUM(IIf(QuoteStatusId = 2, 1, 0)) as won, SUM(NettPriceTotal) as val FROM Quotes WHERE Month(QuoteDate) = " & IIf(currentMonth=1, 12, currentMonth-1) & " AND Year(QuoteDate) = " & IIf(currentMonth=1, currentYear-1, currentYear) & " AND Deleted = 0"
 	Set rs = dbConn.Execute(sql)
 	If Err.Number = 0 And Not rs.EOF Then
 		If Not IsNull(rs("cnt")) And IsNumeric(rs("cnt")) Then lastMonthQuotes = CLng(rs("cnt"))
@@ -260,7 +260,7 @@ If isDirector1 Then
 	On Error Resume Next
 	
 	' Overdue invoices
-	sql = "SELECT COUNT(*) as cnt FROM Invoices WHERE Status = 'ISSUED' AND DueDate < Now() AND DueDate IS NOT NULL"
+	sql = "SELECT COUNT(*) as cnt FROM Invoices WHERE InvoiceStatusId = 2 AND DueDate < Now()"
 	Set rs = dbConn.Execute(sql)
 	If Err.Number = 0 And Not rs.EOF Then
 		If Not IsNull(rs("cnt")) And IsNumeric(rs("cnt")) Then invoicesOverdue = CLng(rs("cnt"))
@@ -271,7 +271,7 @@ If isDirector1 Then
 	On Error Resume Next
 	
 	' Pending approval POs
-	sql = "SELECT COUNT(*) as cnt FROM PurchaseOrders WHERE Status IN ('Draft', 'Pending')"
+	sql = "SELECT COUNT(*) as cnt FROM PurchaseOrders WHERE POStatusId = 2"
 	Set rs = dbConn.Execute(sql)
 	If Err.Number = 0 And Not rs.EOF Then
 		If Not IsNull(rs("cnt")) And IsNumeric(rs("cnt")) Then pendingApprovalPOs = CLng(rs("cnt"))
@@ -283,7 +283,7 @@ If isDirector1 Then
 	
 	' Get monthly quote data for current year
 	For m = 1 To 12
-		sql = "SELECT COUNT(*) as cnt, SUM(CASE WHEN QuoteStatusId = 2 THEN 1 ELSE 0 END) as won, SUM(NettPriceTotal) as val FROM Quotes WHERE Month(QuoteDate) = " & m & " AND Year(QuoteDate) = " & currentYear & " AND Deleted = 0"
+		sql = "SELECT COUNT(*) as cnt, SUM(IIf(QuoteStatusId = 2, 1, 0)) as won, SUM(NettPriceTotal) as val FROM Quotes WHERE Month(QuoteDate) = " & m & " AND Year(QuoteDate) = " & currentYear & " AND Deleted = 0"
 		Set rs = dbConn.Execute(sql)
 		If Err.Number = 0 And Not rs.EOF Then
 			If Not IsNull(rs("won")) And IsNumeric(rs("won")) Then monthlyQuotesThisYear(m) = CLng(rs("won"))
@@ -296,7 +296,7 @@ If isDirector1 Then
 	
 	' Get monthly quote data for last year
 	For m = 1 To 12
-		sql = "SELECT COUNT(*) as cnt, SUM(CASE WHEN QuoteStatusId = 2 THEN 1 ELSE 0 END) as won, SUM(NettPriceTotal) as val FROM Quotes WHERE Month(QuoteDate) = " & m & " AND Year(QuoteDate) = " & lastYear & " AND Deleted = 0"
+		sql = "SELECT COUNT(*) as cnt, SUM(IIf(QuoteStatusId = 2, 1, 0)) as won, SUM(NettPriceTotal) as val FROM Quotes WHERE Month(QuoteDate) = " & m & " AND Year(QuoteDate) = " & lastYear & " AND Deleted = 0"
 		Set rs = dbConn.Execute(sql)
 		If Err.Number = 0 And Not rs.EOF Then
 			If Not IsNull(rs("won")) And IsNumeric(rs("won")) Then monthlyQuotesLastYear(m) = CLng(rs("won"))

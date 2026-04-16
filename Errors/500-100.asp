@@ -3,15 +3,39 @@
 <%
   'Option Explicit
   On Error Resume Next
-  
+
   Dim objError
   Set objError = Server.GetLastError()
-  
+
+  ' Check if there's actually an error
+  Dim hasError
+  hasError = False
+
+  If Not objError Is Nothing Then
+    If objError.Number <> 0 Then
+      hasError = True
+    End If
+  End If
+
+  ' If no error, redirect to Dashboard instead of showing error page
+  If Not hasError Then
+    On Error Resume Next
+    Dim workingDir
+    workingDir = "/Clients/SalesEngineTL"
+    If Not Request.Cookies("ClientSettings") Is Nothing Then
+      If Not IsEmpty(Request.Cookies("ClientSettings")("WorkingDir")) And Request.Cookies("ClientSettings")("WorkingDir") <> "" Then
+        workingDir = Request.Cookies("ClientSettings")("WorkingDir")
+      End If
+    End If
+    Response.Redirect workingDir & "/Dashboard.asp"
+    Response.End
+  End If
+
   ' Capture request details for debugging
   Dim strRequestURL, strQueryString, strFormData, strSessionVars, strCookies
   strRequestURL = Request.ServerVariables("URL")
   strQueryString = Request.QueryString
-  
+
   ' Log the error to file
   Call LogASPError(objError)
 

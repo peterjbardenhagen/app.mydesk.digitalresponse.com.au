@@ -111,10 +111,15 @@ a:hover {
   color: #000000;
 }
 
+.tl-header a, .tl-header a:visited, .tl-header a:active {
+  color: inherit;
+}
+
 /* Base Container for alignment */
 .tl-container {
   max-width: 1400px;
   margin: 0 auto;
+  padding: 0 24px;
 }
 
 /* ============================================
@@ -144,7 +149,7 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 24px;
+  padding: 12px 0;
   position: relative;
   z-index: 1;
 }
@@ -219,7 +224,7 @@ a:hover {
 .tl-nav {
   background: rgba(255,255,255,0.03);
   border-top: 1px solid rgba(255,255,255,0.05);
-  padding: 0 24px;
+  padding: 0;
   position: relative;
   z-index: 1;
 }
@@ -242,21 +247,22 @@ a:hover {
   gap: 8px;
   padding: 10px 16px;
   color: rgba(255,255,255,0.8);
-  text-decoration: none;
+  text-decoration: none !important;
   font-size: 0.875rem;
   font-weight: 500;
   border-radius: var(--radius-md);
   transition: all var(--transition-fast);
+  white-space: nowrap;
 }
 
 .tl-nav-link:hover {
   background: rgba(255,255,255,0.1);
-  color: white;
+  color: white !important;
 }
 
 .tl-nav-link.active {
   background: var(--primary);
-  color: var(--dark);
+  color: var(--dark) !important;
 }
 
 .tl-nav-icon {
