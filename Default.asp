@@ -1,5 +1,5 @@
 <%
-Option Explicit
+'Option Explicit
 
 ' ===============================================================================
 ' Techlight MyDesk - Login Entry Point
@@ -33,7 +33,6 @@ Dim isLoggedIn
 isLoggedIn = False
 
 ' Check Session first with error handling
-On Error Resume Next
 Dim sessionLoggedIn
 sessionLoggedIn = Session("LoggedIn")
 If Err.Number = 0 And Not IsNull(sessionLoggedIn) Then

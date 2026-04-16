@@ -12,17 +12,11 @@
 ' Production (techlight.digitalresponse.com.au) requires HTTPS if cForceHTTPS is True
 ' Local/UAT environments can use HTTP or HTTPS
 Function GetProtocol()
-	On Error Resume Next
-	
 	Dim serverName, currentProtocol
 	
-	' Get server name with error handling
-	serverName = ""
+	' Get server name - ServerVariables never throws errors
 	serverName = Request.ServerVariables("SERVER_NAME")
-	If Err.Number <> 0 Or IsNull(serverName) Then serverName = ""
-	On Error Resume Next
-	
-	If serverName = "" Then serverName = "localhost"
+	If IsNull(serverName) Or serverName = "" Then serverName = "localhost"
 	serverName = LCase(serverName)
 	
 	' Production hostname - force HTTPS only if cForceHTTPS is enabled
@@ -31,8 +25,7 @@ Function GetProtocol()
 	Else
 		' Local/UAT environments or HTTPS enforcement disabled - use current protocol
 		currentProtocol = Request.ServerVariables("HTTPS")
-		If Err.Number <> 0 Or IsNull(currentProtocol) Then currentProtocol = "off"
-		On Error Resume Next
+		If IsNull(currentProtocol) Or currentProtocol = "" Then currentProtocol = "off"
 		
 		If LCase(currentProtocol) = "on" Then
 			GetProtocol = "https://"
@@ -40,83 +33,56 @@ Function GetProtocol()
 			GetProtocol = "http://"
 		End If
 	End If
-	
-	On Error GoTo 0
 End Function
 
 ' Returns the full base URL with protocol and hostname
 Function GetBaseURL()
-	On Error Resume Next
-	
 	Dim serverName
 	serverName = Request.ServerVariables("SERVER_NAME")
-	If Err.Number <> 0 Or IsNull(serverName) Or serverName = "" Then serverName = "localhost"
-	On Error Resume Next
+	If IsNull(serverName) Or serverName = "" Then serverName = "localhost"
 	
 	GetBaseURL = GetProtocol() & serverName
-	
-	On Error GoTo 0
 End Function
 
 ' Returns true if running on production
 Function IsProduction()
-	On Error Resume Next
-	
 	Dim serverName
 	serverName = Request.ServerVariables("SERVER_NAME")
-	If Err.Number <> 0 Or IsNull(serverName) Then serverName = ""
-	On Error Resume Next
+	If IsNull(serverName) Then serverName = ""
 	
 	serverName = LCase(serverName)
 	IsProduction = (serverName = "techlight.digitalresponse.com.au")
-	
-	On Error GoTo 0
 End Function
 
 ' Returns true if running on development environment
 Function IsDevelopment()
-	On Error Resume Next
-	
 	Dim serverName
 	serverName = Request.ServerVariables("SERVER_NAME")
-	If Err.Number <> 0 Or IsNull(serverName) Then serverName = ""
-	On Error Resume Next
+	If IsNull(serverName) Then serverName = ""
 	
 	serverName = LCase(serverName)
 	IsDevelopment = (InStr(serverName, "localhost") > 0 Or _
 	                 InStr(serverName, ".local") > 0 Or _
 	                 InStr(serverName, "dev") > 0)
-	
-	On Error GoTo 0
 End Function
 
 Function BackToList
-	On Error Resume Next
-	
 	If Request("SortIndex") <> "" Then
 		BackToList = "Default.asp?" & BackToListQS
 	Else
 		BackToList = "javascript:history.go(-1);"
 	End If
-	
-	On Error GoTo 0
 End Function
 
 Function BackToListJS
-	On Error Resume Next
-	
 	If Request("SortIndex") <> "" Then
 		BackToListJS = "document.location.href='Default.asp?" & BackToListQS & "'"
 	Else
 		BackToListJS = "history.go(-1);"
 	End If
-	
-	On Error GoTo 0
 End Function
 
 Function BackToListQS()
-	On Error Resume Next
-	
 	Dim strDateFrom, strDateTo, strSortDirection, strCompany, strWholesaler, strCode
 	Dim lngPage, lngSortIndex, lngPromotionId
 	
@@ -127,7 +93,7 @@ Function BackToListQS()
 	strWholesaler = Trim(Request("Wholesaler"))
 	strCode = Trim(Request("Code"))
 	
-	' Validate and convert numeric values with error handling
+	' Validate and convert numeric values
 	lngPage = 0
 	If IsNumeric(Request("Page")) Then lngPage = CLng(Request("Page"))
 	
@@ -146,13 +112,9 @@ Function BackToListQS()
 	               "&Wholesaler=" & Server.URLEncode(strWholesaler) & _
 	               "&Code=" & Server.URLEncode(strCode) & _
 	               "&PromotionId=" & lngPromotionId
-	
-	On Error GoTo 0
 End Function
 
 Function MyRedirect(NewURL)
-	On Error Resume Next
-	
 	Dim QuestionMarkX
 	
 	' Validate input
@@ -172,13 +134,9 @@ Function MyRedirect(NewURL)
 			Response.End
 		End If
 	End If
-	
-	On Error GoTo 0
 End Function
 
 Function MyRedirectWithTarget(NewURL, Target)
-	On Error Resume Next
-	
 	Dim QuestionMarkX
 	
 	' Validate inputs
@@ -202,19 +160,13 @@ Function MyRedirectWithTarget(NewURL, Target)
 			Response.End
 		End If
 	End If
-	
-	On Error GoTo 0
 End Function
 
 Function NoCacheURL()
-	On Error Resume Next
 	NoCacheURL = "NoCache=" & Timer()
-	On Error GoTo 0
 End Function
 
 Function ConvertToWebAddress(strWebsite)
-	On Error Resume Next
-	
 	' Validate input
 	If IsNull(strWebsite) Then strWebsite = ""
 	strWebsite = CStr(strWebsite)
@@ -227,13 +179,9 @@ Function ConvertToWebAddress(strWebsite)
 	End If
 	
 	ConvertToWebAddress = strWebsite
-	
-	On Error GoTo 0
 End Function
 
 Function ConvertToEmail(strEmail)
-	On Error Resume Next
-	
 	' Validate input
 	If IsNull(strEmail) Then strEmail = ""
 	strEmail = CStr(strEmail)
@@ -246,13 +194,9 @@ Function ConvertToEmail(strEmail)
 	End If
 	
 	ConvertToEmail = strEmail
-	
-	On Error GoTo 0
 End Function
 
 Function IsNumberGreaterThanZero(decNumber)
-	On Error Resume Next
-	
 	If IsNumeric(decNumber) Then
 		If CLng(decNumber) > 0 Then
 			IsNumberGreaterThanZero = True
@@ -262,13 +206,9 @@ Function IsNumberGreaterThanZero(decNumber)
 	Else
 		IsNumberGreaterThanZero = False
 	End If
-	
-	On Error GoTo 0
 End Function
 
 Function MakePadding(intNumber, strChar, intPadding)
-	On Error Resume Next
-	
 	Dim g, s
 	
 	' Validate inputs
@@ -285,13 +225,9 @@ Function MakePadding(intNumber, strChar, intPadding)
 	End If
 	
 	MakePadding = s
-	
-	On Error GoTo 0
 End Function
 
 Function GetErrorCode(strS)
-	On Error Resume Next
-	
 	' Validate input
 	If IsNull(strS) Then strS = ""
 	strS = CStr(strS)
@@ -364,14 +300,10 @@ Sub SetWorkingDir(strUrl)
 ' DEPRECATED: WorkingDir now uses TL_WORKING_DIR constant from Constants.asp
 ' PURPOSE: Kept for backward compatibility. Does NOT set session/cookies anymore.
 ' ===============================================================================
-    On Error Resume Next
     ' No-op: All WorkingDir/State/Prefix values now come from Constants.asp
-    On Error GoTo 0
 End Sub
 
 Function SearchArray(arrArray, strFind)
-	On Error Resume Next
-	
 	Dim i, boolFind
 	
 	' Validate inputs

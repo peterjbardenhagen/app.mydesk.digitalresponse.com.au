@@ -6,7 +6,7 @@
 ' NO session variables. NO cookies. Just constants.
 ' ===============================================================================
 
-Option Explicit
+'Option Explicit
 
 '-------------------------------------------------------------------------------
 ' System Paths (never changes)

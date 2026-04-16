@@ -6,10 +6,8 @@
 ' DEPENDENCIES: Pulls in all function modules and constants
 ' ===============================================================================
 
-Option Explicit
-%>
+'Option Explicit
 
-<%
 '-------------------------------------------------------------------------------
 ' LAYER 0: Constants (MUST be first - provides TL_* constants to all includes)
 '-------------------------------------------------------------------------------
