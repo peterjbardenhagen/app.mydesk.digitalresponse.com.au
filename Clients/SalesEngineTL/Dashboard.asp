@@ -339,7 +339,7 @@ End If
 	<link rel="stylesheet" type="text/css" href="/System/Style_Modern.css">
 	<link rel="icon" type="image/x-icon" href="/favicon.ico">
 	<% If isDirector1 Then %>
-	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+	<script src="/System/js/chart.min.js"></script>
 	<% End If %>
 </head>
 <body class="tl-bg-light">
