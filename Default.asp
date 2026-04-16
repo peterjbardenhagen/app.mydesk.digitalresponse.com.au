@@ -7,8 +7,6 @@ Option Explicit
 ' STANDARD INCLUDES: Constants → ResponseHeaders → Functions (no DB needed for login)
 ' ===============================================================================
 
-Option Explicit
-
 ' Layer 1: Constants (no dependencies)
 %>
 <!--#include virtual="/System/Constants.asp"-->
