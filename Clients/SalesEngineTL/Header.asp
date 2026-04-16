@@ -246,6 +246,8 @@ End Function
 					<a href="<%= strWorkingDir %>/PurchaseOrders/" target="MainFrame" class="tl-dropdown-item">
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line></svg>
 						Purchase Orders
+					</a>
+			</li>
 			<li class="tl-nav-item tl-nav-logout">
 				<a href="<%= strWorkingDir %>/Portal/LogOff.asp" target="_top" class="tl-btn-logout">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
