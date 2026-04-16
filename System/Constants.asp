@@ -1,12 +1,10 @@
 <%
 ' ===============================================================================
-' Techlight MyDesk - Global Constants
+' Techlight MyDesk - Global Constants - Updated
 ' ===============================================================================
 ' ALL hardcoded values for single-client Techlight system
 ' NO session variables. NO cookies. Just constants.
 ' ===============================================================================
-
-'Option Explicit
 
 '-------------------------------------------------------------------------------
 ' System Paths (never changes)

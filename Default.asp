@@ -1,5 +1,5 @@
 <%
-'Option Explicit
+Option Explicit
 
 ' ===============================================================================
 ' Techlight MyDesk - Login Entry Point
