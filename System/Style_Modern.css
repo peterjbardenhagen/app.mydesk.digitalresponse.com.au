@@ -281,19 +281,17 @@ a:hover {
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  background: #f5e6d3;
-  border: 1px solid #e8d4c0;
-  color: #5a4a3a;
-  font-size: 0.875rem;
-  font-weight: 500;
+  background: #c9b896;
+  color: #5a3a1a;
+  border: 1px solid #b8a882;
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .tl-btn-logout:hover {
-  background: #fff0e0;
-  border-color: #f0e0d0;
+  background: #d4c4a6;
+  border-color: #c9b896;
 }
 
 /* Dropdown Menu */
