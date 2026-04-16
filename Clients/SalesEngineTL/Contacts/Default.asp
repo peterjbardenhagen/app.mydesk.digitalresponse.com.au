@@ -1,33 +1,76 @@
 <% 
-' Techlight MyDesk - Modern Contacts List
+' Techlight MyDesk - Modern Contacts List - Hardened for Stability
+On Error Resume Next
+
 Response.AddHeader "Pragma", "No-Store"
 Response.ExpiresAbsolute = ServerToEST(Now()) - 1
 Response.AddHeader "pragma","no-cache"
 Response.AddHeader "cache-control","private"
 Response.CacheControl = "no-cache"
 
-Dim strMsg
-strMsg = Trim(Request("Msg"))
+Dim strMsg, strWorkingDir, strCode, strFilter_Code
+strMsg = ""
+strWorkingDir = ""
+strCode = ""
+strFilter_Code = ""
+
+' Get message with null check
+If Not IsNull(Request("Msg")) Then strMsg = Trim(Request("Msg"))
+
 %>
 <!--#include virtual="/System/ssi_Security.inc"-->
 <!--#include virtual="/System/ssi_Functions.asp"-->
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <%
-Dim strSort, strFilter_Code, intCompanyId
+Dim strSort, intCompanyId
 
-If Request.Cookies("UserSettings")("Manager") Then
-	strCode = Trim(Request("Code"))
-	If strCode = "" Then strCode = "All"
-Else
-	strCode = Request.Cookies("UserSettings")("Code")
+' Get working directory with fallback
+On Error Resume Next
+If Not Request.Cookies("ClientSettings") Is Nothing Then
+	If Not IsEmpty(Request.Cookies("ClientSettings")("WorkingDir")) And Request.Cookies("ClientSettings")("WorkingDir") <> "" Then
+		strWorkingDir = Request.Cookies("ClientSettings")("WorkingDir")
+	End If
 End If
+If Err.Number <> 0 Or strWorkingDir = "" Then strWorkingDir = "/Clients/SalesEngineTL"
+On Error GoTo 0
 
-If Request.Cookies("UserSettings")("Manager") Then
-	strFilter_Code = Trim(Request("Filter_Code"))
-	If strFilter_Code = "" Then strFilter_Code = Request.Cookies("UserSettings")("Code")
-Else
-	strFilter_Code = Request.Cookies("UserSettings")("Code")
+' Get user code with null checks
+On Error Resume Next
+If Not Request.Cookies("UserSettings") Is Nothing Then
+	If Not IsEmpty(Request.Cookies("UserSettings")("Manager")) Then
+		If CBool(Request.Cookies("UserSettings")("Manager")) Then
+			strCode = Trim(Request("Code"))
+			If strCode = "" Then strCode = "All"
+		Else
+			If Not IsEmpty(Request.Cookies("UserSettings")("Code")) Then
+				strCode = Request.Cookies("UserSettings")("Code")
+			End If
+		End If
+	End If
 End If
+If Err.Number <> 0 Or strCode = "" Then strCode = "All"
+On Error GoTo 0
+
+' Get filter code with null checks
+On Error Resume Next
+If Not Request.Cookies("UserSettings") Is Nothing Then
+	If Not IsEmpty(Request.Cookies("UserSettings")("Manager")) Then
+		If CBool(Request.Cookies("UserSettings")("Manager")) Then
+			strFilter_Code = Trim(Request("Filter_Code"))
+			If strFilter_Code = "" Then
+				If Not IsEmpty(Request.Cookies("UserSettings")("Code")) Then
+					strFilter_Code = Request.Cookies("UserSettings")("Code")
+				End If
+			End If
+		Else
+			If Not IsEmpty(Request.Cookies("UserSettings")("Code")) Then
+				strFilter_Code = Request.Cookies("UserSettings")("Code")
+			End If
+		End If
+	End If
+End If
+If Err.Number <> 0 Or strFilter_Code = "" Then strFilter_Code = "All"
+On Error GoTo 0
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -41,7 +84,7 @@ End If
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-	<link rel="stylesheet" type="text/css" href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/Style_Techlight.css">
+	<link rel="stylesheet" type="text/css" href="<%= strWorkingDir %>/System/Style_Techlight.css">
 </head>
 <body>
 <!--#include virtual="/System/ssi_Header.inc"-->
@@ -49,7 +92,7 @@ End If
 <div class="tl-page-container">
 	<!-- Breadcrumb -->
 	<nav class="tl-breadcrumb">
-		<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Dashboard.asp" target="_top">Home</a>
+		<a href="<%= strWorkingDir %>/Dashboard.asp" target="_top">Home</a>
 		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
 		<span>Contacts</span>
 	</nav>
@@ -66,7 +109,7 @@ End If
 			Contacts
 		</h1>
 		<div class="tl-btn-group">
-			<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Contacts/Add.asp" class="tl-btn-primary" target="_top">
+			<a href="<%= strWorkingDir %>/Contacts/Add.asp" class="tl-btn-primary" target="_top">
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
 					<line x1="12" y1="5" x2="12" y2="19"></line>
 					<line x1="5" y1="12" x2="19" y2="12"></line>
