@@ -27,10 +27,6 @@
 				</g>
 				<text x="92" y="52" font-family="Arial Black, Arial Bold, Arial, sans-serif" font-weight="900" font-size="32" letter-spacing="-0.5" fill="#ffffff">Techlight</text>
 			</svg>
-			<div class="tl-logo-text">
-				<span class="tl-logo-brand">Techlight</span>
-				<span class="tl-logo-product">MyDesk</span>
-			</div>
 		</a>
 		
 		<!-- Decorative Elements -->
@@ -62,7 +58,7 @@
 			If CBool(Request.Cookies("LoggedIn")) Then 
 				userName = Request.Cookies("UserSettings")("Name")
 				userInitials = Left(userName, 1)
-				Dim isAdmin
+'				Dim isAdmin
 				isAdmin = False
 				On Error Resume Next
 				If Not Request.Cookies("UserSettings") Is Nothing Then
