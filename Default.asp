@@ -446,10 +446,6 @@ strMsg = Trim(Request("Msg"))
             </form>
 
             <div class="login-footer">
-                <div class="footer-links">
-                    <a href="#" onclick="alert('Please contact your administrator to reset your password'); return false;">Forgot Password?</a>
-                    <a href="https://techlight.com.au" target="_blank">Need Help?</a>
-                </div>
                 <div class="security-badge">
                     <i class="fas fa-shield-alt"></i>
                     <span>Secure Connection</span>
