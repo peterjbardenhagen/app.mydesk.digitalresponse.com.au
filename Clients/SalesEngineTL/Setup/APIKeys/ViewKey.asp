@@ -14,7 +14,7 @@ If Not Request.Cookies("UserSettings")("Manager") Then
 End If
 
 Dim isAdmin
-isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
+isAdmin = (Request.Cookies("UserSettings")("UserTypeId") >= 5)
 
 If Not isAdmin Then
 	Response.Redirect("../../Portal/AccessDenied.asp")

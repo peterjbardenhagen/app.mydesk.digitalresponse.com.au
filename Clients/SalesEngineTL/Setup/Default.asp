@@ -14,7 +14,7 @@ If Not Request.Cookies("UserSettings")("Manager") Then
 End If
 
 Dim isAdmin
-isAdmin = (Request.Cookies("UserSettings")("UserTypeId") > 5)
+isAdmin = (Request.Cookies("UserSettings")("UserTypeId") >= 5)
 %>
 <!--#include virtual="/System/ssi_Security.inc"-->
 <!--#include virtual="/System/ssi_Functions.asp"-->
