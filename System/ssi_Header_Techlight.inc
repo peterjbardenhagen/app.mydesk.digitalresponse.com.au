@@ -24,8 +24,6 @@ Function IsActive(pageName)
 	End If
 End Function
 
-Dim IsDirector
-
 Function IsDirector()
 	Dim userTypeId
 	userTypeId = Request.Cookies("UserSettings")("UserTypeID") & ""

@@ -40,14 +40,14 @@ Else
 End If
 
 ' Get business metrics for Directors
-Dim isDirector, currentMonth, currentYear, lastYear
+Dim isDirector1, currentMonth, currentYear, lastYear
 currentMonth = Month(Date())
 currentYear = Year(Date())
 lastYear = currentYear - 1
 
 Dim userTypeId
 userTypeId = Request.Cookies("UserSettings")("UserTypeID") & ""
-isDirector = (userTypeId = "1")
+isDirector1 = (userTypeId = "1")
 
 ' Initialize metrics
 Dim thisMonthQuotes, thisMonthQuotesWon, thisMonthQuotesValue
@@ -58,7 +58,7 @@ Dim ytdQuotesWon, ytdQuotesValue, ytdInvoices, ytdInvoiceValue
 Dim lastYearYTDQuotesWon, lastYearYTDQuotesValue, lastYearYTDInvoices, lastYearYTDInvoiceValue
 Dim pendingQuotesOver30Days, invoicesOverdue, pendingApprovalPOs
 
-If isDirector Then
+If isDirector1 Then
 	Dim sql, rs
 	
 	' This month's quotes
@@ -158,7 +158,7 @@ End If
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 	<link rel="stylesheet" type="text/css" href="<%= strWorkingDir %>/System/Style_Techlight.css">
 	<link rel="icon" type="image/svg+xml" href="/favicon.svg">
-	<% If isDirector Then %>
+	<% If isDirector1 Then %>
 	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 	<% End If %>
 </head>
@@ -293,7 +293,7 @@ End If
 			</a>
 		</div>
 
-		<% If isDirector Then %>
+		<% If isDirector1 Then %>
 		<!-- Director Business Analytics -->
 		<div class="tl-director-analytics" style="margin-top: 24px;">
 			<!-- KPI Cards Row -->
@@ -708,7 +708,7 @@ End If
 			</div>
 		</div>
 	</div>
-<% If isDirector Then %>
+<% If isDirector1 Then %>
 <script>
 // Chart.js initialization for Director Dashboard
 const monthlyCtx = document.getElementById('monthlyChart');

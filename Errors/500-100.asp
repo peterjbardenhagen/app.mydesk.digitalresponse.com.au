@@ -1,7 +1,7 @@
 <%@Language="VBSCRIPT"%>
 <%
 ' I have disabled ssi_Logging.asp for now
-  Option Explicit
+  'Option Explicit
   On Error Resume Next
   
   Dim objError

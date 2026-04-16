@@ -60,7 +60,6 @@
 		<!-- User Info -->
 		<% If Request.Cookies("LoggedIn")&"" <> "" Then
 			If CBool(Request.Cookies("LoggedIn")) Then 
-				Dim userInitials, userName, userRole
 				userName = Request.Cookies("UserSettings")("Name")
 				userInitials = Left(userName, 1)
 				If Request.Cookies("UserSettings")("Admin") Then
