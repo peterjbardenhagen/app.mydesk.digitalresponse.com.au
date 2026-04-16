@@ -79,16 +79,25 @@ isAdmin = (Request.Cookies("UserSettings")("UserTypeId") >= 5)
 	</div>
 
 <% If strMsg <> "" Then %>
-	<div class="setup-alert <%= InStr(strMsg, "success") > 0 Or InStr(strMsg, "Success") > 0 ? "setup-alert-success" : "" %>">
+	<%
+	Dim alertClass, alertColor
+	alertClass = ""
+	alertColor = "#e53e3e"
+	If InStr(strMsg, "success") > 0 Or InStr(strMsg, "Success") > 0 Then
+		alertClass = "setup-alert-success"
+		alertColor = "#38a169"
+	End If
+	%>
+	<div class="setup-alert <%= alertClass %>">
 		<div style="display: flex; align-items: center; gap: 10px;">
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="<%= InStr(strMsg, "success") > 0 Or InStr(strMsg, "Success") > 0 ? "#38a169" : "#e53e3e" %>" stroke-width="2">
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="<%= alertColor %>" stroke-width="2">
 				<% If InStr(strMsg, "success") > 0 Or InStr(strMsg, "Success") > 0 Then %>
 					<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>
 				<% Else %>
 					<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>
 				<% End If %>
 			</svg>
-			<span style="font-weight: 500; color: <%= InStr(strMsg, "success") > 0 Or InStr(strMsg, "Success") > 0 ? "#38a169" : "#e53e3e" %>;"><%= strMsg %></span>
+			<span style="font-weight: 500; color: <%= alertColor %>;"><%= strMsg %></span>
 		</div>
 	</div>
 <% End If %>
