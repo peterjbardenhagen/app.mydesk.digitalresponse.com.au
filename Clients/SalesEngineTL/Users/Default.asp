@@ -128,7 +128,7 @@ End If
 
 	<!-- Results Grid -->
 	<div class="tl-grid-container">
-		<table class="tl-data-table">
+		<table class="tl-data-grid">
 			<thead>
 				<tr>
 					<th>Name</th>
@@ -138,12 +138,11 @@ End If
 					<th>Active</th>
 					<th>Manager</th>
 					<th>User Type</th>
-					<th style="text-align: right;">Actions</th>
+					<th>Actions</th>
 				</tr>
 			</thead>
 			<tbody>
 <%
-
 Dim rs
 Dim sql
 
@@ -167,9 +166,9 @@ If Not(rs.BOF And rs.EOF) Then
 					<td><% If rs("Active") Then Response.Write("Yes") Else Response.Write("No") %></td>
 					<td><% If CheckIfAdmin(rs("UserId")) Then Response.Write("Yes") Else Response.Write("No") %></td>
 					<td><%= rs("UserTypeId") %></td>
-					<td style="text-align: right;">
-						<a href="Edit.asp?UserId=<%= rs("UserId") %>" class="tl-btn tl-btn-secondary tl-btn-sm">Edit</a>
-						<a href="Del_Proc.asp?Code=<%= rs("Code") %>" class="tl-btn tl-btn-secondary tl-btn-sm" onclick="return confirm('Are you sure you want to delete this user?');">Delete</a>
+					<td nowrap>
+						<a href="Edit.asp?UserId=<%= rs("UserId") %>" class="tl-btn-primary" style="padding:4px 8px;font-size:12px;">Edit</a>
+						<a href="Del_Proc.asp?Code=<%= rs("Code") %>" class="tl-btn-primary" style="padding:4px 8px;font-size:12px;" onclick="return confirm('Are you sure you want to delete this user?');">Delete</a>
 					</td>
 				</tr>
 <%
