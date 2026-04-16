@@ -105,7 +105,7 @@ End If
 
 	<!-- Compact Filter Panel -->
 	<div class="tl-filter-compact">
-		<form name="FormReport" id="FormReport" method="post" action="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/SalesProjects/Report.asp" target="MyIFrame">
+		<form name="FormReport" id="FormReport" method="post" action="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Invoices/IFrame.asp" target="MyIFrame">
 			<div class="tl-filter-compact-inner">
 				<div class="tl-filter-field tl-filter-field-narrow">
 					<label>Date From</label>
@@ -139,7 +139,6 @@ End If
 					<label>User</label>
 					<select name="Code" class="tl-form-select">
 						<option value="All">All users</option>
-											<option value="All">All users</option>
 <%
 	Set rsUsers = Server.CreateObject("ADODB.RecordSet")
 	sql = "Select * From Users Where Deleted = 0 AND (Code In (" & GetAccessCodesList(Request.Cookies("UserSettings")("Code"), Request.Cookies("UserSettings")("UserTypeID")) & ")) Order By Name"
@@ -149,11 +148,11 @@ End If
 		Do Until rsUsers.EOF
 			If rsUsers("Code") = strFilter_Code Then
 %>
-											<option selected value="<%= rsUsers("Code") %>"><%= rsUsers("Name") %></option>
+						<option selected value="<%= rsUsers("Code") %>"><%= rsUsers("Name") %></option>
 <%
 			Else
 %>
-											<option value="<%= rsUsers("Code") %>"><%= rsUsers("Name") %></option>
+						<option value="<%= rsUsers("Code") %>"><%= rsUsers("Name") %></option>
 <%
 			End If	
 			rsUsers.MoveNext
@@ -162,33 +161,20 @@ End If
 
 	rsUsers.Close
 	Set rsUsers = Nothing
-
 %>
-											</select>
-										</td>
-
-
-
-
-									</tr>
-									<tr>
-										<td style="font-weight:bold;">Date To</td>
-										<td valign="top"><input type="input" value="<%= dteDateTo %>" name="DateTo" readonly ID="Input2"> <a href="javascript:showCal('Calendar4')"><img src="/Images/Calendar.gif" border=0></a></td>
+					</select>
+				</div>
+				<div class="tl-filter-field">
+					<label>Customer</label>
 <%
-
 Set rsCompany = Server.CreateObject("ADODB.RecordSet")
 sql = "Select DistinctRow Companies.CompanyId, Companies.Company From Contacts Inner Join Companies On Companies.CompanyId = Contacts.CompanyId Where Companies.CompanyId <> 142 And (Companies.DivisionId In (" & Request.Cookies("DivisionIdsAccess")("Quotes") & ") Or Contacts.Code = '" & Request.Cookies("UserSettings")("Code") & "') Order By Companies.Company"
 Set rsCompany = dbConn.Execute(sql)
-
 %>
-										<td style="font-weight:bold;">Customer</td>
-										<td valign="top">
-										<select name="CompanyId" style="width:250px;" id="Select1">
-											<option value="0">All companies</option>
-											<option value="142">Not an account</option>
-											<option value="0"></option>
+					<select name="CompanyId" class="tl-form-select">
+						<option value="0">All companies</option>
+						<option value="142">Not an account</option>
 <%
-
 If Not(rsCompany.BOF And rsCompany.EOF) Then
 	Do Until rsCompany.EOF
 		Response.Write "<option value=""" & rsCompany("CompanyId") & """>" & rsCompany("Company") & "</option>" & vbcrlf
@@ -198,18 +184,14 @@ End If
 
 rsCompany.Close
 Set rsCompany = Nothing
-
 %>
-										</select>										
-										</td>
-									</tr>
-									<tr>
-										<td style="font-weight:bold;">Entity</td>
-										<td>
-										<select name="DivisionId" ID="Select3">
-											<option value="555" style="color:red;">Select an Entity</option>
+					</select>
+				</div>
+				<div class="tl-filter-field">
+					<label>Entity</label>
+					<select name="DivisionId" class="tl-form-select">
+						<option value="555">Select an Entity</option>
 <%
-
 Set rsDiv = Server.CreateObject("ADODB.RecordSet")
 sql = "SELECT * FROM Divisions WHERE Quotes = True AND DivisionId In (" & Request.Cookies("DivisionIdsAccess")("Quotes") & ") ORDER BY Division"
 Set rsDiv = dbConn.Execute(sql)
@@ -218,13 +200,13 @@ If Not(rsDiv.BOF And rsDiv.EOF) Then
 	Do Until rsDiv.EOF
 		If CLng(intDivisionId) = CLng(rsDiv("DivisionId")) Then
 			intSelDivisionId = intDivisionId
-			Response.Write ("								<option selected value=""" & rsDiv("DivisionId") & """>" & rsDiv("Division") & "</option>" & vbNewLine)
+			Response.Write ("						<option selected value=""" & rsDiv("DivisionId") & """>" & rsDiv("Division") & "</option>" & vbNewLine)
 		Else
 			If CLng(Request.Cookies("DivisionId")) = CLng(rsDiv("DivisionId")) Then
 				intSelDivisionId = Request.Cookies("DivisionId")
-				Response.Write ("								<option selected value=""" & rsDiv("DivisionId") & """>" & rsDiv("Division") & "</option>" & vbNewLine)
+				Response.Write ("						<option selected value=""" & rsDiv("DivisionId") & """>" & rsDiv("Division") & "</option>" & vbNewLine)
 			Else
-				Response.Write ("								<option value=""" & rsDiv("DivisionId") & """>" & rsDiv("Division") & "</option>" & vbNewLine)
+				Response.Write ("						<option value=""" & rsDiv("DivisionId") & """>" & rsDiv("Division") & "</option>" & vbNewLine)
 			End If
 		End If
 		rsDiv.MoveNext
@@ -235,16 +217,14 @@ If IsObject(rsDiv) Then
 	rsDiv.Close
 	Set rsDiv = Nothing
 End If
-
 %>
-										</select>
-										</td>
-										<td style="font-weight:bold;">Status</td>
-										<td valign="top">
-										<select name="InvoicestatusId" style="width:280px;" id="Select2">
-											<option value="0">All (Active & Complete)</option>
+					</select>
+				</div>
+				<div class="tl-filter-field">
+					<label>Status</label>
+					<select name="InvoicestatusId" class="tl-form-select">
+						<option value="0">All (Active & Complete)</option>
 <%
-
 sql = "Select * From Invoicestatus Order By Invoicestatus"
 Set rsStatus = dbConn.Execute(sql)
 
@@ -257,36 +237,62 @@ End If
 
 rsStatus.Close
 Set rsStatus = Nothing
-
 %>
-											<option value="555">All (Active)</option>
-										</select>										
-										</td>
-									</tr>
-									<tr>
-										<td colspan=6 align="right">
-										<input type="button" onclick="document.location.href='../Quotes';" value="Quotes" ID="Button3" NAME="Button1">
-										<input type="button" onclick="if(document.FormReport.DivisionId.value == 555){alert('Please Select an Entity before generating a report.');}else{FormReport.action='Report.asp';FormReport.target='MyIFrame';this.form.submit();}" value="Generate Report" ID="Button1" NAME="Button1">
-										<input type="submit" value="Search" ID="Submit2" NAME="Submit2" onclick="FormReport.action='IFrame.asp';FormReport.target='MyIFrame';">
-										</td>
-									</tr>
-								</form>
-								</table>
-							</fieldset>
-						</td>
-					</tr>
-				</table>
-				<table width=100% cellpadding=0 cellspacing=0 border=0 ID="Table2">
-					<tr>
-						<td>
-						<iframe style="width:100%;height:550px;overflow:auto;scroll-y:auto;" scrolling="yes" name="MyIFrame" src="IFrame.asp?Cache=<%= rnd() %>&Sort=<%= strSort %>&CurPage=<%= CurPage %>&Code=<%= strFilter_Code %>&Company=All&DateFrom=<%= dteDateFrom %>&DateTo=<%= dteDateTo %>&DivisionId=<%= intSelDivisionId %>&InvoicestatusId=0"></iframe>
-						</td>
-					</tr>
-				</table>
-			</td>
-		</tr>
-	</table>
-	</center>
-	</body>
+						<option value="555">All (Active)</option>
+					</select>
+				</div>
+				<div class="tl-filter-actions">
+					<button type="button" onclick="goToQuotes()" class="tl-btn-secondary">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+							<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+							<polyline points="14 2 14 8 20 8"></polyline>
+						</svg>
+						Quotes
+					</button>
+					<button type="button" onclick="generateReport()" class="tl-btn-secondary">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+							<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+							<polyline points="14 2 14 8 20 8"></polyline>
+							<line x1="16" y1="13" x2="8" y2="13"></line>
+							<line x1="16" y1="17" x2="8" y2="17"></line>
+						</svg>
+						Generate Report
+					</button>
+					<button type="submit" class="tl-btn-primary">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+							<circle cx="11" cy="11" r="8"></circle>
+							<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+						</svg>
+						Search
+					</button>
+				</div>
+			</div>
+		</form>
+	</div>
+
+	<script>
+		function goToQuotes() {
+			var workingDir = '<%= Request.Cookies("ClientSettings")("WorkingDir") %>';
+			document.location.href = workingDir + '/Quotes/';
+		}
+		
+		function generateReport() {
+			if(document.FormReport.DivisionId.value == 555) {
+				alert('Please Select an Entity before generating a report.');
+			} else {
+				FormReport.action = 'Report.asp';
+				FormReport.target = 'MyIFrame';
+				FormReport.submit();
+			}
+		}
+	</script>
+
+	<!-- Results Grid -->
+	<div class="tl-grid-container">
+		<iframe style="width:100%;height:600px;border:none;" scrolling="yes" name="MyIFrame" src="IFrame.asp?Cache=<%= rnd() %>&Sort=<%= strSort %>&CurPage=<%= CurPage %>&Code=<%= strFilter_Code %>&Company=All&DateFrom=<%= dteDateFrom %>&DateTo=<%= dteDateTo %>&DivisionId=<%= intSelDivisionId %>&InvoicestatusId=0"></iframe>
+	</div>
+</div>
+
+</body>
 </html>
 <!--#include virtual="/System/ssi_dbConn_close.inc"-->
