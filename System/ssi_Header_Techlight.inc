@@ -1,5 +1,5 @@
 <%
-Dim strWorkingDir
+'Dim strWorkingDir
 
 If Request.Cookies("LoggedIn")&"" <> "" Then
 	strWorkingDir = Request.Cookies("ClientSettings")("WorkingDir")
@@ -23,6 +23,8 @@ Function IsActive(pageName)
 		IsActive = ""
 	End If
 End Function
+
+Dim IsDirector
 
 Function IsDirector()
 	Dim userTypeId

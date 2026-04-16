@@ -98,62 +98,16 @@ End If
 			</svg>
 			Filter Contacts
 		</div>
-		<div class="tl-form-row">
-			<div class="tl-form-group">
-				<label class="tl-form-label">Filter by User</label>
-				<select name="Code" class="tl-form-select" onchange="location.href='?Code=' + this.value;">
-					<option value="All">All users</option>
-					<option value="<%= Request.Cookies("UserSettings")("Code") %>" selected><%= Request.Cookies("UserSettings")("Name") %></option>
-				</select>
-			</div>
-		</div>
-	</div>
-
-	<!-- Content -->
-	<div class="tl-panel">
-		<iframe src="IFrame.asp?Code=<%= strCode %>" name="MyIFrame" id="MyIFrame" style="width:100%;height:550px;border:none;"></iframe>
-	</div>
-</div>
-
-</body>
-</html>
-<!--#include virtual="/System/ssi_dbConn_close.inc"-->
-					</tr>
-				</table>
-				<table width=100% cellpadding=0 cellspacing=0 border=0 ID="Table1">
-					<tr>
-						<td>
+		<form name="FormReport" id="FormReport" method="post" action="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Contacts/IFrame.asp" target="MyIFrame">
+			<input type="hidden" name="Cache" value="<%= rnd() %>">
+			<div class="tl-form-row">
+				<div class="tl-form-group">
+					<label class="tl-form-label">User</label>
 <%
-
-If strMsg <> "" Then
-
-%>
-							<br>
-							<table width="100%" cellpadding=3 cellspacing=0 border=0 bgcolor="#ffffff" ID="Table3">
-								<tr>
-									<td><span style="color:red;"><%= strMsg %></span></td>
-								</tr>
-							</table>
-<%
-
-End If
-
-%>
-							<fieldset style="width:750px;">
-								<legend style="font-weight:bold;">Filter</legend>
-								<table width="100%" cellpadding=5 cellspacing=0 border=0 ID="Table3">
-									<form name="FormReport" id="FormReport" method="post" action="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Contacts/IFrame.asp" target="MyIFrame">
-									<input type="hidden" name="Cache" value="<%= rnd() %>" ID="Hidden1">
-									<tr>
-<%
-
 If Request.Cookies("UserSettings")("Manager") Then
-
 %>
-										<td style="font-weight:bold;">User</td>
-										<td>
-											<select name="Code" ID="Select4">
-											<option value="All">All users</option>
+					<select name="Code" class="tl-form-select">
+						<option value="All">All users</option>
 <%
 	Set rsUsers = Server.CreateObject("ADODB.RecordSet")
 	sql = "Select * From Users Where Deleted = 0 AND (Code In (" & GetAccessCodesList(Request.Cookies("UserSettings")("Code"), Request.Cookies("UserSettings")("UserTypeID")) & ")) Order By Name"
@@ -163,11 +117,11 @@ If Request.Cookies("UserSettings")("Manager") Then
 		Do Until rsUsers.EOF
 			If rsUsers("Code") = strFilter_Code Then
 %>
-											<option selected value="<%= rsUsers("Code") %>"><%= rsUsers("Name") %></option>
+						<option selected value="<%= rsUsers("Code") %>"><%= rsUsers("Name") %></option>
 <%
 			Else
 %>
-											<option value="<%= rsUsers("Code") %>"><%= rsUsers("Name") %></option>
+						<option value="<%= rsUsers("Code") %>"><%= rsUsers("Name") %></option>
 <%
 			End If	
 			rsUsers.MoveNext
@@ -176,33 +130,28 @@ If Request.Cookies("UserSettings")("Manager") Then
 
 	rsUsers.Close
 	Set rsUsers = Nothing
-
 %>
-											</select>
-										</td>
+					</select>
 <%
-
 Else
-
 %>
-										<input type="hidden" name="Code" id="Code" value="<%= Request.Cookies("UserSettings")("Code") %>">
+					<input type="hidden" name="Code" value="<%= Request.Cookies("UserSettings")("Code") %>">
+					<input type="text" class="tl-form-input" value="<%= Request.Cookies("UserSettings")("Name") %>" readonly>
 <%
-
 End If
-
+%>
+				</div>
+				<div class="tl-form-group">
+					<label class="tl-form-label">Company</label>
+<%
 Set rsCompany = Server.CreateObject("ADODB.RecordSet")
 sql = "Select DistinctRow Companies.CompanyId, Companies.Company From Contacts Inner Join Companies On Companies.CompanyId = Contacts.CompanyId Where Companies.CompanyId <> 142 And ((Companies.DivisionId In (" & Request.Cookies("DivisionIdsAccess")("Manager") & ")) Or Contacts.Code = '" & Request.Cookies("UserSettings")("Code") & "') Order By Companies.Company"
 Set rsCompany = dbConn.Execute(sql)
-
 %>
-										<td style="font-weight:bold;">Company</td>
-										<td valign="top">
-										<select name="CompanyId" style="width:250px;" id="Select1">
-											<option value="0">All companies</option>
-											<option value="142">Not an account</option>
-											<option value="0"></option>
+					<select name="CompanyId" class="tl-form-select">
+						<option value="0">All companies</option>
+						<option value="142">Not an account</option>
 <%
-
 If Not(rsCompany.BOF And rsCompany.EOF) Then
 	Do Until rsCompany.EOF
 		Response.Write "<option value=""" & rsCompany("CompanyId") & """>" & rsCompany("Company") & "</option>" & vbcrlf
@@ -212,82 +161,79 @@ End If
 
 rsCompany.Close
 Set rsCompany = Nothing
-
 %>
-										</select>										
-										</td>
-									</tr>
-									<tr>
-										<td style="font-weight:bold;" width=50>Letter</td>
-										<td>
-										<select name="Letter" ID="Select2">
-											<option value="All" selected>All</option>
-											<option value="A">A</option>
-											<option value="B">B</option>
-											<option value="C">C</option>
-											<option value="D">D</option>
-											<option value="E">E</option>
-											<option value="F">F</option>
-											<option value="G">G</option>
-											<option value="H">H</option>
-											<option value="I">I</option>
-											<option value="J">J</option>
-											<option value="K">K</option>
-											<option value="L">L</option>
-											<option value="M">M</option>
-											<option value="N">N</option>
-											<option value="O">O</option>
-											<option value="P">P</option>
-											<option value="Q">Q</option>
-											<option value="R">R</option>
-											<option value="S">S</option>
-											<option value="T">T</option>
-											<option value="U">U</option>
-											<option value="V">V</option>
-											<option value="W">W</option>
-											<option value="X">X</option>
-											<option value="Y">Y</option>
-											<option value="0">0</option>
-											<option value="1">1</option>
-											<option value="2">2</option>
-											<option value="3">3</option>
-											<option value="4">4</option>
-											<option value="5">5</option>
-											<option value="6">6</option>
-											<option value="7">7</option>
-											<option value="8">8</option>
-											<option value="9">9</option>
-										</select>
-										</td>
-										<td style="font-weight:bold;" width=50>By</td>
-										<td>
-										<select name="By" ID="Select3">
-											<option value="CompanyName">Company Name</option>
-											<option value="Surname">Surname of Contact</option>
-										</select>
-										</td>
-									</tr>
-									<tr>
-										<td align="right" colspan=4><input onclick="FormReport.action='EmailList.asp';this.form.submit();" type="button" value="Email List" ID="Button1" NAME="Button1"> <input type="button" onclick="FormReport.action='Report.asp';this.form.submit();" value="Generate Report" ID="Button2" NAME="Button1"> <input type="submit" value="Filter" ID="Submit1" NAME="Submit2" onclick="FormReport.action='IFrame.asp';FormReport.target='MyIFrame';"></td>
-									</tr>
-									</form>
-								</table>
-							</fieldset>
-						</td>
-					</tr>
-				</table>
+					</select>
+				</div>
+				<div class="tl-form-group">
+					<label class="tl-form-label">Letter</label>
+					<select name="Letter" class="tl-form-select">
+						<option value="All" selected>All</option>
+						<option value="A">A</option>
+						<option value="B">B</option>
+						<option value="C">C</option>
+						<option value="D">D</option>
+						<option value="E">E</option>
+						<option value="F">F</option>
+						<option value="G">G</option>
+						<option value="H">H</option>
+						<option value="I">I</option>
+						<option value="J">J</option>
+						<option value="K">K</option>
+						<option value="L">L</option>
+						<option value="M">M</option>
+						<option value="N">N</option>
+						<option value="O">O</option>
+						<option value="P">P</option>
+						<option value="Q">Q</option>
+						<option value="R">R</option>
+						<option value="S">S</option>
+						<option value="T">T</option>
+						<option value="U">U</option>
+						<option value="V">V</option>
+						<option value="W">W</option>
+						<option value="X">X</option>
+						<option value="Y">Y</option>
+						<option value="0">0</option>
+						<option value="1">1</option>
+						<option value="2">2</option>
+						<option value="3">3</option>
+						<option value="4">4</option>
+						<option value="5">5</option>
+						<option value="6">6</option>
+						<option value="7">7</option>
+						<option value="8">8</option>
+						<option value="9">9</option>
+					</select>
+				</div>
+				<div class="tl-form-group">
+					<label class="tl-form-label">Sort By</label>
+					<select name="By" class="tl-form-select">
+						<option value="CompanyName">Company Name</option>
+						<option value="Surname">Surname of Contact</option>
+					</select>
+				</div>
+			</div>
+			<div class="tl-form-row">
+				<div class="tl-form-group" style="display: flex; align-items: flex-end; gap: 8px;">
+					<button type="submit" class="tl-btn-primary" onclick="FormReport.action='IFrame.asp';FormReport.target='MyIFrame';">
+						Filter
+					</button>
+					<button type="button" class="tl-btn-secondary" onclick="FormReport.action='Report.asp';FormReport.target='MyIFrame';this.form.submit();">
+						Generate Report
+					</button>
+					<button type="button" class="tl-btn-secondary" onclick="FormReport.action='EmailList.asp';this.form.submit();">
+						Email List
+					</button>
+				</div>
+			</div>
+		</form>
+	</div>
 
-				<table width=100% cellpadding=0 cellspacing=0 border=0 ID="Table2">
-					<tr>
-						<td>
-						<iframe id="MyIFrame" name="MyIFrame" scrolling="yes" style="width:100%;height:550px;overflow:scroll;scroll-y:auto;" src="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Contacts/IFrame.asp?Cache=<%= rnd() %>&Code=<%= strFilter_Code %>&Company=All&Letter=All" name="MyIFrame" id="MyIFrame"></iframe>
-						</td>
-					</tr>
-				</table>
-			</td>
-		</tr>
-	</table>
-	</center>
-	</body>
+	<!-- Results Grid -->
+	<div class="tl-grid-container">
+		<iframe scrolling="yes" style="width:100%;height:600px;border:none;" name="MyIFrame" id="MyIFrame" src="IFrame.asp?Cache=<%= rnd() %>&Code=<%= strFilter_Code %>&Company=All&Letter=All"></iframe>
+	</div>
+</div>
+</body>
 </html>
 <!--#include virtual="/System/ssi_dbConn_close.inc"-->

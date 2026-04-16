@@ -103,16 +103,22 @@ If strMsg <> "" Then
 End If
 %>
 
-	<!-- Compact Filter Panel -->
-	<div class="tl-filter-compact">
+	<!-- Filter Panel -->
+	<div class="tl-filter-panel">
+		<div class="tl-filter-title">
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+			</svg>
+			Filter Invoices
+		</div>
 		<form name="FormReport" id="FormReport" method="post" action="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Invoices/IFrame.asp" target="MyIFrame">
-			<div class="tl-filter-compact-inner">
-				<div class="tl-filter-field tl-filter-field-narrow">
-					<label>Date From</label>
-					<div style="display: flex; gap: 4px;">
+			<div class="tl-form-row">
+				<div class="tl-form-group">
+					<label class="tl-form-label">Date From</label>
+					<div style="display: flex; gap: 8px;">
 						<input type="text" value="<%= dteDateFrom %>" name="DateFrom" class="tl-form-input" readonly style="flex: 1;">
-						<a href="javascript:showCal('Calendar3')" class="tl-icon-btn" title="Calendar" style="padding: 6px;">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<a href="javascript:showCal('Calendar3')" class="tl-icon-btn" title="Open Calendar">
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 								<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
 								<line x1="16" y1="2" x2="16" y2="6"></line>
 								<line x1="8" y1="2" x2="8" y2="6"></line>
@@ -121,12 +127,12 @@ End If
 						</a>
 					</div>
 				</div>
-				<div class="tl-filter-field tl-filter-field-narrow">
-					<label>Date To</label>
-					<div style="display: flex; gap: 4px;">
+				<div class="tl-form-group">
+					<label class="tl-form-label">Date To</label>
+					<div style="display: flex; gap: 8px;">
 						<input type="text" value="<%= dteDateTo %>" name="DateTo" class="tl-form-input" readonly style="flex: 1;">
-						<a href="javascript:showCal('Calendar4')" class="tl-icon-btn" title="Calendar" style="padding: 6px;">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<a href="javascript:showCal('Calendar4')" class="tl-icon-btn" title="Open Calendar">
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 								<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
 								<line x1="16" y1="2" x2="16" y2="6"></line>
 								<line x1="8" y1="2" x2="8" y2="6"></line>
@@ -135,10 +141,10 @@ End If
 						</a>
 					</div>
 				</div>
-				<div class="tl-filter-field">
-					<label>User</label>
+				<div class="tl-form-group">
+					<label class="tl-form-label">User</label>
 					<select name="Code" class="tl-form-select">
-						<option value="All">All users</option>
+						<option selected value="All">All users</option>
 <%
 	Set rsUsers = Server.CreateObject("ADODB.RecordSet")
 	sql = "Select * From Users Where Deleted = 0 AND (Code In (" & GetAccessCodesList(Request.Cookies("UserSettings")("Code"), Request.Cookies("UserSettings")("UserTypeID")) & ")) Order By Name"
@@ -148,7 +154,7 @@ End If
 		Do Until rsUsers.EOF
 			If rsUsers("Code") = strFilter_Code Then
 %>
-						<option selected value="<%= rsUsers("Code") %>"><%= rsUsers("Name") %></option>
+						<option value="<%= rsUsers("Code") %>"><%= rsUsers("Name") %></option>
 <%
 			Else
 %>
@@ -164,8 +170,10 @@ End If
 %>
 					</select>
 				</div>
-				<div class="tl-filter-field">
-					<label>Customer</label>
+			</div>
+			<div class="tl-form-row">
+				<div class="tl-form-group">
+					<label class="tl-form-label">Customer</label>
 <%
 Set rsCompany = Server.CreateObject("ADODB.RecordSet")
 sql = "Select DistinctRow Companies.CompanyId, Companies.Company From Contacts Inner Join Companies On Companies.CompanyId = Contacts.CompanyId Where Companies.CompanyId <> 142 And (Companies.DivisionId In (" & Request.Cookies("DivisionIdsAccess")("Quotes") & ") Or Contacts.Code = '" & Request.Cookies("UserSettings")("Code") & "') Order By Companies.Company"
@@ -187,10 +195,10 @@ Set rsCompany = Nothing
 %>
 					</select>
 				</div>
-				<div class="tl-filter-field">
-					<label>Entity</label>
+				<div class="tl-form-group">
+					<label class="tl-form-label">Entity</label>
 					<select name="DivisionId" class="tl-form-select">
-						<option value="555">Select an Entity</option>
+						<option value="555" style="color:red;">Select an Entity</option>
 <%
 Set rsDiv = Server.CreateObject("ADODB.RecordSet")
 sql = "SELECT * FROM Divisions WHERE Quotes = True AND DivisionId In (" & Request.Cookies("DivisionIdsAccess")("Quotes") & ") ORDER BY Division"
@@ -220,9 +228,10 @@ End If
 %>
 					</select>
 				</div>
-				<div class="tl-filter-field">
-					<label>Status</label>
+				<div class="tl-form-group">
+					<label class="tl-form-label">Status</label>
 					<select name="InvoicestatusId" class="tl-form-select">
+						<option value="555">All (Active)</option>
 						<option value="0">All (Active & Complete)</option>
 <%
 sql = "Select * From Invoicestatus Order By Invoicestatus"
@@ -236,56 +245,23 @@ If Not(rsStatus.BOF And rsStatus.EOF) Then
 End If
 
 rsStatus.Close
-Set rsStatus = Nothing
+	Set rsStatus = Nothing
 %>
-						<option value="555">All (Active)</option>
 					</select>
 				</div>
-				<div class="tl-filter-actions">
-					<button type="button" onclick="goToQuotes()" class="tl-btn-secondary">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
-							<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-							<polyline points="14 2 14 8 20 8"></polyline>
-						</svg>
-						Quotes
+			</div>
+			<div class="tl-form-row">
+				<div class="tl-form-group" style="display: flex; align-items: flex-end; gap: 8px;">
+					<button type="submit" class="tl-btn-primary" onclick="FormReport.action='IFrame.asp';FormReport.target='MyIFrame';">
+						Filter
 					</button>
-					<button type="button" onclick="generateReport()" class="tl-btn-secondary">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
-							<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-							<polyline points="14 2 14 8 20 8"></polyline>
-							<line x1="16" y1="13" x2="8" y2="13"></line>
-							<line x1="16" y1="17" x2="8" y2="17"></line>
-						</svg>
+					<button type="button" class="tl-btn-secondary" onclick="if(document.FormReport.DivisionId.value == 555){alert('Please select an entity before generating a report.');}else{FormReport.action='Report.asp';FormReport.target='MyIFrame';this.form.submit();}">
 						Generate Report
-					</button>
-					<button type="submit" class="tl-btn-primary">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
-							<circle cx="11" cy="11" r="8"></circle>
-							<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-						</svg>
-						Search
 					</button>
 				</div>
 			</div>
 		</form>
 	</div>
-
-	<script>
-		function goToQuotes() {
-			var workingDir = '<%= Request.Cookies("ClientSettings")("WorkingDir") %>';
-			document.location.href = workingDir + '/Quotes/';
-		}
-		
-		function generateReport() {
-			if(document.FormReport.DivisionId.value == 555) {
-				alert('Please Select an Entity before generating a report.');
-			} else {
-				FormReport.action = 'Report.asp';
-				FormReport.target = 'MyIFrame';
-				FormReport.submit();
-			}
-		}
-	</script>
 
 	<!-- Results Grid -->
 	<div class="tl-grid-container">

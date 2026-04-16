@@ -1,6 +1,6 @@
 <%@Language="VBSCRIPT"%>
-<!--#include virtual="/System/ssi_Logging.asp"-->
 <%
+' I have disabled ssi_Logging.asp for now
   Option Explicit
   On Error Resume Next
   
@@ -13,7 +13,7 @@
   strQueryString = Request.QueryString
   
   ' Log the error to file
-  Call LogASPError()
+  Call LogASPError(objError)
 %>
 <!DOCTYPE html>
 <html>

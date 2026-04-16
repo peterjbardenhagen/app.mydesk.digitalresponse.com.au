@@ -1,5 +1,5 @@
 <% 
-
+' Techlight MyDesk - Modern Users List
 Response.AddHeader "Pragma", "No-Store"
 Response.AddHeader "cache-control", "no-store, private, must-revalidate"
 Response.Expires = -1
@@ -22,46 +22,81 @@ End If
 GetAccessCodesList Request.Cookies("UserSettings")("Code"), Request.Cookies("UserSettings")("UserTypeId")
 
 %>
-<html>
-	<head>
-		<title>MyDesk</title>
-		<META http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, pre-check=0">
-		<META http-equiv="Expires" content="0">
-		<META http-equiv="Pragma" content="no-store, private, must-revalidate">
-		<link rel="stylesheet" type="text/css" href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/<%= Request.Cookies("ClientSettings")("Stylesheet") %>">
-	</head>
-	<body bgcolor="#dddddd">
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Users - Techlight MyDesk</title>
+	<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+	<meta http-equiv="Expires" content="0">
+	<meta http-equiv="Pragma" content="no-store">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" type="text/css" href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/System/Style_Techlight.css">
+</head>
+<body>
 <!--#include virtual="/System/ssi_Header.inc"-->
 
-	<table width=95% align="center" cellpadding=0 cellspacing=0 border=0 ID="Table1">
-		<tr>
-			<td>
-				<br/>
-				<table width="100%" cellpadding=0 cellspacing=0 border=0>
-					<tr>
-						<td><span class="Header2"><a href="/Portal.asp" class="Header2">Home</a> / Manage Users /></span></td>
-						<td align="right"><a href="Add.asp" class="Header2">Add User</a></td>
-					</tr>
-				</table>
-<%
+<div class="tl-page-container">
+	<!-- Breadcrumb -->
+	<nav class="tl-breadcrumb">
+		<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Dashboard.asp" target="_top">Home</a>
+		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+		<span>Users</span>
+	</nav>
 
+	<!-- Page Header -->
+	<div class="tl-action-bar">
+		<h1 class="tl-page-title">
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+				<circle cx="12" cy="7" r="4"></circle>
+			</svg>
+			Manage Users
+		</h1>
+		<div class="tl-btn-group">
+			<a href="<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Users/Add.asp" class="tl-btn-primary" target="_top">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+					<line x1="12" y1="5" x2="12" y2="19"></line>
+					<line x1="5" y1="12" x2="19" y2="12"></line>
+				</svg>
+				Add User
+			</a>
+		</div>
+	</div>
+
+<%
 If strMsg <> "" Then
-
 %>
-							<br>
-							<table width="100%" cellpadding=3 cellspacing=0 border=0 bgcolor="#ffffff" ID="Table3">
-								<tr>
-									<td><span style="color:red;"><%= strMsg %></span></td>
-								</tr>
-							</table>
+	<div class="tl-alert tl-alert-success">
+		<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+			<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+			<polyline points="22 4 12 14.01 9 11.01"></polyline>
+		</svg>
+		<%= strMsg %>
+	</div>
 <%
-
 End If
-
 %>
-				<br/>
-				<table width=100% cellpadding=10 cellspacing=0 border=0 ID="Table2">
+
+	<!-- Results Grid -->
+	<div class="tl-grid-container">
+		<table class="tl-data-table">
+			<thead>
+				<tr>
+					<th>Name</th>
+					<th>Code</th>
+					<th>Division</th>
+					<th>Position</th>
+					<th>Active</th>
+					<th>Manager</th>
+					<th>User Type</th>
+					<th style="text-align: right;">Actions</th>
+				</tr>
+			</thead>
+			<tbody>
 <%
 
 Dim rs
@@ -77,38 +112,30 @@ sql = sql & " ORDER BY U.Name"
 Set rs = dbConn.Execute(sql)
 
 If Not(rs.BOF And rs.EOF) Then
-
-%>
-					<tr>
-						<td class="ListHeaderRow" width=150><b>Name</b></td>
-						<td class="ListHeaderRow" width=50><b>Code</b></td>
-						<td class="ListHeaderRow"><b>Division</b></td>
-						<td class="ListHeaderRow" width=100><b>Position</b></td>
-						<td class="ListHeaderRow" width=50><b>Active</b></td>
-						<td class="ListHeaderRow" width=50><b>Manager</b></td>
-						<td class="ListHeaderRow" width=90><b>User Type</b></td>
-						<td class="ListHeaderRow" align="right" width=125><b>Action</b></td>
-					</tr>
-<%
-
 	Do Until rs.EOF
-
 %>
-					<tr>
-						<td style="background-color:#eeeeee;color:black;border-bottom:1px solid white;font-size:12px;vertical-align:top;" width=150><a href="Edit.asp?UserId=<%= rs("UserId") %>"><%= rs("Name") %></td>
-						<td style="background-color:#eeeeee;color:black;border-bottom:1px solid white;font-size:12px;vertical-align:top;" width=50><%= rs("Code") %></td>
-						<td style="background-color:#eeeeee;color:black;border-bottom:1px solid white;font-size:12px;vertical-align:top;"><%= rs("DivisionCode") %></td>
-						<td style="background-color:#eeeeee;color:black;border-bottom:1px solid white;font-size:12px;vertical-align:top;"><%= rs("Position") %>&nbsp;</td>
-						<td style="background-color:#eeeeee;color:black;border-bottom:1px solid white;font-size:12px;vertical-align:top;" width=50><% If rs("Active") Then Response.Write("Yes") Else Response.Write("No") %></td>
-						<td style="background-color:#eeeeee;color:black;border-bottom:1px solid white;font-size:12px;vertical-align:top;" width=50><% If CheckIfAdmin(rs("UserId")) Then Response.Write("Yes") Else Response.Write("No") %></td>
-						<td style="background-color:#eeeeee;color:black;border-bottom:1px solid white;font-size:12px;vertical-align:top;" width=90><%= rs("UserTypeId") %></td>
-						<td style="background-color:#eeeeee;color:black;border-bottom:1px solid white;font-size:12px;vertical-align:top;" align="right" width=125><input type="button" onclick="document.location.href='<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Users/Edit.asp?UserId=<%= rs("UserId") %>';" value="Edit"/>&nbsp;<input type="button" onclick="document.location.href = '<%= Request.Cookies("ClientSettings")("WorkingDir") %>/Users/Del_Proc.asp?Code=<%= rs("Code") %>';" value="Delete"/></td>
-					</tr>
+				<tr>
+					<td><a href="Edit.asp?UserId=<%= rs("UserId") %>" class="tl-link"><%= rs("Name") %></a></td>
+					<td><%= rs("Code") %></td>
+					<td><%= rs("DivisionCode") %></td>
+					<td><%= rs("Position") %>&nbsp;</td>
+					<td><% If rs("Active") Then Response.Write("Yes") Else Response.Write("No") %></td>
+					<td><% If CheckIfAdmin(rs("UserId")) Then Response.Write("Yes") Else Response.Write("No") %></td>
+					<td><%= rs("UserTypeId") %></td>
+					<td style="text-align: right;">
+						<a href="Edit.asp?UserId=<%= rs("UserId") %>" class="tl-btn tl-btn-secondary tl-btn-sm">Edit</a>
+						<a href="Del_Proc.asp?Code=<%= rs("Code") %>" class="tl-btn tl-btn-secondary tl-btn-sm" onclick="return confirm('Are you sure you want to delete this user?');">Delete</a>
+					</td>
+				</tr>
 <%
-
 		rs.MoveNext
 	Loop
-
+Else
+%>
+				<tr>
+					<td colspan="8" style="text-align: center; padding: 40px;">No users found.</td>
+				</tr>
+<%
 End If
 
 If IsObject(rs) Then
@@ -117,8 +144,10 @@ If IsObject(rs) Then
 End If
 
 %>
-				</table>
-			</td>
-		</tr>
-	</table>
+			</tbody>
+		</table>
+	</div>
+</div>
+</body>
+</html>
 <!--#include virtual="/System/ssi_dbConn_close.inc"-->
