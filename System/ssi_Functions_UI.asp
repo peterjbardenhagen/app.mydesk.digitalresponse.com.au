@@ -1,10 +1,29 @@
 <%
 
 Function ViewComments(intTableId, intItemId)
+	On Error Resume Next
+	
+	Dim rsComm, sqlComm
+	
+	' Validate inputs
+	If IsNull(intTableId) Or Not IsNumeric(intTableId) Then
+		ViewComments = "No comments"
+		Exit Function
+	End If
+	
+	If IsNull(intItemId) Or Not IsNumeric(intItemId) Then
+		ViewComments = "No comments"
+		Exit Function
+	End If
+	
+	intTableId = CLng(intTableId)
+	intItemId = CLng(intItemId)
+	
 	Set rsComm = Server.CreateObject("ADODB.RecordSet")
 	sqlComm = "Select * From Comments Where TableId = " & intTableId & " And ItemId = " & intItemId & " Order By [Date] Desc"
 	Set rsComm = dbConn.Execute(sqlComm)
-	If Not(rsComm.BOF And rsComm.EOF) Then
+	
+	If Err.Number = 0 And Not(rsComm.BOF And rsComm.EOF) Then
 		ViewComments = ViewComments & "<table width='100%' class='CommentTable'>" & vbcrlf
 		Do Until rsComm.EOF
 			ViewComments = ViewComments & "<tr class='CommentTableHeader'>" & vbcrlf
@@ -20,9 +39,41 @@ Function ViewComments(intTableId, intItemId)
 	Else
 		ViewComments = "No comments"
 	End If
+	
+	rsComm.Close
+	Set rsComm = Nothing
+	
+	Err.Clear
+	On Error GoTo 0
 End Function
 
 Function GetUserContactDetails(lngDivisionId, strCode)
+	On Error Resume Next
+	
+	Dim rs, sql, s, strPhone, strFax, workingDir
+	
+	' Validate inputs
+	If IsNull(strCode) Or strCode = "" Then
+		GetUserContactDetails = ""
+		Exit Function
+	End If
+	
+	If IsNull(lngDivisionId) Or Not IsNumeric(lngDivisionId) Then
+		lngDivisionId = 0
+	Else
+		lngDivisionId = CLng(lngDivisionId)
+	End If
+	
+	' Get working directory with error handling
+	workingDir = ""
+	On Error Resume Next
+	If Not Request.Cookies("ClientSettings") Is Nothing Then
+		workingDir = Request.Cookies("ClientSettings")("WorkingDir")
+	End If
+	If workingDir = "" Then workingDir = "/Clients/SalesEngineTL"
+	Err.Clear
+	On Error GoTo 0
+	
 	If lngDivisionId = 7 And strCode = "MD0029" Then
 		s = "<br><br><br>" &_
 			"<b>Best Regards,</b><br><br>" &_
@@ -36,24 +87,25 @@ Function GetUserContactDetails(lngDivisionId, strCode)
 			"e: jamesh@georgetraffic.com.au<br><br>" &_
 			"</span>" &_
 			"</span>" &_
-			"<img src='" & GetProtocol() & Request.ServerVariables("SERVER_NAME") & Request.Cookies("ClientSettings")("WorkingDir") & "/Images/Logo_GIT2.jpg' border=0 alt='George Industries Traffic'>" &_
+			"<img src='" & GetProtocol() & Request.ServerVariables("SERVER_NAME") & workingDir & "/Images/Logo_GIT2.jpg' border=0 alt='George Industries Traffic'>" &_
 			"<br><br>" &_
 			"<span style='color:#999999'>" &_
 			"57 Campbell Ave Wacol QLD 4076<br>" &_
 			"<a href='http://www.georgeindustries.com.au' target='_Blank' style='color:#999999'>www.georgeindustries.com.au</a></span>" &_
 			"</span>"
 	Else
-		Dim rs
-		Dim sql
-		Dim s
+		s = ""
 		Set rs = Server.CreateObject("ADODB.RecordSet")
+		
 		If lngDivisionId <> 0 Then
-			sql = "SELECT Divisions.*,Users.*,Locations.*,Users.Email AS userEmail FROM Divisions, Users INNER JOIN Locations ON Users.LocationId = Locations.LocationId WHERE Divisions.DivisionId=" & lngDivisionId & " AND Users.Code='" & strCode & "'"
+			sql = "SELECT Divisions.*,Users.*,Locations.*,Users.Email AS userEmail FROM Divisions, Users INNER JOIN Locations ON Users.LocationId = Locations.LocationId WHERE Divisions.DivisionId=" & lngDivisionId & " AND Users.Code='" & Replace(strCode, "'", "''") & "'"
 		Else
-			sql = "SELECT Users.*, Locations.Phone AS lPhone, Locations.Fax AS lFax, Divisions.* FROM Divisions INNER JOIN (Users INNER JOIN Locations ON Users.LocationId = Locations.LocationId) ON Divisions.DivisionId = Users.DivisionId WHERE (((Users.Code)='" & strCode & "'))"
+			sql = "SELECT Users.*, Locations.Phone AS lPhone, Locations.Fax AS lFax, Divisions.* FROM Divisions INNER JOIN (Users INNER JOIN Locations ON Users.LocationId = Locations.LocationId) ON Divisions.DivisionId = Users.DivisionId WHERE (((Users.Code)='" & Replace(strCode, "'", "''") & "'))"
 		End If
+		
 		Set rs = dbConn.Execute(sql)
-		If Not(rs.BOF And rs.EOF) Then
+		
+		If Err.Number = 0 And Not(rs.BOF And rs.EOF) Then
 			If rs("Phone")&"" <> "" Then strPhone = rs("Phone") Else strPhone = rs("lPhone")
 			If rs("Fax")&"" <> "" Then strFax = rs("Fax") Else strFax = rs("lFax")
 			s = s & "					<table cellpadding=2 cellspacing=0 border=0>" & vbcrlf
@@ -82,42 +134,74 @@ Function GetUserContactDetails(lngDivisionId, strCode)
 			s = s & "					</table>" & vbcrlf
 			s = s & "					<table cellpadding=2 cellspacing=0 border=0>" & vbcrlf
 			s = s & "						<tr>" & vbcrlf
-			s = s & "							<td style=""font-size:12px;"" colspan=2><img src=""" & GetProtocol() & Request.ServerVariables("SERVER_NAME") & Request.Cookies("ClientSettings")("WorkingDir") & "/Images/" & Replace(rs("Logo"),".","_footer.") & """></td>" & vbcrlf
+			s = s & "							<td style=""font-size:12px;"" colspan=2><img src=""" & GetProtocol() & Request.ServerVariables("SERVER_NAME") & workingDir & "/Images/" & Replace(rs("Logo"),".","_footer.") & """></td>" & vbcrlf
 		End If
+		
+		rs.Close
+		Set rs = Nothing
 	End If
+	
 	GetUserContactDetails = s
+	
+	Err.Clear
+	On Error GoTo 0
 End Function
 
 Function DisplayLocationAddress(strAddress1, strAddress2, strSuburb, strState, strPostCode, strCountry, boolPODisplay, strPOAddress1, strPOAddress2, strPOSuburb, strPOState, strPOPostCode, strPOCountry)
+	On Error Resume Next
+	
 	Dim strA
+	
+	' Handle null values
+	If IsNull(strState) Then strState = ""
+	If IsNull(strPOState) Then strPOState = ""
+	
 	If strState = "Other" Then
 		strState = ""
 	End If
 	If strPOState = "Other" Then
 		strPOState = ""
 	End If
-    If Trim(strAddress1) <> "" Then
+	
+	strA = ""
+	
+    If Not IsNull(strAddress1) And Trim(strAddress1) <> "" Then
 	    strA = strAddress1 & "<br>" & vbcrlf
-	    If strAddress2 <> "" Then
+	    If Not IsNull(strAddress2) And strAddress2 <> "" Then
 		    strA = strA & strAddress2 & "<br>"
 	    End If
 	    strA = strA & strSuburb & ", " & strState & " " & strPostCode & "<br>" & vbcrlf
 	    strA = strA & strCountry & vbcrlf
 		strA = strA & "<br><br>" & vbcrlf
     End If
-	If boolPODisplay Then
+	
+	If Not IsNull(boolPODisplay) And boolPODisplay Then
 		strA = strA & strPOAddress1 & "<br>"
-		If strPOAddress2 <> "" Then
+		If Not IsNull(strPOAddress2) And strPOAddress2 <> "" Then
 			strA = strA & strPOAddress2 & "<br>"
 		End If
 		strA = strA & strPOSuburb & ", " & strPOState & " " & strPOPostCode & "<br>"
 		strA = strA & strPOCountry
 	End If
+	
 	DisplayLocationAddress = strA
+	
+	Err.Clear
+	On Error GoTo 0
 End Function
 
 Function IconImage(WhatFile)
+	On Error Resume Next
+	
 	Dim s
+	
+	' Validate input
+	If IsNull(WhatFile) Or WhatFile = "" Then
+		IconImage = "/images/icons/text.gif"
+		Exit Function
+	End If
+	
+	s = ""
     If InStr(LCase(WhatFile),".pdf") > 0 Then
         s = s & "/images/icons/acrobat.gif"
     ElseIf InStr(LCase(WhatFile),".mdb") > 0 Then
@@ -141,7 +225,11 @@ Function IconImage(WhatFile)
     Else
         s = s & "/images/icons/text.gif"
     End If
+	
     IconImage = s
+	
+    Err.Clear
+    On Error GoTo 0
 End Function
 
 %>
