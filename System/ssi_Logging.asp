@@ -90,11 +90,8 @@ Sub LogError(strSource, strDescription, strFile, intLine, strAdditionalInfo)
 End Sub
 
 ' Convenience function to log ASP errors
-Sub LogASPError()
+Sub LogASPError(objError)
     On Error Resume Next
-    
-    Dim objError
-    Set objError = Server.GetLastError()
     
     Call LogError(_
         objError.Source, _
@@ -104,7 +101,6 @@ Sub LogASPError()
         "ASPCode: " & objError.ASPCode & " | Number: " & objError.Number & " (0x" & Hex(objError.Number) & ")"_
     )
     
-    Set objError = Nothing
     On Error GoTo 0
 End Sub
 
