@@ -11,7 +11,7 @@ Response.CacheControl = "no-cache"
 On Error Resume Next
 
 %>
-<!--#include virtual="/Clients/SalesEngine/ssi_Security.inc"-->
+<!--#include virtual="/System/ssi_Security.inc"-->
 <!--#include virtual="/System/ssi_Functions.asp"-->
 <!--#include virtual="/System/ssi_dates.inc"-->
 <%

@@ -13,7 +13,7 @@ If userTypeId <> "1" Then
     Response.Redirect("../Portal/AccessDenied.asp")
 End If
 %>
-<!--#include virtual="/Clients/SalesEngine/ssi_Security.inc"-->
+<!--#include virtual="/System/ssi_Security.inc"-->
 <!--#include virtual="/System/ssi_Functions.asp"-->
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <!DOCTYPE html>

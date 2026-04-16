@@ -31,7 +31,7 @@ End If
 Dim strWorkingDir
 strWorkingDir = Request.Cookies("ClientSettings")("WorkingDir")
 %>
-<!--#include virtual="/Clients/SalesEngine/ssi_Security.inc"-->
+<!--#include virtual="/System/ssi_Security.inc"-->
 <!--#include virtual="/System/ssi_Functions.asp"-->
 <!DOCTYPE html>
 <html lang="en">

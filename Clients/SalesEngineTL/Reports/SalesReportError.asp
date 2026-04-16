@@ -19,7 +19,7 @@ dteBegin = CStr("01-Jul-20" & MakePadding(Right(intYear, 2), "", 2))
 dteEnd = CStr("30-Jun-20" & MakePadding(Right(intYear+1, 2), "", 2))
 
 %>
-<!--#include virtual="/Clients/SalesEngine/ssi_Security.inc"-->
+<!--#include virtual="/System/ssi_Security.inc"-->
 <!--#include virtual="/System/ssi_Functions.asp"-->
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <!--#include virtual="/System/ssi_Dates.inc"-->

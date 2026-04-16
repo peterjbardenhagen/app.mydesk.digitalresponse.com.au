@@ -17,7 +17,7 @@ End If
 dteDateFrom = FormatDateU(DateSerial(Year(Date()), Month(Date()), 1), False)
 dteDateTo = FormatDateU(DateAdd("D", -1, DateAdd("M", 1, DateSerial(Year(Date()), Month(Date()), 1))), False)
 %>
-<!--#include virtual="/Clients/SalesEngine/ssi_Security.inc"-->
+<!--#include virtual="/System/ssi_Security.inc"-->
 <!--#include virtual="/System/ssi_Functions.asp"-->
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <!--#include virtual="/System/ssi_Dates.inc"-->

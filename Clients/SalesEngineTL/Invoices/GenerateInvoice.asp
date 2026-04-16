@@ -20,7 +20,7 @@ strWorkingDir= Request("WorkingDir") & ""
 strNotes = Trim(Replace(Replace(Replace(Replace(Request("Notes"),CHR(10),"<BR>"),CHR(13),"<BR>"),vbclrf,"<BR>"),"&","&amp;")) & ""
 
 %>
-<!--#include virtual="/Clients/SalesEngine/ssi_Security.inc"-->
+<!--#include virtual="/System/ssi_Security.inc"-->
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <%
 

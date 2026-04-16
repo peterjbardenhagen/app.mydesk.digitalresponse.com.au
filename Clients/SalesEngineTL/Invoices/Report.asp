@@ -24,7 +24,7 @@ intCompanyId =	Trim(Request.Form("CompanyId"))
 intInvoiceStatusId = CInt(Request("InvoiceStatusId"))
 
 %>
-<!--#include virtual="/Clients/SalesEngine/ssi_Security.inc"-->
+<!--#include virtual="/System/ssi_Security.inc"-->
 <!--#include virtual="/System/ssi_Functions.asp"-->
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <!--#include virtual="/System/ssi_Dates.inc"-->

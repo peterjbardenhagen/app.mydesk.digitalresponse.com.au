@@ -12,7 +12,7 @@ If Not Request.Cookies("UserSettings")("Manager") Then Response.Redirect("../Por
 
 %>
 <!--#include virtual="/System/ssi_Functions.asp"-->
-<!--#include virtual="/Clients/SalesEngine/ssi_Security.inc"-->
+<!--#include virtual="/System/ssi_Security.inc"-->
 <!--#include virtual="/System/ssi_dbConn_open.inc"-->
 <%
 
