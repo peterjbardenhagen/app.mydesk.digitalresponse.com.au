@@ -47,29 +47,49 @@ End If
 Dim isLoggedIn
 isLoggedIn = False
 
-' Check Session first
-If Session("LoggedIn") = True Then
-    isLoggedIn = True
-End If
-
-' Also check Cookies as backup
-If Not isLoggedIn Then
-    If Request.Cookies("LoggedIn") = "True" Then
-        ' Restore session from cookies if needed
-        If Session("LoggedIn") = False Or Session("LoggedIn") = "" Then
-            Session("LoggedIn") = True
-            Session("Code") = Request.Cookies("UserSettings")("Code")
-            Session("Name") = Request.Cookies("UserSettings")("Name")
-            Session("Email") = Request.Cookies("UserSettings")("Email")
-            Session("Initials") = Request.Cookies("UserSettings")("Initials")
-            Session("DivisionId") = Request.Cookies("UserSettings")("DivisionId")
-            Session("Division") = Request.Cookies("UserSettings")("Division")
-            Session("UserTypeId") = Request.Cookies("UserSettings")("UserTypeId")
-            Session("LocationId") = Request.Cookies("UserSettings")("LocationId")
-            Session("ExpenseTypeGroupId") = Request.Cookies("UserSettings")("ExpenseTypeGroupId")
-        End If
+' Check Session first with error handling
+On Error Resume Next
+Dim sessionLoggedIn
+sessionLoggedIn = Session("LoggedIn")
+If Err.Number = 0 And Not IsNull(sessionLoggedIn) Then
+    If CBool(sessionLoggedIn) = True Then
         isLoggedIn = True
     End If
+End If
+Err.Clear
+On Error GoTo 0
+
+' Also check Cookies as backup with error handling
+If Not isLoggedIn Then
+    On Error Resume Next
+    Dim cookieLoggedIn
+    cookieLoggedIn = Request.Cookies("LoggedIn")
+    If Err.Number = 0 And Not IsNull(cookieLoggedIn) Then
+        If CStr(cookieLoggedIn) = "True" Then
+            ' Restore session from cookies if needed with error handling
+            On Error Resume Next
+            Dim currentSessionLoggedIn
+            currentSessionLoggedIn = Session("LoggedIn")
+            If Err.Number <> 0 Or currentSessionLoggedIn = "" Or CBool(currentSessionLoggedIn) = False Then
+                Session("LoggedIn") = True
+                On Error Resume Next
+                Session("Code") = Request.Cookies("UserSettings")("Code")
+                Session("Name") = Request.Cookies("UserSettings")("Name")
+                Session("Email") = Request.Cookies("UserSettings")("Email")
+                Session("Initials") = Request.Cookies("UserSettings")("Initials")
+                Session("DivisionId") = Request.Cookies("UserSettings")("DivisionId")
+                Session("Division") = Request.Cookies("UserSettings")("Division")
+                Session("UserTypeId") = Request.Cookies("UserSettings")("UserTypeId")
+                Session("LocationId") = Request.Cookies("UserSettings")("LocationId")
+                Session("ExpenseTypeGroupId") = Request.Cookies("UserSettings")("ExpenseTypeGroupId")
+                Err.Clear
+            End If
+            Err.Clear
+            isLoggedIn = True
+        End If
+    End If
+    Err.Clear
+    On Error GoTo 0
 End If
 
 ' If already logged in, redirect to main application
