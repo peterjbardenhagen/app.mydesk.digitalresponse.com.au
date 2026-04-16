@@ -259,9 +259,9 @@ body {
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.2);
-  color: rgba(255,255,255,0.8);
+  background: #cca05a;
+  border: 1px solid #cca05a;
+  color: white;
   font-size: 0.875rem;
   font-weight: 500;
   border-radius: var(--radius-md);
@@ -270,8 +270,8 @@ body {
 }
 
 .tl-btn-logout:hover {
-  background: rgba(239,68,68,0.2);
-  border-color: rgba(239,68,68,0.4);
+  background: #d4aa6e;
+  border-color: #d4aa6e;
 }
 
 /* Dropdown Menu */
