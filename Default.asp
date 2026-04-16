@@ -440,6 +440,13 @@ strMsg = Trim(Request("Msg"))
                     </div>
                 </div>
 
+                <div class="form-group" style="margin-bottom: 24px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.875rem; color: var(--tl-text);">
+                        <input type="checkbox" id="RememberMe" name="RememberMe" style="width: 16px; height: 16px; cursor: pointer;">
+                        <span>Remember me on this device</span>
+                    </label>
+                </div>
+
                 <button type="submit" class="login-btn">
                     Sign In
                 </button>
@@ -458,9 +465,11 @@ strMsg = Trim(Request("Msg"))
     </div>
 
     <script>
+        // Save credentials to cookies if Remember Me is checked
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             var username = document.getElementById('Username').value.trim();
             var password = document.getElementById('Password').value.trim();
+            var rememberMe = document.getElementById('RememberMe').checked;
             
             if (!username || !password) {
                 e.preventDefault();
@@ -468,11 +477,40 @@ strMsg = Trim(Request("Msg"))
                 return false;
             }
             
+            if (rememberMe) {
+                // Save credentials to cookies for 30 days
+                var expiryDate = new Date();
+                expiryDate.setDate(expiryDate.getDate() + 30);
+                document.cookie = 'RememberMeUsername=' + encodeURIComponent(username) + '; expires=' + expiryDate.toUTCString() + '; path=/; SameSite=Strict';
+                document.cookie = 'RememberMePassword=' + encodeURIComponent(password) + '; expires=' + expiryDate.toUTCString() + '; path=/; SameSite=Strict';
+            } else {
+                // Clear credentials if checkbox not checked
+                document.cookie = 'RememberMeUsername=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict';
+                document.cookie = 'RememberMePassword=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict';
+            }
+            
             return true;
         });
         
-        // Focus on username field on load
+        // Load credentials from cookies on page load
         document.addEventListener('DOMContentLoaded', function() {
+            function getCookie(name) {
+                var value = '; ' + document.cookie;
+                var parts = value.split('; ' + name + '=');
+                if (parts.length == 2) return decodeURIComponent(parts.pop().split(';').shift());
+                return null;
+            }
+            
+            var savedUsername = getCookie('RememberMeUsername');
+            var savedPassword = getCookie('RememberMePassword');
+            
+            if (savedUsername && savedPassword) {
+                document.getElementById('Username').value = savedUsername;
+                document.getElementById('Password').value = savedPassword;
+                document.getElementById('RememberMe').checked = true;
+            }
+            
+            // Focus on username field
             document.getElementById('Username').focus();
         });
     </script>
