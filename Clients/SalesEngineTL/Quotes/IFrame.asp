@@ -304,7 +304,7 @@ Do While Not (oRecordset.EOF)
 			StatusClass = "tl-badge-info"
 	End Select
 	
-	Action = "<a href='" & Request.Cookies("ClientSettings")("WorkingDir") & "/Quotes/View.asp?Qid=" & Id & "' class='tl-btn-secondary' style='padding:4px 8px;font-size:12px;'>View</a> " & _
+	Action = "<a href='" & Request.Cookies("ClientSettings")("WorkingDir") & "/Quotes/View.asp?Qid=" & Id & "' class='tl-btn-primary' style='padding:4px 8px;font-size:12px;'>View</a> " & _
 			 "<a href='" & Request.Cookies("ClientSettings")("WorkingDir") & "/Quotes/Edit.asp?Qid=" & Id & "' class='tl-btn-primary' style='padding:4px 8px;font-size:12px;'>Edit</a>"
 	
 	Response.Write("<tr>")
