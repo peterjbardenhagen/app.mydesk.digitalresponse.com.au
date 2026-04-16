@@ -241,8 +241,12 @@ End If
 										<td colspan=2 align="right">
 										<input type="button" onclick="document.location.href='../Invoices';" value="Invoices" ID="Button3" NAME="Button1">
 										<input type="button" onclick="document.location.href='../Quotes';" value="Quotes" ID="Button2" NAME="Button1">
-										<input type="button" onclick="if(document.FormReport.DivisionId.value == 555){alert('Please select a division before generating a report.');}else{FormReport.action='Report.asp';FormReport.target='winResults';parent.SubmitForm();this.form.submit();}" value="Generate Report" ID="Button1" NAME="Button1">
-										<input type="submit" value="Filter" ID="Submit2" NAME="Submit2" onclick="FormReport.action='IFrame.asp';FormReport.target='MyIFrame';">
+										<button type="button" class="tl-btn-primary" onclick="if(document.FormReport.DivisionId.value == 555){alert('Please select a division before generating a report.');}else{FormReport.action='Report.asp';FormReport.target='winResults';parent.SubmitForm();this.form.submit();}">
+											Generate Report
+										</button>
+										<button type="submit" class="tl-btn-primary" onclick="FormReport.action='IFrame.asp';FormReport.target='MyIFrame';">
+											Filter
+										</button>
 										</td>
 									</tr>
 								</form>

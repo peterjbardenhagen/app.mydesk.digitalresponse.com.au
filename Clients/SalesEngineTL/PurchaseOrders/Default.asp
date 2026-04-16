@@ -336,7 +336,7 @@ Set rsStatus = Nothing
 					<button type="submit" class="tl-btn-primary" onclick="FormReport.action='IFrame.asp';FormReport.target='MyIFrame';">
 						Filter
 					</button>
-					<button type="button" class="tl-btn-secondary" onclick="if(document.FormReport.DivisionId.value == 555){alert('Please select a division before generating a report.');}else{FormReport.action='Report.asp';FormReport.target='MyIFrame';this.form.submit();}">
+					<button type="button" class="tl-btn-primary" onclick="if(document.FormReport.DivisionId.value == 555){alert('Please select a division before generating a report.');}else{FormReport.action='Report.asp';FormReport.target='MyIFrame';this.form.submit();}">
 						Generate Report
 					</button>
 					<button type="button" class="tl-btn-secondary" onclick="document.FormReport.Code.value = 'All';document.FormReport.CompanyId.value = 0;document.FormReport.POStatusId.value = 2;FormReport.action='IFrame.asp';FormReport.target='MyIFrame';this.form.submit();">

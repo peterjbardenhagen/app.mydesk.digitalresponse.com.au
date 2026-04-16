@@ -19,10 +19,10 @@ If Not Request.Cookies("DivisionIdsAccess") Is Nothing Then
 End If
 On Error GoTo 0
 
-If Not hasAccess Then
-	Response.Redirect("../Portal/AccessDenied.asp")
-	Response.End
-End If
+'If Not hasAccess Then
+'	Response.Redirect("../Portal/AccessDenied.asp")
+'	Response.End
+'End If
 
 Dim strSort, strFilter_Code, intDivisionId, strCode, dteDateFrom, dteDateTo, intSelDivisionId
 Dim strWorkingDir
@@ -321,7 +321,7 @@ rsStatus.Close
 					<button type="submit" class="tl-btn-primary" onclick="FormReport.action='IFrame.asp';FormReport.target='MyIFrame';">
 						Filter
 					</button>
-					<button type="button" class="tl-btn-secondary" onclick="if(document.FormReport.DivisionId.value == 555){alert('Please select an entity before generating a report.');}else{FormReport.action='Report.asp';FormReport.target='MyIFrame';this.form.submit();}">
+					<button type="button" class="tl-btn-primary" onclick="if(document.FormReport.DivisionId.value == 555){alert('Please select an entity before generating a report.');}else{FormReport.action='Report.asp';FormReport.target='MyIFrame';this.form.submit();}">
 						Generate Report
 					</button>
 				</div>

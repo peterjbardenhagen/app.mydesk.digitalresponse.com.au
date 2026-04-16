@@ -261,7 +261,7 @@ Set rsCompany = Nothing
 					<button type="submit" class="tl-btn-primary" onclick="FormReport.action='IFrame.asp';FormReport.target='MyIFrame';">
 						Filter
 					</button>
-					<button type="button" class="tl-btn-secondary" onclick="FormReport.action='Report.asp';FormReport.target='MyIFrame';this.form.submit();">
+					<button type="button" class="tl-btn-primary" onclick="FormReport.action='Report.asp';FormReport.target='MyIFrame';this.form.submit();">
 						Generate Report
 					</button>
 					<button type="button" class="tl-btn-secondary" onclick="FormReport.action='EmailList.asp';this.form.submit();">
