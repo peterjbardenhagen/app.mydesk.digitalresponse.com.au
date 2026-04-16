@@ -62,7 +62,22 @@
 			If CBool(Request.Cookies("LoggedIn")) Then 
 				userName = Request.Cookies("UserSettings")("Name")
 				userInitials = Left(userName, 1)
-				If Request.Cookies("UserSettings")("Admin") Then
+				Dim isAdmin
+				isAdmin = False
+				On Error Resume Next
+				If Not Request.Cookies("UserSettings") Is Nothing Then
+					If Not IsEmpty(Request.Cookies("UserSettings")("Admin")) Then
+						Dim adminValue
+						adminValue = Request.Cookies("UserSettings")("Admin")
+						If IsNumeric(adminValue) Then
+							isAdmin = CBool(adminValue)
+						Else
+							isAdmin = (LCase(adminValue) = "true")
+						End If
+					End If
+				End If
+				On Error GoTo 0
+				If isAdmin Then
 					userRole = "Administrator"
 				Else
 					userRole = "User"
