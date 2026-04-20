@@ -85,7 +85,7 @@ echo.
 echo This will install SQL Server Express 2022 locally.
 echo Requires Administrator rights.
 echo.
-call "%~dp0Install-SQLExpress.bat"
+call "%~dp0Install-SqlExpress.bat"
 goto PAUSE_RETURN
 
 :EDIT_CONFIG
@@ -115,12 +115,9 @@ echo ============================================================
 echo    MIGRATE ACCESS DB TO SQL SERVER
 echo ============================================================
 echo.
-echo Source: Techlight2.mdb (Access)
+echo Source: AccessDB\Techlight2.mdb
 echo Target: (localdb)\MSSQLLocalDB - Techlight_MyDesk
 echo.
-echo WARNING: This will DROP and recreate tables in SQL Server!
-echo.
-pause
 python "%~dp0migrate_access_to_sqlserver.py"
 goto PAUSE_RETURN
 
@@ -163,8 +160,8 @@ echo *** WARNING: THIS WILL MODIFY THE PRODUCTION DATABASE ***
 echo.
 echo Target: techlight.digitalresponse.com.au\SQL2016
 echo.
-set /p confirm="Type YES to continue: "
-if /i not "!confirm!"=="YES" (
+set /p confirm="Continue? (Y/N): "
+if /i not "!confirm!"=="Y" (
     echo Cancelled.
     goto PAUSE_RETURN
 )
@@ -194,13 +191,13 @@ echo    DOCUMENTATION
 echo ============================================================
 echo.
 echo Available documentation:
-echo   1. MIGRATION_README.md   (Database migration tools)
-echo   2. SQL_INSTALL_README.md (SQL Server installation)
+echo   1. README.md              (Database tools overview)
+echo   2. SQL_SERVER_INSTALL.md  (SQL Server installation guide)
 echo   B. Back to main menu
 echo.
 set /p doc="Select: "
-if /i "%doc%"=="1" start "" notepad "%~dp0MIGRATION_README.md"
-if /i "%doc%"=="2" start "" notepad "%~dp0SQL_INSTALL_README.md"
+if /i "%doc%"=="1" start "" notepad "%~dp0README.md"
+if /i "%doc%"=="2" start "" notepad "%~dp0SQL_SERVER_INSTALL.md"
 goto MENU
 
 :PAUSE_RETURN

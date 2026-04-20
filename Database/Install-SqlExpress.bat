@@ -33,7 +33,7 @@ echo [INFO] Administrator rights confirmed
 echo.
 
 :: Run PowerShell installer
-powershell -ExecutionPolicy Bypass -File "%~dp0Install-SQLExpress.ps1"
+powershell -ExecutionPolicy Bypass -File "%~dp0Install-SqlExpress.ps1"
 
 if %errorlevel% neq 0 (
     echo.

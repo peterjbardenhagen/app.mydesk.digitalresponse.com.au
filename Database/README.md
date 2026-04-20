@@ -23,7 +23,9 @@
 | `migration_config.py` | Configuration for migration script |
 | `Backup-Database.ps1` | Backup local LocalDB to .bak file |
 | `Deploy-Database.ps1` | Deploy local DB to production SQL 2016 |
-| `Install-SQLExpress.ps1` | (Optional) Install SQL Express locally |
+| `Install-SqlExpress.ps1` | (Optional) Install SQL Express locally |
+| `Install-SqlExpress.bat` | (Optional) Batch launcher for SQL Express installer |
+| `Start.bat` | Interactive menu (entry point for all tools) |
 
 ## Quick Usage
 

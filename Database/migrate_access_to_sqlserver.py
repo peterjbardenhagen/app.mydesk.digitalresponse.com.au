@@ -701,11 +701,11 @@ def main():
     # Final confirmation
     print()
     if drop_existing:
-        confirm = input("WARNING: This will DESTROY existing data in the target database!\nContinue? (yes/no): ").strip().lower()
+        confirm = input("WARNING: This will DESTROY existing data in the target database!\nContinue? (Y/N): ").strip().lower()
     else:
-        confirm = input("Continue with migration? (yes/no): ").strip().lower()
+        confirm = input("Continue with migration? (Y/N): ").strip().lower()
     
-    if confirm != 'yes' and confirm != 'y':
+    if not confirm.startswith('y'):
         print("Migration cancelled.")
         return
     

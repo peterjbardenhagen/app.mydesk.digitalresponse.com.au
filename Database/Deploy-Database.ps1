@@ -49,8 +49,8 @@ function Confirm-Action {
     param([string]$Message)
     Write-Host ""
     Write-Host $Message -ForegroundColor Yellow
-    $response = Read-Host "Type 'YES' to continue"
-    return ($response -ceq "YES")
+    $response = Read-Host "Continue? (Y/N)"
+    return ($response -match '^[Yy]')
 }
 
 function Invoke-SqlQuery {

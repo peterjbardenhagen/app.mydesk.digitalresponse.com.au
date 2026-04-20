@@ -3,7 +3,7 @@
 ## Quick Install (Automated)
 
 ### Option 1: Double-Click Installation
-1. **Right-click** `Install-SQLExpress.bat`
+1. **Right-click** `Install-SqlExpress.bat`
 2. Select **"Run as administrator"**
 3. Follow the prompts
 4. Wait 10-20 minutes for installation to complete
@@ -15,7 +15,7 @@
 cd "C:\Development\Techlight.digitalresponse.com.au\Database"
 
 # Run installer
-.\Install-SQLExpress.ps1
+.\Install-SqlExpress.ps1
 ```
 
 ## Configuration Details
@@ -161,9 +161,9 @@ If the automated script fails, install manually:
 
 ## Files Included
 
-- `Install-SQLExpress.ps1` - PowerShell installation script
-- `Install-SQLExpress.bat` - Batch file launcher (easier to run)
-- `SQL_INSTALL_README.md` - This documentation
+- `Install-SqlExpress.ps1` - PowerShell installation script
+- `Install-SqlExpress.bat` - Batch file launcher (easier to run)
+- `SQL_SERVER_INSTALL.md` - This documentation
 
 ## Requirements
 

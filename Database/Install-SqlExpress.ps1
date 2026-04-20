@@ -37,7 +37,7 @@ function Test-IsAdmin {
     return $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-function Download-SQLExpress {
+function Download-SqlExpress {
     $url = "https://go.microsoft.com/fwlink/?linkid=2215158"  # SQL Server 2022 Express x64
     
     Write-Status "Downloading SQL Server Express 2022..." "INFO"
@@ -60,7 +60,7 @@ function Download-SQLExpress {
     }
 }
 
-function Install-SQLExpress {
+function Install-SqlExpress {
     Write-Status "Installing SQL Server Express..." "INFO"
     
     # Create extraction directory
@@ -121,7 +121,7 @@ function Install-SQLExpress {
     }
 }
 
-function Configure-SQLServer {
+function Configure-SqlServer {
     Write-Status "Configuring SQL Server..." "INFO"
     
     # Enable TCP/IP
@@ -203,7 +203,7 @@ function Configure-Firewall {
     }
 }
 
-function Restart-SQLService {
+function Restart-SqlService {
     Write-Status "Restarting SQL Server service..." "INFO"
     
     $serviceName = "MSSQL`$$InstanceName"
@@ -317,10 +317,10 @@ if ($confirm -ne 'y') {
 
 # Execute installation steps
 try {
-    Download-SQLExpress
-    Install-SQLExpress
-    Configure-SQLServer
-    Restart-SQLService
+    Download-SqlExpress
+    Install-SqlExpress
+    Configure-SqlServer
+    Restart-SqlService
     Start-Sleep -Seconds 5  # Wait for service to be ready
     Test-Connection
     Show-Summary
