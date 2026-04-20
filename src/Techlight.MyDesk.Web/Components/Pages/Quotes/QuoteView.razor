@@ -6,6 +6,9 @@
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthState
 @inject ActivityService ActivitySvc
+@inject PdfService PdfSvc
+@inject EmailService EmailSvc
+@inject IJSRuntime JS
 @using System.Security.Claims
 
 <PageTitle>Quote #@Id - Techlight MyDesk</PageTitle>
@@ -56,8 +59,12 @@ else
                            StartIcon="@Icons.Material.Rounded.ShoppingCart"
                            Href="@($"/purchase-orders/create?fromQuote={Id}")" Size="Size.Small">Create PO</MudButton>
             }
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.PictureAsPdf"
+                       OnClick="DownloadPdfAsync" Size="Size.Small">PDF</MudButton>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Email"
+                       OnClick="@(() => { _showEmailPanel = !_showEmailPanel; _showStatusPanel = false; })" Size="Size.Small">Email PDF</MudButton>
             <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.SwapVert"
-                       OnClick="@(() => _showStatusPanel = !_showStatusPanel)" Size="Size.Small">Update Status</MudButton>
+                       OnClick="@(() => { _showStatusPanel = !_showStatusPanel; _showEmailPanel = false; })" Size="Size.Small">Update Status</MudButton>
             @if (CanDelete)
             {
                 <MudButton Variant="Variant.Outlined" Color="Color.Error"
@@ -66,6 +73,31 @@ else
             }
         </div>
     </div>
+
+    @* Email PDF panel *@
+    @if (_showEmailPanel)
+    {
+        <MudPaper Class="pa-4 mb-4" Elevation="1" Style="border-left:4px solid var(--mud-palette-primary);max-width:560px;">
+            <MudText Typo="Typo.subtitle2" Class="mb-3">Email Quote PDF</MudText>
+            <div class="d-flex flex-column gap-2">
+                <MudTextField @bind-Value="_emailTo"      Label="To (email address)" Variant="Variant.Outlined"
+                              Margin="Margin.Dense" InputType="InputType.Email" Required="true" />
+                <MudTextField @bind-Value="_emailSubject" Label="Subject" Variant="Variant.Outlined"
+                              Margin="Margin.Dense" />
+                <MudTextField @bind-Value="_emailMessage" Label="Message (optional)" Variant="Variant.Outlined"
+                              Margin="Margin.Dense" Lines="3" />
+                <MudCheckBox @bind-Value="_emailAttachPdf" Label="Attach PDF" Color="Color.Primary" />
+            </div>
+            <div class="d-flex gap-2 mt-3">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           OnClick="SendEmailAsync" Disabled="_emailSending"
+                           StartIcon="@Icons.Material.Rounded.Send">
+                    @(_emailSending ? "Sending…" : "Send")
+                </MudButton>
+                <MudButton Variant="Variant.Text" OnClick="@(() => _showEmailPanel = false)">Cancel</MudButton>
+            </div>
+        </MudPaper>
+    }
 
     @* Status update panel *@
     @if (_showStatusPanel)
@@ -248,9 +280,16 @@ else
     private List<QuoteThirdPartyItem>? _tpItems;
     private List<QuoteStatus> _statuses = new();
     private bool _showStatusPanel;
-    private int _newStatusId;
+    private int  _newStatusId;
     private string _userCode = "";
     private bool _isAdmin;
+
+    private bool   _showEmailPanel;
+    private string _emailTo        = "";
+    private string _emailSubject   = "";
+    private string _emailMessage   = "";
+    private bool   _emailAttachPdf = true;
+    private bool   _emailSending;
 
     private bool CanApproveDecline => _q?.QuoteStatusId is 1 or 9;
     private bool CanIssue          => _q?.QuoteStatusId is 2 or 3 or 4 or 7 or 10;
@@ -267,10 +306,47 @@ else
 
         if (_q != null)
         {
-            _newStatusId = _q.QuoteStatusId;
-            _lines   = await Svc.GetLineItemsAsync(Id);
-            _tpItems = await Svc.GetThirdPartyItemsAsync(Id);
+            _newStatusId  = _q.QuoteStatusId;
+            _lines        = await Svc.GetLineItemsAsync(Id);
+            _tpItems      = await Svc.GetThirdPartyItemsAsync(Id);
+            _emailSubject = $"Quote — {_q.Reference}";
         }
+    }
+
+    private async Task DownloadPdfAsync()
+    {
+        await JS.InvokeVoidAsync("window.open", $"/api/pdf/quote/{Id}", "_blank");
+    }
+
+    private async Task SendEmailAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_emailTo))
+        {
+            Snackbar.Add("Please enter a recipient email address.", Severity.Warning);
+            return;
+        }
+        _emailSending = true;
+        try
+        {
+            byte[]? pdf = null;
+            if (_emailAttachPdf)
+            {
+                try   { pdf = await PdfSvc.GenerateQuotePdfAsync(Id); }
+                catch { Snackbar.Add("PDF generation failed — email will be sent without attachment.", Severity.Warning); }
+            }
+            var ok = await EmailSvc.EmailQuoteAsync(Id, _emailTo, _emailSubject, _emailMessage, _userCode, pdf);
+            if (ok)
+            {
+                Snackbar.Add($"Quote emailed to {_emailTo}.", Severity.Success);
+                _showEmailPanel = false;
+                _emailMessage   = "";
+            }
+            else
+            {
+                Snackbar.Add("Email failed — check SMTP settings in appsettings.json.", Severity.Error);
+            }
+        }
+        finally { _emailSending = false; }
     }
 
     private async Task CopyAsync()

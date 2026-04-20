@@ -89,6 +89,8 @@ builder.Services.AddScoped<AuthService>();
 
 // Domain services (all in Techlight.MyDesk.Shared.Services)
 builder.Services.AddScoped<ActivityService>();
+builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<PdfService>();
 builder.Services.AddScoped<QuoteService>();
 builder.Services.AddScoped<InvoiceService>();
 builder.Services.AddScoped<PurchaseOrderService>();
@@ -111,11 +113,16 @@ builder.Services.AddRazorComponents()
 
 var app = builder.Build();
 
-// Ensure UserActivity audit table exists (idempotent — runs IF NOT EXISTS)
+// Set QuestPDF community license (free tier, required since v2023.12)
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
+// Ensure audit + email log tables exist (idempotent IF NOT EXISTS)
 using (var scope = app.Services.CreateScope())
 {
-    var actSvc = scope.ServiceProvider.GetRequiredService<ActivityService>();
+    var actSvc   = scope.ServiceProvider.GetRequiredService<ActivityService>();
     await actSvc.EnsureTableAsync();
+    var emailSvc = scope.ServiceProvider.GetRequiredService<EmailService>();
+    await emailSvc.EnsureTablesAsync();
 }
 
 // Request logging with enriched properties (dev: Debug, prod: Information)
@@ -182,6 +189,89 @@ app.MapPost("/api/auth/login", async (HttpContext ctx, AuthService auth) =>
     return Results.Redirect("/login?error=1");
 });
 
+// ── PDF Download endpoints (authenticated — uses existing session cookie) ──────
+app.MapGet("/api/pdf/quote/{id:int}", async (int id, PdfService pdfSvc) =>
+{
+    try
+    {
+        var bytes = await pdfSvc.GenerateQuotePdfAsync(id);
+        return Results.File(bytes, "application/pdf", $"Quote-{id}.pdf");
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "PDF generation failed for quote {Id}", id);
+        return Results.Problem($"Could not generate PDF: {ex.Message}");
+    }
+}).RequireAuthorization();
+
+app.MapGet("/api/pdf/invoice/{id:int}", async (int id, PdfService pdfSvc) =>
+{
+    try
+    {
+        var bytes = await pdfSvc.GenerateInvoicePdfAsync(id);
+        return Results.File(bytes, "application/pdf", $"Invoice-{id}.pdf");
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "PDF generation failed for invoice {Id}", id);
+        return Results.Problem($"Could not generate PDF: {ex.Message}");
+    }
+}).RequireAuthorization();
+
+app.MapGet("/api/pdf/purchase-order/{id:int}", async (int id, PdfService pdfSvc) =>
+{
+    try
+    {
+        var bytes = await pdfSvc.GeneratePurchaseOrderPdfAsync(id);
+        return Results.File(bytes, "application/pdf", $"PurchaseOrder-{id}.pdf");
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "PDF generation failed for PO {Id}", id);
+        return Results.Problem($"Could not generate PDF: {ex.Message}");
+    }
+}).RequireAuthorization();
+
+// ── Email endpoints ─────────────────────────────────────────────────────────
+app.MapPost("/api/email/quote/{id:int}",
+    async (int id, HttpContext ctx, EmailRequest req, PdfService pdfSvc, EmailService emailSvc) =>
+{
+    var senderCode = ctx.User.Identity?.Name ?? "SYSTEM";
+    byte[]? pdf = null;
+    if (req.AttachPdf)
+    {
+        try { pdf = await pdfSvc.GenerateQuotePdfAsync(id); } catch { }
+    }
+    var ok = await emailSvc.EmailQuoteAsync(id, req.To, req.Subject, req.Message, senderCode, pdf);
+    return ok ? Results.Ok(new { sent = true }) : Results.Problem("Email send failed — check SMTP config.");
+}).RequireAuthorization();
+
+app.MapPost("/api/email/invoice/{id:int}",
+    async (int id, HttpContext ctx, EmailRequest req, PdfService pdfSvc, EmailService emailSvc) =>
+{
+    var senderCode = ctx.User.Identity?.Name ?? "SYSTEM";
+    byte[]? pdf = null;
+    if (req.AttachPdf)
+    {
+        try { pdf = await pdfSvc.GenerateInvoicePdfAsync(id); } catch { }
+    }
+    var ok = await emailSvc.EmailInvoiceAsync(id, req.To, req.Subject, req.Message, senderCode, pdf);
+    return ok ? Results.Ok(new { sent = true }) : Results.Problem("Email send failed — check SMTP config.");
+}).RequireAuthorization();
+
+app.MapPost("/api/email/purchase-order/{id:int}",
+    async (int id, HttpContext ctx, EmailRequest req, PdfService pdfSvc, EmailService emailSvc) =>
+{
+    var senderCode = ctx.User.Identity?.Name ?? "SYSTEM";
+    byte[]? pdf = null;
+    if (req.AttachPdf)
+    {
+        try { pdf = await pdfSvc.GeneratePurchaseOrderPdfAsync(id); } catch { }
+    }
+    var ok = await emailSvc.EmailPurchaseOrderAsync(id, req.To, req.Subject, req.Message, senderCode, pdf);
+    return ok ? Results.Ok(new { sent = true }) : Results.Problem("Email send failed — check SMTP config.");
+}).RequireAuthorization();
+
 app.MapGet("/logout", async (HttpContext ctx) =>
 {
     Log.Information("Logout: {User}", ctx.User?.Identity?.Name ?? "anonymous");
@@ -205,3 +295,10 @@ finally
     Log.Information("Application shutting down");
     Log.CloseAndFlush();
 }
+
+/// <summary>Body model for POST /api/email/* endpoints.</summary>
+public record EmailRequest(
+    string To,
+    string? Subject    = null,
+    string? Message    = null,
+    bool    AttachPdf  = true);
