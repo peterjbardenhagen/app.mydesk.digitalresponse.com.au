@@ -115,26 +115,82 @@ class AccessToSqlServerMigrator:
         self.sql_conn = None
         
     def connect_access(self) -> pyodbc.Connection:
-        """Connect to Access database"""
-        driver = '{Microsoft Access Driver (*.mdb, *.accdb)}'
-        conn_str = f'DRIVER={driver};DBQ={self.access_db_path};'
+        """Connect to Access database with validation and driver auto-detection"""
+        import os
         
-        try:
-            conn = pyodbc.connect(conn_str)
-            logger.info(f"Connected to Access database: {self.access_db_path}")
-            return conn
-        except pyodbc.Error as e:
-            logger.error(f"Failed to connect to Access: {e}")
-            # Try 32-bit driver
+        # Validate the Access DB file exists FIRST
+        if not os.path.isfile(self.access_db_path):
+            logger.error(f"Access database file not found: {self.access_db_path}")
+            logger.error(f"Please verify ACCESS_DB_PATH in migration_config.py")
+            raise FileNotFoundError(f"Access database not found: {self.access_db_path}")
+        
+        file_size_mb = os.path.getsize(self.access_db_path) / (1024 * 1024)
+        logger.info(f"Found Access DB: {self.access_db_path} ({file_size_mb:.2f} MB)")
+        
+        # Detect available Access drivers
+        available_drivers = [d for d in pyodbc.drivers() if 'Access' in d]
+        logger.info(f"Available Access drivers: {available_drivers}")
+        
+        if not available_drivers:
+            logger.error("=" * 70)
+            logger.error("NO MICROSOFT ACCESS ODBC DRIVER FOUND!")
+            logger.error("=" * 70)
+            logger.error("You need to install the Microsoft Access Database Engine.")
+            logger.error("")
+            logger.error("Download (pick ONE that matches your Python architecture):")
+            logger.error("  64-bit Python -> AccessDatabaseEngine_X64.exe")
+            logger.error("  32-bit Python -> AccessDatabaseEngine.exe")
+            logger.error("")
+            logger.error("URL: https://www.microsoft.com/en-us/download/details.aspx?id=54920")
+            logger.error("")
+            logger.error("Check your Python architecture with:")
+            logger.error("  python -c \"import platform; print(platform.architecture())\"")
+            logger.error("=" * 70)
+            
+            # Report which architecture Python is running
+            import platform
+            arch = platform.architecture()[0]
+            bits = '64-bit' if '64' in arch else '32-bit'
+            logger.error(f"Your Python is: {bits}")
+            logger.error(f"You need the {bits} Access Database Engine installer")
+            
+            raise RuntimeError("Microsoft Access ODBC Driver not installed")
+        
+        # Try each available driver in preferred order
+        # Prefer the newer .mdb, .accdb combined driver
+        preferred_order = [
+            '{Microsoft Access Driver (*.mdb, *.accdb)}',
+            'Microsoft Access Driver (*.mdb, *.accdb)',
+            '{Microsoft Access Driver (*.mdb)}',
+            'Microsoft Access Driver (*.mdb)',
+        ]
+        
+        # Match available drivers against preferred order
+        drivers_to_try = []
+        for pref in preferred_order:
+            pref_clean = pref.strip('{}')
+            for avail in available_drivers:
+                if avail == pref_clean and avail not in drivers_to_try:
+                    drivers_to_try.append(avail)
+        
+        # Fallback: any driver we found
+        for avail in available_drivers:
+            if avail not in drivers_to_try:
+                drivers_to_try.append(avail)
+        
+        last_error = None
+        for driver_name in drivers_to_try:
+            conn_str = f'DRIVER={{{driver_name}}};DBQ={self.access_db_path};'
             try:
-                driver = '{Microsoft Access Driver (*.mdb)}'
-                conn_str = f'DRIVER={driver};DBQ={self.access_db_path};'
                 conn = pyodbc.connect(conn_str)
-                logger.info(f"Connected using 32-bit driver")
+                logger.info(f"Connected using driver: {driver_name}")
                 return conn
-            except pyodbc.Error as e2:
-                logger.error(f"Failed with 32-bit driver too: {e2}")
-                raise
+            except pyodbc.Error as e:
+                logger.warning(f"Driver '{driver_name}' failed: {e}")
+                last_error = e
+        
+        logger.error(f"All available drivers failed to connect")
+        raise last_error
 
     def connect_sql_server(self) -> pyodbc.Connection:
         """Connect to SQL Server"""

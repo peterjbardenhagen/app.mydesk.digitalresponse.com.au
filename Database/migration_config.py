@@ -7,7 +7,7 @@ Edit these settings for your environment
 # ============================================================================
 # REQUIRED: Path to your Microsoft Access database
 # ============================================================================
-ACCESS_DB_PATH = r"C:\Development\Techlight.digitalresponse.com.au\Database\Techlight2.mdb"
+ACCESS_DB_PATH = r"C:\Development\Techlight.digitalresponse.com.au\Database\AccessDB\Techlight2.mdb"
 
 # ============================================================================
 # REQUIRED: SQL Server Connection Settings

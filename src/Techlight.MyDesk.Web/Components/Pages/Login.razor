@@ -1,0 +1,49 @@
+@page "/login"
+@layout EmptyLayout
+@attribute [AllowAnonymous]
+
+<div class="login-background d-flex align-center justify-center" style="height: 100vh; background: #0f1319; color: white;">
+    <MudContainer MaxWidth="MaxWidth.Small">
+        <MudPaper Elevation="4" Class="pa-8 text-center" Style="background: #1a1f2e; border-radius: 12px; border-top: 4px solid var(--mud-palette-primary);">
+            <MudText Typo="Typo.h4" Class="mb-4 font-weight-bold">
+                <span style="color: var(--mud-palette-primary);">Techlight</span>
+                <span style="color: var(--mud-palette-secondary);">MyDesk</span>
+            </MudText>
+            
+            <MudText Typo="Typo.body1" Class="mb-8" Style="color: #a0aec0;">Sign in to your account</MudText>
+
+            @if (ShowError)
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4">Invalid login credentials.</MudAlert>
+            }
+
+            <form method="post" action="/api/auth/login">
+                <AntiforgeryToken />
+                
+                <MudTextField T="string" Name="code" Label="User Code" Variant="Variant.Outlined" 
+                              Class="mb-4" Required="true" Adornment="Adornment.Start" 
+                              AdornmentIcon="@Icons.Material.Filled.Person" />
+                              
+                <MudTextField T="string" Name="password" Label="Password" InputType="InputType.Password" 
+                              Variant="Variant.Outlined" Class="mb-6" Required="true" 
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock" />
+
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" 
+                           Size="Size.Large" FullWidth="true" Class="py-3 font-weight-bold">
+                    Login
+                </MudButton>
+            </form>
+            
+            <div class="mt-8 text-center">
+                <MudText Typo="Typo.caption" Style="color: #718096;">&copy; @DateTime.Now.Year Techlight. All rights reserved.</MudText>
+            </div>
+        </MudPaper>
+    </MudContainer>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? Error { get; set; }
+
+    private bool ShowError => Error == "1";
+}

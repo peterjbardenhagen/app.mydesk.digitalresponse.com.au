@@ -1,23 +1,66 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
+@inject NavigationManager NavigationManager
 
-<div class="page">
-    <div class="sidebar">
+<MudThemeProvider @ref="@_themeProvider" @bind-IsDarkMode="@_isDarkMode" Theme="_theme" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1" Color="Color.Dark" Fixed="true">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+        <MudText Typo="Typo.h5" Class="ml-3 font-weight-bold" Style="color: var(--mud-palette-primary);">Techlight<span style="color: var(--mud-palette-secondary);">MyDesk</span></MudText>
+        <MudSpacer />
+        
+        <AuthorizeView>
+            <Authorized>
+                <div class="d-flex align-center mr-4">
+                    <MudAvatar Color="Color.Primary" Size="Size.Small" Class="mr-2">
+                        @context.User.Identity?.Name?.FirstOrDefault().ToString().ToUpper()
+                    </MudAvatar>
+                    <MudText Typo="Typo.body2">@context.User.Identity?.Name</MudText>
+                </div>
+                <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit" Href="/logout" Title="Logout" />
+            </Authorized>
+            <NotAuthorized>
+                <MudButton Color="Color.Inherit" Href="/login">Login</MudButton>
+            </NotAuthorized>
+        </AuthorizeView>
+    </MudAppBar>
+    
+    <MudDrawer @bind-Open="_drawerOpen" Elevation="2" ClipMode="DrawerClipMode.Docked">
         <NavMenu />
-    </div>
-
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-
-        <article class="content px-4">
+    </MudDrawer>
+    
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pt-6 pb-8">
             @Body
-        </article>
-    </main>
-</div>
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
 
-<div id="blazor-error-ui">
-    An unhandled error has occurred.
-    <a href="" class="reload">Reload</a>
-    <a class="dismiss">🗙</a>
-</div>
+@code {
+    bool _drawerOpen = true;
+    private MudThemeProvider _themeProvider;
+    private bool _isDarkMode = true;
+
+    void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private MudTheme _theme = new MudTheme
+    {
+        PaletteDark = new PaletteDark
+        {
+            Primary = "#00a8b5",
+            Secondary = "#d4a574",
+            AppbarBackground = "#0f1319",
+            Background = "#0f1319",
+            Surface = "#1a1f2e",
+            DrawerBackground = "#1a1f2e",
+            DrawerIcon = "#a0aec0",
+            DrawerText = "#e2e8f0"
+        }
+    };
+}
