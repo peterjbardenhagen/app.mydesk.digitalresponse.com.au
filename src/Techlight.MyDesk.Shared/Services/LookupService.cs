@@ -66,10 +66,58 @@ public class LookupService
             FROM Contacts ORDER BY CompanyName, Surname");
         return dt.Map(r => new Contact
         {
-            ContactId = Convert.ToInt32(r["ContactId"]),
-            FirstName = r["FirstName"]?.ToString() ?? "",
-            Surname = r["Surname"]?.ToString() ?? "",
+            ContactId   = Convert.ToInt32(r["ContactId"]),
+            FirstName   = r["FirstName"]?.ToString() ?? "",
+            Surname     = r["Surname"]?.ToString() ?? "",
             CompanyName = r["CompanyName"]?.ToString() ?? "",
+        });
+    }
+
+    public async Task<List<UserLookup>> GetUsersAsync()
+    {
+        var dt = await _db.QueryAsync(
+            "SELECT ISNULL(Code,'') AS Code, ISNULL(Name,'') AS Name FROM Users ORDER BY Name");
+        return dt.Map(r => new UserLookup
+        {
+            Code = r["Code"]?.ToString() ?? "",
+            Name = r["Name"]?.ToString() ?? "",
+        });
+    }
+
+    public async Task<List<Company>> GetCompaniesAsync()
+    {
+        var dt = await _db.QueryAsync(
+            "SELECT TOP 2000 CompanyId, ISNULL(Company,'') AS Company FROM Companies ORDER BY Company");
+        return dt.Map(r => new Company
+        {
+            CompanyId   = Convert.ToInt32(r["CompanyId"]),
+            CompanyName = r["Company"]?.ToString() ?? "",
+        });
+    }
+
+    public async Task<List<Location>> GetLocationsAsync()
+    {
+        var dt = await _db.QueryAsync(
+            "SELECT LocationId, ISNULL(LocationName,'') AS LocationName FROM Locations ORDER BY LocationName");
+        return dt.Map(r => new Location
+        {
+            LocationId   = Convert.ToInt32(r["LocationId"]),
+            LocationName = r["LocationName"]?.ToString() ?? "",
+        });
+    }
+
+    public async Task<List<POProductType>> GetPOProductTypesAsync()
+    {
+        var dt = await _db.QueryAsync(@"
+            SELECT POProductTypeId,
+                   ISNULL(POProductType,'') AS POProductTypeName,
+                   ISNULL(IsCapEx,0)        AS IsCapEx
+            FROM PurchaseOrderProductTypes ORDER BY POProductTypeId");
+        return dt.Map(r => new POProductType
+        {
+            POProductTypeId   = Convert.ToInt32(r["POProductTypeId"]),
+            POProductTypeName = r["POProductTypeName"]?.ToString() ?? "",
+            IsCapEx           = r["IsCapEx"] != DBNull.Value && Convert.ToBoolean(r["IsCapEx"]),
         });
     }
 }

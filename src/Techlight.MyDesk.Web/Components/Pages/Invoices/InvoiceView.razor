@@ -1,46 +1,271 @@
 @page "/invoices/{Id:int}"
 @attribute [Authorize]
 @inject InvoiceService InvoiceService
+@inject LookupService LookupService
 @inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject IDialogService Dialog
+@inject AuthenticationStateProvider AuthStateProvider
+@using System.Security.Claims
 
-<PageTitle>Invoice @Id - Techlight MyDesk</PageTitle>
+<PageTitle>Invoice @_inv?.InvoiceNum - Techlight MyDesk</PageTitle>
 
-@if (_invoice == null)
+@if (_inv == null)
 {
     <MudProgressCircular Indeterminate="true" Class="mx-auto my-8 d-block" />
 }
 else
 {
-    <div class="d-flex justify-space-between align-center mb-4">
-        <MudText Typo="Typo.h4" Class="font-weight-bold">Invoice @_invoice.InvoiceNumber</MudText>
-        <div class="d-flex gap-2">
-            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Nav.NavigateTo("/invoices"))">Back</MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" Href="@($"/invoices/{_invoice.InvoiceId}/edit")">Edit</MudButton>
+    <div class="tl-page-header">
+        <div>
+            <div class="tl-breadcrumb">
+                <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+                <a href="/invoices">Invoices</a><span class="sep">/</span>
+                <span>@_inv.InvoiceNum</span>
+            </div>
+            <h1 style="display:flex;align-items:center;gap:.5rem;">
+                Invoice @_inv.InvoiceNum
+                <MudChip T="string" Size="Size.Small" Color="@StatusColour(_inv.StatusName)">@_inv.StatusName</MudChip>
+            </h1>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ArrowBack"
+                       Href="/invoices">Back</MudButton>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.History"
+                       Href="@($"/invoices/{Id}/history")">History</MudButton>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.LocalShipping"
+                       Href="@($"/invoices/{Id}/delivery-note")">Delivery Note</MudButton>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.LocalShipping"
+                       Href="@($"/invoices/{Id}/despatch")" Color="Color.Secondary">Despatch</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Rounded.Edit"
+                       Href="@($"/invoices/{Id}/edit")">Edit</MudButton>
         </div>
     </div>
 
-    <MudPaper Elevation="2" Class="pa-6">
-        <MudGrid>
-            <MudItem xs="6"><strong>Customer:</strong> @_invoice.CompanyName</MudItem>
-            <MudItem xs="6"><strong>Invoice Date:</strong> @_invoice.InvoiceDate.ToString("yyyy-MM-dd")</MudItem>
-            <MudItem xs="6"><strong>Due Date:</strong> @_invoice.DueDate?.ToString("yyyy-MM-dd")</MudItem>
-            <MudItem xs="6"><strong>Status:</strong> <MudChip T="string" Color="Color.Info" Size="Size.Small">@_invoice.Status</MudChip></MudItem>
-            <MudItem xs="6"><strong>Amount (ex GST):</strong> @_invoice.AmountExGST.ToString("C2")</MudItem>
-            <MudItem xs="6"><strong>GST:</strong> @_invoice.GST.ToString("C2")</MudItem>
-            <MudItem xs="6"><strong>Total:</strong> <strong>@_invoice.Amount.ToString("C2")</strong></MudItem>
-            <MudItem xs="6"><strong>Reference:</strong> @(_invoice.Reference ?? "-")</MudItem>
-            @if (_invoice.QuoteId.HasValue)
+    <MudGrid Spacing="3">
+        @* ── Left column: Invoice details ── *@
+        <MudItem xs="12" md="8">
+            <MudPaper Class="pa-5 mb-3" Elevation="1">
+                <MudText Typo="Typo.subtitle2" Class="mb-3"
+                         Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Invoice Details</MudText>
+                <MudGrid Spacing="2">
+                    <MudItem xs="6"><span style="color:var(--gray-500)">Invoice #</span><br/><strong>@(_inv.InvoiceNum.Length > 0 ? _inv.InvoiceNum : "—")</strong></MudItem>
+                    <MudItem xs="6"><span style="color:var(--gray-500)">Date</span><br/><strong>@_inv.InvoiceDate.ToString("dd MMM yyyy")</strong></MudItem>
+                    <MudItem xs="6"><span style="color:var(--gray-500)">Division</span><br/><strong>@_inv.DivisionName</strong></MudItem>
+                    <MudItem xs="6"><span style="color:var(--gray-500)">Invoiced By</span><br/><strong>@_inv.InvoicedBy</strong></MudItem>
+                    <MudItem xs="6"><span style="color:var(--gray-500)">Customer PO</span><br/><strong>@(_inv.CustomerPO ?? "—")</strong></MudItem>
+                    <MudItem xs="6"><span style="color:var(--gray-500)">Account</span><br/><strong>@(_inv.Account ?? "—")</strong></MudItem>
+                    @if (_inv.Qid > 0)
+                    {
+                        <MudItem xs="12"><span style="color:var(--gray-500)">Source Quote</span><br/>
+                            <MudLink Href="@($"/quotes/{_inv.Qid}")">Quote #@_inv.Qid</MudLink>
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudPaper>
+
+            @* ── Addresses ── *@
+            <MudPaper Class="pa-5 mb-3" Elevation="1">
+                <MudText Typo="Typo.subtitle2" Class="mb-3"
+                         Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Addresses</MudText>
+                <MudGrid Spacing="2">
+                    <MudItem xs="6">
+                        <div style="color:var(--gray-500);font-size:.8rem;margin-bottom:4px;">Invoice To</div>
+                        <div style="white-space:pre-line;">@(_inv.InvCompany)<br/>@(_inv.InvAddress)</div>
+                    </MudItem>
+                    <MudItem xs="6">
+                        <div style="color:var(--gray-500);font-size:.8rem;margin-bottom:4px;">Deliver To</div>
+                        <div style="white-space:pre-line;">@(_inv.DelCompany)<br/>@(_inv.DelAddress)</div>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+
+            @* ── Line items ── *@
+            <MudPaper Class="pa-5 mb-3" Elevation="1">
+                <MudText Typo="Typo.subtitle2" Class="mb-3"
+                         Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">
+                    Line Items (@_lines.Count)
+                </MudText>
+                @if (_lines.Any())
+                {
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
+                            <thead>
+                                <tr style="border-bottom:2px solid var(--mud-palette-divider);color:var(--gray-500);">
+                                    <th style="text-align:left;padding:6px 8px;">Description</th>
+                                    <th style="text-align:right;padding:6px 8px;width:60px;">Qty</th>
+                                    <th style="text-align:right;padding:6px 8px;width:100px;">Unit Price</th>
+                                    <th style="text-align:right;padding:6px 8px;width:110px;">Extended</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var l in _lines)
+                                {
+                                    <tr style="border-bottom:1px solid var(--mud-palette-divider);">
+                                        <td style="padding:6px 8px;">
+                                            @if (!string.IsNullOrEmpty(l.ProductCode))
+                                            {
+                                                <span style="color:var(--gray-400);font-size:.8rem;margin-right:6px;">@l.ProductCode</span>
+                                            }
+                                            @l.Description
+                                        </td>
+                                        <td style="text-align:right;padding:6px 8px;">@l.Quantity.ToString("N0")</td>
+                                        <td style="text-align:right;padding:6px 8px;">@l.NettPrice.ToString("C2")</td>
+                                        <td style="text-align:right;padding:6px 8px;font-weight:500;">@l.ExtNettPrice.ToString("C2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <MudText Style="color:var(--gray-400)">No line items recorded.</MudText>
+                }
+            </MudPaper>
+
+            @* ── Notes ── *@
+            @if (!string.IsNullOrEmpty(_inv.CustomerNotes) || !string.IsNullOrEmpty(_inv.InternalNotes))
             {
-                <MudItem xs="12"><strong>Related Quote:</strong> <MudLink Href="@($"/quotes/{_invoice.QuoteId}")">#@_invoice.QuoteId</MudLink></MudItem>
+                <MudPaper Class="pa-5 mb-3" Elevation="1">
+                    <MudGrid Spacing="2">
+                        @if (!string.IsNullOrEmpty(_inv.CustomerNotes))
+                        {
+                            <MudItem xs="12" sm="6">
+                                <div style="color:var(--gray-500);font-size:.8rem;margin-bottom:4px;">Customer Notes</div>
+                                <div style="white-space:pre-line;font-size:.875rem;">@_inv.CustomerNotes</div>
+                            </MudItem>
+                        }
+                        @if (!string.IsNullOrEmpty(_inv.InternalNotes))
+                        {
+                            <MudItem xs="12" sm="6">
+                                <div style="color:var(--gray-500);font-size:.8rem;margin-bottom:4px;">Internal Notes</div>
+                                <div style="white-space:pre-line;font-size:.875rem;">@_inv.InternalNotes</div>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </MudPaper>
             }
-        </MudGrid>
-    </MudPaper>
+        </MudItem>
+
+        @* ── Right column: Totals + Status ── *@
+        <MudItem xs="12" md="4">
+            @* Totals *@
+            <MudPaper Class="pa-5 mb-3" Elevation="1">
+                <MudText Typo="Typo.subtitle2" Class="mb-3"
+                         Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Totals</MudText>
+                <table style="width:100%;font-size:.9rem;">
+                    <tr><td style="color:var(--gray-500);padding:3px 0;">Ex GST</td>
+                        <td style="text-align:right;font-weight:500;">@_inv.NettPriceTotal.ToString("C2")</td></tr>
+                    <tr><td style="color:var(--gray-500);padding:3px 0;">GST</td>
+                        <td style="text-align:right;">@_inv.GSTTotal.ToString("C2")</td></tr>
+                    <tr style="border-top:1px solid var(--mud-palette-divider);">
+                        <td style="font-weight:600;padding-top:6px;">Total inc GST</td>
+                        <td style="text-align:right;font-weight:700;font-size:1.1rem;padding-top:6px;">@_inv.TotalIncGST.ToString("C2")</td>
+                    </tr>
+                </table>
+                @if (_inv.ExportedToMYOB)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mt-3">
+                        Exported to MYOB @(_inv.ExportedDate.HasValue ? $"on {_inv.ExportedDate.Value:dd MMM yyyy}" : "")
+                    </MudAlert>
+                }
+            </MudPaper>
+
+            @* Status panel *@
+            <MudPaper Class="pa-5 mb-3" Elevation="1">
+                <MudText Typo="Typo.subtitle2" Class="mb-3"
+                         Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Change Status</MudText>
+                <MudSelect T="int" @bind-Value="_newStatusId" Variant="Variant.Outlined" Dense="true">
+                    @foreach (var s in _statuses)
+                    {
+                        <MudSelectItem T="int" Value="@s.InvoiceStatusId">@s.StatusName</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudButton Class="mt-2" FullWidth="true" Variant="Variant.Filled" Color="Color.Primary"
+                           OnClick="UpdateStatusAsync" Disabled="@(_newStatusId == _inv.InvoiceStatusId || _statusUpdating)">
+                    @(_statusUpdating ? "Saving…" : "Save Status")
+                </MudButton>
+            </MudPaper>
+
+            @* Delete (admin only) *@
+            @if (_isAdmin)
+            {
+                <MudPaper Class="pa-5" Elevation="1">
+                    <MudButton FullWidth="true" Variant="Variant.Outlined" Color="Color.Error"
+                               StartIcon="@Icons.Material.Rounded.Delete"
+                               OnClick="DeleteAsync">Delete Invoice</MudButton>
+                </MudPaper>
+            }
+        </MudItem>
+    </MudGrid>
 }
 
 @code {
     [Parameter] public int Id { get; set; }
-    private Invoice? _invoice;
+
+    private Invoice?           _inv;
+    private List<InvoiceLineItem> _lines   = new();
+    private List<InvoiceStatus>   _statuses= new();
+    private bool   _isAdmin;
+    private bool   _statusUpdating;
+    private int    _newStatusId;
+    private string _userCode = "";
 
     protected override async Task OnInitializedAsync()
-        => _invoice = await InvoiceService.GetInvoiceAsync(Id);
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        _isAdmin  = auth.User.IsInRole("Admin") || auth.User.FindFirst("IsAdmin")?.Value == "True";
+        _userCode = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+
+        (_inv, _lines, _statuses) = (
+            await InvoiceService.GetInvoiceAsync(Id),
+            await InvoiceService.GetLineItemsAsync(Id),
+            await LookupService.GetInvoiceStatusesAsync());
+
+        if (_inv != null) _newStatusId = _inv.InvoiceStatusId;
+    }
+
+    private async Task UpdateStatusAsync()
+    {
+        if (_inv == null) return;
+        _statusUpdating = true;
+        try
+        {
+            var name = _statuses.FirstOrDefault(s => s.InvoiceStatusId == _newStatusId)?.StatusName ?? "";
+            await InvoiceService.UpdateStatusAsync(Id, _newStatusId, _userCode, name);
+            _inv.InvoiceStatusId = _newStatusId;
+            _inv.StatusName      = name;
+            Snackbar.Add($"Status updated to {name}.", Severity.Success);
+        }
+        catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
+        finally { _statusUpdating = false; }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (_inv == null) return;
+        bool? ok = await Dialog.ShowMessageBox("Delete Invoice",
+            $"Delete invoice {_inv.InvoiceNum}? This cannot be undone.",
+            yesText: "Delete", cancelText: "Cancel");
+        if (ok != true) return;
+        try
+        {
+            await InvoiceService.DeleteAsync(Id, _userCode);
+            Snackbar.Add("Invoice deleted.", Severity.Success);
+            Nav.NavigateTo("/invoices");
+        }
+        catch (Exception ex) { Snackbar.Add($"Delete failed: {ex.Message}", Severity.Error); }
+    }
+
+    private static Color StatusColour(string s) => s switch
+    {
+        "Draft"    => Color.Default,
+        "Issued"   => Color.Success,
+        "Paid"     => Color.Info,
+        "Overdue"  => Color.Error,
+        "Credited" => Color.Warning,
+        _          => Color.Default,
+    };
 }

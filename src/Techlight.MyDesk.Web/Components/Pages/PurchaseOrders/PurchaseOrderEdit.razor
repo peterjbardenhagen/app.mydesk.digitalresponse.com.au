@@ -6,121 +6,287 @@
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthStateProvider
+@using System.Security.Claims
 
-<PageTitle>@(IsNew ? "New" : "Edit") PO - Techlight MyDesk</PageTitle>
+<PageTitle>@(IsNew ? "New PO" : $"Edit PO #{Id}") - Techlight MyDesk</PageTitle>
 
-<div class="d-flex justify-space-between align-center mb-4">
-    <MudText Typo="Typo.h4" Class="font-weight-bold">@(IsNew ? "New Purchase Order" : $"Edit PO #{_po.PurchaseOrderId}")</MudText>
-    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ArrowBack"
-               OnClick="@(() => Nav.NavigateTo(IsNew ? "/purchase-orders" : $"/purchase-orders/{Id}"))">Cancel</MudButton>
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/purchase-orders">Purchase Orders</a><span class="sep">/</span>
+            <span>@(IsNew ? "New PO" : $"Edit #{Id}")</span>
+        </div>
+        <h1>@(IsNew ? "New Purchase Order" : $"Edit PO #{Id}")</h1>
+    </div>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ArrowBack"
+               Href="@(IsNew ? "/purchase-orders" : $"/purchase-orders/{Id}")">Cancel</MudButton>
 </div>
 
-<MudPaper Elevation="2" Class="pa-6">
-    <MudForm @ref="_form" Model="_po" @bind-IsValid="_isValid">
-        <MudGrid>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_po.PurchaseOrderNumber" Label="PO Number" Variant="Variant.Outlined" Required="true" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudSelect T="int" @bind-Value="_po.ContactId" Label="Supplier" Variant="Variant.Outlined" Required="true">
-                    @foreach (var c in _contacts)
-                    {
-                        <MudSelectItem T="int" Value="@c.ContactId">@c.CompanyName - @c.FullName</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudDatePicker @bind-Date="_poDate" Label="PO Date" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudDatePicker @bind-Date="_deliveryDate" Label="Expected Delivery" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudSelect T="int" @bind-Value="_po.POStatusId" Label="Status" Variant="Variant.Outlined">
-                    @foreach (var s in _statuses)
-                    {
-                        <MudSelectItem T="int" Value="@s.POStatusId">@s.StatusName</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_po.Reference" Label="Reference" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudNumericField @bind-Value="_po.AmountExGST" Label="Amount ex GST" Format="N2" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudNumericField @bind-Value="_po.Amount" Label="Total Amount" Format="N2" Variant="Variant.Outlined" />
-            </MudItem>
-        </MudGrid>
-
-        <div class="d-flex justify-end gap-2 mt-4">
-            <MudButton Variant="Variant.Outlined" OnClick="@(() => Nav.NavigateTo(IsNew ? "/purchase-orders" : $"/purchase-orders/{Id}"))">Cancel</MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@_saving" StartIcon="@Icons.Material.Filled.Save">
-                @(_saving ? "Saving..." : "Save")
-            </MudButton>
-        </div>
-    </MudForm>
+<MudPaper Class="pa-6 mb-4" Elevation="1">
+    <MudText Typo="Typo.subtitle2" Class="mb-4"
+             Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">PO Details</MudText>
+    <MudGrid Spacing="3">
+        <MudItem xs="12" sm="4">
+            <MudSelect T="int" @bind-Value="_po.ContactId" Label="Supplier *" Variant="Variant.Outlined">
+                <MudSelectItem T="int" Value="0">— Select Supplier —</MudSelectItem>
+                @foreach (var c in _contacts)
+                {
+                    <MudSelectItem T="int" Value="@c.ContactId">@c.CompanyName</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudTextField @bind-Value="_po.Project" Label="Project / Reason for Purchase *" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect T="int" @bind-Value="_po.DivisionId" Label="Division" Variant="Variant.Outlined">
+                @foreach (var d in _divisions)
+                {
+                    <MudSelectItem T="int" Value="@d.DivisionId">@d.DivisionName</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="3">
+            <MudDatePicker @bind-Date="_poDate" Label="PO Date *" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="3">
+            <MudDatePicker @bind-Date="_dateRequired" Label="Date Required" Variant="Variant.Outlined" Clearable="true" />
+        </MudItem>
+        <MudItem xs="12" sm="3">
+            <MudSelect T="int?" @bind-Value="_po.POPaymentTypeId" Label="Payment Type" Variant="Variant.Outlined">
+                <MudSelectItem T="int?" Value="@((int?)null)">— None —</MudSelectItem>
+                @foreach (var pt in _paymentTypes)
+                {
+                    <MudSelectItem T="int?" Value="@((int?)pt.POStatusId)">@pt.StatusName</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="3">
+            <MudCheckBox @bind-Value="_po.GST" Label="Apply GST (10%)" Color="Color.Primary" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_po.Terms" Label="Payment Terms" Variant="Variant.Outlined" Lines="2" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_po.DeliverToLocation" Label="Deliver To Address" Variant="Variant.Outlined" Lines="2" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_po.IntroText" Label="Notes to Supplier (printed on PO)" Variant="Variant.Outlined" Lines="3" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_po.InternalNotes" Label="Internal Notes / Reason for Purchase" Variant="Variant.Outlined" Lines="3" />
+        </MudItem>
+    </MudGrid>
 </MudPaper>
+
+@* ── Line Items ── *@
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <div class="d-flex justify-space-between align-center mb-3">
+        <MudText Typo="Typo.subtitle2"
+                 Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Line Items</MudText>
+        <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Add"
+                   OnClick="AddLine">Add Line</MudButton>
+    </div>
+    <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--mud-palette-divider);color:var(--gray-500);">
+                    <th style="text-align:left;padding:4px 6px;">Description</th>
+                    <th style="text-align:right;padding:4px 6px;width:60px;">Qty</th>
+                    <th style="text-align:right;padding:4px 6px;width:100px;">Unit Price</th>
+                    <th style="text-align:right;padding:4px 6px;width:110px;">Extended</th>
+                    <th style="padding:4px 6px;width:130px;">Product Type</th>
+                    <th style="width:36px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in _lines)
+                {
+                    var r = row;
+                    <tr style="border-bottom:1px solid var(--mud-palette-divider);">
+                        <td style="padding:2px 4px;">
+                            <MudTextField @bind-Value="r.Description" Variant="Variant.Text"
+                                          Margin="Margin.Dense" Style="min-width:180px;" />
+                        </td>
+                        <td style="padding:2px 4px;">
+                            <MudNumericField Value="@r.Qty"
+                                             ValueChanged="@((int v) => { r.Qty = v; StateHasChanged(); })"
+                                             Variant="Variant.Text" Margin="Margin.Dense" Min="1" />
+                        </td>
+                        <td style="padding:2px 4px;">
+                            <MudNumericField Value="@r.PriceEx"
+                                             ValueChanged="@((decimal v) => { r.PriceEx = v; StateHasChanged(); })"
+                                             Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
+                        </td>
+                        <td style="text-align:right;padding:2px 8px;white-space:nowrap;font-weight:500;">
+                            @r.ExtPrice.ToString("N2")
+                        </td>
+                        <td style="padding:2px 4px;">
+                            <MudSelect T="int?" Value="@r.POProductTypeId"
+                                       ValueChanged="@((int? v) => { r.POProductTypeId = v; StateHasChanged(); })"
+                                       Variant="Variant.Text" Margin="Margin.Dense">
+                                <MudSelectItem T="int?" Value="@((int?)null)">—</MudSelectItem>
+                                @foreach (var pt in _productTypes)
+                                {
+                                    <MudSelectItem T="int?" Value="@((int?)pt.POProductTypeId)">@pt.POProductTypeName</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </td>
+                        <td>
+                            <MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small"
+                                           Color="Color.Error" OnClick="@(() => RemoveLine(r))" />
+                        </td>
+                    </tr>
+                }
+                @if (!_lines.Any())
+                {
+                    <tr><td colspan="6" style="padding:16px;text-align:center;color:var(--gray-400);">
+                        No lines — click Add Line.
+                    </td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</MudPaper>
+
+@* ── Totals + Save ── *@
+<div class="d-flex justify-space-between align-start gap-4 flex-wrap">
+    <MudPaper Class="pa-4" Elevation="1" Style="min-width:260px;">
+        <MudText Typo="Typo.subtitle2" Class="mb-2"
+                 Style="color:var(--gray-500);text-transform:uppercase;">Totals</MudText>
+        <table style="width:100%;font-size:.9rem;">
+            <tr><td style="color:var(--gray-500);">Ex GST</td>
+                <td style="text-align:right;font-weight:500;">$@PriceExTotal.ToString("N2")</td></tr>
+            @if (_po.GST)
+            {
+                <tr><td style="color:var(--gray-500);">GST (10%)</td>
+                    <td style="text-align:right;">$@PriceGSTTotal.ToString("N2")</td></tr>
+            }
+            <tr style="border-top:1px solid var(--mud-palette-divider);">
+                <td style="font-weight:600;padding-top:4px;">Total @(_po.GST ? "inc GST" : "ex GST")</td>
+                <td style="text-align:right;font-weight:700;padding-top:4px;">$@PriceIncTotal.ToString("N2")</td></tr>
+        </table>
+    </MudPaper>
+    <div class="d-flex gap-2 align-center flex-wrap">
+        @if (_error != null)
+        {
+            <MudText Color="Color.Error" Typo="Typo.body2">@_error</MudText>
+        }
+        <MudButton Variant="Variant.Outlined" Href="@(IsNew ? "/purchase-orders" : $"/purchase-orders/{Id}")">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Save"
+                   OnClick="SaveAsync" Disabled="@_saving">
+            @(_saving ? "Saving…" : "Save PO")
+        </MudButton>
+    </div>
+</div>
 
 @code {
     [Parameter] public int? Id { get; set; }
+    [SupplyParameterFromQuery(Name = "qid")] public int? Qid { get; set; }
     private bool IsNew => !Id.HasValue || Id == 0;
 
-    private MudForm _form = null!;
-    private bool _isValid;
-    private bool _saving;
+    private PurchaseOrder       _po           = new() { PODate = DateTime.Today, GST = true };
+    private DateTime?           _poDate       = DateTime.Today;
+    private DateTime?           _dateRequired;
+    private List<POLineRow>     _lines        = new();
+    private List<Contact>       _contacts     = new();
+    private List<Division>      _divisions    = new();
+    private List<POStatus>      _paymentTypes = new();
+    private List<POProductType> _productTypes = new();
+    private bool    _saving;
+    private string? _error;
+    private string  _userCode = "";
 
-    private PurchaseOrder _po = new() { PODate = DateTime.Today, POStatusId = 1 };
-    private DateTime? _poDate = DateTime.Today;
-    private DateTime? _deliveryDate;
-    private List<Contact> _contacts = new();
-    private List<POStatus> _statuses = new();
+    private decimal PriceExTotal  => _lines.Sum(l => l.ExtPrice);
+    private decimal PriceGSTTotal => _po.GST ? PriceExTotal * 0.10m : 0;
+    private decimal PriceIncTotal => PriceExTotal + PriceGSTTotal;
 
     protected override async Task OnInitializedAsync()
     {
-        _contacts = await LookupService.GetContactLookupsAsync();
-        _statuses = await LookupService.GetPoStatusesAsync();
+        var auth  = await AuthStateProvider.GetAuthenticationStateAsync();
+        _userCode = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+
+        (_contacts, _divisions, _productTypes) = (
+            await LookupService.GetContactLookupsAsync(),
+            await LookupService.GetDivisionsAsync(),
+            await LookupService.GetPOProductTypesAsync());
 
         if (!IsNew)
         {
             var existing = await POService.GetPurchaseOrderAsync(Id!.Value);
             if (existing != null)
             {
-                _po = existing;
-                _poDate = existing.PODate;
-                _deliveryDate = existing.ExpectedDelivery;
+                _po           = existing;
+                _poDate       = existing.PODate;
+                _dateRequired = existing.DateRequired == DateTime.MinValue ? null : existing.DateRequired;
+                var items     = await POService.GetLineItemsAsync(Id!.Value);
+                _lines        = items.Select(i => new POLineRow
+                {
+                    Description     = i.Description,
+                    Qty             = i.Quantity,
+                    PriceEx         = i.PriceEx,
+                    POProductTypeId = i.POProductTypeId,
+                }).ToList();
             }
         }
     }
 
+    private void AddLine()               { _lines.Add(new POLineRow()); StateHasChanged(); }
+    private void RemoveLine(POLineRow r) { _lines.Remove(r); StateHasChanged(); }
+
     private async Task SaveAsync()
     {
-        await _form.Validate();
-        if (!_isValid) return;
+        _error = null;
+        if (_po.ContactId == 0)       { _error = "Please select a supplier."; return; }
+        if (string.IsNullOrWhiteSpace(_po.Project)) { _error = "Project/Reason is required."; return; }
+
+        _po.PODate        = _poDate ?? DateTime.Today;
+        _po.DateRequired  = _dateRequired ?? DateTime.MinValue;
+        _po.PriceExTotal  = PriceExTotal;
+        _po.PriceGSTTotal = PriceGSTTotal;
+        _po.PriceIncTotal = PriceIncTotal;
+        _po.HasCapEx      = _lines.Any(l => _productTypes.FirstOrDefault(pt => pt.POProductTypeId == l.POProductTypeId)?.IsCapEx == true);
+
+        var lineItems = _lines
+            .Where(r => r.Qty > 0 && !string.IsNullOrWhiteSpace(r.Description))
+            .Select(r => new POLineItem
+            {
+                Description     = r.Description,
+                Quantity        = r.Qty,
+                PriceEx         = r.PriceEx,
+                PriceExSubTotal = r.ExtPrice,
+                POProductTypeId = r.POProductTypeId,
+                IsCapEx         = _productTypes.FirstOrDefault(pt => pt.POProductTypeId == r.POProductTypeId)?.IsCapEx == true,
+            }).ToList();
+
         _saving = true;
         try
         {
-            _po.PODate = _poDate ?? DateTime.Today;
-            _po.ExpectedDelivery = _deliveryDate;
-
-            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-            var code = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
-
             if (IsNew)
             {
-                var newId = await POService.CreatePurchaseOrderAsync(_po, code);
-                Snackbar.Add($"PO #{newId} created", Severity.Success);
+                var newId = await POService.CreatePurchaseOrderAsync(_po, lineItems, _userCode);
+                Snackbar.Add("PO created.", Severity.Success);
                 Nav.NavigateTo($"/purchase-orders/{newId}");
             }
             else
             {
-                await POService.UpdatePurchaseOrderAsync(_po);
-                Snackbar.Add("PO updated", Severity.Success);
-                Nav.NavigateTo($"/purchase-orders/{_po.PurchaseOrderId}");
+                _po.POid = Id!.Value;
+                await POService.UpdatePurchaseOrderAsync(_po, lineItems, _userCode);
+                Snackbar.Add("PO saved.", Severity.Success);
+                Nav.NavigateTo($"/purchase-orders/{Id}");
             }
         }
-        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+        catch (Exception ex) { Snackbar.Add($"Save failed: {ex.Message}", Severity.Error); }
         finally { _saving = false; }
+    }
+
+    private sealed class POLineRow
+    {
+        public string  Description     { get; set; } = "";
+        public int     Qty             { get; set; } = 1;
+        public decimal PriceEx         { get; set; }
+        public int?    POProductTypeId { get; set; }
+        public decimal ExtPrice        => Qty * PriceEx;
     }
 }

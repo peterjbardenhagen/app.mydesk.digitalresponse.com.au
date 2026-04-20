@@ -11,140 +11,291 @@ public class PurchaseOrderService
 
     public PurchaseOrderService(DatabaseService db, ILogger<PurchaseOrderService> logger)
     {
-        _db = db;
+        _db     = db;
         _logger = logger;
     }
 
+    // ── Shared SELECT fragment ──────────────────────────────────────────────
+    private const string SelectCols = @"
+        p.POid,
+        ISNULL(p.Code,'')           AS Code,
+        ISNULL(u.Name,'')           AS OriginatorName,
+        ISNULL(p.Project,'')        AS Project,
+        ISNULL(p.ContactId,0)       AS ContactId,
+        ISNULL(cn.CompanyName,'')   AS SupplierName,
+        ISNULL(p.DivisionId,0)      AS DivisionId,
+        ISNULL(d.DivisionName,'')   AS DivisionName,
+        p.PODate,
+        ISNULL(p.POStatusId,1)      AS POStatusId,
+        ISNULL(s.POStatus,'')       AS StatusName,
+        ISNULL(p.GST,0)             AS GST,
+        p.POPaymentTypeId,
+        ISNULL(pt.POPaymentType,'') AS PaymentType,
+        p.Terms, p.DateRequired,
+        p.DeliverToLocationId,
+        ISNULL(loc.LocationName,'') AS LocationName,
+        ISNULL(p.DeliverToLocation,'') AS DeliverToLocation,
+        p.IntroText, p.InternalNotes,
+        ISNULL(p.PriceExTotal,0)    AS PriceExTotal,
+        ISNULL(p.PriceGSTTotal,0)   AS PriceGSTTotal,
+        ISNULL(p.PriceIncTotal,0)   AS PriceIncTotal,
+        ISNULL(p.RFQid,0)           AS RFQid,
+        ISNULL(p.Qid,0)             AS Qid,
+        ISNULL(p.HasCapEx,0)        AS HasCapEx
+    FROM PurchaseOrders p
+    LEFT JOIN Users u                    ON p.Code = u.Code
+    LEFT JOIN PurchaseOrderStatus s      ON p.POStatusId = s.POStatusId
+    LEFT JOIN Contacts cn                ON p.ContactId  = cn.ContactId
+    LEFT JOIN Divisions d                ON p.DivisionId = d.DivisionId
+    LEFT JOIN PurchaseOrderPaymentTypes pt ON p.POPaymentTypeId = pt.POPaymentTypeId
+    LEFT JOIN Locations loc              ON p.DeliverToLocationId = loc.LocationId";
+
+    // ── List ───────────────────────────────────────────────────────────────
+
     public async Task<List<PurchaseOrder>> GetPurchaseOrdersAsync(
         DateTime? dateFrom = null, DateTime? dateTo = null,
-        string? supplierName = null, string? status = null,
-        string? originatorCode = null, int limit = 500)
+        string? supplier = null, int statusId = 0,
+        string? originatorCode = null, int? divisionId = null,
+        bool pendingApprovalOnly = false, int limit = 500)
     {
-        var sql = @"
-            SELECT TOP (@Limit) p.PurchaseOrderId,
-                   ISNULL(p.PurchaseOrderNumber, '') AS PurchaseOrderNumber,
-                   ISNULL(c.CompanyName, '') AS SupplierName,
-                   p.Reference,
-                   ISNULL(p.Amount, 0) AS Amount,
-                   ISNULL(p.AmountExGST, 0) AS AmountExGST,
-                   ISNULL(ps.POStatus, '') AS Status,
-                   p.PODate, p.ExpectedDelivery,
-                   ISNULL(u.Name, '') AS Originator,
-                   p.QuoteId,
-                   ISNULL(p.ContactId, 0) AS ContactId,
-                   ISNULL(p.POStatusId, 0) AS POStatusId
-            FROM PurchaseOrders p
-            LEFT JOIN Contacts c ON p.ContactId = c.ContactId
-            LEFT JOIN PurchaseOrderStatus ps ON p.POStatusId = ps.POStatusId
-            LEFT JOIN Users u ON p.Code = u.Code
-            WHERE 1=1";
+        var sql = $"SELECT TOP (@Limit) {SelectCols} WHERE 1=1";
+        var p   = new Dictionary<string, object?> { ["Limit"] = limit };
 
-        var parameters = new Dictionary<string, object?> { ["Limit"] = limit };
+        if (pendingApprovalOnly)    { sql += " AND p.POStatusId = 2"; }
+        else if (statusId > 0)      { sql += " AND p.POStatusId = @Sid"; p["Sid"] = statusId; }
+        if (dateFrom.HasValue)      { sql += " AND p.PODate >= @F"; p["F"] = dateFrom.Value; }
+        if (dateTo.HasValue)        { sql += " AND p.PODate <= @T"; p["T"] = dateTo.Value; }
+        if (!string.IsNullOrEmpty(supplier))       { sql += " AND cn.CompanyName LIKE @S"; p["S"] = $"%{supplier}%"; }
+        if (!string.IsNullOrEmpty(originatorCode)) { sql += " AND p.Code = @OC"; p["OC"] = originatorCode; }
+        if (divisionId.HasValue)    { sql += " AND p.DivisionId = @DivId"; p["DivId"] = divisionId.Value; }
 
-        if (dateFrom.HasValue) { sql += " AND p.PODate >= @DateFrom"; parameters["DateFrom"] = dateFrom.Value; }
-        if (dateTo.HasValue) { sql += " AND p.PODate <= @DateTo"; parameters["DateTo"] = dateTo.Value; }
-        if (!string.IsNullOrEmpty(supplierName)) { sql += " AND c.CompanyName LIKE @SupplierName"; parameters["SupplierName"] = $"%{supplierName}%"; }
-        if (!string.IsNullOrEmpty(status)) { sql += " AND ps.POStatus = @Status"; parameters["Status"] = status; }
-        if (!string.IsNullOrEmpty(originatorCode)) { sql += " AND p.Code = @OriginatorCode"; parameters["OriginatorCode"] = originatorCode; }
-
-        sql += " ORDER BY p.PODate DESC";
-
-        var dt = await _db.QueryAsync(sql, parameters);
-        return dt.Map(MapPO);
+        sql += " ORDER BY p.PODate DESC, p.POid DESC";
+        return (await _db.QueryAsync(sql, p)).Map(MapPO);
     }
 
     public async Task<PurchaseOrder?> GetPurchaseOrderAsync(int poId)
     {
-        var sql = @"
-            SELECT p.PurchaseOrderId,
-                   ISNULL(p.PurchaseOrderNumber, '') AS PurchaseOrderNumber,
-                   ISNULL(c.CompanyName, '') AS SupplierName,
-                   p.Reference,
-                   ISNULL(p.Amount, 0) AS Amount,
-                   ISNULL(p.AmountExGST, 0) AS AmountExGST,
-                   ISNULL(ps.POStatus, '') AS Status,
-                   p.PODate, p.ExpectedDelivery,
-                   ISNULL(u.Name, '') AS Originator,
-                   p.QuoteId,
-                   ISNULL(p.ContactId, 0) AS ContactId,
-                   ISNULL(p.POStatusId, 0) AS POStatusId
-            FROM PurchaseOrders p
-            LEFT JOIN Contacts c ON p.ContactId = c.ContactId
-            LEFT JOIN PurchaseOrderStatus ps ON p.POStatusId = ps.POStatusId
-            LEFT JOIN Users u ON p.Code = u.Code
-            WHERE p.PurchaseOrderId = @Id";
-
-        var dt = await _db.QueryAsync(sql, new() { ["Id"] = poId });
+        var sql = $"SELECT {SelectCols} WHERE p.POid = @Id";
+        var dt  = await _db.QueryAsync(sql, new() { ["Id"] = poId });
         return dt.Rows.Count == 0 ? null : MapPO(dt.Rows[0]);
     }
 
-    public async Task<int> CreatePurchaseOrderAsync(PurchaseOrder po, string originatorCode)
-    {
-        var sql = @"
-            INSERT INTO PurchaseOrders (PurchaseOrderNumber, ContactId, POStatusId, Code,
-                                        Amount, AmountExGST, PODate, ExpectedDelivery,
-                                        Reference, QuoteId)
-            VALUES (@PurchaseOrderNumber, @ContactId, @POStatusId, @Code,
-                    @Amount, @AmountExGST, @PODate, @ExpectedDelivery,
-                    @Reference, @QuoteId)";
+    // ── Line items ─────────────────────────────────────────────────────────
 
-        return await _db.InsertAsync(sql, new()
+    public async Task<List<POLineItem>> GetLineItemsAsync(int poId)
+    {
+        var dt = await _db.QueryAsync(@"
+            SELECT pc.POItemId, pc.POid,
+                   pc.PartCodeId,
+                   ISNULL(pc.Quantity,1)      AS Quantity,
+                   ISNULL(pc.Description,'')  AS Description,
+                   ISNULL(pc.PriceEx,0)       AS PriceEx,
+                   ISNULL(pc.PriceExSubTotal,0) AS PriceExSubTotal,
+                   pc.POProductTypeId,
+                   ISNULL(pt.POProductType,'') AS ProductTypeName,
+                   ISNULL(pt.IsCapEx,0)        AS IsCapEx
+            FROM PurchaseOrderContents pc
+            LEFT JOIN PurchaseOrderProductTypes pt ON pc.POProductTypeId = pt.POProductTypeId
+            WHERE pc.POid = @Id
+            ORDER BY pc.POItemId",
+            new() { ["Id"] = poId });
+        return dt.Map(r => new POLineItem
         {
-            ["PurchaseOrderNumber"] = po.PurchaseOrderNumber,
-            ["ContactId"] = po.ContactId,
-            ["POStatusId"] = po.POStatusId > 0 ? po.POStatusId : 1,
-            ["Code"] = originatorCode,
-            ["Amount"] = po.Amount,
-            ["AmountExGST"] = po.AmountExGST,
-            ["PODate"] = po.PODate == default ? DateTime.Now : po.PODate,
-            ["ExpectedDelivery"] = (object?)po.ExpectedDelivery ?? DBNull.Value,
-            ["Reference"] = (object?)po.Reference ?? DBNull.Value,
-            ["QuoteId"] = (object?)po.QuoteId ?? DBNull.Value,
+            POItemId        = Convert.ToInt32(r["POItemId"]),
+            POid            = Convert.ToInt32(r["POid"]),
+            PartCodeId      = r["PartCodeId"] == DBNull.Value ? null : Convert.ToInt32(r["PartCodeId"]),
+            Quantity        = Convert.ToInt32(r["Quantity"]),
+            Description     = r["Description"]?.ToString() ?? "",
+            PriceEx         = Convert.ToDecimal(r["PriceEx"]),
+            PriceExSubTotal = Convert.ToDecimal(r["PriceExSubTotal"]),
+            POProductTypeId = r["POProductTypeId"] == DBNull.Value ? null : Convert.ToInt32(r["POProductTypeId"]),
+            ProductTypeName = r["ProductTypeName"]?.ToString(),
+            IsCapEx         = r["IsCapEx"] != DBNull.Value && Convert.ToBoolean(r["IsCapEx"]),
         });
     }
 
-    public async Task<int> UpdatePurchaseOrderAsync(PurchaseOrder po)
+    // ── Create ─────────────────────────────────────────────────────────────
+
+    public async Task<int> CreatePurchaseOrderAsync(PurchaseOrder po, List<POLineItem> lines, string userCode)
     {
-        var sql = @"
+        var id = await _db.InsertAsync(@"
+            INSERT INTO PurchaseOrders
+                (Code, Project, ContactId, DivisionId, PODate, POStatusId,
+                 GST, POPaymentTypeId, Terms, DateRequired,
+                 DeliverToLocationId, DeliverToLocation,
+                 IntroText, InternalNotes,
+                 PriceExTotal, PriceGSTTotal, PriceIncTotal,
+                 RFQid, Qid, HasCapEx)
+            VALUES
+                (@Code, @Project, @ContactId, @DivisionId, @PODate, 1,
+                 @GST, @POPaymentTypeId, @Terms, @DateRequired,
+                 @DeliverToLocationId, @DeliverToLocation,
+                 @IntroText, @InternalNotes,
+                 @PriceExTotal, @PriceGSTTotal, @PriceIncTotal,
+                 @RFQid, @Qid, @HasCapEx)",
+            BuildParams(po, userCode));
+
+        foreach (var line in lines.Where(l => l.Quantity > 0))
+            await InsertLineAsync(id, line);
+
+        await WriteAuditAsync(id, userCode, "PO created");
+        return id;
+    }
+
+    // ── Update ─────────────────────────────────────────────────────────────
+
+    public async Task UpdatePurchaseOrderAsync(PurchaseOrder po, List<POLineItem> lines, string userCode)
+    {
+        var p = BuildParams(po, userCode);
+        p["POid"] = po.POid;
+        await _db.ExecuteAsync(@"
             UPDATE PurchaseOrders SET
-                PurchaseOrderNumber = @PurchaseOrderNumber,
-                ContactId = @ContactId,
-                POStatusId = @POStatusId,
-                Amount = @Amount,
-                AmountExGST = @AmountExGST,
-                PODate = @PODate,
-                ExpectedDelivery = @ExpectedDelivery,
-                Reference = @Reference
-            WHERE PurchaseOrderId = @PurchaseOrderId";
+                Project = @Project, ContactId = @ContactId, DivisionId = @DivisionId,
+                GST = @GST, POPaymentTypeId = @POPaymentTypeId,
+                Terms = @Terms, DateRequired = @DateRequired,
+                DeliverToLocationId = @DeliverToLocationId, DeliverToLocation = @DeliverToLocation,
+                IntroText = @IntroText, InternalNotes = @InternalNotes,
+                PriceExTotal = @PriceExTotal, PriceGSTTotal = @PriceGSTTotal, PriceIncTotal = @PriceIncTotal,
+                Qid = @Qid, HasCapEx = @HasCapEx
+            WHERE POid = @POid", p);
 
-        return await _db.ExecuteAsync(sql, new()
+        await _db.ExecuteAsync("DELETE FROM PurchaseOrderContents WHERE POid = @Id", new() { ["Id"] = po.POid });
+        foreach (var line in lines.Where(l => l.Quantity > 0))
+            await InsertLineAsync(po.POid, line);
+
+        await WriteAuditAsync(po.POid, userCode, "PO updated");
+    }
+
+    // ── Status ─────────────────────────────────────────────────────────────
+
+    public async Task UpdateStatusAsync(int poId, int statusId, string userCode, string statusName)
+    {
+        await _db.ExecuteAsync(
+            "UPDATE PurchaseOrders SET POStatusId = @S WHERE POid = @Id",
+            new() { ["S"] = statusId, ["Id"] = poId });
+        await WriteAuditAsync(poId, userCode, $"Status changed to {statusName}");
+    }
+
+    public async Task ApproveAsync(int poId, string userCode)
+    {
+        await _db.ExecuteAsync(
+            "UPDATE PurchaseOrders SET POStatusId = 3 WHERE POid = @Id",
+            new() { ["Id"] = poId });
+        await WriteAuditAsync(poId, userCode, "PO approved");
+    }
+
+    public async Task DeclineAsync(int poId, string userCode)
+    {
+        await _db.ExecuteAsync(
+            "UPDATE PurchaseOrders SET POStatusId = 5 WHERE POid = @Id",
+            new() { ["Id"] = poId });
+        await WriteAuditAsync(poId, userCode, "PO declined");
+    }
+
+    // ── Delete ─────────────────────────────────────────────────────────────
+
+    public async Task DeleteAsync(int poId)
+    {
+        await _db.ExecuteAsync("DELETE FROM PurchaseOrderContents WHERE POid = @Id", new() { ["Id"] = poId });
+        await _db.ExecuteAsync("DELETE FROM PurchaseOrderAudit    WHERE POid = @Id", new() { ["Id"] = poId });
+        await _db.ExecuteAsync("DELETE FROM PurchaseOrders        WHERE POid = @Id", new() { ["Id"] = poId });
+    }
+
+    // ── Audit ──────────────────────────────────────────────────────────────
+
+    public async Task<List<POAuditEntry>> GetAuditAsync(int poId)
+    {
+        var dt = await _db.QueryAsync(@"
+            SELECT pa.Code, ISNULL(u.Name,'') AS UserName, pa.Action, pa.DateEntered
+            FROM PurchaseOrderAudit pa
+            LEFT JOIN Users u ON pa.Code = u.Code
+            WHERE pa.POid = @Id
+            ORDER BY pa.DateEntered DESC",
+            new() { ["Id"] = poId });
+        return dt.Map(r => new POAuditEntry
         {
-            ["PurchaseOrderId"] = po.PurchaseOrderId,
-            ["PurchaseOrderNumber"] = po.PurchaseOrderNumber,
-            ["ContactId"] = po.ContactId,
-            ["POStatusId"] = po.POStatusId,
-            ["Amount"] = po.Amount,
-            ["AmountExGST"] = po.AmountExGST,
-            ["PODate"] = po.PODate,
-            ["ExpectedDelivery"] = (object?)po.ExpectedDelivery ?? DBNull.Value,
-            ["Reference"] = (object?)po.Reference ?? DBNull.Value,
+            Code        = r["Code"]?.ToString(),
+            UserName    = r["UserName"]?.ToString(),
+            Action      = r["Action"]?.ToString(),
+            DateEntered = r["DateEntered"] == DBNull.Value ? DateTime.MinValue : Convert.ToDateTime(r["DateEntered"]),
         });
     }
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+
+    private Task InsertLineAsync(int poId, POLineItem l) =>
+        _db.InsertAsync(@"
+            INSERT INTO PurchaseOrderContents
+                (POid, PartCodeId, Quantity, Description, PriceEx, PriceExSubTotal, POProductTypeId)
+            VALUES
+                (@POid, @PartCodeId, @Qty, @Description, @PriceEx, @PriceExSubTotal, @POProductTypeId)",
+            new()
+            {
+                ["POid"]           = poId,
+                ["PartCodeId"]     = (object?)l.PartCodeId ?? DBNull.Value,
+                ["Qty"]            = l.Quantity,
+                ["Description"]    = l.Description,
+                ["PriceEx"]        = l.PriceEx,
+                ["PriceExSubTotal"]= l.PriceExSubTotal,
+                ["POProductTypeId"]= (object?)l.POProductTypeId ?? DBNull.Value,
+            });
+
+    private Task WriteAuditAsync(int poId, string code, string action) =>
+        _db.InsertAsync(
+            "INSERT INTO PurchaseOrderAudit (POid, Code, Action, DateEntered) VALUES (@Id, @C, @A, @D)",
+            new() { ["Id"] = poId, ["C"] = code, ["A"] = action, ["D"] = DateTime.Now });
+
+    private static Dictionary<string, object?> BuildParams(PurchaseOrder po, string userCode) => new()
+    {
+        ["Code"]              = userCode,
+        ["Project"]           = po.Project,
+        ["ContactId"]         = po.ContactId,
+        ["DivisionId"]        = po.DivisionId,
+        ["PODate"]            = po.PODate == default ? DateTime.Now : po.PODate,
+        ["GST"]               = po.GST,
+        ["POPaymentTypeId"]   = (object?)po.POPaymentTypeId ?? DBNull.Value,
+        ["Terms"]             = (object?)po.Terms ?? DBNull.Value,
+        ["DateRequired"]      = po.DateRequired == default ? (object)DBNull.Value : po.DateRequired,
+        ["DeliverToLocationId"] = (object?)po.DeliverToLocationId ?? DBNull.Value,
+        ["DeliverToLocation"] = (object?)po.DeliverToLocation ?? DBNull.Value,
+        ["IntroText"]         = (object?)po.IntroText ?? DBNull.Value,
+        ["InternalNotes"]     = (object?)po.InternalNotes ?? DBNull.Value,
+        ["PriceExTotal"]      = po.PriceExTotal,
+        ["PriceGSTTotal"]     = po.PriceGSTTotal,
+        ["PriceIncTotal"]     = po.PriceIncTotal,
+        ["RFQid"]             = po.RFQid,
+        ["Qid"]               = po.Qid,
+        ["HasCapEx"]          = po.HasCapEx,
+    };
 
     private static PurchaseOrder MapPO(DataRow r) => new()
     {
-        PurchaseOrderId = Convert.ToInt32(r["PurchaseOrderId"]),
-        PurchaseOrderNumber = r["PurchaseOrderNumber"]?.ToString() ?? "",
-        SupplierName = r["SupplierName"]?.ToString() ?? "",
-        Reference = r["Reference"] == DBNull.Value ? null : r["Reference"]?.ToString(),
-        Amount = Convert.ToDecimal(r["Amount"]),
-        AmountExGST = Convert.ToDecimal(r["AmountExGST"]),
-        Status = r["Status"]?.ToString() ?? "",
-        PODate = r["PODate"] == DBNull.Value ? DateTime.MinValue : Convert.ToDateTime(r["PODate"]),
-        ExpectedDelivery = r["ExpectedDelivery"] == DBNull.Value ? null : Convert.ToDateTime(r["ExpectedDelivery"]),
-        Originator = r["Originator"]?.ToString() ?? "",
-        QuoteId = r["QuoteId"] == DBNull.Value ? null : Convert.ToInt32(r["QuoteId"]),
-        ContactId = Convert.ToInt32(r["ContactId"]),
-        POStatusId = Convert.ToInt32(r["POStatusId"]),
+        POid              = Convert.ToInt32(r["POid"]),
+        Code              = r["Code"]?.ToString() ?? "",
+        OriginatorName    = r["OriginatorName"]?.ToString() ?? "",
+        Project           = r["Project"]?.ToString() ?? "",
+        ContactId         = Convert.ToInt32(r["ContactId"]),
+        SupplierName      = r["SupplierName"]?.ToString() ?? "",
+        DivisionId        = Convert.ToInt32(r["DivisionId"]),
+        DivisionName      = r["DivisionName"]?.ToString() ?? "",
+        PODate            = r["PODate"] == DBNull.Value ? DateTime.MinValue : Convert.ToDateTime(r["PODate"]),
+        POStatusId        = Convert.ToInt32(r["POStatusId"]),
+        StatusName        = r["StatusName"]?.ToString() ?? "",
+        GST               = r["GST"] != DBNull.Value && Convert.ToBoolean(r["GST"]),
+        POPaymentTypeId   = r["POPaymentTypeId"] == DBNull.Value ? null : Convert.ToInt32(r["POPaymentTypeId"]),
+        PaymentType       = r["PaymentType"]?.ToString(),
+        Terms             = r["Terms"] == DBNull.Value ? null : r["Terms"]?.ToString(),
+        DateRequired      = r["DateRequired"] == DBNull.Value ? DateTime.MinValue : Convert.ToDateTime(r["DateRequired"]),
+        DeliverToLocationId = r["DeliverToLocationId"] == DBNull.Value ? null : Convert.ToInt32(r["DeliverToLocationId"]),
+        LocationName      = r["LocationName"]?.ToString(),
+        DeliverToLocation = r["DeliverToLocation"]?.ToString(),
+        IntroText         = r["IntroText"] == DBNull.Value ? null : r["IntroText"]?.ToString(),
+        InternalNotes     = r["InternalNotes"] == DBNull.Value ? null : r["InternalNotes"]?.ToString(),
+        PriceExTotal      = Convert.ToDecimal(r["PriceExTotal"]),
+        PriceGSTTotal     = Convert.ToDecimal(r["PriceGSTTotal"]),
+        PriceIncTotal     = Convert.ToDecimal(r["PriceIncTotal"]),
+        RFQid             = Convert.ToInt32(r["RFQid"]),
+        Qid               = Convert.ToInt32(r["Qid"]),
+        HasCapEx          = r["HasCapEx"] != DBNull.Value && Convert.ToBoolean(r["HasCapEx"]),
     };
 }

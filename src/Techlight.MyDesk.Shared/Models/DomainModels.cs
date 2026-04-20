@@ -102,20 +102,63 @@ public class QuoteAuditEntry
 public class Invoice
 {
     public int InvoiceId { get; set; }
-    public string InvoiceNumber { get; set; } = string.Empty;
-    public string CompanyName { get; set; } = string.Empty;
-    public decimal Amount { get; set; }
-    public decimal AmountExGST { get; set; }
-    public decimal GST { get; set; }
-    public string Status { get; set; } = string.Empty;
+    public string InvoiceNum { get; set; } = "";          // customer-facing invoice number
     public DateTime InvoiceDate { get; set; }
-    public DateTime? DueDate { get; set; }
-    public string Originator { get; set; } = string.Empty;
-    public string? Reference { get; set; }
-    public int? QuoteId { get; set; }
-    public int? PurchaseOrderId { get; set; }
-    public int ContactId { get; set; }
+    public string Code { get; set; } = "";               // FK Users — Invoiced By
+    public string InvoicedBy { get; set; } = "";         // display name from Users
     public int InvoiceStatusId { get; set; }
+    public string StatusName { get; set; } = "";
+    public int DivisionId { get; set; }
+    public string DivisionName { get; set; } = "";
+    public int Qid { get; set; }                         // FK Quotes (0 = standalone)
+    public int CompanyId { get; set; }                   // FK Companies (142 = not an account)
+    public int? ContactId { get; set; }
+    public string CCompany { get; set; } = "";           // denormalised company name for display
+    public string InvCompany { get; set; } = "";
+    public string DelCompany { get; set; } = "";
+    public string InvAddress { get; set; } = "";
+    public string DelAddress { get; set; } = "";
+    public string? CustomerPO { get; set; }
+    public string? Attention { get; set; }
+    public string? Account { get; set; }
+    public string? Terms { get; set; }
+    public string? CustomerNotes { get; set; }
+    public string? InternalNotes { get; set; }
+    public decimal NettPriceTotal { get; set; }          // ex-GST total
+    public decimal GSTTotal { get; set; }
+    public decimal TotalIncGST => NettPriceTotal + GSTTotal;
+    public bool ExportedToMYOB { get; set; }
+    public DateTime? ExportedDate { get; set; }
+}
+
+public class InvoiceLineItem
+{
+    public int InvoiceContentId { get; set; }
+    public int InvoiceId { get; set; }
+    public decimal Quantity { get; set; }
+    public string? ProductCode { get; set; }
+    public string Description { get; set; } = "";
+    public decimal NettPrice { get; set; }               // unit price
+    public decimal ExtNettPrice { get; set; }            // extended = qty * unit
+}
+
+public class InvoiceAuditEntry
+{
+    public string? Code { get; set; }
+    public string? UserName { get; set; }
+    public string? Action { get; set; }
+    public DateTime DateEntered { get; set; }
+}
+
+public class DespatchDetail
+{
+    public int DespatchId { get; set; }
+    public int InvoiceId { get; set; }
+    public DateTime DespatchDate { get; set; } = DateTime.Today;
+    public string? Carrier { get; set; }
+    public string? CarrierRef { get; set; }
+    public string? PackageDetails { get; set; }
+    public string? InternalNotes { get; set; }
 }
 
 public class InvoiceReportRequest
@@ -124,7 +167,7 @@ public class InvoiceReportRequest
     public string? OriginatorCode { get; set; }
     public DateTime? DateFrom { get; set; }
     public DateTime? DateTo { get; set; }
-    public int? QuoteId { get; set; }
+    public int? Qid { get; set; }
     public string? Status { get; set; }
 }
 
@@ -133,19 +176,62 @@ public class InvoiceReportRequest
 // ============================================================================
 public class PurchaseOrder
 {
-    public int PurchaseOrderId { get; set; }
-    public string PurchaseOrderNumber { get; set; } = string.Empty;
-    public string SupplierName { get; set; } = string.Empty;
-    public string? Reference { get; set; }
-    public decimal Amount { get; set; }
-    public decimal AmountExGST { get; set; }
-    public string Status { get; set; } = string.Empty;
+    public int POid { get; set; }                        // PK
+    public string Code { get; set; } = "";               // FK Users — originator
+    public string OriginatorName { get; set; } = "";
+    public string Project { get; set; } = "";            // project / job / replacement (required)
+    public int ContactId { get; set; }                   // FK Contacts — supplier
+    public string SupplierName { get; set; } = "";
+    public int DivisionId { get; set; }
+    public string DivisionName { get; set; } = "";
     public DateTime PODate { get; set; }
-    public DateTime? ExpectedDelivery { get; set; }
-    public string Originator { get; set; } = string.Empty;
-    public int? QuoteId { get; set; }
-    public int ContactId { get; set; }
     public int POStatusId { get; set; }
+    public string StatusName { get; set; } = "";
+    public bool GST { get; set; } = true;
+    public int? POPaymentTypeId { get; set; }
+    public string? PaymentType { get; set; }
+    public string? Terms { get; set; }
+    public DateTime DateRequired { get; set; }
+    public int? DeliverToLocationId { get; set; }
+    public string? LocationName { get; set; }
+    public string? DeliverToLocation { get; set; }       // free-text delivery address
+    public string? IntroText { get; set; }               // notes visible to supplier
+    public string? InternalNotes { get; set; }           // reason for purchase
+    public decimal PriceExTotal { get; set; }
+    public decimal PriceGSTTotal { get; set; }
+    public decimal PriceIncTotal { get; set; }
+    public int RFQid { get; set; }
+    public int Qid { get; set; }
+    public bool HasCapEx { get; set; }
+}
+
+public class POLineItem
+{
+    public int POItemId { get; set; }
+    public int POid { get; set; }
+    public int? PartCodeId { get; set; }
+    public int Quantity { get; set; } = 1;
+    public string Description { get; set; } = "";
+    public decimal PriceEx { get; set; }                 // unit price
+    public decimal PriceExSubTotal { get; set; }         // extended
+    public int? POProductTypeId { get; set; }
+    public string? ProductTypeName { get; set; }
+    public bool IsCapEx { get; set; }
+}
+
+public class POAuditEntry
+{
+    public string? Code { get; set; }
+    public string? UserName { get; set; }
+    public string? Action { get; set; }
+    public DateTime DateEntered { get; set; }
+}
+
+public class POProductType
+{
+    public int POProductTypeId { get; set; }
+    public string POProductTypeName { get; set; } = "";
+    public bool IsCapEx { get; set; }
 }
 
 // ============================================================================
@@ -225,6 +311,12 @@ public class Location
 {
     public int LocationId { get; set; }
     public string LocationName { get; set; } = string.Empty;
+}
+
+public class UserLookup
+{
+    public string Code { get; set; } = "";
+    public string Name { get; set; } = "";
 }
 
 public class ActivityType

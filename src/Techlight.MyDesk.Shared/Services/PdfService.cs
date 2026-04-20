@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using SkiaSharp;
 
 namespace Techlight.MyDesk.Shared.Services;
 
@@ -16,10 +17,25 @@ public class PdfService
     private readonly DatabaseService _db;
     private readonly ILogger<PdfService> _logger;
 
-    private const string Brand     = "#007b8c";
-    private const string BrandDark = "#005f6b";
-    private const string RowAlt    = "#f8f9fa";
-    private const string White     = "#ffffff";
+    // ── Techlight Brand Colours ──────────────────────────────────────────────
+    private const string TlDark      = "#08121a";   // Primary dark background
+    private const string TlTeal      = "#008b8b";   // Primary teal
+    private const string TlTealLight = "#00a0a0";   // Light teal (accents)
+    private const string TlGold      = "#cca05a";   // Gold accent
+    private const string TlGoldLight = "#e0b870";   // Light gold
+    private const string TlGray50   = "#f8fafc";   // Row alt
+    private const string TlGray200  = "#eaecf0";   // Border
+    private const string TlGray500  = "#667085";   // Muted text
+    private const string TlGray700  = "#344054";   // Body text
+    private const string White       = "#ffffff";
+
+    // ── Techlight Company Details ────────────────────────────────────────────
+    private const string CompanyName    = "Techlight Pty Ltd";
+    private const string CompanyAddress = "Level 5, 14 Banfield St";
+    private const string CompanyCity    = "Chermside QLD 4032";
+    private const string CompanyWeb     = "techlight.com.au";
+    private const string CompanyPhone   = "0418 736 454";
+    private const string CompanyEmail   = "bertb@techlight.com.au";
 
     public PdfService(DatabaseService db, ILogger<PdfService> logger)
     {
@@ -113,20 +129,20 @@ public class PdfService
                     {
                         row.RelativeItem().Column(left =>
                         {
-                            left.Item().Text("BILL TO").Bold().FontSize(7.5f).FontColor(Colors.Grey.Darken1);
-                            left.Item().PaddingTop(3).Text(h["CompanyName"].ToString()!).Bold().FontSize(11);
+                            left.Item().Text("BILL TO").Bold().FontSize(7.5f).FontColor(TlTeal);
+                            left.Item().PaddingTop(3).Text(h["CompanyName"].ToString()!).Bold().FontSize(11).FontColor(TlGray700);
                             if (!string.IsNullOrWhiteSpace(h["ContactName"].ToString()))
-                                left.Item().Text(h["ContactName"].ToString()!).FontSize(9);
+                                left.Item().Text(h["ContactName"].ToString()!).FontSize(9).FontColor(TlGray700);
                             if (!string.IsNullOrWhiteSpace(h["Attention"].ToString()))
-                                left.Item().Text($"Attn: {h["Attention"]}").FontSize(9).Italic();
+                                left.Item().Text($"Attn: {h["Attention"]}").FontSize(9).Italic().FontColor(TlGray500);
                             var addr = h["Address1"].ToString()!;
                             if (!string.IsNullOrWhiteSpace(addr))
-                                left.Item().Text(addr).FontSize(9);
+                                left.Item().Text(addr).FontSize(9).FontColor(TlGray500);
                             var suburb = h["Suburb"].ToString()!;
                             if (!string.IsNullOrWhiteSpace(suburb))
                             {
                                 var statePc = $"{h["State"]} {h["Postcode"]}".Trim();
-                                left.Item().Text($"{suburb}  {statePc}".Trim()).FontSize(9);
+                                left.Item().Text($"{suburb}  {statePc}".Trim()).FontSize(9).FontColor(TlGray500);
                             }
                         });
 
@@ -155,16 +171,16 @@ public class PdfService
 
                             table.Header(h2 =>
                             {
-                                h2.Cell().Background(Brand).Padding(5).Text("Description").Bold().FontSize(8.5f).FontColor(Colors.White);
-                                h2.Cell().Background(Brand).Padding(5).AlignCenter().Text("Qty").Bold().FontSize(8.5f).FontColor(Colors.White);
-                                h2.Cell().Background(Brand).Padding(5).AlignRight().Text("Unit Price").Bold().FontSize(8.5f).FontColor(Colors.White);
-                                h2.Cell().Background(Brand).Padding(5).AlignRight().Text("Total").Bold().FontSize(8.5f).FontColor(Colors.White);
+                                h2.Cell().Background(TlDark).Padding(5).Text("Description").Bold().FontSize(8.5f).FontColor(Colors.White);
+                                h2.Cell().Background(TlDark).Padding(5).AlignCenter().Text("Qty").Bold().FontSize(8.5f).FontColor(Colors.White);
+                                h2.Cell().Background(TlDark).Padding(5).AlignRight().Text("Unit Price").Bold().FontSize(8.5f).FontColor(Colors.White);
+                                h2.Cell().Background(TlDark).Padding(5).AlignRight().Text("Total").Bold().FontSize(8.5f).FontColor(Colors.White);
                             });
 
                             bool alt = false;
                             void ItemRow(DataRow r)
                             {
-                                var bg = alt ? RowAlt : White;
+                                var bg = alt ? TlGray50 : White;
                                 table.Cell().Background(bg).BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2)
                                     .Padding(5).Text(r["Description"].ToString()!).FontSize(9);
                                 var qty = Convert.ToDecimal(r["Quantity"]);
@@ -185,8 +201,8 @@ public class PdfService
                             if (tpRows.Count > 0)
                             {
                                 table.Cell().ColumnSpan(4)
-                                    .Background(Colors.Grey.Lighten3).PaddingHorizontal(5).PaddingVertical(3)
-                                    .Text("Third Party Supply").Bold().FontSize(8).FontColor(Colors.Grey.Darken2);
+                                    .Background(TlGray200).PaddingHorizontal(5).PaddingVertical(3)
+                                    .Text("Third Party Supply").Bold().FontSize(8).FontColor(TlGray700);
                                 alt = false;
                                 foreach (var r in tpRows) ItemRow(r);
                             }
@@ -198,7 +214,7 @@ public class PdfService
                     {
                         TotalRow(totals, "Subtotal (ex GST)", nettTotal);
                         TotalRow(totals, "GST (10%)", gst);
-                        totals.Item().Background(Brand).Row(r =>
+                        totals.Item().Background(TlTeal).Row(r =>
                         {
                             r.RelativeItem().Padding(5)
                                 .Text("TOTAL (inc. GST)").Bold().FontSize(10.5f).FontColor(Colors.White);
@@ -214,16 +230,16 @@ public class PdfService
                     {
                         col.Item().PaddingTop(18).Column(n =>
                         {
-                            n.Item().Text("Notes").Bold().FontSize(9).FontColor(Colors.Grey.Darken2);
-                            n.Item().PaddingTop(3).Text(notes!).FontSize(9);
+                            n.Item().Text("Notes").Bold().FontSize(9).FontColor(TlGray700);
+                            n.Item().PaddingTop(3).Text(notes!).FontSize(9).FontColor(TlGray700);
                         });
                     }
                     if (!string.IsNullOrWhiteSpace(terms))
                     {
-                        col.Item().PaddingTop(12).Column(n =>
+                        col.Item().PaddingTop(12).BorderTop(1).BorderColor(TlGray200).Column(n =>
                         {
-                            n.Item().Text("Terms & Conditions").Bold().FontSize(9).FontColor(Colors.Grey.Darken2);
-                            n.Item().PaddingTop(3).Text(terms!).FontSize(9);
+                            n.Item().PaddingTop(8).Text("Terms & Conditions").Bold().FontSize(9).FontColor(TlGray700);
+                            n.Item().PaddingTop(3).Text(terms!).FontSize(8).FontColor(TlGray500);
                         });
                     }
                 });
@@ -290,17 +306,17 @@ public class PdfService
                     {
                         row.RelativeItem().Column(left =>
                         {
-                            left.Item().Text("BILL TO").Bold().FontSize(7.5f).FontColor(Colors.Grey.Darken1);
-                            left.Item().PaddingTop(3).Text(h["CompanyName"].ToString()!).Bold().FontSize(11);
+                            left.Item().Text("BILL TO").Bold().FontSize(7.5f).FontColor(TlTeal);
+                            left.Item().PaddingTop(3).Text(h["CompanyName"].ToString()!).Bold().FontSize(11).FontColor(TlGray700);
                             if (!string.IsNullOrWhiteSpace(h["ContactName"].ToString()))
-                                left.Item().Text(h["ContactName"].ToString()!).FontSize(9);
+                                left.Item().Text(h["ContactName"].ToString()!).FontSize(9).FontColor(TlGray700);
                             var addr = h["Address1"].ToString()!;
-                            if (!string.IsNullOrWhiteSpace(addr)) left.Item().Text(addr).FontSize(9);
+                            if (!string.IsNullOrWhiteSpace(addr)) left.Item().Text(addr).FontSize(9).FontColor(TlGray500);
                             var suburb = h["Suburb"].ToString()!;
                             if (!string.IsNullOrWhiteSpace(suburb))
                             {
                                 var sp = $"{h["State"]} {h["Postcode"]}".Trim();
-                                left.Item().Text($"{suburb}  {sp}".Trim()).FontSize(9);
+                                left.Item().Text($"{suburb}  {sp}".Trim()).FontSize(9).FontColor(TlGray500);
                             }
                         });
 
@@ -320,7 +336,7 @@ public class PdfService
                     {
                         TotalRow(totals, "Amount (ex GST)", amtExGst);
                         TotalRow(totals, "GST (10%)", gst);
-                        totals.Item().Background(Brand).Row(r =>
+                        totals.Item().Background(TlTeal).Row(r =>
                         {
                             r.RelativeItem().Padding(5)
                                 .Text("TOTAL (inc. GST)").Bold().FontSize(10.5f).FontColor(Colors.White);
@@ -384,8 +400,8 @@ public class PdfService
                     {
                         row.RelativeItem().Column(left =>
                         {
-                            left.Item().Text("SUPPLIER").Bold().FontSize(7.5f).FontColor(Colors.Grey.Darken1);
-                            left.Item().PaddingTop(3).Text(h["SupplierName"].ToString()!).Bold().FontSize(11);
+                            left.Item().Text("SUPPLIER").Bold().FontSize(7.5f).FontColor(TlTeal);
+                            left.Item().PaddingTop(3).Text(h["SupplierName"].ToString()!).Bold().FontSize(11).FontColor(TlGray700);
                         });
 
                         row.ConstantItem(195).Column(right =>
@@ -404,7 +420,7 @@ public class PdfService
                     {
                         TotalRow(totals, "Amount (ex GST)", amtExGst);
                         TotalRow(totals, "GST (10%)", gst);
-                        totals.Item().Background(Brand).Row(r =>
+                        totals.Item().Background(TlTeal).Row(r =>
                         {
                             r.RelativeItem().Padding(5)
                                 .Text("TOTAL (inc. GST)").Bold().FontSize(10.5f).FontColor(Colors.White);
@@ -424,20 +440,55 @@ public class PdfService
     private static void DocHeader(IContainer container, string docType, string docNumber,
         string originator, string email)
     {
-        container.Background(Brand).Row(row =>
+        container.Column(col =>
         {
-            row.RelativeItem().PaddingHorizontal(16).PaddingVertical(14).Column(left =>
+            // Top band: dark with logo mark SVG + company name right
+            col.Item().Background(TlDark).Row(row =>
             {
-                left.Item().Text(docType).FontSize(20).Bold().FontColor(Colors.White);
-                left.Item().PaddingTop(2).Text(docNumber).FontSize(10).FontColor(Colors.White).Italic();
+                // Logo mark (circles drawn in QuestPDF) + wordmark
+                row.RelativeItem().PaddingHorizontal(16).PaddingVertical(12).Row(logoRow =>
+                {
+                    logoRow.ConstantItem(44).AlignMiddle().Canvas((canvas, size) =>
+                    {
+                        var sk = (SKCanvas)canvas;
+                        float cx = size.Width / 2, cy = size.Height / 2;
+                        using var outerPaint = new SKPaint { Color = SKColor.Parse(TlTeal), Style = SKPaintStyle.Stroke, StrokeWidth = 2f, IsAntialias = true };
+                        using var midPaint   = new SKPaint { Color = SKColor.Parse(TlTealLight), Style = SKPaintStyle.Stroke, StrokeWidth = 1.5f, IsAntialias = true };
+                        using var fillPaint  = new SKPaint { Color = SKColor.Parse(TlDark), Style = SKPaintStyle.Fill, IsAntialias = true };
+                        using var dotPaint   = new SKPaint { Color = SKColor.Parse(TlTealLight), Style = SKPaintStyle.Fill, IsAntialias = true };
+                        sk.DrawCircle(cx, cy, 20f, outerPaint);
+                        sk.DrawCircle(cx, cy, 14f, midPaint);
+                        sk.DrawCircle(cx, cy, 8f, fillPaint);
+                        sk.DrawCircle(cx, cy, 4f, dotPaint);
+                    });
+                    logoRow.RelativeItem().PaddingLeft(8).AlignMiddle().Column(lc =>
+                    {
+                        lc.Item().Text("Techlight").FontSize(18).Bold().FontColor(Colors.White).FontFamily(Fonts.Arial);
+                        lc.Item().Text("Pty Ltd").FontSize(8).FontColor(TlTealLight).FontFamily(Fonts.Arial);
+                    });
+                });
+
+                // Company details right-aligned
+                row.ConstantItem(200).PaddingVertical(12).PaddingRight(16).AlignRight().Column(right =>
+                {
+                    right.Item().Text(CompanyAddress).FontSize(8).FontColor(TlGray500).FontFamily(Fonts.Arial);
+                    right.Item().Text(CompanyCity).FontSize(8).FontColor(TlGray500).FontFamily(Fonts.Arial);
+                    right.Item().Text(CompanyWeb).FontSize(8).FontColor(TlTealLight).FontFamily(Fonts.Arial);
+                    if (!string.IsNullOrWhiteSpace(originator))
+                        right.Item().PaddingTop(3).Text(originator).FontSize(8).FontColor(Colors.White).FontFamily(Fonts.Arial);
+                    if (!string.IsNullOrWhiteSpace(email))
+                        right.Item().Text(email).FontSize(8).FontColor(TlGray500).FontFamily(Fonts.Arial);
+                });
             });
-            row.ConstantItem(230).PaddingVertical(14).PaddingRight(16).AlignRight().Column(right =>
+
+            // Gold accent bar + document type
+            col.Item().Background(TlGold).Row(bar =>
             {
-                right.Item().Text("TECHLIGHT").FontSize(14).Bold().FontColor(Colors.White);
-                if (!string.IsNullOrWhiteSpace(originator))
-                    right.Item().PaddingTop(2).Text(originator).FontSize(9).FontColor(Colors.White).Italic();
-                if (!string.IsNullOrWhiteSpace(email))
-                    right.Item().Text(email).FontSize(9).FontColor(Colors.White).Italic();
+                bar.RelativeItem().PaddingHorizontal(16).PaddingVertical(8).Row(r =>
+                {
+                    r.RelativeItem().Text(docType).FontSize(14).Bold().FontColor(TlDark).FontFamily(Fonts.Arial);
+                    r.ConstantItem(180).AlignRight().Text(docNumber).FontSize(11).FontColor(TlDark).Italic().FontFamily(Fonts.Arial);
+                });
             });
         });
     }
@@ -447,34 +498,42 @@ public class PdfService
         if (string.IsNullOrWhiteSpace(value)) return;
         col.Item().Row(r =>
         {
-            r.ConstantItem(100).Text(label).FontSize(9).FontColor(Colors.Grey.Darken1);
-            r.RelativeItem().Text(value).FontSize(9);
+            r.ConstantItem(100).Text(label).FontSize(9).FontColor(TlGray500);
+            r.RelativeItem().Text(value).FontSize(9).FontColor(TlGray700);
         });
     }
 
     private static void TotalRow(ColumnDescriptor col, string label, decimal amount)
     {
-        col.Item().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).Row(r =>
+        col.Item().BorderBottom(0.5f).BorderColor(TlGray200).Row(r =>
         {
-            r.RelativeItem().Padding(4).Text(label).FontSize(9).FontColor(Colors.Grey.Darken1);
-            r.ConstantItem(90).AlignRight().Padding(4).Text(amount.ToString("C2")).FontSize(9);
+            r.RelativeItem().Padding(4).Text(label).FontSize(9).FontColor(TlGray500);
+            r.ConstantItem(90).AlignRight().Padding(4).Text(amount.ToString("C2")).FontSize(9).FontColor(TlGray700);
         });
     }
 
     private static void DocFooter(PageDescriptor page, string originator)
     {
-        page.Footer().AlignCenter().Text(t =>
+        page.Footer().Column(col =>
         {
-            t.Span("Techlight MyDesk").FontSize(7.5f).FontColor(Colors.Grey.Medium);
-            if (!string.IsNullOrWhiteSpace(originator))
+            col.Item().BorderTop(1).BorderColor(TlGray200).PaddingTop(6).Row(row =>
             {
-                t.Span("  ·  ").FontSize(7.5f).FontColor(Colors.Grey.Medium);
-                t.Span(originator).FontSize(7.5f).FontColor(Colors.Grey.Medium);
-            }
-            t.Span("  ·  Page ").FontSize(7.5f).FontColor(Colors.Grey.Medium);
-            t.CurrentPageNumber().FontSize(7.5f).FontColor(Colors.Grey.Medium);
-            t.Span(" of ").FontSize(7.5f).FontColor(Colors.Grey.Medium);
-            t.TotalPages().FontSize(7.5f).FontColor(Colors.Grey.Medium);
+                row.RelativeItem().Text(t =>
+                {
+                    t.Span(CompanyName).FontSize(7.5f).FontColor(TlGray500).Bold();
+                    t.Span("  ·  ").FontSize(7.5f).FontColor(TlGray200);
+                    t.Span(CompanyAddress + ", " + CompanyCity).FontSize(7.5f).FontColor(TlGray500);
+                    t.Span("  ·  ").FontSize(7.5f).FontColor(TlGray200);
+                    t.Span(CompanyWeb).FontSize(7.5f).FontColor(TlTeal);
+                });
+                row.ConstantItem(100).AlignRight().Text(t =>
+                {
+                    t.Span("Page ").FontSize(7.5f).FontColor(TlGray500);
+                    t.CurrentPageNumber().FontSize(7.5f).FontColor(TlGray700).Bold();
+                    t.Span(" of ").FontSize(7.5f).FontColor(TlGray500);
+                    t.TotalPages().FontSize(7.5f).FontColor(TlGray700).Bold();
+                });
+            });
         });
     }
 }
