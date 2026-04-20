@@ -1,0 +1,135 @@
+@page "/admin/setup"
+@page "/admin"
+@attribute [Authorize]
+@inject SystemService SystemSvc
+
+<PageTitle>Setup - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <span>Techlight MyDesk</span>
+            <span class="sep">/</span>
+            <span style="color:var(--gray-700); font-weight:500;">Setup</span>
+        </div>
+        <h1>System setup</h1>
+        <p class="tl-subtitle">Reference data, users, and configuration.</p>
+    </div>
+</div>
+
+<MudGrid Spacing="4">
+    @foreach (var group in _groups)
+    {
+        <MudItem xs="12">
+            <MudText Typo="Typo.h6" Class="mt-2 mb-2" Style="font-weight:600; color:var(--gray-700);">@group.Title</MudText>
+        </MudItem>
+        @foreach (var tile in group.Tiles)
+        {
+            <MudItem xs="12" sm="6" md="4" lg="3">
+                <a href="@tile.Href" style="text-decoration:none; color:inherit;">
+                    <div class="tl-setup-tile">
+                        <span class="tl-stat-icon @tile.Tone">
+                            <MudIcon Icon="@tile.Icon" Size="Size.Medium" />
+                        </span>
+                        <div>
+                            <div class="tile-title">@tile.Title</div>
+                            <div class="tile-desc">@tile.Description</div>
+                        </div>
+                    </div>
+                </a>
+            </MudItem>
+        }
+    }
+
+    <!-- DB stats panel -->
+    <MudItem xs="12">
+        <MudPaper Class="pa-5 mt-4">
+            <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight:600;">Database overview</MudText>
+            @if (_stats == null)
+            {
+                <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Small" />
+            }
+            else
+            {
+                <div class="d-flex flex-wrap tl-gap-md">
+                    <div><span class="tl-small">Tables</span><div style="font-weight:700; font-size:20px;">@_stats.Count</div></div>
+                    <div><span class="tl-small">Total rows</span><div style="font-weight:700; font-size:20px;">@_stats.Sum(s => s.RowCount).ToString("N0")</div></div>
+                    <div><span class="tl-small">Largest</span>
+                        <div style="font-weight:600;">@_largest.Table <span class="tl-small">(@_largest.RowCount.ToString("N0"))</span></div>
+                    </div>
+                </div>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<style>
+    .tl-setup-tile {
+        display: flex; align-items: center; gap: 16px;
+        padding: 20px;
+        background: var(--surface);
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-xs);
+        transition: transform 150ms var(--ease), box-shadow 150ms var(--ease), border-color 150ms var(--ease);
+        height: 100%;
+    }
+    .tl-setup-tile:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--tl-primary-300);
+    }
+    .tl-setup-tile .tile-title { font-weight: 600; color: var(--gray-900); font-size: 15px; }
+    .tl-setup-tile .tile-desc  { font-size: 13px; color: var(--gray-600); margin-top: 2px; }
+</style>
+
+@code {
+    private List<(string Table, int RowCount)>? _stats;
+    private (string Table, int RowCount) _largest = ("—", 0);
+
+    private record Tile(string Title, string Description, string Href, string Icon, string Tone);
+    private record Group(string Title, List<Tile> Tiles);
+
+    private readonly List<Group> _groups = new()
+    {
+        new("User administration", new()
+        {
+            new("Users",      "Manage user accounts, roles and passwords",      "/admin/users",      Icons.Material.Rounded.People,      "primary"),
+            new("User Roles", "Define permission levels (Admin, Manager, etc.)", "/admin/user-roles", Icons.Material.Rounded.VerifiedUser, "info"),
+        }),
+        new("Organisation", new()
+        {
+            new("Divisions",  "Business units / departments",    "/admin/divisions",  Icons.Material.Rounded.AccountTree,    "primary"),
+            new("Locations",  "Office / warehouse locations",     "/admin/locations",  Icons.Material.Rounded.LocationOn,     "info"),
+        }),
+        new("Reference data", new()
+        {
+            new("Products",        "Product catalog & part codes", "/products",                 Icons.Material.Rounded.Category,        "accent"),
+            new("Part Codes",      "SKU / part numbering",          "/admin/part-codes",        Icons.Material.Rounded.QrCode,          "info"),
+            new("Currencies",      "Exchange rates",                "/admin/currency",           Icons.Material.Rounded.CurrencyExchange,"success"),
+            new("Financial Year", "Reporting year boundaries",      "/admin/financial-year",    Icons.Material.Rounded.CalendarMonth,   "warning"),
+            new("Activity Types", "Sales activity categories",       "/admin/activity-types",    Icons.Material.Rounded.Bolt,             "primary"),
+        }),
+        new("Workflow status", new()
+        {
+            new("Quote Status",        "Pipeline stages for quotes",  "/admin/quote-status",       Icons.Material.Rounded.RequestQuote, "primary"),
+            new("Invoice Status",      "Lifecycle states for invoices","/admin/invoice-status",     Icons.Material.Rounded.ReceiptLong,   "info"),
+            new("Purchase Order Status","States for POs",               "/admin/po-status",          Icons.Material.Rounded.Inventory2,    "accent"),
+            new("Job Order Status",   "States for job orders",         "/admin/job-order-status",   Icons.Material.Rounded.Work,          "warning"),
+        }),
+        new("System", new()
+        {
+            new("Parameters", "Global system settings", "/admin/parameters", Icons.Material.Rounded.Tune,     "primary"),
+        }),
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _stats = await SystemSvc.GetTableStatsAsync();
+            if (_stats.Count > 0) _largest = _stats.OrderByDescending(s => s.RowCount).First();
+        }
+        catch { /* non-critical */ }
+    }
+}

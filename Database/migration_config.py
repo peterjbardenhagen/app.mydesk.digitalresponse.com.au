@@ -49,5 +49,66 @@ CREATE_FOREIGN_KEYS = True
 # Whether to stop on the first error or continue with other tables
 STOP_ON_ERROR = False
 
-# List of tables to skip (e.g., ['TempTable', 'BackupTable'])
-SKIP_TABLES = []
+# ---------------------------------------------------------------------------
+# TABLE EXCLUSION — legacy / unused / obsolete tables that should NOT migrate
+# ---------------------------------------------------------------------------
+# These are explicitly excluded regardless of row count. Modules that are
+# being retired or replaced in the new Blazor system.
+EXCLUDED_TABLES = [
+    # Call reports / CRM activities (retired)
+    "CallReports",
+    "CallReportTypes",
+
+    # Expenses module (retired — legacy reimbursement workflow)
+    "ExpenseTypeGroups",
+    "ExpenseTypes",
+    "Expenses",
+    "ExpensesSignOffs",
+
+    # File management module (retired — cloud storage replaces this)
+    "Files",
+    "FilesCategories",
+    "FilesCategoriesDivisionAccess",
+    "FilesCategoriesUserAccess",
+    "FilesCategoriesUserLevelAccess",
+
+    # Employment / HR (retired)
+    "Employment",
+
+    # Internal messaging (retired — use Teams/email)
+    "TMail",
+
+    # Timesheets (retired — external time-tracking system)
+    "TimesheetItems",
+    "Timesheets",
+    "TimesheetStatus",
+
+    # Legacy metadata / schema tables (no longer used in Blazor ORM)
+    "Tables",
+    "TableFiles",
+
+    # Access-only garbage/debug tables
+    "Paste Errors",              # Access import-error dump
+    "ContactsDef",               # unused legacy definitions table
+
+    # Empty materialized reports — will be rewritten as LINQ queries in services
+    "SalesResults",
+    "SalesResults_ByCustomer",
+
+    # Other obsolete lookup tables
+    "MarketSeg",                 # empty, superseded by Divisions
+    "ProjectHistory",            # empty, unused
+
+    # RFQ module (not in initial Blazor scope — can re-add later if needed)
+    # Uncomment to exclude:
+    # "RFQ",
+    # "RFQContents",
+    # "RFQStatus",
+]
+
+# Auto-skip any table with zero rows in Access (strong signal it's unused).
+# Applies AFTER the EXCLUDED_TABLES list. Protects against carrying dead schema.
+SKIP_EMPTY_TABLES = True
+
+# Legacy alias — kept for compatibility with older code paths
+SKIP_TABLES = EXCLUDED_TABLES

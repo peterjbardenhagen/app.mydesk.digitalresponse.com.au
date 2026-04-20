@@ -109,10 +109,11 @@ class AccessToSqlServerMigrator:
                  drop_existing: bool = True,
                  create_fks: bool = True,
                  stop_on_error: bool = False,
-                 skip_tables: list = None):
+                 skip_tables: list = None,
+                 skip_empty_tables: bool = True):
         """
         Initialize migrator
-        
+
         Args:
             access_db_path: Full path to .mdb or .accdb file
             sql_server_conn_str: SQL Server connection string
@@ -120,7 +121,8 @@ class AccessToSqlServerMigrator:
             drop_existing: Drop existing tables before creating
             create_fks: Create foreign keys after data migration
             stop_on_error: Stop on first error if True
-            skip_tables: List of table names to skip
+            skip_tables: List of table names to skip (case-insensitive)
+            skip_empty_tables: Also skip tables with 0 rows in Access
         """
         self.access_db_path = access_db_path
         self.sql_server_conn_str = sql_server_conn_str
@@ -128,9 +130,11 @@ class AccessToSqlServerMigrator:
         self.drop_existing = drop_existing
         self.create_fks = create_fks
         self.stop_on_error = stop_on_error
-        self.skip_tables = skip_tables or []
+        self.skip_tables_lower = {t.lower() for t in (skip_tables or [])}
+        self.skip_empty_tables = skip_empty_tables
         self.access_conn = None
         self.sql_conn = None
+        self._excluded_summary = []  # for final report
         
     def connect_access(self) -> pyodbc.Connection:
         """Connect to Access database with validation and driver auto-detection"""
@@ -221,19 +225,59 @@ class AccessToSqlServerMigrator:
             raise
 
     def get_access_tables(self) -> List[str]:
-        """Get list of user tables from Access using ODBC metadata (no MSysObjects perms needed)"""
+        """Get list of user tables from Access, filtering out:
+        - Access system / temp tables (MSys*, ~*)
+        - Tables in the EXCLUDED_TABLES list (legacy / retired modules)
+        - Tables with 0 rows (if skip_empty_tables=True)
+        """
         cursor = self.access_conn.cursor()
-        tables = []
+        all_tables = []
         for row in cursor.tables(tableType='TABLE'):
             name = row.table_name
-            # Skip Access system tables and temp tables
             if name.startswith('MSys') or name.startswith('~'):
                 continue
-            tables.append(name)
-        tables.sort()
-        logger.info(f"Found {len(tables)} tables")
-        logger.debug(f"Tables: {tables}")
-        return tables
+            all_tables.append(name)
+        all_tables.sort()
+
+        kept = []
+        excluded_by_list = []
+        excluded_by_empty = []
+
+        for name in all_tables:
+            # Filter 1: explicit exclusion list
+            if name.lower() in self.skip_tables_lower:
+                excluded_by_list.append(name)
+                continue
+
+            # Filter 2: zero-row auto-skip
+            if self.skip_empty_tables:
+                try:
+                    count_cur = self.access_conn.cursor()
+                    # Bracket quoting handles names with spaces (e.g. "Paste Errors")
+                    count_cur.execute(f"SELECT COUNT(*) FROM [{name}]")
+                    row_count = count_cur.fetchone()[0] or 0
+                    count_cur.close()
+                    if row_count == 0:
+                        excluded_by_empty.append(name)
+                        continue
+                except Exception as e:
+                    logger.warning(f"Could not count rows for {name}, including by default: {e}")
+
+            kept.append(name)
+
+        # Reporting
+        logger.info(f"Access DB total tables: {len(all_tables)}")
+        if excluded_by_list:
+            logger.info(f"Excluded by EXCLUDED_TABLES list ({len(excluded_by_list)}): {', '.join(excluded_by_list)}")
+        if excluded_by_empty:
+            logger.info(f"Excluded (zero rows) ({len(excluded_by_empty)}): {', '.join(excluded_by_empty)}")
+        logger.info(f"Tables to migrate: {len(kept)}")
+
+        self._excluded_summary = [
+            ("list",  excluded_by_list),
+            ("empty", excluded_by_empty),
+        ]
+        return kept
 
     def get_access_table_schema(self, table_name: str) -> TableInfo:
         """Get column information for a table"""
@@ -477,9 +521,9 @@ ALTER TABLE [{fk.table}]
         sql_cursor = self.sql_conn.cursor()
         
         for table in tables:
-            # Skip if table is in skip_tables list
-            if table.name in self.skip_tables:
-                logger.info(f"Skipping table {table.name} (in skip list)")
+            # Safety net — get_access_tables() already filters these out
+            if table.name.lower() in self.skip_tables_lower:
+                logger.info(f"Skipping table {table.name} (in exclusion list)")
                 continue
                 
             try:
@@ -658,7 +702,8 @@ def main():
             DROP_EXISTING_TABLES,
             CREATE_FOREIGN_KEYS,
             STOP_ON_ERROR,
-            SKIP_TABLES
+            EXCLUDED_TABLES,
+            SKIP_EMPTY_TABLES,
         )
     except ImportError:
         # Fallback to defaults if config file doesn't exist
@@ -674,14 +719,17 @@ def main():
         DROP_EXISTING_TABLES = True
         CREATE_FOREIGN_KEYS = True
         STOP_ON_ERROR = False
-        SKIP_TABLES = []
+        EXCLUDED_TABLES = []
+        SKIP_EMPTY_TABLES = True
     
     print("=" * 60)
     print("Microsoft Access to SQL Server Migration Tool")
     print("=" * 60)
-    print(f"Source:     {ACCESS_DB_PATH}")
-    print(f"Target:     SQL Server")
-    print(f"Batch Size: {BATCH_SIZE} rows")
+    print(f"Source:        {ACCESS_DB_PATH}")
+    print(f"Target:        SQL Server")
+    print(f"Batch Size:    {BATCH_SIZE} rows")
+    print(f"Excluded:      {len(EXCLUDED_TABLES)} legacy/retired tables")
+    print(f"Skip empty:    {'Yes' if SKIP_EMPTY_TABLES else 'No'}")
     print("=" * 60)
     
     # Ask about clearing existing data (default YES)
@@ -711,13 +759,14 @@ def main():
     
     try:
         migrator = AccessToSqlServerMigrator(
-            ACCESS_DB_PATH, 
+            ACCESS_DB_PATH,
             SQL_SERVER_CONN_STR,
             batch_size=BATCH_SIZE,
             drop_existing=drop_existing,
             create_fks=CREATE_FOREIGN_KEYS,
             stop_on_error=STOP_ON_ERROR,
-            skip_tables=SKIP_TABLES
+            skip_tables=EXCLUDED_TABLES,
+            skip_empty_tables=SKIP_EMPTY_TABLES,
         )
         migrator.migrate()
         print("\n[SUCCESS] Migration completed successfully!")

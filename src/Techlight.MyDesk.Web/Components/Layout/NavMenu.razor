@@ -1,28 +1,47 @@
-<MudNavMenu>
-    <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
-    
-    <MudNavGroup Title="Sales" Icon="@Icons.Material.Filled.PointOfSale" Expanded="true">
-        <MudNavLink Href="/quotes" Icon="@Icons.Material.Filled.RequestQuote">Quotes</MudNavLink>
-        <MudNavLink Href="/invoices" Icon="@Icons.Material.Filled.Receipt">Invoices</MudNavLink>
-    </MudNavGroup>
+<MudNavMenu Class="tl-nav pt-4">
+    <div class="tl-nav-section-label">Overview</div>
+    <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Rounded.SpaceDashboard">Dashboard</MudNavLink>
+    <MudNavLink Href="/ask-ai" Icon="@Icons.Material.Rounded.AutoAwesome">Ask AI</MudNavLink>
 
-    <MudNavGroup Title="Purchasing" Icon="@Icons.Material.Filled.ShoppingCart">
-        <MudNavLink Href="/purchase-orders" Icon="@Icons.Material.Filled.Inventory">Purchase Orders</MudNavLink>
-    </MudNavGroup>
+    <div class="tl-nav-section-label">Sales</div>
+    <MudNavLink Href="/quotes" Icon="@Icons.Material.Rounded.RequestQuote">Quotes</MudNavLink>
+    <MudNavLink Href="/invoices" Icon="@Icons.Material.Rounded.ReceiptLong">Invoices</MudNavLink>
+    <MudNavLink Href="/despatch" Icon="@Icons.Material.Rounded.LocalShipping">Despatch</MudNavLink>
 
-    <MudNavGroup Title="Entities" Icon="@Icons.Material.Filled.Business">
-        <MudNavLink Href="/contacts" Icon="@Icons.Material.Filled.Contacts">Contacts</MudNavLink>
-        <MudNavLink Href="/companies" Icon="@Icons.Material.Filled.BusinessCenter">Companies</MudNavLink>
-    </MudNavGroup>
+    <div class="tl-nav-section-label">Purchasing</div>
+    <MudNavLink Href="/purchase-orders" Icon="@Icons.Material.Rounded.Inventory2">Purchase Orders</MudNavLink>
+    <MudNavLink Href="/rfq" Icon="@Icons.Material.Rounded.QuestionAnswer">RFQ</MudNavLink>
 
-    <MudNavLink Href="/reports" Icon="@Icons.Material.Filled.BarChart">Reports</MudNavLink>
+    <div class="tl-nav-section-label">CRM</div>
+    <MudNavLink Href="/contacts" Icon="@Icons.Material.Rounded.Contacts">Contacts</MudNavLink>
+    <MudNavLink Href="/companies" Icon="@Icons.Material.Rounded.Business">Companies</MudNavLink>
+    <MudNavLink Href="/call-reports" Icon="@Icons.Material.Rounded.Call">Call Reports</MudNavLink>
+    <MudNavLink Href="/sales-projects" Icon="@Icons.Material.Rounded.TrackChanges">Sales Projects</MudNavLink>
 
-    <AuthorizeView Roles="Admin,Director">
-        <MudNavGroup Title="Admin" Icon="@Icons.Material.Filled.AdminPanelSettings">
-            <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.People">Users</MudNavLink>
-            <MudNavLink Href="/admin/setup" Icon="@Icons.Material.Filled.Settings">Setup</MudNavLink>
-        </MudNavGroup>
-    </AuthorizeView>
+    <div class="tl-nav-section-label">Operations</div>
+    <MudNavLink Href="/job-orders" Icon="@Icons.Material.Rounded.Work">Job Orders</MudNavLink>
+    <MudNavLink Href="/products" Icon="@Icons.Material.Rounded.Category">Products</MudNavLink>
 
-    <MudNavLink Href="/ask-ai" Icon="@Icons.Material.Filled.AutoAwesome" Style="color: var(--mud-palette-primary);">Ask AI</MudNavLink>
+    <div class="tl-nav-section-label">Insights</div>
+    <MudNavLink Href="/reports" Icon="@Icons.Material.Rounded.StackedBarChart">Reports</MudNavLink>
+    <MudNavLink Href="/noticeboard" Icon="@Icons.Material.Rounded.Campaign">Noticeboard</MudNavLink>
+
+    <div class="tl-nav-section-label">Admin</div>
+    <MudNavLink Href="/admin/setup" Icon="@Icons.Material.Rounded.Tune">Setup</MudNavLink>
+    <MudNavLink Href="/admin/users" Icon="@Icons.Material.Rounded.People">Users</MudNavLink>
+    <MudNavLink Href="/admin/divisions" Icon="@Icons.Material.Rounded.AccountTree">Divisions</MudNavLink>
+    <MudNavLink Href="/admin/locations" Icon="@Icons.Material.Rounded.LocationOn">Locations</MudNavLink>
 </MudNavMenu>
+
+<style>
+    .tl-nav-section-label {
+        padding: 14px 24px 6px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: .08em;
+    }
+    .mud-drawer-mini .tl-nav-section-label { display: none; }
+</style>
+

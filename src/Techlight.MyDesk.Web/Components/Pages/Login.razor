@@ -2,43 +2,64 @@
 @layout EmptyLayout
 @attribute [AllowAnonymous]
 
-<div class="login-background d-flex align-center justify-center" style="height: 100vh; background: #0f1319; color: white;">
-    <MudContainer MaxWidth="MaxWidth.Small">
-        <MudPaper Elevation="4" Class="pa-8 text-center" Style="background: #1a1f2e; border-radius: 12px; border-top: 4px solid var(--mud-palette-primary);">
-            <MudText Typo="Typo.h4" Class="mb-4 font-weight-bold">
-                <span style="color: var(--mud-palette-primary);">Techlight</span>
-                <span style="color: var(--mud-palette-secondary);">MyDesk</span>
-            </MudText>
-            
-            <MudText Typo="Typo.body1" Class="mb-8" Style="color: #a0aec0;">Sign in to your account</MudText>
+<div class="tl-login-root">
+    <!-- LEFT: brand hero -->
+    <aside class="tl-login-hero">
+        <div class="tl-login-hero-brand">
+            <img src="/images/techlight-logo.svg" alt="Techlight" />
+        </div>
+
+        <div class="tl-login-quote">
+            <div class="q">Your complete sales & operations platform — quotes, invoices, purchase orders, and insights, all in one place.</div>
+            <div class="by">Techlight MyDesk &middot; Powered by Digital Response</div>
+        </div>
+
+        <div style="position:relative; z-index:1; font-size:12px; color:var(--gray-400);">
+            &copy; @DateTime.Now.Year Techlight. All rights reserved.
+        </div>
+    </aside>
+
+    <!-- RIGHT: form -->
+    <section class="tl-login-form">
+        <div class="tl-login-form-inner">
+            <img src="/images/techlight-mark.svg" alt="" class="tl-mark" />
+            <h1>Welcome back</h1>
+            <p class="sub">Sign in to your Techlight MyDesk account</p>
 
             @if (ShowError)
             {
-                <MudAlert Severity="Severity.Error" Class="mb-4">Invalid login credentials.</MudAlert>
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4" Variant="Variant.Outlined">
+                    Invalid login credentials. Please try again.
+                </MudAlert>
             }
 
             <form method="post" action="/api/auth/login">
                 <AntiforgeryToken />
-                
-                <MudTextField T="string" Name="code" Label="User Code" Variant="Variant.Outlined" 
-                              Class="mb-4" Required="true" Adornment="Adornment.Start" 
-                              AdornmentIcon="@Icons.Material.Filled.Person" />
-                              
-                <MudTextField T="string" Name="password" Label="Password" InputType="InputType.Password" 
-                              Variant="Variant.Outlined" Class="mb-6" Required="true" 
-                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock" />
 
-                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" 
-                           Size="Size.Large" FullWidth="true" Class="py-3 font-weight-bold">
-                    Login
+                <MudTextField T="string" name="login" Label="Username"
+                              Variant="Variant.Outlined" Margin="Margin.Normal"
+                              HelperText="Your full name or user code"
+                              Required="true" FullWidth="true"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Rounded.PersonOutline" />
+
+                <MudTextField T="string" name="password" Label="Password" InputType="InputType.Password"
+                              Variant="Variant.Outlined" Margin="Margin.Normal"
+                              Required="true" FullWidth="true" Class="mb-4"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Rounded.Lock" />
+
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary"
+                           Size="Size.Large" FullWidth="true">
+                    Sign in
                 </MudButton>
             </form>
-            
-            <div class="mt-8 text-center">
-                <MudText Typo="Typo.caption" Style="color: #718096;">&copy; @DateTime.Now.Year Techlight. All rights reserved.</MudText>
+
+            <div class="tl-login-footer">
+                Need help? Contact your administrator.
             </div>
-        </MudPaper>
-    </MudContainer>
+        </div>
+    </section>
 </div>
 
 @code {

@@ -17,32 +17,46 @@ public class AuthService
         _logger = logger;
     }
 
-    public async Task<User?> ValidateLoginAsync(string code, string password)
+    public async Task<User?> ValidateLoginAsync(string login, string password)
     {
         try
         {
+            // Match against Name OR Code (case-insensitive via SQL default collation).
+            // PW is the plaintext password column in the legacy schema.
+            // Only allow Active, non-deleted users.
+            // Name/Code: case-INsensitive (CI). Password: case-SENSITIVE (CS).
             var dt = await _db.QueryAsync(
-                "SELECT * FROM Users WHERE Code = @Code AND Password = @Password",
-                new() { ["Code"] = code, ["Password"] = password });
+                @"SELECT TOP 1 * FROM Users
+                  WHERE (Name COLLATE Latin1_General_CI_AS = @Login
+                         OR Code COLLATE Latin1_General_CI_AS = @Login)
+                    AND PW COLLATE Latin1_General_CS_AS = @Password
+                    AND ISNULL(Active, 0) = 1
+                    AND ISNULL(Deleted, 0) = 0",
+                new() { ["Login"] = login, ["Password"] = password });
 
             if (dt.Rows.Count == 0) return null;
 
             var row = dt.Rows[0];
+            var userTypeId = row.Table.Columns.Contains("UserTypeId") && row["UserTypeId"] != DBNull.Value
+                ? Convert.ToInt32(row["UserTypeId"]) : 0;
+
             return new User
             {
                 UserId = Convert.ToInt32(row["UserId"]),
                 Code = row["Code"]?.ToString() ?? "",
                 Name = row["Name"]?.ToString() ?? "",
-                Email = row["Email"]?.ToString(),
-                IsAdmin = row.Table.Columns.Contains("Admin") && Convert.ToBoolean(row["Admin"] == DBNull.Value ? false : row["Admin"]),
-                IsManager = row.Table.Columns.Contains("Manager") && Convert.ToBoolean(row["Manager"] == DBNull.Value ? false : row["Manager"]),
-                UserTypeId = row.Table.Columns.Contains("UserTypeId") ? Convert.ToInt32(row["UserTypeId"] == DBNull.Value ? 0 : row["UserTypeId"]) : 0,
-                DivisionId = row.Table.Columns.Contains("DivisionId") && row["DivisionId"] != DBNull.Value ? Convert.ToInt32(row["DivisionId"]) : null
+                Email = row.Table.Columns.Contains("Email") ? row["Email"]?.ToString() : null,
+                UserTypeId = userTypeId,
+                // UserTypeId == 1 is Director/Admin in legacy schema
+                IsAdmin = userTypeId == 1,
+                IsManager = userTypeId == 2,
+                DivisionId = row.Table.Columns.Contains("DivisionId") && row["DivisionId"] != DBNull.Value
+                    ? Convert.ToInt32(row["DivisionId"]) : null
             };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Login validation error for user {Code}", code);
+            _logger.LogError(ex, "Login validation error for {Login}", login);
             return null;
         }
     }

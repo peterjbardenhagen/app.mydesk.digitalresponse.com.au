@@ -5,8 +5,57 @@ using Techlight.MyDesk.Web.Components;
 using Techlight.MyDesk.Web.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Diagnostics;
+using Serilog;
+using Serilog.Events;
+
+// ---------------------------------------------------------------------------
+// Logging (Serilog) - writes to /Logs/app-YYYYMMDD.log and /Logs/errors-YYYYMMDD.log
+// ---------------------------------------------------------------------------
+var logsDir = Path.Combine(AppContext.BaseDirectory, "Logs");
+Directory.CreateDirectory(logsDir);
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Information)
+    .Enrich.FromLogContext()
+    .Enrich.WithMachineName()
+    .Enrich.WithThreadId()
+    .WriteTo.Console(
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.File(
+        path: Path.Combine(logsDir, "app-.log"),
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 30,
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{ThreadId}] {SourceContext} {Message:lj}{NewLine}{Exception}")
+    .WriteTo.File(
+        path: Path.Combine(logsDir, "errors-.log"),
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 60,
+        restrictedToMinimumLevel: LogEventLevel.Warning,
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{ThreadId}] {SourceContext} {Message:lj}{NewLine}{Exception}")
+    .CreateLogger();
+
+Log.Information("======================================================================");
+Log.Information("Techlight MyDesk starting up - PID {Pid}, Logs at {LogsDir}", Environment.ProcessId, logsDir);
+Log.Information("======================================================================");
+
+// Catch anything the framework misses (e.g. background threads / finalizers)
+AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+    Log.Fatal(e.ExceptionObject as Exception, "UNHANDLED AppDomain exception (IsTerminating={Terminating})", e.IsTerminating);
+TaskScheduler.UnobservedTaskException += (_, e) =>
+{
+    Log.Error(e.Exception, "UNHANDLED Task exception");
+    e.SetObserved();
+};
+
+try
+{
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseSerilog();
 
 // Authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -43,6 +92,8 @@ builder.Services.AddScoped<ContactService>();
 builder.Services.AddScoped<CompanyService>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<LookupService>();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<SystemService>();
 
 builder.Services.AddHttpClient();
 
@@ -52,10 +103,41 @@ builder.Services.AddRazorComponents()
 
 var app = builder.Build();
 
-if (!app.Environment.IsDevelopment())
+// Request logging with enriched properties (dev: Debug, prod: Information)
+app.UseSerilogRequestLogging(opts =>
 {
-    app.UseExceptionHandler("/Error");
-}
+    opts.GetLevel = (ctx, elapsed, ex) =>
+        ex != null ? LogEventLevel.Error
+        : ctx.Response.StatusCode >= 500 ? LogEventLevel.Error
+        : ctx.Response.StatusCode >= 400 ? LogEventLevel.Warning
+        : app.Environment.IsDevelopment() ? LogEventLevel.Debug : LogEventLevel.Information;
+    opts.EnrichDiagnosticContext = (diag, http) =>
+    {
+        diag.Set("RemoteIP", http.Connection.RemoteIpAddress?.ToString() ?? "-");
+        diag.Set("User", http.User?.Identity?.Name ?? "-");
+        diag.Set("UserAgent", http.Request.Headers.UserAgent.ToString());
+    };
+});
+
+// Global exception handler - logs EVERY unhandled request exception
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async ctx =>
+    {
+        var feature = ctx.Features.Get<IExceptionHandlerFeature>();
+        if (feature?.Error != null)
+        {
+            Log.Error(feature.Error,
+                "Unhandled exception at {Path} for user {User}",
+                feature.Path, ctx.User?.Identity?.Name ?? "anonymous");
+        }
+        ctx.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        ctx.Response.ContentType = "text/html";
+        await ctx.Response.WriteAsync(app.Environment.IsDevelopment()
+            ? $"<h1>500 - Server Error</h1><pre>{System.Net.WebUtility.HtmlEncode(feature?.Error?.ToString() ?? "Unknown")}</pre>"
+            : "<h1>500 - Server Error</h1><p>An unexpected error occurred. Check the server logs for details.</p>");
+    });
+});
 
 app.UseStaticFiles();
 app.UseAuthentication();
@@ -69,22 +151,42 @@ app.MapRazorComponents<App>()
 app.MapPost("/api/auth/login", async (HttpContext ctx, AuthService auth) =>
 {
     var form = await ctx.Request.ReadFormAsync();
-    var code = form["code"].ToString();
+    var login = form["login"].ToString();
     var password = form["password"].ToString();
 
-    var user = await auth.ValidateLoginAsync(code, password);
+    var user = await auth.ValidateLoginAsync(login, password);
     if (user != null)
     {
+        Log.Information("Login SUCCESS: {Login} -> UserId={UserId} Code={Code} Name={Name}",
+            login, user.UserId, user.Code, user.Name);
         await auth.SignInAsync(ctx, user);
         return Results.Redirect("/");
     }
+    Log.Warning("Login FAILED for {Login} from {RemoteIP}",
+        login, ctx.Connection.RemoteIpAddress);
     return Results.Redirect("/login?error=1");
 });
 
 app.MapGet("/logout", async (HttpContext ctx) =>
 {
+    Log.Information("Logout: {User}", ctx.User?.Identity?.Name ?? "anonymous");
     await ctx.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
     return Results.Redirect("/login");
 });
 
+Log.Information("Application configured. Environment={Env}, URLs={Urls}",
+    app.Environment.EnvironmentName, string.Join(", ", app.Urls.DefaultIfEmpty("default")));
+
 app.Run();
+
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly during startup");
+    throw;
+}
+finally
+{
+    Log.Information("Application shutting down");
+    Log.CloseAndFlush();
+}

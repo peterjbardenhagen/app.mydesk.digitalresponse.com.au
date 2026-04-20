@@ -1,39 +1,77 @@
 @inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
 
-<MudThemeProvider @ref="@_themeProvider" @bind-IsDarkMode="@_isDarkMode" Theme="_theme" />
-<MudDialogProvider />
-<MudSnackbarProvider />
-<MudPopoverProvider />
-
 <MudLayout>
-    <MudAppBar Elevation="1" Color="Color.Dark" Fixed="true">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
-        <MudText Typo="Typo.h5" Class="ml-3 font-weight-bold" Style="color: var(--mud-palette-primary);">Techlight<span style="color: var(--mud-palette-secondary);">MyDesk</span></MudText>
+    <MudAppBar Elevation="0" Fixed="true" Dense="true">
+        <MudIconButton Icon="@Icons.Material.Rounded.Menu" Color="Color.Default" Edge="Edge.Start" OnClick="DrawerToggle" />
+
+        <a href="/" class="tl-logo-wrap ml-2" style="text-decoration:none;">
+            <img src="/images/techlight-mark.svg" alt="Techlight" class="tl-logo-mark" />
+            <span class="tl-logo-text-stack">
+                <span class="tl-logo-brand">Techlight</span>
+                <span class="tl-logo-product">MyDesk</span>
+            </span>
+        </a>
+
         <MudSpacer />
-        
+
+        <div class="d-none d-md-flex align-center" style="flex:1; max-width:420px; margin:0 24px;">
+            <MudTextField T="string" Placeholder="Search quotes, invoices, contacts…"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" FullWidth="true"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Rounded.Search"
+                          Style="background: var(--gray-50); border-radius: 8px;" />
+        </div>
+
         <AuthorizeView>
             <Authorized>
-                <div class="d-flex align-center mr-4">
-                    <MudAvatar Color="Color.Primary" Size="Size.Small" Class="mr-2">
-                        @context.User.Identity?.Name?.FirstOrDefault().ToString().ToUpper()
-                    </MudAvatar>
-                    <MudText Typo="Typo.body2">@context.User.Identity?.Name</MudText>
-                </div>
-                <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit" Href="/logout" Title="Logout" />
+                <MudTooltip Text="Ask Techlight AI" Arrow="true" Placement="Placement.Bottom">
+                    <MudIconButton Icon="@Icons.Material.Rounded.AutoAwesome" Color="Color.Primary" Href="/ask-ai" />
+                </MudTooltip>
+                <MudTooltip Text="Notifications" Arrow="true" Placement="Placement.Bottom">
+                    <MudIconButton Icon="@Icons.Material.Rounded.NotificationsNone" Color="Color.Default" />
+                </MudTooltip>
+
+                <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+                         Dense="true" Class="ml-2">
+                    <ActivatorContent>
+                        <MudButton Variant="Variant.Text" Class="pa-1" Style="min-width:auto; text-transform:none;">
+                            <div class="d-flex align-center tl-gap-sm">
+                                <MudAvatar Color="Color.Primary" Size="Size.Small" Style="font-weight:600;">
+                                    @Initials(context.User.Identity?.Name)
+                                </MudAvatar>
+                                <div class="d-none d-md-flex flex-column" style="line-height:1.1; text-align:left;">
+                                    <span style="font-size:13px; font-weight:600; color:var(--gray-900);">
+                                        @context.User.Identity?.Name
+                                    </span>
+                                    <span style="font-size:11px; color:var(--gray-500);">
+                                        Signed in
+                                    </span>
+                                </div>
+                                <MudIcon Icon="@Icons.Material.Rounded.KeyboardArrowDown" Size="Size.Small" Color="Color.Default" />
+                            </div>
+                        </MudButton>
+                    </ActivatorContent>
+                    <ChildContent>
+                        <MudMenuItem Icon="@Icons.Material.Rounded.Person" Href="/profile">Profile</MudMenuItem>
+                        <MudMenuItem Icon="@Icons.Material.Rounded.Settings" Href="/settings">Settings</MudMenuItem>
+                        <MudDivider />
+                        <MudMenuItem Icon="@Icons.Material.Rounded.Logout" Href="/logout">Sign out</MudMenuItem>
+                    </ChildContent>
+                </MudMenu>
             </Authorized>
             <NotAuthorized>
-                <MudButton Color="Color.Inherit" Href="/login">Login</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/login">Login</MudButton>
             </NotAuthorized>
         </AuthorizeView>
     </MudAppBar>
-    
-    <MudDrawer @bind-Open="_drawerOpen" Elevation="2" ClipMode="DrawerClipMode.Docked">
+
+    <MudDrawer @bind-Open="_drawerOpen" Elevation="0" ClipMode="DrawerClipMode.Docked" Variant="DrawerVariant.Mini" OpenMiniOnHover="true">
         <NavMenu />
     </MudDrawer>
-    
+
     <MudMainContent>
-        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pt-6 pb-8">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-8 px-6">
             @Body
         </MudContainer>
     </MudMainContent>
@@ -41,26 +79,18 @@
 
 @code {
     bool _drawerOpen = true;
-    private MudThemeProvider _themeProvider;
-    private bool _isDarkMode = true;
 
-    void DrawerToggle()
-    {
-        _drawerOpen = !_drawerOpen;
-    }
+    void DrawerToggle() => _drawerOpen = !_drawerOpen;
 
-    private MudTheme _theme = new MudTheme
+    static string Initials(string? name)
     {
-        PaletteDark = new PaletteDark
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length switch
         {
-            Primary = "#00a8b5",
-            Secondary = "#d4a574",
-            AppbarBackground = "#0f1319",
-            Background = "#0f1319",
-            Surface = "#1a1f2e",
-            DrawerBackground = "#1a1f2e",
-            DrawerIcon = "#a0aec0",
-            DrawerText = "#e2e8f0"
-        }
-    };
+            0 => "?",
+            1 => parts[0][..1].ToUpper(),
+            _ => (parts[0][..1] + parts[^1][..1]).ToUpper()
+        };
+    }
 }
