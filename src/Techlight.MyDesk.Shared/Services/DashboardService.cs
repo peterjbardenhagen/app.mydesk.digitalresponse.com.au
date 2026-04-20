@@ -3,6 +3,14 @@ using Techlight.MyDesk.Shared.Models;
 
 namespace Techlight.MyDesk.Shared.Services;
 
+public enum ChartPeriod { ThisYear, FyToDate, LastYear, SinceInception }
+
+public record DashboardChartData(
+    decimal[] QuotesWon,
+    decimal[] Invoices,
+    decimal[] POs,
+    string[]  Labels);
+
 public class DashboardService
 {
     private readonly DatabaseService _db;
@@ -146,5 +154,131 @@ public class DashboardService
             return result;
         }
         catch { return new decimal[12]; }
+    }
+
+    // ── Chart period queries ─────────────────────────────────────────────────
+
+    public async Task<DashboardChartData> GetChartDataAsync(ChartPeriod period)
+    {
+        var now = DateTime.Now;
+        try
+        {
+            return period switch
+            {
+                ChartPeriod.ThisYear       => await GetCalendarYearChartAsync(now.Year),
+                ChartPeriod.FyToDate       => await GetFyToDateChartAsync(now),
+                ChartPeriod.LastYear       => await GetCalendarYearChartAsync(now.Year - 1),
+                ChartPeriod.SinceInception => await GetSinceInceptionChartAsync(),
+                _                          => await GetCalendarYearChartAsync(now.Year),
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading chart data for {Period}", period);
+            return new(new decimal[12], new decimal[12], new decimal[12],
+                new[]{"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"});
+        }
+    }
+
+    private async Task<DashboardChartData> GetCalendarYearChartAsync(int year)
+    {
+        var quotes   = await GetMonthlyTotals("Quotes",         "QuoteDate",
+            "CASE WHEN QuoteStatusId IN (4,10) THEN NettPriceTotal ELSE 0 END", year);
+        var invoices = await GetMonthlyTotals("Invoices",        "InvoiceDate", "Amount",      year);
+        var pos      = await GetMonthlyTotals("PurchaseOrders",  "PODate",      "AmountExGST", year);
+        return new(quotes, invoices, pos,
+            new[]{"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"});
+    }
+
+    private async Task<DashboardChartData> GetFyToDateChartAsync(DateTime now)
+    {
+        // Australian FY starts 1 July.
+        // If current month >= July the FY started in the current calendar year; otherwise the previous one.
+        var fyYear  = now.Month >= 7 ? now.Year : now.Year - 1;
+        var fyStart = new DateTime(fyYear, 7, 1);
+        var fyEnd   = now.Date.AddDays(1);      // exclusive upper bound (includes today)
+
+        // Build ordered list of (year, month) pairs from FY start to now
+        var months = new List<(int Year, int Month)>();
+        for (var d = fyStart; d <= new DateTime(now.Year, now.Month, 1); d = d.AddMonths(1))
+            months.Add((d.Year, d.Month));
+
+        if (months.Count == 0)
+            return await GetCalendarYearChartAsync(fyYear);
+
+        var spansYears = months.Select(m => m.Year).Distinct().Count() > 1;
+        string Label((int Year, int Month) m) =>
+            spansYears
+                ? $"{new DateTime(m.Year, m.Month, 1):MMM}'{m.Year % 100:D2}"
+                : new DateTime(m.Year, m.Month, 1).ToString("MMM");
+
+        var qMap  = await GetMonthlyTotalsInRange("Quotes",        "QuoteDate",
+            "CASE WHEN QuoteStatusId IN (4,10) THEN NettPriceTotal ELSE 0 END", fyStart, fyEnd);
+        var iMap  = await GetMonthlyTotalsInRange("Invoices",       "InvoiceDate", "Amount",      fyStart, fyEnd);
+        var pMap  = await GetMonthlyTotalsInRange("PurchaseOrders", "PODate",      "AmountExGST", fyStart, fyEnd);
+
+        return new(
+            months.Select(m => qMap.GetValueOrDefault(m)).ToArray(),
+            months.Select(m => iMap.GetValueOrDefault(m)).ToArray(),
+            months.Select(m => pMap.GetValueOrDefault(m)).ToArray(),
+            months.Select(Label).ToArray());
+    }
+
+    private async Task<DashboardChartData> GetSinceInceptionChartAsync()
+    {
+        var quotes   = await GetAnnualTotals("Quotes",        "QuoteDate",
+            "CASE WHEN QuoteStatusId IN (4,10) THEN NettPriceTotal ELSE 0 END");
+        var invoices = await GetAnnualTotals("Invoices",       "InvoiceDate", "Amount");
+        var pos      = await GetAnnualTotals("PurchaseOrders", "PODate",      "AmountExGST");
+
+        var allYears = quotes.Keys.Union(invoices.Keys).Union(pos.Keys).OrderBy(y => y).ToArray();
+
+        // If there's only one year of data fall back to monthly view for that year
+        if (allYears.Length <= 1)
+            return await GetCalendarYearChartAsync(allYears.Length == 1 ? allYears[0] : DateTime.Now.Year);
+
+        return new(
+            allYears.Select(y => quotes.GetValueOrDefault(y)).ToArray(),
+            allYears.Select(y => invoices.GetValueOrDefault(y)).ToArray(),
+            allYears.Select(y => pos.GetValueOrDefault(y)).ToArray(),
+            allYears.Select(y => y.ToString()).ToArray());
+    }
+
+    private async Task<Dictionary<(int Year, int Month), decimal>> GetMonthlyTotalsInRange(
+        string table, string dateCol, string valueExpr, DateTime start, DateTime end)
+    {
+        var sql = $@"
+            SELECT YEAR({dateCol}) AS Yr, MONTH({dateCol}) AS Mo, ISNULL(SUM({valueExpr}), 0) AS Total
+            FROM {table}
+            WHERE {dateCol} >= @S AND {dateCol} < @E
+            GROUP BY YEAR({dateCol}), MONTH({dateCol})";
+        var dict = new Dictionary<(int, int), decimal>();
+        try
+        {
+            var dt = await _db.QueryAsync(sql, new() { ["S"] = start, ["E"] = end });
+            foreach (System.Data.DataRow r in dt.Rows)
+                dict[(Convert.ToInt32(r["Yr"]), Convert.ToInt32(r["Mo"]))] = Convert.ToDecimal(r["Total"]);
+        }
+        catch { }
+        return dict;
+    }
+
+    private async Task<Dictionary<int, decimal>> GetAnnualTotals(
+        string table, string dateCol, string valueExpr)
+    {
+        var sql = $@"
+            SELECT YEAR({dateCol}) AS Yr, ISNULL(SUM({valueExpr}), 0) AS Total
+            FROM {table}
+            WHERE {dateCol} IS NOT NULL
+            GROUP BY YEAR({dateCol})";
+        var dict = new Dictionary<int, decimal>();
+        try
+        {
+            var dt = await _db.QueryAsync(sql, new Dictionary<string, object?>());
+            foreach (System.Data.DataRow r in dt.Rows)
+                dict[Convert.ToInt32(r["Yr"])] = Convert.ToDecimal(r["Total"]);
+        }
+        catch { }
+        return dict;
     }
 }

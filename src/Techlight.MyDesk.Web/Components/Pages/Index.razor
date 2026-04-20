@@ -104,15 +104,33 @@ else
         @* ── Chart (left) + Alerts + Quick Actions (right) ─────────────────── *@
         <MudItem xs="12" md="8">
             <MudPaper Class="pa-5" Elevation="1">
-                <div class="d-flex justify-space-between align-center mb-4">
+                <div class="d-flex justify-space-between align-center mb-4" style="flex-wrap:wrap;gap:8px;">
                     <div>
                         <MudText Typo="Typo.h6" Style="font-weight:600;">Monthly Performance</MudText>
-                        <MudText Typo="Typo.body2" Style="color:var(--gray-500);">Quotes won · invoices · purchase orders — value by month</MudText>
+                        <MudText Typo="Typo.body2" Style="color:var(--gray-500);">@_chartSubtitle</MudText>
                     </div>
-                    <span class="tl-badge primary">@DateTime.Now.Year</span>
+                    <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                        @foreach (var opt in _periodOptions)
+                        {
+                            <MudButton Size="Size.Small"
+                                       Variant="@(_chartPeriod == opt.Key ? Variant.Filled : Variant.Outlined)"
+                                       Color="@(_chartPeriod == opt.Key ? Color.Primary : Color.Default)"
+                                       OnClick="@(() => SelectPeriodAsync(opt.Key))"
+                                       Disabled="_chartLoading">@opt.Value</MudButton>
+                        }
+                    </div>
                 </div>
-                <MudChart ChartType="ChartType.Bar" ChartSeries="@_chartSeries" XAxisLabels="@_xAxisLabels"
-                          Width="100%" Height="300px" ChartOptions="@_chartOptions" />
+                @if (_chartLoading)
+                {
+                    <div class="d-flex justify-center align-center" style="height:300px;">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                    </div>
+                }
+                else
+                {
+                    <MudChart ChartType="ChartType.Bar" ChartSeries="@_chartSeries" XAxisLabels="@_xAxisLabels"
+                              Width="100%" Height="300px" ChartOptions="@_chartOptions" />
+                }
             </MudPaper>
         </MudItem>
 
@@ -217,7 +235,19 @@ else
 @code {
     private DashboardMetrics? _metrics;
     private List<ChartSeries> _chartSeries = new();
-    private readonly string[] _xAxisLabels = { "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec" };
+    private string[]          _xAxisLabels = Array.Empty<string>();
+    private bool              _chartLoading;
+    private ChartPeriod       _chartPeriod = ChartPeriod.ThisYear;
+    private string            _chartSubtitle = "Quotes won \u00b7 invoices \u00b7 purchase orders \u2014 value by month";
+
+    private static readonly IReadOnlyDictionary<ChartPeriod, string> _periodOptions =
+        new Dictionary<ChartPeriod, string>
+        {
+            [ChartPeriod.ThisYear]       = "This Year",
+            [ChartPeriod.FyToDate]       = "FY to Date",
+            [ChartPeriod.LastYear]       = "Last Year",
+            [ChartPeriod.SinceInception] = "Since Inception",
+        };
 
     private readonly ChartOptions _chartOptions = new()
     {
@@ -228,11 +258,39 @@ else
     protected override async Task OnInitializedAsync()
     {
         _metrics = await DashboardService.GetMetricsAsync();
+        // Seed chart from already-loaded metrics data (avoids a second DB round-trip on init)
+        _xAxisLabels = new[]{"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
         _chartSeries = new List<ChartSeries>
         {
-            new() { Name = "Quotes Won",  Data = _metrics.MonthlyQuotesThisYear.Select(v => (double)v).ToArray() },
-            new() { Name = "Invoices",    Data = _metrics.MonthlyInvoicesThisYear.Select(v => (double)v).ToArray() },
+            new() { Name = "Quotes Won",      Data = _metrics.MonthlyQuotesThisYear.Select(v => (double)v).ToArray() },
+            new() { Name = "Invoices",        Data = _metrics.MonthlyInvoicesThisYear.Select(v => (double)v).ToArray() },
             new() { Name = "Purchase Orders", Data = _metrics.MonthlyPOsThisYear.Select(v => (double)v).ToArray() },
+        };
+    }
+
+    private async Task SelectPeriodAsync(ChartPeriod period)
+    {
+        if (_chartPeriod == period) return;
+        _chartPeriod  = period;
+        _chartLoading = true;
+        StateHasChanged();
+
+        var data = await DashboardService.GetChartDataAsync(period);
+        ApplyChartData(data);
+        _chartLoading = false;
+    }
+
+    private void ApplyChartData(DashboardChartData data)
+    {
+        _xAxisLabels   = data.Labels;
+        _chartSubtitle = _chartPeriod == ChartPeriod.SinceInception
+            ? "Quotes won \u00b7 invoices \u00b7 purchase orders \u2014 value by year"
+            : "Quotes won \u00b7 invoices \u00b7 purchase orders \u2014 value by month";
+        _chartSeries = new List<ChartSeries>
+        {
+            new() { Name = "Quotes Won",      Data = data.QuotesWon.Select(v => (double)v).ToArray() },
+            new() { Name = "Invoices",        Data = data.Invoices.Select(v => (double)v).ToArray() },
+            new() { Name = "Purchase Orders", Data = data.POs.Select(v => (double)v).ToArray() },
         };
     }
 
