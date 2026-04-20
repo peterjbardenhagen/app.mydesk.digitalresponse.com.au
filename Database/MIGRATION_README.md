@@ -1,3 +1,54 @@
+# Database Migration & Deployment Tools
+
+## Environment Details
+
+### Local Development
+- **IIS URL:** https://localhost
+- **SQL Server:** `(localdb)\MSSQLLocalDB`
+- **Database:** `Techlight_MyDesk` (pre-created, blank)
+- **SQL User:** `Techlight_MyDesk` / `DigitalResponse2595!`
+- **Auth:** Windows Auth (default) or SQL Auth
+
+### Production
+- **Server:** `techlight.digitalresponse.com.au`
+- **SQL Instance:** `localhost\SQL2016` (SQL Server 2016)
+- **Same DB name/credentials as local**
+- **Compatibility:** Scripts avoid SQL 2017+ features (STRING_AGG, TRANSLATE, etc.)
+
+## Scripts in This Folder
+
+| Script | Purpose |
+|--------|---------|
+| `migrate_access_to_sqlserver.py` | One-time: Migrate Access .mdb → SQL Server |
+| `migration_config.py` | Configuration for migration script |
+| `Backup-Database.ps1` | Backup local LocalDB to .bak file |
+| `Deploy-Database.ps1` | Deploy local DB to production SQL 2016 |
+| `Install-SQLExpress.ps1` | (Optional) Install SQL Express locally |
+
+## Quick Usage
+
+### Migrate Access → SQL Server (Local)
+```powershell
+python migrate_access_to_sqlserver.py
+```
+
+### Backup Local Database
+```powershell
+.\Backup-Database.ps1
+.\Backup-Database.ps1 -Compress   # Zip the backup
+```
+
+### Deploy Local → Production
+```powershell
+# Dry run first (shows what would happen, no changes):
+.\Deploy-Database.ps1 -DryRun
+
+# Actual deployment:
+.\Deploy-Database.ps1
+```
+
+---
+
 # Access to SQL Server Migration Tool
 
 Complete migration tool that converts Microsoft Access databases to SQL Server, including:

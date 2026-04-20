@@ -12,22 +12,39 @@ ACCESS_DB_PATH = r"C:\Development\Techlight.digitalresponse.com.au\Database\Tech
 # ============================================================================
 # REQUIRED: SQL Server Connection Settings
 # ============================================================================
+# Target database: Techlight_MyDesk (must already exist)
+# Compatibility: SQL Server 2016+ (production runs SQL Server 2016)
 
-# Option 1: Windows Authentication (most common)
+# Option 1: LOCAL DEV - LocalDB with Windows Authentication (DEFAULT)
 SQL_SERVER_CONN_STR = (
     "Driver={ODBC Driver 17 for SQL Server};"
-    "Server=localhost\sqlserver;"      # SQL Express instance name
-    "Database=Techlight;"              # Target database (must exist)
-    "Trusted_Connection=yes;"          # Use Windows login
+    "Server=(localdb)\\MSSQLLocalDB;"
+    "Database=Techlight_MyDesk;"
+    "Trusted_Connection=yes;"
+    "Encrypt=yes;"
+    "TrustServerCertificate=no;"
 )
 
-# Option 2: SQL Server Authentication (comment out Option 1 and use this)
+# Option 2: LOCAL DEV - SQL Authentication (if Windows Auth fails)
 # SQL_SERVER_CONN_STR = (
 #     "Driver={ODBC Driver 17 for SQL Server};"
-#     "Server=localhost;"
-#     "Database=Techlight;"
-#     "UID=sa;"                        # SQL Server username
-#     "PWD=your_password;"             # SQL Server password
+#     "Server=(localdb)\\MSSQLLocalDB;"
+#     "Database=Techlight_MyDesk;"
+#     "UID=Techlight_MyDesk;"
+#     "PWD=DigitalResponse2595!;"
+#     "Encrypt=yes;"
+#     "TrustServerCertificate=yes;"
+# )
+
+# Option 3: PRODUCTION - SQL Server 2016 on techlight.digitalresponse.com.au
+# PROD_SQL_SERVER_CONN_STR = (
+#     "Driver={ODBC Driver 17 for SQL Server};"
+#     "Server=localhost\\SQL2016;"
+#     "Database=Techlight_MyDesk;"
+#     "UID=Techlight_MyDesk;"
+#     "PWD=DigitalResponse2595!;"
+#     "Encrypt=yes;"
+#     "TrustServerCertificate=yes;"
 # )
 
 # ============================================================================
