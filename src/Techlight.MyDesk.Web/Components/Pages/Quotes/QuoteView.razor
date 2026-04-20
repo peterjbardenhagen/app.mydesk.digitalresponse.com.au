@@ -1,99 +1,239 @@
 @page "/quotes/{Id:int}"
 @attribute [Authorize]
-@inject QuoteService QuoteService
+@inject QuoteService Svc
+@inject LookupService LookupSvc
 @inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthState
+@using System.Security.Claims
 
 <PageTitle>Quote #@Id - Techlight MyDesk</PageTitle>
 
-@if (_quote == null)
+@if (_q == null)
 {
     <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="mx-auto my-8 d-block" />
 }
 else
 {
-    <div class="d-flex justify-space-between align-center mb-4">
-        <MudText Typo="Typo.h4" Class="font-weight-bold">Quote #@_quote.Qid</MudText>
-        <div class="d-flex gap-2">
-            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Nav.NavigateTo("/quotes"))">Back</MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" Href="@($"/quotes/{_quote.Qid}/edit")">Edit</MudButton>
+    <div class="tl-page-header">
+        <div>
+            <div class="tl-breadcrumb">
+                <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+                <a href="/quotes">Quotes</a><span class="sep">/</span>
+                <span style="color:var(--gray-700);font-weight:500;">Quote #@_q.Qid</span>
+            </div>
+            <h1 style="display:flex;align-items:center;gap:12px;">
+                Quote #@_q.Qid
+                <span class="tl-badge @StatusTone(_q.QuoteStatusId)">@_q.QuoteStatus</span>
+            </h1>
+            <p class="tl-subtitle">@(_q.Reference is { Length: > 0 } r ? r : _q.CompanyName)</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ArrowBack"
+                       Href="/quotes" Size="Size.Small">All Quotes</MudButton>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Edit"
+                       Href="@($"/quotes/{Id}/edit")" Size="Size.Small">Edit</MudButton>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ContentCopy"
+                       OnClick="CopyAsync" Size="Size.Small">Copy</MudButton>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.History"
+                       Href="@($"/quotes/{Id}/history")" Size="Size.Small">History</MudButton>
+            @if (CanApproveDecline)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Success"
+                           StartIcon="@Icons.Material.Rounded.ThumbUp"
+                           OnClick="ApproveAsync" Size="Size.Small">Approve</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Error"
+                           StartIcon="@Icons.Material.Rounded.ThumbDown"
+                           OnClick="DeclineAsync" Size="Size.Small">Decline</MudButton>
+            }
+            @if (CanIssue)
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Rounded.Receipt"
+                           Href="@($"/invoices/create?fromQuote={Id}")" Size="Size.Small">Invoice</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Rounded.ShoppingCart"
+                           Href="@($"/purchase-orders/create?fromQuote={Id}")" Size="Size.Small">Create PO</MudButton>
+            }
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.SwapVert"
+                       OnClick="@(() => _showStatusPanel = !_showStatusPanel)" Size="Size.Small">Update Status</MudButton>
+            @if (CanDelete)
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Error"
+                           StartIcon="@Icons.Material.Rounded.Delete"
+                           OnClick="DeleteAsync" Size="Size.Small">Delete</MudButton>
+            }
         </div>
     </div>
 
-    <MudGrid>
+    @* Status update panel *@
+    @if (_showStatusPanel)
+    {
+        <MudPaper Class="pa-4 mb-4" Elevation="1" Style="border-left:4px solid var(--mud-palette-primary);max-width:420px;">
+            <MudText Typo="Typo.subtitle2" Class="mb-3">Change Status</MudText>
+            <div class="d-flex gap-2 align-center">
+                <MudSelect T="int" @bind-Value="_newStatusId" Label="New Status" Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width:200px;">
+                    @foreach (var s in _statuses)
+                    {
+                        <MudSelectItem T="int" Value="@s.QuoteStatusId">@s.StatusName</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                           OnClick="UpdateStatusAsync">Apply</MudButton>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                           OnClick="@(() => _showStatusPanel = false)">Cancel</MudButton>
+            </div>
+        </MudPaper>
+    }
+
+    <MudGrid Spacing="3">
+        @* ── Left column: details + line items ── *@
         <MudItem xs="12" md="8">
-            <MudPaper Elevation="2" Class="pa-6">
-                <MudText Typo="Typo.h5" Class="mb-4">@_quote.Reference</MudText>
-                <MudGrid>
-                    <MudItem xs="6"><strong>Customer:</strong> @_quote.CompanyName</MudItem>
-                    <MudItem xs="6"><strong>Date:</strong> @_quote.QuoteDate.ToString("yyyy-MM-dd")</MudItem>
-                    <MudItem xs="6"><strong>Status:</strong> <MudChip T="string" Color="Color.Info" Size="Size.Small">@_quote.QuoteStatus</MudChip></MudItem>
-                    <MudItem xs="6"><strong>Originator:</strong> @_quote.Originator</MudItem>
-                    <MudItem xs="6"><strong>Net Price:</strong> @_quote.NettPriceTotal.ToString("C2")</MudItem>
-                    <MudItem xs="6"><strong>Margin:</strong> @_quote.Margin.ToString("P0")</MudItem>
+            <MudPaper Elevation="1" Class="pa-5 mb-4">
+                <MudText Typo="Typo.subtitle2" Class="mb-3" Style="color:var(--gray-500);text-transform:uppercase;">Quote Details</MudText>
+                <MudGrid Spacing="2">
+                    <MudItem xs="6"><span style="color:var(--gray-500);">Customer</span><br/><strong>@_q.CompanyName</strong></MudItem>
+                    <MudItem xs="6"><span style="color:var(--gray-500);">Contact</span><br/>@(_q.ContactName ?? "—")</MudItem>
+                    <MudItem xs="6"><span style="color:var(--gray-500);">Date</span><br/>@_q.QuoteDate.ToString("dd/MM/yyyy")</MudItem>
+                    <MudItem xs="6"><span style="color:var(--gray-500);">Division</span><br/>@(_q.DivisionName ?? "—")</MudItem>
+                    @if (_q.QuoteNumber is { Length: > 0 })
+                    {
+                        <MudItem xs="6"><span style="color:var(--gray-500);">Customer Ref #</span><br/>@_q.QuoteNumber</MudItem>
+                    }
+                    @if (_q.Attention is { Length: > 0 })
+                    {
+                        <MudItem xs="6"><span style="color:var(--gray-500);">Attention</span><br/>@_q.Attention</MudItem>
+                    }
+                    @if (_q.Delivery is { Length: > 0 })
+                    {
+                        <MudItem xs="6"><span style="color:var(--gray-500);">Delivery</span><br/>@_q.Delivery</MudItem>
+                    }
+                    <MudItem xs="6"><span style="color:var(--gray-500);">Validity</span><br/>@_q.Validity days</MudItem>
+                    <MudItem xs="6"><span style="color:var(--gray-500);">Originator</span><br/>@_q.Originator</MudItem>
                 </MudGrid>
-
-                @if (!string.IsNullOrWhiteSpace(_quote.CustomerNotes))
+                @if (_q.Terms is { Length: > 0 })
                 {
-                    <MudDivider Class="my-4" />
-                    <MudText Typo="Typo.subtitle2">Customer Notes</MudText>
-                    <MudText Typo="Typo.body2" Class="mt-1" Style="white-space: pre-wrap;">@_quote.CustomerNotes</MudText>
+                    <MudDivider Class="my-3" />
+                    <MudText Typo="Typo.caption" Style="color:var(--gray-500);">TERMS</MudText>
+                    <MudText Typo="Typo.body2" Style="white-space:pre-line;">@_q.Terms</MudText>
                 }
-
-                @if (!string.IsNullOrWhiteSpace(_quote.InternalNotes))
+                @if (_q.CustomerNotes is { Length: > 0 })
                 {
-                    <MudDivider Class="my-4" />
-                    <MudText Typo="Typo.subtitle2">Internal Notes</MudText>
-                    <MudText Typo="Typo.body2" Class="mt-1" Style="white-space: pre-wrap;">@_quote.InternalNotes</MudText>
+                    <MudDivider Class="my-3" />
+                    <MudText Typo="Typo.caption" Style="color:var(--gray-500);">CUSTOMER NOTES</MudText>
+                    <MudText Typo="Typo.body2" Style="white-space:pre-line;">@_q.CustomerNotes</MudText>
+                }
+                @if (_q.InternalNotes is { Length: > 0 })
+                {
+                    <MudDivider Class="my-3" />
+                    <MudText Typo="Typo.caption" Style="color:var(--gray-500);">INTERNAL NOTES</MudText>
+                    <MudText Typo="Typo.body2" Style="white-space:pre-line;">@_q.InternalNotes</MudText>
                 }
             </MudPaper>
 
-            <MudPaper Elevation="2" Class="pa-6 mt-4">
-                <MudText Typo="Typo.h6" Class="mb-3">Line Items</MudText>
-                @if (_lineItems == null)
+            @* Line items *@
+            <MudPaper Elevation="1" Class="pa-4 mb-4">
+                <MudText Typo="Typo.subtitle2" Class="mb-3" Style="color:var(--gray-500);text-transform:uppercase;">Line Items</MudText>
+                @if (_lines == null)
                 {
-                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Small" />
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
                 }
-                else if (!_lineItems.Any())
+                else if (!_lines.Any())
                 {
-                    <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);">No line items.</MudText>
+                    <MudText Typo="Typo.body2" Style="color:var(--gray-400);">No own-product line items.</MudText>
                 }
                 else
                 {
-                    <MudSimpleTable Dense="true" Hover="true">
-                        <thead>
-                            <tr>
-                                <th>Description</th>
-                                <th>Qty</th>
-                                <th>Unit Cost</th>
-                                <th>Unit Price</th>
-                                <th>Line Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var item in _lineItems)
-                            {
+                    <div style="overflow-x:auto;">
+                        <MudSimpleTable Dense="true" Hover="true" Style="font-size:0.875rem;">
+                            <thead>
                                 <tr>
-                                    <td>@item.Description</td>
-                                    <td>@item.Quantity</td>
-                                    <td>@item.UnitCost.ToString("C2")</td>
-                                    <td>@item.UnitPrice.ToString("C2")</td>
-                                    <td>@item.LineTotal.ToString("C2")</td>
+                                    <th>Type</th><th>Description</th>
+                                    <th style="text-align:right;">Eff. Qty</th>
+                                    <th style="text-align:right;">Unit Cost</th>
+                                    <th style="text-align:right;">Nett Price</th>
+                                    <th style="text-align:right;">Ext Price</th>
                                 </tr>
-                            }
-                        </tbody>
-                    </MudSimpleTable>
+                            </thead>
+                            <tbody>
+                                @foreach (var i in _lines)
+                                {
+                                    <tr>
+                                        <td><span style="color:var(--gray-500);font-size:0.8rem;">@i.Type</span></td>
+                                        <td>@i.Description</td>
+                                        <td style="text-align:right;">@i.EffectiveQty.ToString("N2")</td>
+                                        <td style="text-align:right;">$@i.UnitCost.ToString("N2")</td>
+                                        <td style="text-align:right;">$@i.NettPrice.ToString("N2")</td>
+                                        <td style="text-align:right;font-weight:500;">$@i.ExtNettPrice.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </MudSimpleTable>
+                    </div>
                 }
             </MudPaper>
+
+            @* TP items *@
+            @if (_tpItems != null && _tpItems.Any())
+            {
+                <MudPaper Elevation="1" Class="pa-4 mb-4">
+                    <MudText Typo="Typo.subtitle2" Class="mb-3" Style="color:var(--gray-500);text-transform:uppercase;">Third-Party Supply</MudText>
+                    <div style="overflow-x:auto;">
+                        <MudSimpleTable Dense="true" Hover="true" Style="font-size:0.875rem;">
+                            <thead>
+                                <tr>
+                                    <th>Description</th><th>Supplier</th>
+                                    <th style="text-align:right;">Qty</th>
+                                    <th style="text-align:right;">Unit Cost</th>
+                                    <th style="text-align:right;">Nett Price</th>
+                                    <th style="text-align:right;">Ext Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var t in _tpItems)
+                                {
+                                    <tr>
+                                        <td>@t.Description</td>
+                                        <td style="color:var(--gray-500);">@t.Supplier</td>
+                                        <td style="text-align:right;">@t.Quantity.ToString("N2")</td>
+                                        <td style="text-align:right;">$@t.UnitCost.ToString("N2")</td>
+                                        <td style="text-align:right;">$@t.NettPrice.ToString("N2")</td>
+                                        <td style="text-align:right;font-weight:500;">$@t.ExtNettPrice.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </MudSimpleTable>
+                    </div>
+                </MudPaper>
+            }
         </MudItem>
 
+        @* ── Right column: totals ── *@
         <MudItem xs="12" md="4">
-            <MudPaper Elevation="2" Class="pa-4">
-                <MudText Typo="Typo.h6" Class="mb-3">Summary</MudText>
-                <MudList T="string" Dense="true">
-                    <MudListItem Icon="@Icons.Material.Filled.AttachMoney">Unit Cost: @_quote.UnitCostTotal.ToString("C2")</MudListItem>
-                    <MudListItem Icon="@Icons.Material.Filled.AttachMoney">Net Price: @_quote.NettPriceTotal.ToString("C2")</MudListItem>
-                    <MudListItem Icon="@Icons.Material.Filled.TrendingUp">Margin: @_quote.Margin.ToString("P0")</MudListItem>
-                </MudList>
+            <MudPaper Elevation="1" Class="pa-5">
+                <MudText Typo="Typo.subtitle2" Class="mb-3" Style="color:var(--gray-500);text-transform:uppercase;">Financials</MudText>
+                <table style="width:100%;font-size:0.9rem;">
+                    <tr>
+                        <td style="color:var(--gray-500);padding:4px 0;">Cost ex GST</td>
+                        <td style="text-align:right;padding:4px 0;">$@_q.UnitCostTotal.ToString("N2")</td>
+                    </tr>
+                    <tr>
+                        <td style="color:var(--gray-500);padding:4px 0;">Price ex GST</td>
+                        <td style="text-align:right;font-weight:500;padding:4px 0;">$@_q.NettPriceTotal.ToString("N2")</td>
+                    </tr>
+                    <tr>
+                        <td style="color:var(--gray-500);padding:4px 0;">GST (10%)</td>
+                        <td style="text-align:right;padding:4px 0;">$@(_q.NettPriceTotal * 0.10m).ToString("N2")</td>
+                    </tr>
+                    <tr style="border-top:1px solid var(--mud-palette-divider);">
+                        <td style="font-weight:600;padding:6px 0 4px;">Price inc GST</td>
+                        <td style="text-align:right;font-weight:600;font-size:1rem;padding:6px 0 4px;">$@(_q.NettPriceTotal * 1.10m).ToString("N2")</td>
+                    </tr>
+                    <tr>
+                        <td style="color:var(--gray-500);padding:4px 0;">Margin</td>
+                        <td style="text-align:right;padding:4px 0;">@_q.Margin.ToString("N1")%</td>
+                    </tr>
+                </table>
             </MudPaper>
         </MudItem>
     </MudGrid>
@@ -101,15 +241,100 @@ else
 
 @code {
     [Parameter] public int Id { get; set; }
-    private Quote? _quote;
-    private List<QuoteLineItem>? _lineItems;
+
+    private Quote? _q;
+    private List<QuoteLineItem>? _lines;
+    private List<QuoteThirdPartyItem>? _tpItems;
+    private List<QuoteStatus> _statuses = new();
+    private bool _showStatusPanel;
+    private int _newStatusId;
+    private string _userCode = "";
+    private bool _isAdmin;
+
+    private bool CanApproveDecline => _q?.QuoteStatusId is 1 or 9;
+    private bool CanIssue          => _q?.QuoteStatusId is 2 or 3 or 4 or 7 or 10;
+    private bool CanDelete         => _q?.QuoteStatusId == 1 || _isAdmin;
 
     protected override async Task OnInitializedAsync()
     {
-        _quote = await QuoteService.GetQuoteAsync(Id);
-        if (_quote != null)
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        _userCode = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+        _isAdmin  = auth.User.IsInRole("Admin") || auth.User.IsInRole("Director");
+
+        _q        = await Svc.GetQuoteAsync(Id);
+        _statuses = await LookupSvc.GetQuoteStatusesAsync();
+
+        if (_q != null)
         {
-            _lineItems = await QuoteService.GetQuoteLineItemsAsync(Id);
+            _newStatusId = _q.QuoteStatusId;
+            _lines   = await Svc.GetLineItemsAsync(Id);
+            _tpItems = await Svc.GetThirdPartyItemsAsync(Id);
         }
     }
+
+    private async Task CopyAsync()
+    {
+        try
+        {
+            var newId = await Svc.CopyQuoteAsync(Id, _userCode);
+            Snackbar.Add($"Copied → Quote #{newId}", Severity.Success);
+            Nav.NavigateTo($"/quotes/{newId}/edit");
+        }
+        catch (Exception ex) { Snackbar.Add($"Copy failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task ApproveAsync()
+    {
+        try
+        {
+            await Svc.ApproveAsync(Id, _userCode, isDirectorOrFinalApprover: _isAdmin);
+            Snackbar.Add("Quote approved.", Severity.Success);
+            _q = await Svc.GetQuoteAsync(Id);
+        }
+        catch (Exception ex) { Snackbar.Add($"Approve failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task DeclineAsync()
+    {
+        try
+        {
+            await Svc.DeclineAsync(Id, _userCode);
+            Snackbar.Add("Quote declined.", Severity.Info);
+            _q = await Svc.GetQuoteAsync(Id);
+        }
+        catch (Exception ex) { Snackbar.Add($"Decline failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task UpdateStatusAsync()
+    {
+        var statusName = _statuses.FirstOrDefault(s => s.QuoteStatusId == _newStatusId)?.StatusName ?? _newStatusId.ToString();
+        try
+        {
+            await Svc.UpdateStatusAsync(Id, _newStatusId, statusName, _userCode);
+            Snackbar.Add($"Status changed to {statusName}.", Severity.Success);
+            _showStatusPanel = false;
+            _q = await Svc.GetQuoteAsync(Id);
+        }
+        catch (Exception ex) { Snackbar.Add($"Status update failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task DeleteAsync()
+    {
+        try
+        {
+            await Svc.DeleteQuoteAsync(Id);
+            Snackbar.Add($"Quote #{Id} deleted.", Severity.Info);
+            Nav.NavigateTo("/quotes");
+        }
+        catch (Exception ex) { Snackbar.Add($"Delete failed: {ex.Message}", Severity.Error); }
+    }
+
+    private static string StatusTone(int id) => id switch
+    {
+        4 or 10     => "success",
+        2 or 3 or 7 => "primary",
+        9           => "warning",
+        5 or 11     => "error",
+        _           => "info",
+    };
 }

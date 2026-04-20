@@ -22,19 +22,31 @@ public class Quote
     public int DivisionId { get; set; }
     public string Code { get; set; } = string.Empty;
     public int QuoteStatusId { get; set; }
+    public string? Attention { get; set; }
+    public string? Delivery { get; set; }
+    public int Validity { get; set; } = 30;
+    public string? QuoteNumber { get; set; }
+    public string? SenderCode { get; set; }
+    public string? ContactName { get; set; }
+    public string? DivisionName { get; set; }
 }
 
 public class QuoteLineItem
 {
-    public int QuoteContentsId { get; set; }
+    public int QuoteItemId { get; set; }
     public int Qid { get; set; }
+    public string? ProductCode { get; set; }
+    public string? Type { get; set; }
     public string Description { get; set; } = string.Empty;
     public decimal Quantity { get; set; }
     public decimal Units { get; set; }
     public decimal Days { get; set; }
     public decimal UnitCost { get; set; }
-    public decimal UnitPrice { get; set; }
-    public decimal LineTotal { get; set; }
+    public decimal MinNettPrice { get; set; }
+    public decimal NettPrice { get; set; }
+    public decimal UnitCostSubTotal { get; set; }
+    public decimal ExtNettPrice { get; set; }
+    public decimal EffectiveQty => Days > 0 && Units > 0 ? Units * Days : Quantity;
 }
 
 public class CreateQuoteRequest
@@ -56,7 +68,32 @@ public class QuoteLineItemRequest
     public decimal? Units { get; set; }
     public decimal? Days { get; set; }
     public decimal UnitCost { get; set; }
-    public decimal UnitPrice { get; set; }
+    public decimal NettPrice { get; set; }
+}
+
+public class QuoteThirdPartyItem
+{
+    public int QuoteThirdPartyId { get; set; }
+    public int QuoteId { get; set; }
+    public string? Description { get; set; }
+    public string? Supplier { get; set; }
+    public string? SupplierPartNumber { get; set; }
+    public string? OurPartNumber { get; set; }
+    public decimal Quantity { get; set; }
+    public string? Type { get; set; }
+    public decimal UnitCost { get; set; }
+    public decimal NettPrice { get; set; }
+    public decimal ExtNettPrice { get; set; }
+    public decimal TotalCost { get; set; }
+}
+
+public class QuoteAuditEntry
+{
+    public int Qid { get; set; }
+    public string? Code { get; set; }
+    public string? UserName { get; set; }
+    public string? Action { get; set; }
+    public DateTime DateEntered { get; set; }
 }
 
 // ============================================================================

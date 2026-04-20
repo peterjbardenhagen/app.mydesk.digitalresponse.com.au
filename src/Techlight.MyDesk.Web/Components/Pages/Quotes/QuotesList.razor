@@ -1,91 +1,174 @@
 @page "/quotes"
 @attribute [Authorize]
 @inject QuoteService QuoteService
+@inject LookupService LookupService
 @inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthState
 
 <PageTitle>Quotes - Techlight MyDesk</PageTitle>
 
-<div class="d-flex justify-space-between align-center mb-4">
-    <MudText Typo="Typo.h4" Class="font-weight-bold">Quotes</MudText>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
-               OnClick="@(() => Nav.NavigateTo("/quotes/create"))">New Quote</MudButton>
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb"><a href="/">Techlight MyDesk</a><span class="sep">/</span><span style="color:var(--gray-700);font-weight:500;">Quotes</span></div>
+        <h1>Quotes</h1>
+        <p class="tl-subtitle">Sales quotations — raise, approve, issue and convert.</p>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
+               Href="/quotes/create">New Quote</MudButton>
 </div>
 
-<MudPaper Elevation="2" Class="pa-4 mb-4">
-    <MudGrid>
-        <MudItem xs="12" sm="4">
-            <MudTextField @bind-Value="_search" Label="Search Customer" Variant="Variant.Outlined"
-                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                          Immediate="true" Clearable="true" />
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudGrid Spacing="2">
+        <MudItem xs="12" sm="3">
+            <MudTextField @bind-Value="_customer" Label="Customer" Placeholder="Search company..." Variant="Variant.Outlined"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Search" Margin="Margin.Dense" />
         </MudItem>
-        <MudItem xs="12" sm="4">
-            <MudDatePicker @bind-Date="_dateFrom" Label="From Date" Variant="Variant.Outlined" Clearable="true" />
+        <MudItem xs="12" sm="2">
+            <MudTextField @bind-Value="_keyword" Label="Keyword" Placeholder="Reference, notes…" Variant="Variant.Outlined" Margin="Margin.Dense" />
         </MudItem>
-        <MudItem xs="12" sm="4">
-            <MudDatePicker @bind-Date="_dateTo" Label="To Date" Variant="Variant.Outlined" Clearable="true" />
+        <MudItem xs="6" sm="2">
+            <MudDatePicker @bind-Date="_dateFrom" Label="From" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="6" sm="2">
+            <MudDatePicker @bind-Date="_dateTo" Label="To" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12" sm="3">
+            <MudSelect T="int" @bind-Value="_statusId" Label="Status" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelectItem T="int" Value="555">All Active (excl. Won/Lost)</MudSelectItem>
+                <MudSelectItem T="int" Value="0">All (including Won &amp; Lost)</MudSelectItem>
+                <MudSelectItem T="int" Value="1">Draft</MudSelectItem>
+                <MudSelectItem T="int" Value="9">Pending Approval</MudSelectItem>
+                <MudSelectItem T="int" Value="10">Fully Approved</MudSelectItem>
+                <MudSelectItem T="int" Value="2">Issued</MudSelectItem>
+                <MudSelectItem T="int" Value="4">Accepted / Won</MudSelectItem>
+                <MudSelectItem T="int" Value="5">Lost</MudSelectItem>
+                <MudSelectItem T="int" Value="11">Declined</MudSelectItem>
+            </MudSelect>
         </MudItem>
     </MudGrid>
     <div class="d-flex gap-2 mt-3">
-        <MudButton OnClick="LoadAsync" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.FilterList">Apply Filter</MudButton>
-        <MudButton OnClick="ResetFilter" Color="Color.Default" Variant="Variant.Outlined">Reset</MudButton>
+        <MudButton OnClick="LoadAsync" Color="Color.Primary" Variant="Variant.Filled"
+                   StartIcon="@Icons.Material.Rounded.FilterList" Size="Size.Small">Apply</MudButton>
+        <MudButton OnClick="ResetFilter" Variant="Variant.Outlined" Size="Size.Small">Reset</MudButton>
     </div>
 </MudPaper>
 
-<MudDataGrid T="Quote" Items="@_quotes" Loading="@_loading" Dense="true" Hover="true"
-             Filterable="false" SortMode="@SortMode.Multiple" Groupable="false"
-             Virtualize="true" FixedHeader="true" Height="600px">
-    <Columns>
-        <PropertyColumn Property="x => x.Qid" Title="#" />
-        <PropertyColumn Property="x => x.Reference" Title="Reference" />
-        <PropertyColumn Property="x => x.CompanyName" Title="Customer" />
-        <PropertyColumn Property="x => x.QuoteDate" Title="Date" Format="yyyy-MM-dd" />
-        <PropertyColumn Property="x => x.NettPriceTotal" Title="Value" Format="C0" />
-        <PropertyColumn Property="x => x.QuoteStatus" Title="Status" />
-        <PropertyColumn Property="x => x.Originator" Title="Originator" />
-        <TemplateColumn Title="Actions" Sortable="false">
-            <CellTemplate>
-                <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Info"
-                               Href="@($"/quotes/{context.Item.Qid}")" title="View" />
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
-                               Href="@($"/quotes/{context.Item.Qid}/edit")" title="Edit" />
-            </CellTemplate>
-        </TemplateColumn>
-    </Columns>
-    <PagerContent>
-        <MudDataGridPager T="Quote" />
-    </PagerContent>
-</MudDataGrid>
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+
+<MudPaper Class="pa-0" Elevation="1">
+    <MudDataGrid T="Quote" Items="@_quotes" Dense="true" Hover="true" Elevation="0"
+                 SortMode="SortMode.Multiple" Filterable="false">
+        <Columns>
+            <PropertyColumn Property="x => x.Qid" Title="#" CellStyle="width:70px;font-weight:600;" />
+            <PropertyColumn Property="x => x.CompanyName" Title="Customer" />
+            <PropertyColumn Property="x => x.Reference" Title="Project / Reference" />
+            <PropertyColumn Property="x => x.QuoteDate" Title="Date" Format="dd/MM/yyyy" CellStyle="width:105px;" />
+            <PropertyColumn Property="x => x.NettPriceTotal" Title="Price ex GST" Format="C0" CellStyle="width:120px;text-align:right;" />
+            <PropertyColumn Property="x => x.Margin" Title="Margin %" Format="N1" CellStyle="width:90px;text-align:right;" />
+            <TemplateColumn Title="Status" CellStyle="width:145px;">
+                <CellTemplate>
+                    <span class="tl-badge @StatusTone(context.Item.QuoteStatusId)">@context.Item.QuoteStatus</span>
+                </CellTemplate>
+            </TemplateColumn>
+            <PropertyColumn Property="x => x.Originator" Title="Owner" CellStyle="width:130px;" />
+            <TemplateColumn Title="" CellStyle="width:130px;" Sortable="false">
+                <CellTemplate>
+                    <MudIconButton Icon="@Icons.Material.Rounded.Visibility" Size="Size.Small" Color="Color.Default"
+                                   Href="@($"/quotes/{context.Item.Qid}")" title="View" />
+                    <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" Color="Color.Primary"
+                                   Href="@($"/quotes/{context.Item.Qid}/edit")" title="Edit" />
+                    <MudIconButton Icon="@Icons.Material.Rounded.ContentCopy" Size="Size.Small" Color="Color.Default"
+                                   OnClick="@(() => CopyAsync(context.Item.Qid))" title="Copy" />
+                    @if (context.Item.QuoteStatusId == 1 || _isAdmin)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
+                                       OnClick="@(() => DeleteAsync(context.Item))" title="Delete" />
+                    }
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <PagerContent><MudDataGridPager T="Quote" /></PagerContent>
+        <NoRecordsContent>
+            <MudText Typo="Typo.body2" Class="pa-6" Style="color:var(--gray-500);">No quotes match the current filter.</MudText>
+        </NoRecordsContent>
+    </MudDataGrid>
+</MudPaper>
 
 @code {
     private List<Quote> _quotes = new();
-    private bool _loading = true;
-    private string? _search;
-    private DateTime? _dateFrom;
-    private DateTime? _dateTo;
+    private bool _loading;
+    private bool _isAdmin;
+    private string? _customer;
+    private string? _keyword;
+    private DateTime? _dateFrom = DateTime.Today.AddMonths(-3);
+    private DateTime? _dateTo   = DateTime.Today.AddDays(1);
+    private int _statusId = 555;
+    private string? _userCode;
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        _userCode = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        _isAdmin  = auth.User.IsInRole("Admin") || auth.User.IsInRole("Director");
+        await LoadAsync();
+    }
 
     private async Task LoadAsync()
     {
         _loading = true;
+        StateHasChanged();
         try
         {
             _quotes = await QuoteService.GetQuotesAsync(
-                dateFrom: _dateFrom,
-                dateTo: _dateTo,
-                customerName: _search);
+                dateFrom: _dateFrom, dateTo: _dateTo,
+                customerName: _customer, statusId: _statusId,
+                keyword: _keyword);
         }
-        finally
-        {
-            _loading = false;
-        }
+        catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
+        finally { _loading = false; }
     }
 
     private async Task ResetFilter()
     {
-        _search = null;
-        _dateFrom = null;
-        _dateTo = null;
+        _customer = null; _keyword = null; _statusId = 555;
+        _dateFrom = DateTime.Today.AddMonths(-3);
+        _dateTo   = DateTime.Today.AddDays(1);
         await LoadAsync();
     }
+
+    private async Task CopyAsync(int qid)
+    {
+        try
+        {
+            var newQid = await QuoteService.CopyQuoteAsync(qid, _userCode ?? "");
+            Snackbar.Add($"Copied → Quote #{newQid}", Severity.Success);
+            Nav.NavigateTo($"/quotes/{newQid}/edit");
+        }
+        catch (Exception ex) { Snackbar.Add($"Copy failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task DeleteAsync(Quote q)
+    {
+        try
+        {
+            await QuoteService.DeleteQuoteAsync(q.Qid);
+            Snackbar.Add($"Quote #{q.Qid} deleted.", Severity.Info);
+            _quotes.Remove(q);
+        }
+        catch (Exception ex) { Snackbar.Add($"Delete failed: {ex.Message}", Severity.Error); }
+    }
+
+    private static string StatusTone(int id) => id switch
+    {
+        4 or 10       => "success",
+        2 or 3 or 7   => "primary",
+        9             => "warning",
+        5 or 11       => "error",
+        1             => "info",
+        _             => "info",
+    };
 }
