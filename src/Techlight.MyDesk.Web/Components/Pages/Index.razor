@@ -16,8 +16,8 @@
             <p class="tl-subtitle">Here's what's happening across your business today.</p>
         </div>
         <div class="d-flex tl-gap-sm">
-            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Download">Export</MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/quotes/create" StartIcon="@Icons.Material.Rounded.Add">New Quote</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/quotes/create"
+                       StartIcon="@Icons.Material.Rounded.Add">New Quote</MudButton>
         </div>
     </div>
 </AuthorizeView>
@@ -31,7 +31,8 @@
 else
 {
     <MudGrid Spacing="4">
-        <!-- KPI 1: Quotes This Month -->
+
+        @* ── KPI Row ───────────────────────────────────────────────────────── *@
         <MudItem xs="12" sm="6" md="3">
             <div class="tl-stat-card">
                 <div class="tl-stat-head">
@@ -41,96 +42,106 @@ else
                     </div>
                     <span class="tl-stat-icon"><MudIcon Icon="@Icons.Material.Rounded.RequestQuote" Size="Size.Medium" /></span>
                 </div>
-                <span class="tl-stat-delta up">
-                    <MudIcon Icon="@Icons.Material.Rounded.ArrowUpward" Size="Size.Small" />
-                    @_metrics.ThisMonthQuotesWon won
+                <span class="tl-stat-delta @(_metrics.ThisMonthQuotesWon > 0 ? "up" : "flat")">
+                    @if (_metrics.ThisMonthQuotesWon > 0)
+                    {
+                        <MudIcon Icon="@Icons.Material.Rounded.ArrowUpward" Size="Size.Small" />
+                    }
+                    @_metrics.ThisMonthQuotesWon won · @_metrics.ThisMonthQuotesValue.ToString("C0") value
                 </span>
             </div>
         </MudItem>
 
-        <!-- KPI 2: Quotes Value -->
         <MudItem xs="12" sm="6" md="3">
             <div class="tl-stat-card">
                 <div class="tl-stat-head">
                     <div>
-                        <div class="tl-stat-label">Quote value</div>
-                        <div class="tl-stat-value">@_metrics.ThisMonthQuotesValue.ToString("C0")</div>
+                        <div class="tl-stat-label">Invoice value MTD</div>
+                        <div class="tl-stat-value">@_metrics.ThisMonthInvoiceValue.ToString("C0")</div>
                     </div>
-                    <span class="tl-stat-icon success"><MudIcon Icon="@Icons.Material.Rounded.AttachMoney" Size="Size.Medium" /></span>
+                    <span class="tl-stat-icon success"><MudIcon Icon="@Icons.Material.Rounded.ReceiptLong" Size="Size.Medium" /></span>
                 </div>
-                <span class="tl-stat-delta flat">Total value this month</span>
+                <span class="tl-stat-delta @(_metrics.ThisMonthInvoices > _metrics.LastMonthInvoices ? "up" : "flat")">
+                    @_metrics.ThisMonthInvoices invoices · @_metrics.YtdInvoiceValue.ToString("C0") YTD
+                </span>
             </div>
         </MudItem>
 
-        <!-- KPI 3: Invoices -->
         <MudItem xs="12" sm="6" md="3">
             <div class="tl-stat-card">
                 <div class="tl-stat-head">
                     <div>
-                        <div class="tl-stat-label">Invoices issued</div>
-                        <div class="tl-stat-value">@_metrics.ThisMonthInvoices</div>
+                        <div class="tl-stat-label">Purchase Orders MTD</div>
+                        <div class="tl-stat-value">@_metrics.ThisMonthPOs</div>
                     </div>
-                    <span class="tl-stat-icon info"><MudIcon Icon="@Icons.Material.Rounded.ReceiptLong" Size="Size.Medium" /></span>
+                    <span class="tl-stat-icon info"><MudIcon Icon="@Icons.Material.Rounded.ShoppingCart" Size="Size.Medium" /></span>
                 </div>
-                <span class="tl-stat-delta flat">Invoices this month</span>
+                <span class="tl-stat-delta @(_metrics.ThisMonthPOs > _metrics.LastMonthPOs ? "up" : "flat")">
+                    @_metrics.ThisMonthPOValue.ToString("C0") value
+                    @if (_metrics.ThisMonthDespatch > 0)
+                    {
+                        <text> · @_metrics.ThisMonthDespatch despatched</text>
+                    }
+                </span>
             </div>
         </MudItem>
 
-        <!-- KPI 4: Exceptions -->
         <MudItem xs="12" sm="6" md="3">
             <div class="tl-stat-card">
                 <div class="tl-stat-head">
                     <div>
                         <div class="tl-stat-label">Needs attention</div>
-                        <div class="tl-stat-value">@(_metrics.InvoicesOverdue + _metrics.PendingApprovalPOs)</div>
+                        <div class="tl-stat-value">@(_metrics.InvoicesOverdue + _metrics.PendingApprovalPOs + _metrics.PendingQuotesOver30Days)</div>
                     </div>
                     <span class="tl-stat-icon warning"><MudIcon Icon="@Icons.Material.Rounded.WarningAmber" Size="Size.Medium" /></span>
                 </div>
-                <span class="tl-stat-delta @(_metrics.InvoicesOverdue + _metrics.PendingApprovalPOs > 0 ? "down" : "flat")">
-                    @(_metrics.InvoicesOverdue) overdue &middot; @(_metrics.PendingApprovalPOs) to approve
+                <span class="tl-stat-delta @(_metrics.InvoicesOverdue > 0 || _metrics.PendingApprovalPOs > 0 ? "down" : "flat")">
+                    @_metrics.InvoicesOverdue overdue inv · @_metrics.PendingApprovalPOs POs pending
                 </span>
             </div>
         </MudItem>
 
-        <!-- Main Chart -->
+        @* ── Chart (left) + Alerts + Quick Actions (right) ─────────────────── *@
         <MudItem xs="12" md="8">
-            <MudPaper Class="pa-5 h-100">
+            <MudPaper Class="pa-5" Elevation="1">
                 <div class="d-flex justify-space-between align-center mb-4">
                     <div>
-                        <MudText Typo="Typo.h5" Class="mb-1" Style="font-weight:600;">Monthly performance</MudText>
-                        <MudText Typo="Typo.body2" Style="color:var(--gray-600);">Quotes won vs. invoices issued by month</MudText>
+                        <MudText Typo="Typo.h6" Style="font-weight:600;">Monthly Performance</MudText>
+                        <MudText Typo="Typo.body2" Style="color:var(--gray-500);">Quotes won · invoices · purchase orders — value by month</MudText>
                     </div>
-                    <span class="tl-badge primary">This year</span>
+                    <span class="tl-badge primary">@DateTime.Now.Year</span>
                 </div>
                 <MudChart ChartType="ChartType.Bar" ChartSeries="@_chartSeries" XAxisLabels="@_xAxisLabels"
-                          Width="100%" Height="320px" ChartOptions="@_chartOptions" />
+                          Width="100%" Height="300px" ChartOptions="@_chartOptions" />
             </MudPaper>
         </MudItem>
 
-        <!-- Side Panels -->
         <MudItem xs="12" md="4">
             <MudGrid Spacing="4">
                 <MudItem xs="12">
-                    <MudPaper Class="pa-5">
-                        <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight:600;">Needs attention</MudText>
+                    <MudPaper Class="pa-5" Elevation="1">
+                        <MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:600;">Needs Attention</MudText>
                         <div class="d-flex flex-column tl-gap-sm">
                             <AttentionRow Icon="@Icons.Material.Rounded.ErrorOutline" Tone="error"
-                                          Label="Overdue invoices" Count="@_metrics.InvoicesOverdue" />
+                                          Label="Overdue invoices (>30 days)" Count="@_metrics.InvoicesOverdue"
+                                          Href="/invoices?status=overdue" />
                             <AttentionRow Icon="@Icons.Material.Rounded.AccessTime" Tone="warning"
-                                          Label="Pending quotes > 30 days" Count="@_metrics.PendingQuotesOver30Days" />
+                                          Label="Quotes open >30 days" Count="@_metrics.PendingQuotesOver30Days"
+                                          Href="/quotes?status=overdue" />
                             <AttentionRow Icon="@Icons.Material.Rounded.FactCheck" Tone="info"
-                                          Label="POs pending approval" Count="@_metrics.PendingApprovalPOs" />
+                                          Label="POs pending approval" Count="@_metrics.PendingApprovalPOs"
+                                          Href="/purchase-orders?status=pending" />
                         </div>
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="12">
-                    <MudPaper Class="pa-5">
-                        <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight:600;">Quick actions</MudText>
+                    <MudPaper Class="pa-5" Elevation="1">
+                        <MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:600;">Quick Actions</MudText>
                         <div class="d-flex flex-column tl-gap-sm">
                             <MudButton Href="/quotes/create" Variant="Variant.Filled" Color="Color.Primary"
-                                       StartIcon="@Icons.Material.Rounded.Add" FullWidth="true">New quote</MudButton>
+                                       StartIcon="@Icons.Material.Rounded.Add" FullWidth="true">New Quote</MudButton>
                             <MudButton Href="/invoices/create" Variant="Variant.Outlined"
-                                       StartIcon="@Icons.Material.Rounded.ReceiptLong" FullWidth="true">New invoice</MudButton>
+                                       StartIcon="@Icons.Material.Rounded.ReceiptLong" FullWidth="true">New Invoice</MudButton>
                             <MudButton Href="/purchase-orders/create" Variant="Variant.Outlined"
                                        StartIcon="@Icons.Material.Rounded.ShoppingCart" FullWidth="true">New PO</MudButton>
                             <MudButton Href="/ask-ai" Variant="Variant.Text" Color="Color.Primary"
@@ -140,36 +151,110 @@ else
                 </MudItem>
             </MudGrid>
         </MudItem>
+
+        @* ── Recent Activity Feed ────────────────────────────────────────────── *@
+        <MudItem xs="12">
+            <MudPaper Class="pa-5" Elevation="1">
+                <div class="d-flex justify-space-between align-center mb-4">
+                    <div>
+                        <MudText Typo="Typo.h6" Style="font-weight:600;">Recent Activity</MudText>
+                        <MudText Typo="Typo.body2" Style="color:var(--gray-500);">
+                            Latest actions across quotes, invoices, purchase orders and despatch — newest first.
+                        </MudText>
+                    </div>
+                </div>
+
+                @if (_metrics.RecentActivity.Any())
+                {
+                    <div style="display:flex;flex-direction:column;gap:2px;">
+                        @foreach (var item in _metrics.RecentActivity)
+                        {
+                            <a href="@item.NavUrl" style="text-decoration:none;color:inherit;">
+                                <div style="display:flex;align-items:center;gap:14px;padding:9px 10px;border-radius:8px;"
+                                     onmouseover="this.style.background='var(--mud-palette-background-grey)'"
+                                     onmouseout="this.style.background=''">
+                                    <span class="tl-stat-icon @EntityTone(item.EntityType)"
+                                          style="min-width:34px;width:34px;height:34px;font-size:0;">
+                                        <MudIcon Icon="@EntityIcon(item.EntityType)" Size="Size.Small" />
+                                    </span>
+                                    <div style="flex:1;min-width:0;">
+                                        <div style="font-size:0.875rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                            @item.Action
+                                            @if (!string.IsNullOrWhiteSpace(item.EntityRef))
+                                            {
+                                                <span style="color:var(--gray-500);font-weight:400;"> — @item.EntityRef</span>
+                                            }
+                                        </div>
+                                        <div style="font-size:0.78rem;color:var(--gray-400);margin-top:1px;">
+                                            @if (!string.IsNullOrWhiteSpace(item.UserName))
+                                            {
+                                                <b style="font-weight:500;color:var(--gray-600);">@item.UserName</b>
+                                                <text> · </text>
+                                            }
+                                            @item.TimeAgo
+                                        </div>
+                                    </div>
+                                    <span class="tl-badge @EntityTone(item.EntityType)"
+                                          style="font-size:0.72rem;white-space:nowrap;">@item.EntityType</span>
+                                </div>
+                            </a>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div style="padding:24px;text-align:center;color:var(--gray-400);">
+                        <MudIcon Icon="@Icons.Material.Rounded.History" Style="font-size:2.5rem;opacity:.3;" />
+                        <p style="margin-top:8px;">No activity recorded yet. Actions on quotes, invoices, POs and despatch will appear here.</p>
+                    </div>
+                }
+            </MudPaper>
+        </MudItem>
+
     </MudGrid>
 }
 
 @code {
     private DashboardMetrics? _metrics;
     private List<ChartSeries> _chartSeries = new();
-    private string[] _xAxisLabels = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+    private readonly string[] _xAxisLabels = { "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec" };
 
     private readonly ChartOptions _chartOptions = new()
     {
-        ChartPalette = new[] { "#00a8b0", "#cca05a", "#2e90fa", "#6941c6" },
-        YAxisLines = true,
-        XAxisLines = false,
-        LineStrokeWidth = 2,
+        ChartPalette = new[] { "#00a8b0", "#cca05a", "#6941c6", "#2e90fa" },
+        YAxisLines = true, XAxisLines = false, LineStrokeWidth = 2,
     };
 
     protected override async Task OnInitializedAsync()
     {
         _metrics = await DashboardService.GetMetricsAsync();
-
         _chartSeries = new List<ChartSeries>
         {
-            new() { Name = "Quotes",   Data = _metrics.MonthlyQuotesThisYear.Select(v => (double)v).ToArray() },
-            new() { Name = "Invoices", Data = _metrics.MonthlyInvoicesThisYear.Select(v => (double)v).ToArray() },
+            new() { Name = "Quotes Won",  Data = _metrics.MonthlyQuotesThisYear.Select(v => (double)v).ToArray() },
+            new() { Name = "Invoices",    Data = _metrics.MonthlyInvoicesThisYear.Select(v => (double)v).ToArray() },
+            new() { Name = "Purchase Orders", Data = _metrics.MonthlyPOsThisYear.Select(v => (double)v).ToArray() },
         };
     }
 
-    private static string FirstName(string? fullName)
+    private static string FirstName(string? n) =>
+        string.IsNullOrWhiteSpace(n) ? "there"
+        : n.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "there";
+
+    private static string EntityIcon(string type) => type switch
     {
-        if (string.IsNullOrWhiteSpace(fullName)) return "there";
-        return fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "there";
-    }
+        "Quote"    => Icons.Material.Rounded.RequestQuote,
+        "Invoice"  => Icons.Material.Rounded.ReceiptLong,
+        "PO"       => Icons.Material.Rounded.ShoppingCart,
+        "Despatch" => Icons.Material.Rounded.LocalShipping,
+        _          => Icons.Material.Rounded.History,
+    };
+
+    private static string EntityTone(string type) => type switch
+    {
+        "Quote"    => "primary",
+        "Invoice"  => "success",
+        "PO"       => "warning",
+        "Despatch" => "info",
+        _          => "",
+    };
 }

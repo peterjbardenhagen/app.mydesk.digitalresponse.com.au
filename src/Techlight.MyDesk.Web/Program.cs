@@ -88,6 +88,7 @@ builder.Services.AddSingleton<DatabaseService>();
 builder.Services.AddScoped<AuthService>();
 
 // Domain services (all in Techlight.MyDesk.Shared.Services)
+builder.Services.AddScoped<ActivityService>();
 builder.Services.AddScoped<QuoteService>();
 builder.Services.AddScoped<InvoiceService>();
 builder.Services.AddScoped<PurchaseOrderService>();
@@ -109,6 +110,13 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 var app = builder.Build();
+
+// Ensure UserActivity audit table exists (idempotent — runs IF NOT EXISTS)
+using (var scope = app.Services.CreateScope())
+{
+    var actSvc = scope.ServiceProvider.GetRequiredService<ActivityService>();
+    await actSvc.EnsureTableAsync();
+}
 
 // Request logging with enriched properties (dev: Debug, prod: Information)
 app.UseSerilogRequestLogging(opts =>

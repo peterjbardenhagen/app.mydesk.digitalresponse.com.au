@@ -290,6 +290,45 @@ public class DashboardMetrics
     public decimal[] MonthlyQuotesThisYear { get; set; } = new decimal[12];
     public decimal[] MonthlyQuotesLastYear { get; set; } = new decimal[12];
     public decimal[] MonthlyInvoicesThisYear { get; set; } = new decimal[12];
+    public int ThisMonthPOs { get; set; }
+    public decimal ThisMonthPOValue { get; set; }
+    public int LastMonthPOs { get; set; }
+    public int ThisMonthDespatch { get; set; }
+    public decimal[] MonthlyPOsThisYear { get; set; } = new decimal[12];
+    public List<ActivityFeedItem> RecentActivity { get; set; } = new();
+}
+
+public class ActivityFeedItem
+{
+    public string UserCode   { get; set; } = "";
+    public string UserName   { get; set; } = "";
+    public string EntityType { get; set; } = "";
+    public int?   EntityId   { get; set; }
+    public string EntityRef  { get; set; } = "";
+    public string Action     { get; set; } = "";
+    public DateTime ActivityDate { get; set; }
+
+    public string TimeAgo
+    {
+        get
+        {
+            var d = DateTime.Now - ActivityDate;
+            if (d.TotalMinutes < 1)  return "just now";
+            if (d.TotalHours   < 1)  return $"{(int)d.TotalMinutes}m ago";
+            if (d.TotalHours   < 24) return $"{(int)d.TotalHours}h ago";
+            if (d.TotalDays    < 7)  return $"{(int)d.TotalDays}d ago";
+            return ActivityDate.ToString("dd/MM/yyyy");
+        }
+    }
+
+    public string NavUrl => EntityType switch
+    {
+        "Quote"    => EntityId.HasValue ? $"/quotes/{EntityId}"          : "/quotes",
+        "Invoice"  => EntityId.HasValue ? $"/invoices/{EntityId}"        : "/invoices",
+        "PO"       => EntityId.HasValue ? $"/purchase-orders/{EntityId}" : "/purchase-orders",
+        "Despatch" => "/despatch",
+        _          => "/",
+    };
 }
 
 // ============================================================================

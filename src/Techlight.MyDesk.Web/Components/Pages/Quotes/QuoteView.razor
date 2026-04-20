@@ -5,6 +5,7 @@
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthState
+@inject ActivityService ActivitySvc
 @using System.Security.Claims
 
 <PageTitle>Quote #@Id - Techlight MyDesk</PageTitle>
@@ -277,6 +278,8 @@ else
         try
         {
             var newId = await Svc.CopyQuoteAsync(Id, _userCode);
+            await ActivitySvc.LogAsync(_userCode, "Quote", newId,
+                $"Copied from Quote #{Id}", _q?.Reference);
             Snackbar.Add($"Copied → Quote #{newId}", Severity.Success);
             Nav.NavigateTo($"/quotes/{newId}/edit");
         }
@@ -288,6 +291,7 @@ else
         try
         {
             await Svc.ApproveAsync(Id, _userCode, isDirectorOrFinalApprover: _isAdmin);
+            await ActivitySvc.LogAsync(_userCode, "Quote", Id, "Approved quote", _q?.Reference);
             Snackbar.Add("Quote approved.", Severity.Success);
             _q = await Svc.GetQuoteAsync(Id);
         }
@@ -299,6 +303,7 @@ else
         try
         {
             await Svc.DeclineAsync(Id, _userCode);
+            await ActivitySvc.LogAsync(_userCode, "Quote", Id, "Declined quote", _q?.Reference);
             Snackbar.Add("Quote declined.", Severity.Info);
             _q = await Svc.GetQuoteAsync(Id);
         }
@@ -311,6 +316,8 @@ else
         try
         {
             await Svc.UpdateStatusAsync(Id, _newStatusId, statusName, _userCode);
+            await ActivitySvc.LogAsync(_userCode, "Quote", Id,
+                $"Status changed to {statusName}", _q?.Reference);
             Snackbar.Add($"Status changed to {statusName}.", Severity.Success);
             _showStatusPanel = false;
             _q = await Svc.GetQuoteAsync(Id);
@@ -320,9 +327,11 @@ else
 
     private async Task DeleteAsync()
     {
+        var refStr = _q?.Reference ?? $"#{Id}";
         try
         {
             await Svc.DeleteQuoteAsync(Id);
+            await ActivitySvc.LogAsync(_userCode, "Quote", null, $"Deleted quote #{Id}", refStr);
             Snackbar.Add($"Quote #{Id} deleted.", Severity.Info);
             Nav.NavigateTo("/quotes");
         }

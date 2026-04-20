@@ -6,6 +6,7 @@
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthStateProvider
+@inject ActivityService ActivitySvc
 @using System.Security.Claims
 
 <PageTitle>@(IsNew ? "New Quote" : $"Edit Quote #{Id}") - Techlight MyDesk</PageTitle>
@@ -324,6 +325,7 @@
             if (IsNew)
             {
                 var newId = await QuoteService.CreateQuoteAsync(_q, items, tpItems, _userCode);
+                await ActivitySvc.LogAsync(_userCode, "Quote", newId, "Created quote", _q.Reference);
                 Snackbar.Add($"Quote #{newId} created.", Severity.Success);
                 Nav.NavigateTo($"/quotes/{newId}");
             }
@@ -331,6 +333,7 @@
             {
                 _q.Qid = Id!.Value;
                 await QuoteService.UpdateQuoteAsync(_q, items, tpItems);
+                await ActivitySvc.LogAsync(_userCode, "Quote", _q.Qid, "Updated quote", _q.Reference);
                 Snackbar.Add("Quote saved.", Severity.Success);
                 Nav.NavigateTo($"/quotes/{_q.Qid}");
             }
