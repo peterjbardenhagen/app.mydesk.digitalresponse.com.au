@@ -16,7 +16,7 @@ ACCESS_DB_PATH = r"C:\Development\Techlight.digitalresponse.com.au\Database\Tech
 # Option 1: Windows Authentication (most common)
 SQL_SERVER_CONN_STR = (
     "Driver={ODBC Driver 17 for SQL Server};"
-    "Server=localhost;"              # Or your server name\instance
+    "Server=localhost\sqlserver;"      # SQL Express instance name
     "Database=Techlight;"              # Target database (must exist)
     "Trusted_Connection=yes;"          # Use Windows login
 )
