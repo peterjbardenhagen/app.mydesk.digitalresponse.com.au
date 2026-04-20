@@ -1,0 +1,54 @@
+<MudThemeProvider Theme="_theme" IsDarkMode="true" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<CascadingAuthenticationState>
+    <Router AppAssembly="typeof(Program).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
+                <NotAuthorized>
+                    <RedirectToLogin />
+                </NotAuthorized>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        </Found>
+    </Router>
+</CascadingAuthenticationState>
+
+@code {
+    private readonly MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#00a8b5",
+            PrimaryDarken = "#008a94",
+            PrimaryLighten = "#00c4d3",
+            Secondary = "#d4a574",
+            AppbarBackground = "#1a1f2e",
+            Background = "#f7fafc",
+            Surface = "#ffffff",
+            TextPrimary = "#2d3748",
+            TextSecondary = "#718096",
+        },
+        PaletteDark = new PaletteDark
+        {
+            Primary = "#00a8b5",
+            PrimaryDarken = "#008a94",
+            PrimaryLighten = "#00c4d3",
+            Secondary = "#d4a574",
+            AppbarBackground = "#1a1f2e",
+            Background = "#0f1319",
+            Surface = "#1a1f2e",
+            TextPrimary = "#e2e8f0",
+            TextSecondary = "#a0aec0",
+        },
+        Typography = new Typography
+        {
+            Default = new DefaultTypography { FontFamily = new[] { "Inter", "Segoe UI", "Roboto", "sans-serif" } }
+        },
+        LayoutProperties = new LayoutProperties
+        {
+            DefaultBorderRadius = "12px"
+        }
+    };
+}

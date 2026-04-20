@@ -1,10 +1,16 @@
 <%
 ' ===============================================================================
-' Techlight MyDesk - Global Constants - Updated
+' Techlight MyDesk - Global Constants
 ' ===============================================================================
-' ALL hardcoded values for single-client Techlight system
-' NO session variables. NO cookies. Just constants.
+' INCLUDE GUARD: Prevents multiple inclusions
 ' ===============================================================================
+
+If IsEmpty(ConstantsIncluded) Then
+    ConstantsIncluded = True
+Else
+    ' Already included, exit
+    Exit Sub
+End If
 
 '-------------------------------------------------------------------------------
 ' System Paths (never changes)
