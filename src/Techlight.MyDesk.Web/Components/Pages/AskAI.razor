@@ -1,0 +1,137 @@
+@page "/ask-ai"
+@attribute [Authorize]
+@inject IConfiguration Config
+@inject IHttpClientFactory HttpFactory
+@using System.Text
+@using System.Text.Json
+
+<PageTitle>Ask AI - Techlight MyDesk</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4 font-weight-bold">
+    <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Color="Color.Primary" Class="mr-2" />
+    Ask Techlight AI
+</MudText>
+
+<MudPaper Elevation="2" Class="pa-4 mb-4" Style="min-height: 400px; max-height: 500px; overflow-y: auto;">
+    @if (!_messages.Any())
+    {
+        <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);" Class="text-center my-8">
+            Ask anything about your quotes, invoices, customers, or business data.
+        </MudText>
+    }
+    @foreach (var msg in _messages)
+    {
+        <div class="mb-3 pa-3" style="background: @(msg.IsUser ? "var(--mud-palette-primary-hover)" : "var(--mud-palette-surface)"); border-radius: 8px;">
+            <MudText Typo="Typo.subtitle2" Class="mb-1">@(msg.IsUser ? "You" : "AI")</MudText>
+            <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">@msg.Content</MudText>
+        </div>
+    }
+    @if (_isLoading)
+    {
+        <div class="d-flex align-center gap-2 pa-3">
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+            <MudText Typo="Typo.body2">AI is thinking...</MudText>
+        </div>
+    }
+</MudPaper>
+
+<MudPaper Elevation="2" Class="pa-4">
+    <MudTextField @bind-Value="_input" Label="Ask a question..." Variant="Variant.Outlined"
+                  Lines="3" Immediate="true" OnKeyDown="OnKey" />
+    <div class="d-flex justify-end gap-2 mt-2">
+        <MudButton OnClick="ClearAsync" Variant="Variant.Outlined">Clear</MudButton>
+        <MudButton OnClick="SendAsync" Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Send" Disabled="@(_isLoading || string.IsNullOrWhiteSpace(_input))">Send</MudButton>
+    </div>
+</MudPaper>
+
+@code {
+    private string _input = "";
+    private List<ChatMessage> _messages = new();
+    private bool _isLoading;
+
+    private record ChatMessage(bool IsUser, string Content);
+
+    private async Task OnKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && e.CtrlKey)
+        {
+            await SendAsync();
+        }
+    }
+
+    private async Task SendAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_input) || _isLoading) return;
+
+        var question = _input.Trim();
+        _messages.Add(new ChatMessage(true, question));
+        _input = "";
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var endpoint = Config["AzureOpenAI:Endpoint"];
+            var apiKey = Config["AzureOpenAI:ApiKey"];
+
+            if (string.IsNullOrEmpty(endpoint) || string.IsNullOrEmpty(apiKey))
+            {
+                _messages.Add(new ChatMessage(false, "Azure OpenAI is not configured. Please set AzureOpenAI:Endpoint and ApiKey in appsettings.json."));
+                return;
+            }
+
+            var client = HttpFactory.CreateClient();
+            client.DefaultRequestHeaders.Add("api-key", apiKey);
+
+            var chatHistory = _messages.Select(m => new
+            {
+                role = m.IsUser ? "user" : "assistant",
+                content = m.Content
+            }).ToList();
+
+            chatHistory.Insert(0, new
+            {
+                role = "system",
+                content = "You are a helpful AI assistant for Techlight MyDesk, a business management system. Help users with questions about quotes, invoices, purchase orders, contacts, and reports."
+            });
+
+            var payload = new { messages = chatHistory, max_tokens = 1000, temperature = 0.7 };
+            var json = JsonSerializer.Serialize(payload);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await client.PostAsync(endpoint, content);
+            var responseText = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                using var doc = JsonDocument.Parse(responseText);
+                var reply = doc.RootElement
+                    .GetProperty("choices")[0]
+                    .GetProperty("message")
+                    .GetProperty("content")
+                    .GetString() ?? "(no response)";
+                _messages.Add(new ChatMessage(false, reply));
+            }
+            else
+            {
+                _messages.Add(new ChatMessage(false, $"Error: {response.StatusCode}"));
+            }
+        }
+        catch (Exception ex)
+        {
+            _messages.Add(new ChatMessage(false, $"Error: {ex.Message}"));
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private Task ClearAsync()
+    {
+        _messages.Clear();
+        return Task.CompletedTask;
+    }
+}

@@ -1,0 +1,53 @@
+@page "/contacts/{Id:int}"
+@attribute [Authorize]
+@inject ContactService ContactService
+@inject NavigationManager Nav
+
+<PageTitle>Contact - Techlight MyDesk</PageTitle>
+
+@if (_contact == null)
+{
+    <MudProgressCircular Indeterminate="true" Class="mx-auto my-8 d-block" />
+}
+else
+{
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h4" Class="font-weight-bold">@_contact.FullName</MudText>
+        <div class="d-flex gap-2">
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Nav.NavigateTo("/contacts"))">Back</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" Href="@($"/contacts/{_contact.ContactId}/edit")">Edit</MudButton>
+        </div>
+    </div>
+
+    <MudPaper Elevation="2" Class="pa-6">
+        <MudGrid>
+            <MudItem xs="6"><strong>Company:</strong> @_contact.CompanyName</MudItem>
+            <MudItem xs="6"><strong>Position:</strong> @(_contact.Position ?? "-")</MudItem>
+            <MudItem xs="6"><strong>Email:</strong> <MudLink Href="@($"mailto:{_contact.Email}")">@_contact.Email</MudLink></MudItem>
+            <MudItem xs="6"><strong>Phone:</strong> @(_contact.Phone ?? "-")</MudItem>
+            <MudItem xs="6"><strong>Mobile:</strong> @(_contact.Mobile ?? "-")</MudItem>
+            <MudItem xs="6"><strong>Fax:</strong> @(_contact.Fax ?? "-")</MudItem>
+            <MudItem xs="12">
+                <MudDivider Class="my-2" />
+                <strong>Address</strong>
+            </MudItem>
+            <MudItem xs="6">@_contact.Address1</MudItem>
+            <MudItem xs="6">@_contact.Address2</MudItem>
+            <MudItem xs="6"><strong>Suburb:</strong> @_contact.Suburb</MudItem>
+            <MudItem xs="6"><strong>PostCode:</strong> @_contact.PostCode</MudItem>
+            <MudItem xs="12">
+                <MudDivider Class="my-2" />
+            </MudItem>
+            <MudItem xs="6"><strong>Customer Code:</strong> @(_contact.CustomerCode ?? "-")</MudItem>
+            <MudItem xs="6"><strong>Supplier Code:</strong> @(_contact.SupplierCode ?? "-")</MudItem>
+        </MudGrid>
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Contact? _contact;
+
+    protected override async Task OnInitializedAsync()
+        => _contact = await ContactService.GetContactAsync(Id);
+}

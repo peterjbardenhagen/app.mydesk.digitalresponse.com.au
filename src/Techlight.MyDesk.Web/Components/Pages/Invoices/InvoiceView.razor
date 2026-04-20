@@ -1,0 +1,46 @@
+@page "/invoices/{Id:int}"
+@attribute [Authorize]
+@inject InvoiceService InvoiceService
+@inject NavigationManager Nav
+
+<PageTitle>Invoice @Id - Techlight MyDesk</PageTitle>
+
+@if (_invoice == null)
+{
+    <MudProgressCircular Indeterminate="true" Class="mx-auto my-8 d-block" />
+}
+else
+{
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h4" Class="font-weight-bold">Invoice @_invoice.InvoiceNumber</MudText>
+        <div class="d-flex gap-2">
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Nav.NavigateTo("/invoices"))">Back</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" Href="@($"/invoices/{_invoice.InvoiceId}/edit")">Edit</MudButton>
+        </div>
+    </div>
+
+    <MudPaper Elevation="2" Class="pa-6">
+        <MudGrid>
+            <MudItem xs="6"><strong>Customer:</strong> @_invoice.CompanyName</MudItem>
+            <MudItem xs="6"><strong>Invoice Date:</strong> @_invoice.InvoiceDate.ToString("yyyy-MM-dd")</MudItem>
+            <MudItem xs="6"><strong>Due Date:</strong> @_invoice.DueDate?.ToString("yyyy-MM-dd")</MudItem>
+            <MudItem xs="6"><strong>Status:</strong> <MudChip T="string" Color="Color.Info" Size="Size.Small">@_invoice.Status</MudChip></MudItem>
+            <MudItem xs="6"><strong>Amount (ex GST):</strong> @_invoice.AmountExGST.ToString("C2")</MudItem>
+            <MudItem xs="6"><strong>GST:</strong> @_invoice.GST.ToString("C2")</MudItem>
+            <MudItem xs="6"><strong>Total:</strong> <strong>@_invoice.Amount.ToString("C2")</strong></MudItem>
+            <MudItem xs="6"><strong>Reference:</strong> @(_invoice.Reference ?? "-")</MudItem>
+            @if (_invoice.QuoteId.HasValue)
+            {
+                <MudItem xs="12"><strong>Related Quote:</strong> <MudLink Href="@($"/quotes/{_invoice.QuoteId}")">#@_invoice.QuoteId</MudLink></MudItem>
+            }
+        </MudGrid>
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Invoice? _invoice;
+
+    protected override async Task OnInitializedAsync()
+        => _invoice = await InvoiceService.GetInvoiceAsync(Id);
+}

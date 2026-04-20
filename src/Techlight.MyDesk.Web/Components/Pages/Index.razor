@@ -110,14 +110,12 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        // Load metrics from service
         _metrics = await DashboardService.GetMetricsAsync();
         
-        // Mock chart data for now while DB migration finishes
         _chartSeries = new List<ChartSeries>
         {
-            new ChartSeries { Name = "Quotes Won", Data = new double[] { 40, 20, 25, 27, 46, 60, 48, 80, 15, 60, 40, 30 } },
-            new ChartSeries { Name = "Invoiced", Data = new double[] { 19, 24, 35, 13, 28, 15, 60, 35, 20, 35, 10, 20 } },
+            new ChartSeries { Name = "Quotes This Year", Data = _metrics.MonthlyQuotesThisYear.Select(v => (double)v).ToArray() },
+            new ChartSeries { Name = "Invoices This Year", Data = _metrics.MonthlyInvoicesThisYear.Select(v => (double)v).ToArray() },
         };
     }
 }

@@ -1,0 +1,45 @@
+@page "/purchase-orders/{Id:int}"
+@attribute [Authorize]
+@inject PurchaseOrderService POService
+@inject NavigationManager Nav
+
+<PageTitle>PO @Id - Techlight MyDesk</PageTitle>
+
+@if (_po == null)
+{
+    <MudProgressCircular Indeterminate="true" Class="mx-auto my-8 d-block" />
+}
+else
+{
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h4" Class="font-weight-bold">PO @_po.PurchaseOrderNumber</MudText>
+        <div class="d-flex gap-2">
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Nav.NavigateTo("/purchase-orders"))">Back</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" Href="@($"/purchase-orders/{_po.PurchaseOrderId}/edit")">Edit</MudButton>
+        </div>
+    </div>
+
+    <MudPaper Elevation="2" Class="pa-6">
+        <MudGrid>
+            <MudItem xs="6"><strong>Supplier:</strong> @_po.SupplierName</MudItem>
+            <MudItem xs="6"><strong>PO Date:</strong> @_po.PODate.ToString("yyyy-MM-dd")</MudItem>
+            <MudItem xs="6"><strong>Expected Delivery:</strong> @_po.ExpectedDelivery?.ToString("yyyy-MM-dd")</MudItem>
+            <MudItem xs="6"><strong>Status:</strong> <MudChip T="string" Color="Color.Info" Size="Size.Small">@_po.Status</MudChip></MudItem>
+            <MudItem xs="6"><strong>Reference:</strong> @(_po.Reference ?? "-")</MudItem>
+            <MudItem xs="6"><strong>Amount ex GST:</strong> @_po.AmountExGST.ToString("C2")</MudItem>
+            <MudItem xs="6"><strong>Total Amount:</strong> <strong>@_po.Amount.ToString("C2")</strong></MudItem>
+            @if (_po.QuoteId.HasValue)
+            {
+                <MudItem xs="12"><strong>Related Quote:</strong> <MudLink Href="@($"/quotes/{_po.QuoteId}")">#@_po.QuoteId</MudLink></MudItem>
+            }
+        </MudGrid>
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private PurchaseOrder? _po;
+
+    protected override async Task OnInitializedAsync()
+        => _po = await POService.GetPurchaseOrderAsync(Id);
+}

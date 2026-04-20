@@ -1,0 +1,78 @@
+@page "/invoices"
+@attribute [Authorize]
+@inject InvoiceService InvoiceService
+@inject NavigationManager Nav
+
+<PageTitle>Invoices - Techlight MyDesk</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <MudText Typo="Typo.h4" Class="font-weight-bold">Invoices</MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+               OnClick="@(() => Nav.NavigateTo("/invoices/create"))">New Invoice</MudButton>
+</div>
+
+<MudPaper Elevation="2" Class="pa-4 mb-4">
+    <MudGrid>
+        <MudItem xs="12" sm="4">
+            <MudTextField @bind-Value="_search" Label="Search Customer" Variant="Variant.Outlined"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudDatePicker @bind-Date="_dateFrom" Label="From Date" Variant="Variant.Outlined" Clearable="true" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudDatePicker @bind-Date="_dateTo" Label="To Date" Variant="Variant.Outlined" Clearable="true" />
+        </MudItem>
+    </MudGrid>
+    <div class="d-flex gap-2 mt-3">
+        <MudButton OnClick="LoadAsync" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.FilterList">Apply Filter</MudButton>
+        <MudButton OnClick="ResetFilter" Color="Color.Default" Variant="Variant.Outlined">Reset</MudButton>
+    </div>
+</MudPaper>
+
+<MudDataGrid T="Invoice" Items="@_invoices" Loading="@_loading" Dense="true" Hover="true"
+             SortMode="@SortMode.Multiple" Virtualize="true" FixedHeader="true" Height="600px">
+    <Columns>
+        <PropertyColumn Property="x => x.InvoiceId" Title="#" />
+        <PropertyColumn Property="x => x.InvoiceNumber" Title="Invoice #" />
+        <PropertyColumn Property="x => x.CompanyName" Title="Customer" />
+        <PropertyColumn Property="x => x.InvoiceDate" Title="Date" Format="yyyy-MM-dd" />
+        <PropertyColumn Property="x => x.DueDate" Title="Due" Format="yyyy-MM-dd" />
+        <PropertyColumn Property="x => x.Amount" Title="Amount" Format="C2" />
+        <PropertyColumn Property="x => x.Status" Title="Status" />
+        <TemplateColumn Title="Actions" Sortable="false">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Info"
+                               Href="@($"/invoices/{context.Item.InvoiceId}")" />
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
+                               Href="@($"/invoices/{context.Item.InvoiceId}/edit")" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <PagerContent>
+        <MudDataGridPager T="Invoice" />
+    </PagerContent>
+</MudDataGrid>
+
+@code {
+    private List<Invoice> _invoices = new();
+    private bool _loading = true;
+    private string? _search;
+    private DateTime? _dateFrom;
+    private DateTime? _dateTo;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try { _invoices = await InvoiceService.GetInvoicesAsync(_dateFrom, _dateTo, _search); }
+        finally { _loading = false; }
+    }
+
+    private async Task ResetFilter()
+    {
+        _search = null; _dateFrom = null; _dateTo = null;
+        await LoadAsync();
+    }
+}

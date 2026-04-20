@@ -1,0 +1,91 @@
+@page "/quotes"
+@attribute [Authorize]
+@inject QuoteService QuoteService
+@inject NavigationManager Nav
+
+<PageTitle>Quotes - Techlight MyDesk</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <MudText Typo="Typo.h4" Class="font-weight-bold">Quotes</MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+               OnClick="@(() => Nav.NavigateTo("/quotes/create"))">New Quote</MudButton>
+</div>
+
+<MudPaper Elevation="2" Class="pa-4 mb-4">
+    <MudGrid>
+        <MudItem xs="12" sm="4">
+            <MudTextField @bind-Value="_search" Label="Search Customer" Variant="Variant.Outlined"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true" Clearable="true" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudDatePicker @bind-Date="_dateFrom" Label="From Date" Variant="Variant.Outlined" Clearable="true" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudDatePicker @bind-Date="_dateTo" Label="To Date" Variant="Variant.Outlined" Clearable="true" />
+        </MudItem>
+    </MudGrid>
+    <div class="d-flex gap-2 mt-3">
+        <MudButton OnClick="LoadAsync" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.FilterList">Apply Filter</MudButton>
+        <MudButton OnClick="ResetFilter" Color="Color.Default" Variant="Variant.Outlined">Reset</MudButton>
+    </div>
+</MudPaper>
+
+<MudDataGrid T="Quote" Items="@_quotes" Loading="@_loading" Dense="true" Hover="true"
+             Filterable="false" SortMode="@SortMode.Multiple" Groupable="false"
+             Virtualize="true" FixedHeader="true" Height="600px">
+    <Columns>
+        <PropertyColumn Property="x => x.Qid" Title="#" />
+        <PropertyColumn Property="x => x.Reference" Title="Reference" />
+        <PropertyColumn Property="x => x.CompanyName" Title="Customer" />
+        <PropertyColumn Property="x => x.QuoteDate" Title="Date" Format="yyyy-MM-dd" />
+        <PropertyColumn Property="x => x.NettPriceTotal" Title="Value" Format="C0" />
+        <PropertyColumn Property="x => x.QuoteStatus" Title="Status" />
+        <PropertyColumn Property="x => x.Originator" Title="Originator" />
+        <TemplateColumn Title="Actions" Sortable="false">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Info"
+                               Href="@($"/quotes/{context.Item.Qid}")" Title="View" />
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
+                               Href="@($"/quotes/{context.Item.Qid}/edit")" Title="Edit" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <PagerContent>
+        <MudDataGridPager T="Quote" />
+    </PagerContent>
+</MudDataGrid>
+
+@code {
+    private List<Quote> _quotes = new();
+    private bool _loading = true;
+    private string? _search;
+    private DateTime? _dateFrom;
+    private DateTime? _dateTo;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            _quotes = await QuoteService.GetQuotesAsync(
+                dateFrom: _dateFrom,
+                dateTo: _dateTo,
+                customerName: _search);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ResetFilter()
+    {
+        _search = null;
+        _dateFrom = null;
+        _dateTo = null;
+        await LoadAsync();
+    }
+}

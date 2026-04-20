@@ -1,0 +1,115 @@
+@page "/quotes/{Id:int}"
+@attribute [Authorize]
+@inject QuoteService QuoteService
+@inject NavigationManager Nav
+
+<PageTitle>Quote #@Id - Techlight MyDesk</PageTitle>
+
+@if (_quote == null)
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="mx-auto my-8 d-block" />
+}
+else
+{
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h4" Class="font-weight-bold">Quote #@_quote.Qid</MudText>
+        <div class="d-flex gap-2">
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Nav.NavigateTo("/quotes"))">Back</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" Href="@($"/quotes/{_quote.Qid}/edit")">Edit</MudButton>
+        </div>
+    </div>
+
+    <MudGrid>
+        <MudItem xs="12" md="8">
+            <MudPaper Elevation="2" Class="pa-6">
+                <MudText Typo="Typo.h5" Class="mb-4">@_quote.Reference</MudText>
+                <MudGrid>
+                    <MudItem xs="6"><strong>Customer:</strong> @_quote.CompanyName</MudItem>
+                    <MudItem xs="6"><strong>Date:</strong> @_quote.QuoteDate.ToString("yyyy-MM-dd")</MudItem>
+                    <MudItem xs="6"><strong>Status:</strong> <MudChip T="string" Color="Color.Info" Size="Size.Small">@_quote.QuoteStatus</MudChip></MudItem>
+                    <MudItem xs="6"><strong>Originator:</strong> @_quote.Originator</MudItem>
+                    <MudItem xs="6"><strong>Net Price:</strong> @_quote.NettPriceTotal.ToString("C2")</MudItem>
+                    <MudItem xs="6"><strong>Margin:</strong> @_quote.Margin.ToString("P0")</MudItem>
+                </MudGrid>
+
+                @if (!string.IsNullOrWhiteSpace(_quote.CustomerNotes))
+                {
+                    <MudDivider Class="my-4" />
+                    <MudText Typo="Typo.subtitle2">Customer Notes</MudText>
+                    <MudText Typo="Typo.body2" Class="mt-1" Style="white-space: pre-wrap;">@_quote.CustomerNotes</MudText>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(_quote.InternalNotes))
+                {
+                    <MudDivider Class="my-4" />
+                    <MudText Typo="Typo.subtitle2">Internal Notes</MudText>
+                    <MudText Typo="Typo.body2" Class="mt-1" Style="white-space: pre-wrap;">@_quote.InternalNotes</MudText>
+                }
+            </MudPaper>
+
+            <MudPaper Elevation="2" Class="pa-6 mt-4">
+                <MudText Typo="Typo.h6" Class="mb-3">Line Items</MudText>
+                @if (_lineItems == null)
+                {
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Small" />
+                }
+                else if (!_lineItems.Any())
+                {
+                    <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);">No line items.</MudText>
+                }
+                else
+                {
+                    <MudSimpleTable Dense="true" Hover="true">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Qty</th>
+                                <th>Unit Cost</th>
+                                <th>Unit Price</th>
+                                <th>Line Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in _lineItems)
+                            {
+                                <tr>
+                                    <td>@item.Description</td>
+                                    <td>@item.Quantity</td>
+                                    <td>@item.UnitCost.ToString("C2")</td>
+                                    <td>@item.UnitPrice.ToString("C2")</td>
+                                    <td>@item.LineTotal.ToString("C2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="2" Class="pa-4">
+                <MudText Typo="Typo.h6" Class="mb-3">Summary</MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem Icon="@Icons.Material.Filled.AttachMoney">Unit Cost: @_quote.UnitCostTotal.ToString("C2")</MudListItem>
+                    <MudListItem Icon="@Icons.Material.Filled.AttachMoney">Net Price: @_quote.NettPriceTotal.ToString("C2")</MudListItem>
+                    <MudListItem Icon="@Icons.Material.Filled.TrendingUp">Margin: @_quote.Margin.ToString("P0")</MudListItem>
+                </MudList>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Quote? _quote;
+    private List<QuoteLineItem>? _lineItems;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _quote = await QuoteService.GetQuoteAsync(Id);
+        if (_quote != null)
+        {
+            _lineItems = await QuoteService.GetQuoteLineItemsAsync(Id);
+        }
+    }
+}

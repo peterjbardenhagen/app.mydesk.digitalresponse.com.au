@@ -1,0 +1,67 @@
+@page "/contacts"
+@attribute [Authorize]
+@inject ContactService ContactService
+@inject NavigationManager Nav
+
+<PageTitle>Contacts - Techlight MyDesk</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <MudText Typo="Typo.h4" Class="font-weight-bold">Contacts</MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+               OnClick="@(() => Nav.NavigateTo("/contacts/create"))">New Contact</MudButton>
+</div>
+
+<MudPaper Elevation="2" Class="pa-4 mb-4">
+    <MudTextField @bind-Value="_search" Label="Search (name, company, email)" Variant="Variant.Outlined"
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                  Clearable="true" OnKeyDown="OnKey" />
+    <div class="d-flex gap-2 mt-3">
+        <MudButton OnClick="LoadAsync" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.FilterList">Search</MudButton>
+        <MudButton OnClick="Reset" Variant="Variant.Outlined">Reset</MudButton>
+    </div>
+</MudPaper>
+
+<MudDataGrid T="Contact" Items="@_contacts" Loading="@_loading" Dense="true" Hover="true"
+             SortMode="@SortMode.Multiple" Virtualize="true" FixedHeader="true" Height="600px">
+    <Columns>
+        <PropertyColumn Property="x => x.ContactId" Title="#" />
+        <PropertyColumn Property="x => x.CompanyName" Title="Company" />
+        <PropertyColumn Property="x => x.FullName" Title="Name" />
+        <PropertyColumn Property="x => x.Position" Title="Position" />
+        <PropertyColumn Property="x => x.Email" Title="Email" />
+        <PropertyColumn Property="x => x.Phone" Title="Phone" />
+        <TemplateColumn Title="Actions" Sortable="false">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Info"
+                               Href="@($"/contacts/{context.Item.ContactId}")" />
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
+                               Href="@($"/contacts/{context.Item.ContactId}/edit")" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <PagerContent>
+        <MudDataGridPager T="Contact" />
+    </PagerContent>
+</MudDataGrid>
+
+@code {
+    private List<Contact> _contacts = new();
+    private bool _loading = true;
+    private string? _search;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try { _contacts = await ContactService.GetContactsAsync(_search); }
+        finally { _loading = false; }
+    }
+
+    private async Task Reset() { _search = null; await LoadAsync(); }
+
+    private async Task OnKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadAsync();
+    }
+}

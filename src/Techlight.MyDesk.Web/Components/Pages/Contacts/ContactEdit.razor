@@ -1,0 +1,124 @@
+@page "/contacts/create"
+@page "/contacts/{Id:int}/edit"
+@attribute [Authorize]
+@inject ContactService ContactService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>@(IsNew ? "New" : "Edit") Contact - Techlight MyDesk</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <MudText Typo="Typo.h4" Class="font-weight-bold">@(IsNew ? "New Contact" : $"Edit {_contact.FullName}")</MudText>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ArrowBack"
+               OnClick="@(() => Nav.NavigateTo(IsNew ? "/contacts" : $"/contacts/{Id}"))">Cancel</MudButton>
+</div>
+
+<MudPaper Elevation="2" Class="pa-6">
+    <MudForm @ref="_form" Model="_contact" @bind-IsValid="_isValid">
+        <MudGrid>
+            <MudItem xs="12"><MudText Typo="Typo.subtitle1">Contact Details</MudText></MudItem>
+            <MudItem xs="12" sm="4">
+                <MudTextField @bind-Value="_contact.FirstName" Label="First Name" Variant="Variant.Outlined" Required="true" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudTextField @bind-Value="_contact.Surname" Label="Surname" Variant="Variant.Outlined" Required="true" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudTextField @bind-Value="_contact.Position" Label="Position" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_contact.CompanyName" Label="Company Name" Variant="Variant.Outlined" Required="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_contact.Email" Label="Email" Variant="Variant.Outlined" InputType="InputType.Email" />
+            </MudItem>
+
+            <MudItem xs="12"><MudDivider Class="my-2" /><MudText Typo="Typo.subtitle1">Phone</MudText></MudItem>
+            <MudItem xs="12" sm="4">
+                <MudTextField @bind-Value="_contact.Phone" Label="Phone" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudTextField @bind-Value="_contact.Mobile" Label="Mobile" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudTextField @bind-Value="_contact.Fax" Label="Fax" Variant="Variant.Outlined" />
+            </MudItem>
+
+            <MudItem xs="12"><MudDivider Class="my-2" /><MudText Typo="Typo.subtitle1">Address</MudText></MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_contact.Address1" Label="Address Line 1" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_contact.Address2" Label="Address Line 2" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_contact.Suburb" Label="Suburb" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_contact.PostCode" Label="Post Code" Variant="Variant.Outlined" />
+            </MudItem>
+
+            <MudItem xs="12"><MudDivider Class="my-2" /><MudText Typo="Typo.subtitle1">Codes</MudText></MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_contact.CustomerCode" Label="Customer Code" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_contact.SupplierCode" Label="Supplier Code" Variant="Variant.Outlined" />
+            </MudItem>
+        </MudGrid>
+
+        <div class="d-flex justify-end gap-2 mt-4">
+            <MudButton Variant="Variant.Outlined" OnClick="@(() => Nav.NavigateTo(IsNew ? "/contacts" : $"/contacts/{Id}"))">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@_saving" StartIcon="@Icons.Material.Filled.Save">
+                @(_saving ? "Saving..." : "Save")
+            </MudButton>
+        </div>
+    </MudForm>
+</MudPaper>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    private bool IsNew => !Id.HasValue || Id == 0;
+
+    private MudForm _form = null!;
+    private bool _isValid;
+    private bool _saving;
+    private Contact _contact = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!IsNew)
+        {
+            var existing = await ContactService.GetContactAsync(Id!.Value);
+            if (existing != null) _contact = existing;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        await _form.Validate();
+        if (!_isValid) return;
+        _saving = true;
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var code = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
+
+            if (IsNew)
+            {
+                var newId = await ContactService.CreateContactAsync(_contact, code);
+                Snackbar.Add($"Contact created", Severity.Success);
+                Nav.NavigateTo($"/contacts/{newId}");
+            }
+            else
+            {
+                await ContactService.UpdateContactAsync(_contact);
+                Snackbar.Add("Contact updated", Severity.Success);
+                Nav.NavigateTo($"/contacts/{_contact.ContactId}");
+            }
+        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+        finally { _saving = false; }
+    }
+}

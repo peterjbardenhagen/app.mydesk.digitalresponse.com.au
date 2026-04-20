@@ -1,0 +1,61 @@
+@page "/products"
+@page "/reports"
+@page "/admin/users"
+@page "/admin/setup"
+@page "/admin/divisions"
+@page "/admin/locations"
+@page "/admin/parameters"
+@page "/admin/part-codes"
+@page "/admin/user-roles"
+@page "/admin/activity-types"
+@page "/admin/expense-types"
+@page "/admin/call-report-types"
+@page "/admin/job-order-status"
+@page "/admin/market-segments"
+@page "/admin/currency"
+@page "/admin/financial-year"
+@page "/despatch"
+@page "/expenses"
+@page "/timesheets"
+@page "/call-reports"
+@page "/job-orders"
+@page "/sales-projects"
+@page "/tmail"
+@page "/files"
+@page "/rfq"
+@page "/noticeboard"
+@attribute [Authorize]
+@inject NavigationManager Nav
+
+<PageTitle>@_title - Techlight MyDesk</PageTitle>
+
+<MudPaper Elevation="2" Class="pa-8 text-center">
+    <MudIcon Icon="@Icons.Material.Filled.Construction" Color="Color.Warning" Size="Size.Large" Class="mb-4" Style="font-size: 4rem;" />
+    <MudText Typo="Typo.h4" Class="mb-2">@_title</MudText>
+    <MudText Typo="Typo.body1" Style="color: var(--mud-palette-text-secondary);" Class="mb-4">
+        This module is pending migration from Classic ASP.
+    </MudText>
+    <div class="d-flex justify-center gap-2">
+        <MudButton Href="/" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Home">Dashboard</MudButton>
+        <MudButton Href="/quotes" Variant="Variant.Outlined" Color="Color.Primary">View Quotes</MudButton>
+    </div>
+</MudPaper>
+
+@code {
+    private string _title = "Coming Soon";
+
+    protected override void OnParametersSet()
+    {
+        var uri = new Uri(Nav.Uri);
+        var path = uri.AbsolutePath.Trim('/');
+        _title = ToTitleCase(path);
+    }
+
+    private static string ToTitleCase(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return "Coming Soon";
+        return string.Join(" / ", s.Split('/').Select(part =>
+            string.Join(" ", part.Split('-').Select(w =>
+                char.ToUpper(w[0]) + w[1..]))));
+    }
+}

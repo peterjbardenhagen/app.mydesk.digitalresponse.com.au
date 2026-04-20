@@ -1,0 +1,74 @@
+@page "/purchase-orders"
+@attribute [Authorize]
+@inject PurchaseOrderService POService
+@inject NavigationManager Nav
+
+<PageTitle>Purchase Orders - Techlight MyDesk</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <MudText Typo="Typo.h4" Class="font-weight-bold">Purchase Orders</MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+               OnClick="@(() => Nav.NavigateTo("/purchase-orders/create"))">New PO</MudButton>
+</div>
+
+<MudPaper Elevation="2" Class="pa-4 mb-4">
+    <MudGrid>
+        <MudItem xs="12" sm="4">
+            <MudTextField @bind-Value="_search" Label="Search Supplier" Variant="Variant.Outlined" Clearable="true"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudDatePicker @bind-Date="_dateFrom" Label="From Date" Variant="Variant.Outlined" Clearable="true" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudDatePicker @bind-Date="_dateTo" Label="To Date" Variant="Variant.Outlined" Clearable="true" />
+        </MudItem>
+    </MudGrid>
+    <div class="d-flex gap-2 mt-3">
+        <MudButton OnClick="LoadAsync" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.FilterList">Apply Filter</MudButton>
+        <MudButton OnClick="ResetFilter" Variant="Variant.Outlined">Reset</MudButton>
+    </div>
+</MudPaper>
+
+<MudDataGrid T="PurchaseOrder" Items="@_pos" Loading="@_loading" Dense="true" Hover="true"
+             SortMode="@SortMode.Multiple" Virtualize="true" FixedHeader="true" Height="600px">
+    <Columns>
+        <PropertyColumn Property="x => x.PurchaseOrderId" Title="#" />
+        <PropertyColumn Property="x => x.PurchaseOrderNumber" Title="PO #" />
+        <PropertyColumn Property="x => x.SupplierName" Title="Supplier" />
+        <PropertyColumn Property="x => x.PODate" Title="Date" Format="yyyy-MM-dd" />
+        <PropertyColumn Property="x => x.ExpectedDelivery" Title="Delivery" Format="yyyy-MM-dd" />
+        <PropertyColumn Property="x => x.Amount" Title="Amount" Format="C2" />
+        <PropertyColumn Property="x => x.Status" Title="Status" />
+        <TemplateColumn Title="Actions" Sortable="false">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Info"
+                               Href="@($"/purchase-orders/{context.Item.PurchaseOrderId}")" />
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
+                               Href="@($"/purchase-orders/{context.Item.PurchaseOrderId}/edit")" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <PagerContent>
+        <MudDataGridPager T="PurchaseOrder" />
+    </PagerContent>
+</MudDataGrid>
+
+@code {
+    private List<PurchaseOrder> _pos = new();
+    private bool _loading = true;
+    private string? _search;
+    private DateTime? _dateFrom;
+    private DateTime? _dateTo;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try { _pos = await POService.GetPurchaseOrdersAsync(_dateFrom, _dateTo, _search); }
+        finally { _loading = false; }
+    }
+
+    private async Task ResetFilter() { _search = null; _dateFrom = null; _dateTo = null; await LoadAsync(); }
+}

@@ -1,0 +1,136 @@
+@page "/invoices/create"
+@page "/invoices/{Id:int}/edit"
+@attribute [Authorize]
+@inject InvoiceService InvoiceService
+@inject LookupService LookupService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>@(IsNew ? "New" : "Edit") Invoice - Techlight MyDesk</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <MudText Typo="Typo.h4" Class="font-weight-bold">@(IsNew ? "New Invoice" : $"Edit Invoice #{_invoice.InvoiceId}")</MudText>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ArrowBack"
+               OnClick="@(() => Nav.NavigateTo(IsNew ? "/invoices" : $"/invoices/{Id}"))">Cancel</MudButton>
+</div>
+
+<MudPaper Elevation="2" Class="pa-6">
+    <MudForm @ref="_form" Model="_invoice" @bind-IsValid="_isValid">
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_invoice.InvoiceNumber" Label="Invoice Number" Variant="Variant.Outlined" Required="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="int" @bind-Value="_invoice.ContactId" Label="Customer" Variant="Variant.Outlined" Required="true">
+                    @foreach (var c in _contacts)
+                    {
+                        <MudSelectItem T="int" Value="@c.ContactId">@c.CompanyName - @c.FullName</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudDatePicker @bind-Date="_invoiceDate" Label="Invoice Date" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudDatePicker @bind-Date="_dueDate" Label="Due Date" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="int" @bind-Value="_invoice.InvoiceStatusId" Label="Status" Variant="Variant.Outlined">
+                    @foreach (var s in _statuses)
+                    {
+                        <MudSelectItem T="int" Value="@s.InvoiceStatusId">@s.StatusName</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_invoice.Reference" Label="Reference" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudNumericField @bind-Value="_invoice.AmountExGST" Label="Amount ex GST" Format="N2" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudNumericField @bind-Value="_invoice.GST" Label="GST" Format="N2" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudNumericField @bind-Value="_invoice.Amount" Label="Total Amount" Format="N2" Variant="Variant.Outlined" />
+            </MudItem>
+        </MudGrid>
+
+        <div class="d-flex justify-end gap-2 mt-4">
+            <MudButton Variant="Variant.Outlined" OnClick="@(() => Nav.NavigateTo(IsNew ? "/invoices" : $"/invoices/{Id}"))">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@_saving" StartIcon="@Icons.Material.Filled.Save">
+                @(_saving ? "Saving..." : "Save")
+            </MudButton>
+        </div>
+    </MudForm>
+</MudPaper>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    private bool IsNew => !Id.HasValue || Id == 0;
+
+    private MudForm _form = null!;
+    private bool _isValid;
+    private bool _saving;
+
+    private Invoice _invoice = new() { InvoiceDate = DateTime.Today, InvoiceStatusId = 1 };
+    private DateTime? _invoiceDate = DateTime.Today;
+    private DateTime? _dueDate;
+    private List<Contact> _contacts = new();
+    private List<InvoiceStatus> _statuses = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _contacts = await LookupService.GetContactLookupsAsync();
+        _statuses = await LookupService.GetInvoiceStatusesAsync();
+
+        if (!IsNew)
+        {
+            var existing = await InvoiceService.GetInvoiceAsync(Id!.Value);
+            if (existing != null)
+            {
+                _invoice = existing;
+                _invoiceDate = existing.InvoiceDate;
+                _dueDate = existing.DueDate;
+            }
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        await _form.Validate();
+        if (!_isValid) return;
+
+        _saving = true;
+        try
+        {
+            _invoice.InvoiceDate = _invoiceDate ?? DateTime.Today;
+            _invoice.DueDate = _dueDate;
+
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var code = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
+
+            if (IsNew)
+            {
+                var newId = await InvoiceService.CreateInvoiceAsync(_invoice, code);
+                Snackbar.Add($"Invoice #{newId} created", Severity.Success);
+                Nav.NavigateTo($"/invoices/{newId}");
+            }
+            else
+            {
+                await InvoiceService.UpdateInvoiceAsync(_invoice);
+                Snackbar.Add("Invoice updated", Severity.Success);
+                Nav.NavigateTo($"/invoices/{_invoice.InvoiceId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}
