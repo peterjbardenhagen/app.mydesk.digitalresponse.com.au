@@ -2,7 +2,7 @@ import os
 
 # Microsoft Access to SQL Server Migration Configuration
 
-ACCESS_DB_PATH = r"C:\Development\Techlight.digitalresponse.com.au\Database\AccessDB\Techlight2.mdb"
+ACCESS_DB_PATH = r"C:\Database\Techlight2.mdb"
 
 # Connect to master first if we need to create the database, but for simplicity let's assume we'll pre-create it 
 # or the script will try. Actually, the script uses the connection string and we can use local DB.

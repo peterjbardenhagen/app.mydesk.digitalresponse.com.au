@@ -287,8 +287,11 @@ class AccessToSqlServerMigrator:
         """Get all foreign keys from Access database"""
         cursor = self.access_conn.cursor()
         fks = []
+        fk_api_supported = True
         
         for table in self.get_access_tables():
+            if not fk_api_supported:
+                break
             try:
                 for row in cursor.foreignKeys(table):
                     # Row structure: [pktable_cat, pktable_schem, pktable_name, pkcolumn_name,
@@ -304,6 +307,17 @@ class AccessToSqlServerMigrator:
                         on_delete=row[10] or 'NO ACTION'
                     )
                     fks.append(fk)
+            except pyodbc.InterfaceError as e:
+                # IM001 = driver does not support this function
+                # Access ODBC driver doesn't expose foreign keys - stop trying
+                if 'IM001' in str(e):
+                    logger.warning(
+                        "Access ODBC driver does not support foreign key metadata. "
+                        "FKs will NOT be migrated - recreate manually in SQL Server if needed."
+                    )
+                    fk_api_supported = False
+                    break
+                logger.warning(f"Could not get FKs for {table}: {e}")
             except Exception as e:
                 logger.warning(f"Could not get FKs for {table}: {e}")
                 
@@ -665,14 +679,33 @@ def main():
     print("=" * 60)
     print("Microsoft Access to SQL Server Migration Tool")
     print("=" * 60)
-    print(f"Source: {ACCESS_DB_PATH}")
-    print(f"Target: SQL Server")
+    print(f"Source:     {ACCESS_DB_PATH}")
+    print(f"Target:     SQL Server")
     print(f"Batch Size: {BATCH_SIZE} rows")
     print("=" * 60)
     
-    # Confirm before proceeding
-    confirm = input("\nWARNING: This will DROP and recreate tables in SQL Server!\nContinue? (yes/no): ")
-    if confirm.lower() != 'yes':
+    # Ask about clearing existing data (default YES)
+    print()
+    print("Clear existing data in the target database first?")
+    print("  YES = Drop and recreate all tables (clean migration)")
+    print("  NO  = Keep existing tables, skip tables that already exist")
+    clear_response = input("Clear all data first? [Y/n]: ").strip().lower()
+    # Default to yes if empty or starts with 'y'
+    drop_existing = (clear_response == '' or clear_response.startswith('y'))
+    
+    if drop_existing:
+        print("\n[MODE] Will DROP and recreate all tables")
+    else:
+        print("\n[MODE] Will SKIP tables that already exist (incremental mode)")
+    
+    # Final confirmation
+    print()
+    if drop_existing:
+        confirm = input("WARNING: This will DESTROY existing data in the target database!\nContinue? (yes/no): ").strip().lower()
+    else:
+        confirm = input("Continue with migration? (yes/no): ").strip().lower()
+    
+    if confirm != 'yes' and confirm != 'y':
         print("Migration cancelled.")
         return
     
@@ -681,7 +714,7 @@ def main():
             ACCESS_DB_PATH, 
             SQL_SERVER_CONN_STR,
             batch_size=BATCH_SIZE,
-            drop_existing=DROP_EXISTING_TABLES,
+            drop_existing=drop_existing,
             create_fks=CREATE_FOREIGN_KEYS,
             stop_on_error=STOP_ON_ERROR,
             skip_tables=SKIP_TABLES
