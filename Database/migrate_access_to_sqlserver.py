@@ -78,12 +78,30 @@ class AccessToSqlServerMigrator:
         'TIME': 'TIME',
         'TEXT': 'NVARCHAR',  # Will add length
         'VARCHAR': 'NVARCHAR',
+        'CHAR': 'NVARCHAR',
+        'NCHAR': 'NVARCHAR',
+        'NVARCHAR': 'NVARCHAR',
         'MEMO': 'NVARCHAR(MAX)',
         'LONGTEXT': 'NVARCHAR(MAX)',
+        'LONGCHAR': 'NVARCHAR(MAX)',  # Access ODBC reports Memo fields as LONGCHAR
+        'NTEXT': 'NVARCHAR(MAX)',
         'OLE': 'VARBINARY(MAX)',
+        'OLEOBJECT': 'VARBINARY(MAX)',
+        'LONGBINARY': 'VARBINARY(MAX)',
+        'IMAGE': 'VARBINARY(MAX)',
         'BINARY': 'VARBINARY',
+        'VARBINARY': 'VARBINARY',
         'GUID': 'UNIQUEIDENTIFIER',
+        'UNIQUEIDENTIFIER': 'UNIQUEIDENTIFIER',
         'HYPERLINK': 'NVARCHAR(2048)',
+        'REAL': 'REAL',
+        'FLOAT': 'FLOAT',
+        'BIGINT': 'BIGINT',
+        'SMALLINT': 'SMALLINT',
+        'TINYINT': 'TINYINT',
+        'INT': 'INT',
+        'TIMESTAMP': 'DATETIME2',
+        'SMALLDATETIME': 'DATETIME2',
     }
 
     def __init__(self, access_db_path: str, sql_server_conn_str: str,
@@ -203,20 +221,18 @@ class AccessToSqlServerMigrator:
             raise
 
     def get_access_tables(self) -> List[str]:
-        """Get list of user tables from Access"""
+        """Get list of user tables from Access using ODBC metadata (no MSysObjects perms needed)"""
         cursor = self.access_conn.cursor()
-        # Query MSysObjects for user tables (Type=1, not system)
-        cursor.execute("""
-            SELECT Name 
-            FROM MSysObjects 
-            WHERE Type = 1 
-            AND Name NOT LIKE 'MSys%' 
-            AND Name NOT LIKE '~%'
-            AND Name NOT LIKE 'f_'
-            ORDER BY Name
-        """)
-        tables = [row[0] for row in cursor.fetchall()]
-        logger.info(f"Found {len(tables)} tables: {tables}")
+        tables = []
+        for row in cursor.tables(tableType='TABLE'):
+            name = row.table_name
+            # Skip Access system tables and temp tables
+            if name.startswith('MSys') or name.startswith('~'):
+                continue
+            tables.append(name)
+        tables.sort()
+        logger.info(f"Found {len(tables)} tables")
+        logger.debug(f"Tables: {tables}")
         return tables
 
     def get_access_table_schema(self, table_name: str) -> TableInfo:
@@ -247,9 +263,23 @@ class AccessToSqlServerMigrator:
             )
             columns.append(col_info)
         
-        # Get primary keys
-        for row in cursor.primaryKeys(table_name):
-            primary_keys.append(row[3])  # Column name is 4th field
+        # Get primary keys via SQLStatistics (Access ODBC doesn't support SQLPrimaryKeys)
+        # statistics() returns rows: table_cat, table_schem, table_name, non_unique,
+        #   index_qualifier, index_name, type, ordinal_position, column_name, ...
+        # Primary key index in Access is typically named "PrimaryKey"
+        try:
+            pk_rows = []
+            for row in cursor.statistics(table_name, unique=True):
+                index_name = row[5]  # index_name
+                col_name = row[8]    # column_name
+                ordinal = row[7]     # ordinal_position
+                if index_name == 'PrimaryKey' and col_name:
+                    pk_rows.append((ordinal, col_name))
+            # Sort by ordinal position
+            pk_rows.sort(key=lambda x: x[0] or 0)
+            primary_keys = [col for _, col in pk_rows]
+        except Exception as e:
+            logger.warning(f"Could not get primary keys for {table_name}: {e}")
             
         return TableInfo(name=table_name, columns=columns, primary_keys=primary_keys)
 
@@ -281,29 +311,19 @@ class AccessToSqlServerMigrator:
         return fks
 
     def get_views(self) -> List[ViewInfo]:
-        """Get all views (queries) from Access"""
+        """Get all views (queries) from Access using ODBC metadata"""
         cursor = self.access_conn.cursor()
         views = []
         
-        # Views in Access are stored as Type=5 in MSysObjects
-        cursor.execute("""
-            SELECT Name 
-            FROM MSysObjects 
-            WHERE Type = 5 
-            AND Name NOT LIKE '~%'
-            ORDER BY Name
-        """)
-        
-        for row in cursor.fetchall():
-            view_name = row[0]
-            try:
-                # Get the SQL from the query
-                cursor.execute(f"SELECT TOP 1 * FROM [{view_name}]")
-                # We can't easily get the SQL text in Access via ODBC
-                # Would need to use DAO or Access Automation
+        try:
+            for row in cursor.tables(tableType='VIEW'):
+                view_name = row.table_name
+                if view_name.startswith('~') or view_name.startswith('MSys'):
+                    continue
+                # SQL text can't be retrieved via ODBC - will require manual recreation
                 views.append(ViewInfo(name=view_name, sql=""))
-            except Exception as e:
-                logger.warning(f"Could not get view {view_name}: {e}")
+        except Exception as e:
+            logger.warning(f"Could not enumerate views: {e}")
                 
         logger.info(f"Found {len(views)} views")
         return views
@@ -316,13 +336,11 @@ class AccessToSqlServerMigrator:
             sql_type = self.TYPE_MAPPING[access_type]
             
             # Handle variable-length types
-            if 'NVARCHAR' in sql_type and column.max_length:
-                # Access max_length is in bytes, unicode needs 2x
-                length = min(column.max_length, 4000)
-                if access_type in ('MEMO', 'LONGTEXT'):
-                    sql_type = 'NVARCHAR(MAX)'
-                else:
-                    sql_type = f'NVARCHAR({length})'
+            # Use NVARCHAR(MAX) for all text columns to avoid truncation issues
+            # (Access ODBC reports column_size unreliably and often undersizes memo fields)
+            # SQL Server handles NVARCHAR(MAX) efficiently for short values too.
+            if 'NVARCHAR' in sql_type:
+                sql_type = 'NVARCHAR(MAX)'
             elif 'VARBINARY' in sql_type and column.max_length:
                 if column.max_length > 8000:
                     sql_type = 'VARBINARY(MAX)'
@@ -338,14 +356,28 @@ class AccessToSqlServerMigrator:
         """Generate CREATE TABLE SQL for SQL Server"""
         columns_sql = []
         
+        pk_set = set(table.primary_keys)
+        
         for col in table.columns:
             sql_type = self.map_data_type(col)
             
-            # Handle identity
-            if col.is_identity:
-                sql_type = sql_type.replace('INT', 'INT IDENTITY(1,1)')
-                
-            nullable = 'NULL' if col.is_nullable else 'NOT NULL'
+            # PKs cannot be NVARCHAR(MAX) - cap to NVARCHAR(450) (SQL Server index limit)
+            if col.name in pk_set and sql_type == 'NVARCHAR(MAX)':
+                sql_type = 'NVARCHAR(450)'
+            
+            # Handle identity - only add if not already in the mapped type
+            if col.is_identity and 'IDENTITY' not in sql_type:
+                sql_type = sql_type.replace('INT', 'INT IDENTITY(1,1)', 1)
+            
+            # Nullability rules:
+            # - Identity columns: NOT NULL (required by SQL Server)
+            # - Primary key columns: NOT NULL (required by SQL Server)
+            # - All other columns: NULL (Access is more permissive than SQL Server;
+            #   Access often reports NOT NULL but has actual NULL data in records)
+            if 'IDENTITY' in sql_type or col.name in pk_set:
+                nullable = 'NOT NULL'
+            else:
+                nullable = 'NULL'
             
             col_def = f"    [{col.name}] {sql_type} {nullable}"
             columns_sql.append(col_def)
@@ -372,9 +404,32 @@ ALTER TABLE [{fk.table}]
 """
         return sql
 
+    def drop_all_foreign_keys(self):
+        """Drop all foreign keys in the database to allow tables to be dropped"""
+        cursor = self.sql_conn.cursor()
+        cursor.execute("""
+            SELECT 
+                OBJECT_NAME(parent_object_id) AS table_name,
+                name AS fk_name
+            FROM sys.foreign_keys
+        """)
+        fks = cursor.fetchall()
+        for table_name, fk_name in fks:
+            try:
+                cursor.execute(f"ALTER TABLE [{table_name}] DROP CONSTRAINT [{fk_name}]")
+            except pyodbc.Error as e:
+                logger.warning(f"Could not drop FK {fk_name}: {e}")
+        if fks:
+            logger.info(f"Dropped {len(fks)} existing foreign keys")
+        self.sql_conn.commit()
+
     def create_tables(self, tables: List[TableInfo]):
         """Create tables in SQL Server"""
         cursor = self.sql_conn.cursor()
+        
+        # Drop all FKs first so tables can be dropped in any order
+        if self.drop_existing:
+            self.drop_all_foreign_keys()
         
         for table in tables:
             try:
@@ -632,10 +687,10 @@ def main():
             skip_tables=SKIP_TABLES
         )
         migrator.migrate()
-        print("\n✓ Migration completed successfully!")
+        print("\n[SUCCESS] Migration completed successfully!")
         print("Check migration.log for details.")
     except Exception as e:
-        print(f"\n✗ Migration failed: {e}")
+        print(f"\n[FAILED] Migration failed: {e}")
         print("Check migration.log for details.")
         sys.exit(1)
 
