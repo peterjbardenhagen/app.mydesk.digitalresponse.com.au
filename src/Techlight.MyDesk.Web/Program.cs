@@ -3,6 +3,7 @@ using MudBlazor;
 using Techlight.MyDesk.Shared.Services;
 using Techlight.MyDesk.Web.Components;
 using Techlight.MyDesk.Web.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,9 +29,13 @@ builder.Services.AddMudServices(config =>
     config.SnackbarConfiguration.HideTransitionDuration = 200;
 });
 
-// Database & Services
+// Database (singleton - wraps connection string, opens new conn per query)
 builder.Services.AddSingleton<DatabaseService>();
+
+// Auth service (scoped to request)
 builder.Services.AddScoped<AuthService>();
+
+// Domain services (all in Techlight.MyDesk.Shared.Services)
 builder.Services.AddScoped<QuoteService>();
 builder.Services.AddScoped<InvoiceService>();
 builder.Services.AddScoped<PurchaseOrderService>();
@@ -38,6 +43,7 @@ builder.Services.AddScoped<ContactService>();
 builder.Services.AddScoped<CompanyService>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<LookupService>();
+
 builder.Services.AddHttpClient();
 
 // Razor Components
