@@ -12,7 +12,10 @@ using Serilog.Events;
 // ---------------------------------------------------------------------------
 // Logging (Serilog) - writes to /Logs/app-YYYYMMDD.log and /Logs/errors-YYYYMMDD.log
 // ---------------------------------------------------------------------------
-var logsDir = Path.Combine(AppContext.BaseDirectory, "Logs");
+// Logs go to the PROJECT ROOT /Logs folder (not bin/Debug/...), so they
+// survive rebuilds and are easy to find.
+var projectRoot = Directory.GetCurrentDirectory(); // cwd when "dotnet run" is invoked
+var logsDir = Path.Combine(projectRoot, "Logs");
 Directory.CreateDirectory(logsDir);
 
 Log.Logger = new LoggerConfiguration()
@@ -94,6 +97,10 @@ builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<LookupService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<SystemService>();
+builder.Services.AddScoped<ProductService>();
+builder.Services.AddScoped<DespatchService>();
+builder.Services.AddScoped<JobOrderService>();
+builder.Services.AddScoped<NoticeboardService>();
 
 builder.Services.AddHttpClient();
 

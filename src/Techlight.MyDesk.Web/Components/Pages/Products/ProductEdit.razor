@@ -1,0 +1,70 @@
+@page "/products/new"
+@page "/products/{ProductId:int}/edit"
+@attribute [Authorize]
+@inject ProductService Svc
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>@(IsNew ? "New product" : _model.ProductName) - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/products">Products</a><span class="sep">/</span>
+            <span style="color:var(--gray-700); font-weight:500;">@(IsNew ? "New" : "Edit")</span>
+        </div>
+        <h1>@(IsNew ? "New product" : "Edit product")</h1>
+    </div>
+    <MudButton Variant="Variant.Outlined" Href="/products">Cancel</MudButton>
+</div>
+
+<MudPaper Class="pa-6" Style="max-width: 720px;">
+    <MudForm @ref="_form">
+        <MudGrid Spacing="3">
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_model.ProductName" Label="Name" Required="true" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_model.Description" Label="Description" Lines="3" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudNumericField T="decimal?" @bind-Value="_model.UnitCost" Label="Unit cost" Format="N2" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudNumericField T="decimal?" @bind-Value="_model.UnitPrice" Label="Unit price" Format="N2" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12">
+                <div class="d-flex justify-end">
+                    <MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Rounded.Save" OnClick="Save">Save</MudButton>
+                </div>
+            </MudItem>
+        </MudGrid>
+    </MudForm>
+</MudPaper>
+
+@code {
+    [Parameter] public int? ProductId { get; set; }
+    private bool IsNew => ProductId is null or 0;
+    private MudForm _form = default!;
+    private Product _model = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!IsNew)
+            _model = await Svc.GetAsync(ProductId!.Value) ?? new Product();
+    }
+
+    private async Task Save()
+    {
+        await _form.Validate();
+        if (!_form.IsValid) return;
+        try
+        {
+            await Svc.SaveAsync(_model);
+            Snackbar.Add("Saved", Severity.Success);
+            Nav.NavigateTo("/products");
+        }
+        catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
+    }
+}

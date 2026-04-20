@@ -1,0 +1,66 @@
+@page "/job-orders"
+@attribute [Authorize]
+@inject JobOrderService Svc
+
+<PageTitle>Job Orders - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb"><a href="/">Techlight MyDesk</a><span class="sep">/</span><span style="color:var(--gray-700); font-weight:500;">Job Orders</span></div>
+        <h1>Job Orders</h1>
+        <p class="tl-subtitle">Internal job tracking and work orders.</p>
+    </div>
+</div>
+
+@if (_items == null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-0">
+        <MudDataGrid T="JobOrderRow" Items="_items" Dense="true" Hover="true" Elevation="0"
+                     Filterable="true" SortMode="SortMode.Multiple" QuickFilter="@QuickFilter">
+            <ToolBarContent>
+                <MudTextField T="string" Placeholder="Search job orders..." @bind-Value="_search" Immediate="true"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Search"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </ToolBarContent>
+            <Columns>
+                <PropertyColumn Property="x => x.JobOrderNumber" Title="Job Order #" />
+                <PropertyColumn Property="x => x.JobOrderDate"   Title="Date" Format="dd/MM/yyyy" />
+                <PropertyColumn Property="x => x.CompanyName"    Title="Customer" />
+                <PropertyColumn Property="x => x.Originator"     Title="Created by" />
+                <TemplateColumn Title="Status">
+                    <CellTemplate>
+                        <span class="tl-badge @StatusTone(context.Item.StatusName)">
+                            @(context.Item.StatusName ?? "—")
+                        </span>
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+            <PagerContent><MudDataGridPager T="JobOrderRow" /></PagerContent>
+        </MudDataGrid>
+    </MudPaper>
+}
+
+@code {
+    private List<JobOrderRow>? _items;
+    private string _search = "";
+
+    protected override async Task OnInitializedAsync() => _items = await Svc.GetAllAsync();
+
+    private Func<JobOrderRow, bool> QuickFilter => j =>
+        string.IsNullOrWhiteSpace(_search) ||
+        (j.JobOrderNumber?.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+        (j.CompanyName?.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false);
+
+    private static string StatusTone(string? s) => s?.ToLower() switch
+    {
+        "complete" or "completed" or "closed" => "success",
+        "open" or "in progress"               => "primary",
+        "on hold" or "hold"                   => "warning",
+        "cancelled" or "canceled"             => "error",
+        _                                     => "info",
+    };
+}
