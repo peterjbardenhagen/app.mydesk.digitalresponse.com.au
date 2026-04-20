@@ -26,8 +26,7 @@ param(
     [string]$SqlUser = "Techlight_MyDesk",
     [string]$SqlPassword = "DigitalResponse2595!",
     [string]$LocalServer = "(localdb)\MSSQLLocalDB",
-    [string]$RemoteBackupShare = "",  # e.g. "\\techlight.digitalresponse.com.au\Backups$"
-    [string]$RemoteBackupPath = "C:\SQLBackups",  # Path on production server
+    [string]$RemoteBackupPath = "C:\SQLBackups",  # Path on production server where .bak will be placed
     [switch]$DryRun,
     [switch]$SkipBackup
 )
@@ -153,46 +152,67 @@ else {
 }
 
 # ============================================================================
-# STEP 3: Transfer backup to production
+# STEP 3: Manual file transfer to production
 # ============================================================================
-Write-Status "=== STEP 3: Transfer Backup to Production ===" "STEP"
+Write-Status "=== STEP 3: Transfer Backup to Production (MANUAL) ===" "STEP"
 
-# Strategy: Use SMB share if available, else use SQL Server's file stream
-if ($RemoteBackupShare) {
-    $remoteBackupPath = Join-Path $RemoteBackupShare $backupFileName
-    if ($DryRun) {
-        Write-Status "[DRY RUN] Would copy $localBackupPath to $remoteBackupPath"
-    }
-    else {
-        Write-Status "Copying backup via SMB to $remoteBackupPath..."
-        try {
-            Copy-Item -Path $localBackupPath -Destination $remoteBackupPath -Force
-            Write-Status "File transferred" "SUCCESS"
-        }
-        catch {
-            Write-Status "SMB transfer failed: $_" "ERROR"
-            Write-Status "Falling back to SQL Server file transfer..." "WARNING"
-            $RemoteBackupShare = $null  # Trigger fallback below
-        }
-    }
-    $restorePath = Join-Path $RemoteBackupPath $backupFileName
+$restorePath = Join-Path $RemoteBackupPath $backupFileName
+
+if ($DryRun) {
+    Write-Status "[DRY RUN] Would prompt for manual file copy to $ProductionServer"
 }
-
-if (-not $RemoteBackupShare) {
-    # Option: Upload via PowerShell remoting
-    Write-Status "No SMB share configured. Manual transfer required." "WARNING"
-    Write-Status "Please copy the file manually:" "WARNING"
-    Write-Status "  Source: $localBackupPath"
-    Write-Status "  Target: $ProductionServer : $RemoteBackupPath\$backupFileName"
+else {
+    Write-Host ""
+    Write-Host "┌────────────────────────────────────────────────────────────┐" -ForegroundColor Yellow
+    Write-Host "│  MANUAL FILE TRANSFER REQUIRED                             │" -ForegroundColor Yellow
+    Write-Host "└────────────────────────────────────────────────────────────┘" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Status "Copy the following backup file to the production server:" "WARNING"
+    Write-Host ""
+    Write-Host "  SOURCE (your local machine):" -ForegroundColor White
+    Write-Host "    $localBackupPath" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "  TARGET (on $ProductionServer):" -ForegroundColor White
+    Write-Host "    $restorePath" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "  Suggested methods:" -ForegroundColor Cyan
+    Write-Host "    - RDP: Open RDP to $ProductionServer, drag file in clipboard" -ForegroundColor Gray
+    Write-Host "    - SCP/SFTP: Use WinSCP or pscp" -ForegroundColor Gray
+    Write-Host "    - Cloud: Upload to OneDrive/Dropbox, download on server" -ForegroundColor Gray
     Write-Host ""
     
-    if (-not $DryRun) {
-        if (-not (Confirm-Action "Have you copied the file to the production server?")) {
-            Write-Status "Deployment cancelled - awaiting file transfer" "WARNING"
-            exit 0
+    # Try to open file explorer at the backup location for convenience
+    try {
+        Start-Process "explorer.exe" "/select,`"$localBackupPath`"" -ErrorAction SilentlyContinue
+    } catch { }
+    
+    if (-not (Confirm-Action "Have you copied '$backupFileName' to '$RemoteBackupPath' on production?")) {
+        Write-Status "Deployment cancelled - awaiting file transfer" "WARNING"
+        exit 0
+    }
+    
+    # Verify the file exists on production via SQL Server's xp_fileexist
+    Write-Status "Verifying backup file exists on production..."
+    try {
+        $verifyQuery = "EXEC xp_fileexist '$restorePath'"
+        $fileCheck = Invoke-Sqlcmd -ConnectionString $prodConnStr -Query $verifyQuery -ErrorAction Stop
+        # xp_fileexist returns "File Exists" as bit in first column
+        $fileExists = $fileCheck.PSObject.Properties.Value[0]
+        if ($fileExists -eq 1) {
+            Write-Status "File verified on production: $restorePath" "SUCCESS"
+        }
+        else {
+            Write-Status "File NOT found at: $restorePath" "ERROR"
+            Write-Status "Please verify the path and re-run the script" "WARNING"
+            exit 1
         }
     }
-    $restorePath = Join-Path $RemoteBackupPath $backupFileName
+    catch {
+        Write-Status "Could not verify file (requires sysadmin on production): $_" "WARNING"
+        if (-not (Confirm-Action "Continue assuming file is in place?")) {
+            exit 1
+        }
+    }
 }
 
 # ============================================================================
