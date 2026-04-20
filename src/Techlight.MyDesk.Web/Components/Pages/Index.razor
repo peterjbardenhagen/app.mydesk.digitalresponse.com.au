@@ -1,0 +1,123 @@
+@page "/"
+@attribute [Authorize]
+@inject DashboardService DashboardService
+
+<PageTitle>Dashboard - Techlight MyDesk</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-6 font-weight-bold">
+    Welcome to <span style="color: var(--mud-palette-primary);">Techlight</span>
+    <span style="color: var(--mud-palette-secondary);">MyDesk</span>
+</MudText>
+
+@if (_metrics == null)
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="mx-auto my-8 d-block" />
+}
+else
+{
+    <MudGrid>
+        <!-- KPI Cards -->
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="2" Class="pa-4 dashboard-kpi-card" Style="border-left: 4px solid var(--mud-palette-primary);">
+                <MudText Typo="Typo.subtitle2" Style="color: var(--mud-palette-text-secondary);">Quotes This Month</MudText>
+                <div class="d-flex align-center mt-2">
+                    <MudText Typo="Typo.h4" Class="mr-2 font-weight-bold">@_metrics.ThisMonthQuotes</MudText>
+                    <MudIcon Icon="@Icons.Material.Filled.RequestQuote" Color="Color.Primary" Size="Size.Large" Class="ml-auto" />
+                </div>
+                <MudText Typo="Typo.body2" Class="mt-2 text-muted">@_metrics.ThisMonthQuotesWon Won</MudText>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="2" Class="pa-4 dashboard-kpi-card" Style="border-left: 4px solid var(--mud-palette-success);">
+                <MudText Typo="Typo.subtitle2" Style="color: var(--mud-palette-text-secondary);">Quotes Value</MudText>
+                <div class="d-flex align-center mt-2">
+                    <MudText Typo="Typo.h4" Class="mr-2 font-weight-bold">@_metrics.ThisMonthQuotesValue.ToString("C0")</MudText>
+                    <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Color="Color.Success" Size="Size.Large" Class="ml-auto" />
+                </div>
+                <MudText Typo="Typo.body2" Class="mt-2 text-muted">Total value this month</MudText>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="2" Class="pa-4 dashboard-kpi-card" Style="border-left: 4px solid var(--mud-palette-info);">
+                <MudText Typo="Typo.subtitle2" Style="color: var(--mud-palette-text-secondary);">Invoices This Month</MudText>
+                <div class="d-flex align-center mt-2">
+                    <MudText Typo="Typo.h4" Class="mr-2 font-weight-bold">@_metrics.ThisMonthInvoices</MudText>
+                    <MudIcon Icon="@Icons.Material.Filled.Receipt" Color="Color.Info" Size="Size.Large" Class="ml-auto" />
+                </div>
+                <MudText Typo="Typo.body2" Class="mt-2 text-muted">Total invoices issued</MudText>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="2" Class="pa-4 dashboard-kpi-card" Style="border-left: 4px solid var(--mud-palette-warning);">
+                <MudText Typo="Typo.subtitle2" Style="color: var(--mud-palette-text-secondary);">Exceptions</MudText>
+                <div class="d-flex align-center mt-2">
+                    <MudText Typo="Typo.h4" Class="mr-2 font-weight-bold">@(_metrics.InvoicesOverdue + _metrics.PendingApprovalPOs)</MudText>
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Large" Class="ml-auto" />
+                </div>
+                <MudText Typo="Typo.body2" Class="mt-2 text-muted">Items requiring attention</MudText>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Main Chart -->
+        <MudItem xs="12" md="8">
+            <MudPaper Elevation="2" Class="pa-4 h-100">
+                <MudText Typo="Typo.h6" Class="mb-4">Monthly Performance (Quotes Won vs Invoiced)</MudText>
+                <MudChart ChartType="ChartType.Bar" ChartSeries="@_chartSeries" XAxisLabels="@_xAxisLabels" Width="100%" Height="350px"></MudChart>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Quick Actions & Exceptions -->
+        <MudItem xs="12" md="4">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudPaper Elevation="2" Class="pa-4">
+                        <MudText Typo="Typo.h6" Class="mb-4">Exceptions</MudText>
+                        <MudList T="string" Dense="true" ReadOnly="true">
+                            <MudListItem Icon="@Icons.Material.Filled.Error" IconColor="Color.Error">
+                                <span class="font-weight-bold">@_metrics.InvoicesOverdue</span> Overdue Invoices
+                            </MudListItem>
+                            <MudListItem Icon="@Icons.Material.Filled.Warning" IconColor="Color.Warning">
+                                <span class="font-weight-bold">@_metrics.PendingQuotesOver30Days</span> Pending Quotes (>30 days)
+                            </MudListItem>
+                            <MudListItem Icon="@Icons.Material.Filled.Info" IconColor="Color.Info">
+                                <span class="font-weight-bold">@_metrics.PendingApprovalPOs</span> POs Pending Approval
+                            </MudListItem>
+                        </MudList>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudPaper Elevation="2" Class="pa-4">
+                        <MudText Typo="Typo.h6" Class="mb-4">Quick Actions</MudText>
+                        <div class="d-flex flex-column gap-2">
+                            <MudButton Href="/quotes/create" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add">New Quote</MudButton>
+                            <MudButton Href="/invoices/create" Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Add">New Invoice</MudButton>
+                            <MudButton Href="/ask-ai" Variant="Variant.Text" Color="Color.Info" StartIcon="@Icons.Material.Filled.AutoAwesome">Ask Techlight AI</MudButton>
+                        </div>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    private DashboardMetrics? _metrics;
+    private List<ChartSeries> _chartSeries = new();
+    private string[] _xAxisLabels = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load metrics from service
+        _metrics = await DashboardService.GetMetricsAsync();
+        
+        // Mock chart data for now while DB migration finishes
+        _chartSeries = new List<ChartSeries>
+        {
+            new ChartSeries { Name = "Quotes Won", Data = new double[] { 40, 20, 25, 27, 46, 60, 48, 80, 15, 60, 40, 30 } },
+            new ChartSeries { Name = "Invoiced", Data = new double[] { 19, 24, 35, 13, 28, 15, 60, 35, 20, 35, 10, 20 } },
+        };
+    }
+}

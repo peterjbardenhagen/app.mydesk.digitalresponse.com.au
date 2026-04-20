@@ -1,78 +1,31 @@
-#!/usr/bin/env python3
-"""
-Configuration for Access to SQL Server Migration
-Edit these settings for your environment
-"""
+import os
 
-# ============================================================================
-# REQUIRED: Path to your Microsoft Access database
-# ============================================================================
-ACCESS_DB_PATH = r"C:\Development\Techlight.digitalresponse.com.au\Database\AccessDB\Techlight2.mdb"
+# Microsoft Access to SQL Server Migration Configuration
 
-# ============================================================================
-# REQUIRED: SQL Server Connection Settings
-# ============================================================================
-# Target database: Techlight_MyDesk (must already exist)
-# Compatibility: SQL Server 2016+ (production runs SQL Server 2016)
+ACCESS_DB_PATH = r"C:\Development\Techlight.digitalresponse.com.au\Database\Techlight2.mdb"
 
-# Option 1: LOCAL DEV - LocalDB with Windows Authentication (DEFAULT)
+# Connect to master first if we need to create the database, but for simplicity let's assume we'll pre-create it 
+# or the script will try. Actually, the script uses the connection string and we can use local DB.
+# TrustServerCertificate=True is sometimes needed for newer ODBC drivers
 SQL_SERVER_CONN_STR = (
     "Driver={ODBC Driver 17 for SQL Server};"
-    "Server=(localdb)\\MSSQLLocalDB;"
-    "Database=Techlight_MyDesk;"
+    "Server=localhost\\SQLEXPRESS;"
+    "Database=Techlight;"
     "Trusted_Connection=yes;"
-    "Encrypt=yes;"
-    "TrustServerCertificate=no;"
+    "TrustServerCertificate=True;"
 )
 
-# Option 2: LOCAL DEV - SQL Authentication (if Windows Auth fails)
-# SQL_SERVER_CONN_STR = (
-#     "Driver={ODBC Driver 17 for SQL Server};"
-#     "Server=(localdb)\\MSSQLLocalDB;"
-#     "Database=Techlight_MyDesk;"
-#     "UID=Techlight_MyDesk;"
-#     "PWD=DigitalResponse2595!;"
-#     "Encrypt=yes;"
-#     "TrustServerCertificate=yes;"
-# )
-
-# Option 3: PRODUCTION - SQL Server 2016 on techlight.digitalresponse.com.au
-# PROD_SQL_SERVER_CONN_STR = (
-#     "Driver={ODBC Driver 17 for SQL Server};"
-#     "Server=localhost\\SQL2016;"
-#     "Database=Techlight_MyDesk;"
-#     "UID=Techlight_MyDesk;"
-#     "PWD=DigitalResponse2595!;"
-#     "Encrypt=yes;"
-#     "TrustServerCertificate=yes;"
-# )
-
-# ============================================================================
-# OPTIONAL: Migration Settings
-# ============================================================================
-
-# Number of rows to insert at once (higher = faster but more memory)
+# Number of rows to insert in a single batch
 BATCH_SIZE = 1000
 
-# If True, drop and recreate existing tables (WARNING: destroys existing data!)
+# Whether to drop existing tables in the target database before migrating
 DROP_EXISTING_TABLES = True
 
-# If True, create foreign keys after data migration
+# Whether to recreate foreign keys after data migration
 CREATE_FOREIGN_KEYS = True
 
-# If True, stop on first error. If False, continue and log errors
+# Whether to stop on the first error or continue with other tables
 STOP_ON_ERROR = False
 
-# Tables to skip (if any)
-SKIP_TABLES = []  # Example: ['TempTable', 'OldData']
-
-# ============================================================================
-# Advanced: Data Type Overrides (optional)
-# Use this to force specific data types for specific columns
-# ============================================================================
-
-# Format: 'TableName.ColumnName': 'SQL_Server_Type'
-DATA_TYPE_OVERRIDES = {
-    # Example: Force 'Notes' column in 'Customers' table to NVARCHAR(MAX)
-    # 'Customers.Notes': 'NVARCHAR(MAX)',
-}
+# List of tables to skip (e.g., ['TempTable', 'BackupTable'])
+SKIP_TABLES = []

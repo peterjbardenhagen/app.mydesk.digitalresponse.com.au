@@ -3,6 +3,7 @@
     Backs up the local Techlight_MyDesk SQL Server database to a .bak file
 .DESCRIPTION
     Creates a timestamped full backup of the local LocalDB Techlight_MyDesk database.
+    Uses System.Data.SqlClient directly (no SqlServer PowerShell module required).
     Backups are stored in Database/Backups/ with format: Techlight_MyDesk_YYYYMMDD_HHMMSS.bak
 .PARAMETER BackupPath
     Optional. Override default backup directory.
@@ -33,6 +34,52 @@ function Write-Status {
     Write-Host "[$Status] $Message" -ForegroundColor $color
 }
 
+function Invoke-SqlQuery {
+    <#
+    .SYNOPSIS
+        Execute a SQL query using System.Data.SqlClient (no module required)
+    .PARAMETER ConnectionString
+        Full SQL Server connection string
+    .PARAMETER Query
+        SQL query to execute
+    .PARAMETER Timeout
+        Command timeout in seconds (default 30)
+    .PARAMETER ReturnScalar
+        If set, returns a single scalar value
+    #>
+    param(
+        [Parameter(Mandatory)][string]$ConnectionString,
+        [Parameter(Mandatory)][string]$Query,
+        [int]$Timeout = 30,
+        [switch]$ReturnScalar
+    )
+    
+    Add-Type -AssemblyName "System.Data" -ErrorAction SilentlyContinue
+    
+    $conn = New-Object System.Data.SqlClient.SqlConnection($ConnectionString)
+    try {
+        $conn.Open()
+        $cmd = $conn.CreateCommand()
+        $cmd.CommandText = $Query
+        $cmd.CommandTimeout = $Timeout
+        
+        if ($ReturnScalar) {
+            return $cmd.ExecuteScalar()
+        }
+        
+        # For queries that return rows, use a DataTable
+        $reader = $cmd.ExecuteReader()
+        $table = New-Object System.Data.DataTable
+        $table.Load($reader)
+        $reader.Close()
+        return $table
+    }
+    finally {
+        if ($conn.State -eq 'Open') { $conn.Close() }
+        $conn.Dispose()
+    }
+}
+
 # Ensure backup directory exists
 if (-not (Test-Path $BackupPath)) {
     New-Item -ItemType Directory -Path $BackupPath -Force | Out-Null
@@ -52,24 +99,34 @@ Write-Status "Database: $DatabaseName"
 Write-Status "Target:   $backupFile"
 Write-Host ""
 
-# Test connection
+# Connection string - connect to master for backup
+$connStr = "Server=$ServerInstance;Database=master;Integrated Security=True;Connection Timeout=30;"
+
+# Test connection and verify database exists
 Write-Status "Testing connection..."
 try {
-    $testQuery = "SELECT name FROM sys.databases WHERE name = '$DatabaseName'"
-    $result = Invoke-Sqlcmd -ServerInstance $ServerInstance -Query $testQuery -ErrorAction Stop
-    if (-not $result) {
+    $testQuery = "SELECT COUNT(*) FROM sys.databases WHERE name = '$DatabaseName'"
+    $dbCount = Invoke-SqlQuery -ConnectionString $connStr -Query $testQuery -ReturnScalar
+    
+    if ($dbCount -eq 0) {
         Write-Status "Database '$DatabaseName' not found on $ServerInstance" "ERROR"
+        Write-Status "Available databases:" "WARNING"
+        $dbList = Invoke-SqlQuery -ConnectionString $connStr -Query "SELECT name FROM sys.databases ORDER BY name"
+        foreach ($row in $dbList) {
+            Write-Host "    $($row.name)" -ForegroundColor Gray
+        }
         exit 1
     }
-    Write-Status "Connection OK" "SUCCESS"
+    Write-Status "Connection OK - database '$DatabaseName' found" "SUCCESS"
 }
 catch {
-    Write-Status "Cannot connect to $ServerInstance : $_" "ERROR"
+    Write-Status "Cannot connect to $ServerInstance" "ERROR"
+    Write-Status "Error: $($_.Exception.Message)" "ERROR"
     Write-Status "Ensure LocalDB is running: sqllocaldb start MSSQLLocalDB" "WARNING"
     exit 1
 }
 
-# Run backup
+# Run backup (LocalDB doesn't support COMPRESSION, omit it)
 Write-Status "Running backup..."
 $backupQuery = @"
 BACKUP DATABASE [$DatabaseName]
@@ -78,17 +135,23 @@ WITH FORMAT,
      INIT,
      NAME = N'$DatabaseName-Full Backup $timestamp',
      SKIP,
-     COMPRESSION,
      STATS = 10;
 "@
 
 try {
-    Invoke-Sqlcmd -ServerInstance $ServerInstance -Query $backupQuery -QueryTimeout 600 -ErrorAction Stop
+    Invoke-SqlQuery -ConnectionString $connStr -Query $backupQuery -Timeout 600 | Out-Null
+    
+    if (-not (Test-Path $backupFile)) {
+        Write-Status "Backup command succeeded but file not created at $backupFile" "ERROR"
+        Write-Status "This may happen when running under different user context" "WARNING"
+        exit 1
+    }
+    
     $backupSize = (Get-Item $backupFile).Length / 1MB
     Write-Status ("Backup complete ({0:N2} MB)" -f $backupSize) "SUCCESS"
 }
 catch {
-    Write-Status "Backup failed: $_" "ERROR"
+    Write-Status "Backup failed: $($_.Exception.Message)" "ERROR"
     exit 1
 }
 

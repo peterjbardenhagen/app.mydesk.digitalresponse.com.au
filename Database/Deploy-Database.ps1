@@ -53,6 +53,47 @@ function Confirm-Action {
     return ($response -ceq "YES")
 }
 
+function Invoke-SqlQuery {
+    <#
+    .SYNOPSIS
+        Execute SQL using System.Data.SqlClient (no module dependencies)
+    #>
+    param(
+        [Parameter(Mandatory)][string]$ConnectionString,
+        [Parameter(Mandatory)][string]$Query,
+        [int]$Timeout = 30,
+        [switch]$ReturnScalar,
+        [switch]$NonQuery
+    )
+    
+    Add-Type -AssemblyName "System.Data" -ErrorAction SilentlyContinue
+    
+    $conn = New-Object System.Data.SqlClient.SqlConnection($ConnectionString)
+    try {
+        $conn.Open()
+        $cmd = $conn.CreateCommand()
+        $cmd.CommandText = $Query
+        $cmd.CommandTimeout = $Timeout
+        
+        if ($NonQuery) {
+            return $cmd.ExecuteNonQuery()
+        }
+        if ($ReturnScalar) {
+            return $cmd.ExecuteScalar()
+        }
+        
+        $reader = $cmd.ExecuteReader()
+        $table = New-Object System.Data.DataTable
+        $table.Load($reader)
+        $reader.Close()
+        return $table
+    }
+    finally {
+        if ($conn.State -eq 'Open') { $conn.Close() }
+        $conn.Dispose()
+    }
+}
+
 # ============================================================================
 # BANNER
 # ============================================================================
@@ -97,13 +138,14 @@ else {
     }
     else {
         Write-Status "Backing up local $DatabaseName..."
+        $localConnStr = "Server=$LocalServer;Database=master;Integrated Security=True;Connection Timeout=30;"
         $backupQuery = @"
 BACKUP DATABASE [$DatabaseName]
 TO DISK = N'$localBackupPath'
-WITH FORMAT, INIT, COMPRESSION, STATS = 10;
+WITH FORMAT, INIT, STATS = 10;
 "@
         try {
-            Invoke-Sqlcmd -ServerInstance $LocalServer -Query $backupQuery -QueryTimeout 600 -ErrorAction Stop
+            Invoke-SqlQuery -ConnectionString $localConnStr -Query $backupQuery -Timeout 600 | Out-Null
             $size = (Get-Item $localBackupPath).Length / 1MB
             Write-Status ("Backup created ({0:N2} MB)" -f $size) "SUCCESS"
         }
@@ -127,17 +169,16 @@ if ($DryRun) {
 else {
     Write-Status "Testing connection to $ProductionServer\$ProductionInstance..."
     try {
-        $versionQuery = "SELECT @@VERSION AS Version, @@SERVERNAME AS ServerName"
-        $result = Invoke-Sqlcmd -ConnectionString $prodConnStr -Query $versionQuery -ErrorAction Stop
-        Write-Status "Connected to: $($result.ServerName)" "SUCCESS"
+        $serverName = Invoke-SqlQuery -ConnectionString $prodConnStr -Query "SELECT @@SERVERNAME" -ReturnScalar
+        Write-Status "Connected to: $serverName" "SUCCESS"
         
         # Verify SQL Server 2016+
-        $versionCheck = Invoke-Sqlcmd -ConnectionString $prodConnStr -Query "SELECT SERVERPROPERTY('ProductMajorVersion') AS Major"
-        if ($versionCheck.Major -lt 13) {
+        $majorVersion = Invoke-SqlQuery -ConnectionString $prodConnStr -Query "SELECT SERVERPROPERTY('ProductMajorVersion')" -ReturnScalar
+        if ([int]$majorVersion -lt 13) {
             Write-Status "Production is older than SQL 2016 - may have compatibility issues" "WARNING"
         }
         else {
-            Write-Status "SQL Server version check passed (Major: $($versionCheck.Major))" "SUCCESS"
+            Write-Status "SQL Server version check passed (Major: $majorVersion)" "SUCCESS"
         }
     }
     catch {
@@ -195,9 +236,9 @@ else {
     Write-Status "Verifying backup file exists on production..."
     try {
         $verifyQuery = "EXEC xp_fileexist '$restorePath'"
-        $fileCheck = Invoke-Sqlcmd -ConnectionString $prodConnStr -Query $verifyQuery -ErrorAction Stop
+        $fileCheck = Invoke-SqlQuery -ConnectionString $prodConnStr -Query $verifyQuery
         # xp_fileexist returns "File Exists" as bit in first column
-        $fileExists = $fileCheck.PSObject.Properties.Value[0]
+        $fileExists = if ($fileCheck.Rows.Count -gt 0) { $fileCheck.Rows[0][0] } else { 0 }
         if ($fileExists -eq 1) {
             Write-Status "File verified on production: $restorePath" "SUCCESS"
         }
@@ -225,8 +266,9 @@ if ($DryRun) {
 }
 else {
     # Check if DB exists on production
-    $checkDbQuery = "SELECT COUNT(*) AS Exists FROM sys.databases WHERE name = '$DatabaseName'"
-    $dbExists = (Invoke-Sqlcmd -ConnectionString $prodConnStr -Query $checkDbQuery).Exists -gt 0
+    $checkDbQuery = "SELECT COUNT(*) FROM sys.databases WHERE name = '$DatabaseName'"
+    $dbCount = Invoke-SqlQuery -ConnectionString $prodConnStr -Query $checkDbQuery -ReturnScalar
+    $dbExists = [int]$dbCount -gt 0
     
     if ($dbExists) {
         $safetyBackup = "$RemoteBackupPath\$($DatabaseName)_PREDEPLOY_$timestamp.bak"
@@ -237,7 +279,7 @@ TO DISK = N'$safetyBackup'
 WITH FORMAT, INIT, COMPRESSION, STATS = 10;
 "@
         try {
-            Invoke-Sqlcmd -ConnectionString $prodConnStr -Query $safetyBackupQuery -QueryTimeout 600 -ErrorAction Stop
+            Invoke-SqlQuery -ConnectionString $prodConnStr -Query $safetyBackupQuery -Timeout 600 | Out-Null
             Write-Status "Production safety backup created" "SUCCESS"
         }
         catch {
@@ -286,7 +328,7 @@ ALTER ROLE db_owner ADD MEMBER [$SqlUser];
 "@
     
     try {
-        Invoke-Sqlcmd -ConnectionString $prodConnStr -Query $restoreQuery -QueryTimeout 1800 -ErrorAction Stop
+        Invoke-SqlQuery -ConnectionString $prodConnStr -Query $restoreQuery -Timeout 1800 | Out-Null
         Write-Status "Restore complete" "SUCCESS"
     }
     catch {
@@ -308,12 +350,12 @@ else {
     $verifyConnStr = "Server=$ProductionServer\$ProductionInstance;Database=$DatabaseName;User Id=$SqlUser;Password=$SqlPassword;Encrypt=yes;TrustServerCertificate=yes;"
     
     try {
-        $tableCount = Invoke-Sqlcmd -ConnectionString $verifyConnStr -Query "SELECT COUNT(*) AS Count FROM sys.tables"
-        Write-Status "Tables in production: $($tableCount.Count)" "SUCCESS"
+        $tableCount = Invoke-SqlQuery -ConnectionString $verifyConnStr -Query "SELECT COUNT(*) FROM sys.tables" -ReturnScalar
+        Write-Status "Tables in production: $tableCount" "SUCCESS"
         
         # Show top 5 tables with row counts
         Write-Status "Top 5 tables by row count:"
-        $topTables = Invoke-Sqlcmd -ConnectionString $verifyConnStr -Query @"
+        $topTables = Invoke-SqlQuery -ConnectionString $verifyConnStr -Query @"
 SELECT TOP 5 
     t.name AS TableName,
     SUM(p.rows) AS RowCount
@@ -323,8 +365,8 @@ WHERE p.index_id IN (0, 1)
 GROUP BY t.name
 ORDER BY RowCount DESC;
 "@
-        foreach ($row in $topTables) {
-            Write-Status "  $($row.TableName): $($row.RowCount) rows"
+        foreach ($row in $topTables.Rows) {
+            Write-Status "  $($row['TableName']): $($row['RowCount']) rows"
         }
     }
     catch {
