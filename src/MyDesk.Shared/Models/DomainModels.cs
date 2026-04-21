@@ -19,6 +19,7 @@ public class Quote
     public string? InternalNotes { get; set; }
     public string? Terms { get; set; }
     public int ContactId { get; set; }
+    public int CompanyId { get; set; }
     public int DivisionId { get; set; }
     public string Code { get; set; } = string.Empty;
     public int QuoteStatusId { get; set; }

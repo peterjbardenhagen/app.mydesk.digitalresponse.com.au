@@ -1,8 +1,8 @@
 @inject DashboardService DashboardService
 @inject IDialogService DialogService
 
-<MudDialog Class="tl-health-dialog">
-    <DialogContent Class="pa-0">
+<MudDialog Class="tl-health-dialog" Options="new DialogOptions { CloseButton = false, MaxWidth = MaxWidth.Medium }">
+    <DialogContent>
         @if (_recommendations == null)
         {
             <div class="tl-dialog-loading">
@@ -56,7 +56,7 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Variant="Variant.Text">Close</MudButton>
+        <MudButton OnClick="@Cancel" Variant="Variant.Text">Close</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -177,6 +177,7 @@
 </style>
 
 @code {
+    [CascadingParameter] MudDialogInstance? MudDialog { get; set; }
     private List<BusinessRecommendation>? _recommendations;
 
     protected override async Task OnInitializedAsync()
@@ -187,7 +188,7 @@
 
     private void Cancel()
     {
-        DialogService.Close(DialogInstance);
+        MudDialog.Close();
     }
 
     private string GetRecIcon(string priority) => priority switch

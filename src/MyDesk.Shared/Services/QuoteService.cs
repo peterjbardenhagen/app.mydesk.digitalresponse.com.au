@@ -169,6 +169,7 @@ public class QuoteService
             QuoteNumber = HasCol("QuoteNumber") ? r["QuoteNumber"]?.ToString() : $"Q{r["Qid"]}",
             QuoteStatusId = HasCol("QuoteStatusId") ? Convert.ToInt32(r["QuoteStatusId"]) : 0,
             ContactId = HasCol("ContactId") ? Convert.ToInt32(r["ContactId"]) : 0,
+            CompanyId = HasCol("CompanyId") ? Convert.ToInt32(r["CompanyId"]) : 0,
             DivisionId = HasCol("DivisionId") ? Convert.ToInt32(r["DivisionId"]) : 0,
             Attention = HasCol("Attention") ? r["Attention"]?.ToString() : "",
             Delivery = HasCol("Delivery") ? r["Delivery"]?.ToString() : "",

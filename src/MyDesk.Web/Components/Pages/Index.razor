@@ -223,38 +223,44 @@ else
                 </div>
                 
                 <div class="tl-user-kpi-grid">
-                    <div class="tl-user-kpi-card">
-                        <div class="tl-user-kpi-icon teal">
-                            <MudIcon Icon="@Icons.Material.Rounded.RequestQuote" Size="Size.Small" />
+                    @if (_userKpi != null)
+                    {
+                        <div class="tl-user-kpi-card">
+                            <div class="tl-user-kpi-icon teal">
+                                <MudIcon Icon="@Icons.Material.Rounded.RequestQuote" Size="Size.Small" />
+                            </div>
+                            <div class="tl-user-kpi-value">@_userKpi.QuotesRaisedThisMonth</div>
+                            <div class="tl-user-kpi-label">Quotes Raised</div>
+                            <div class="tl-user-kpi-sub">@_userKpi.QuotesWonThisMonth won (@_userKpi.WinRate.ToString("N0")%)</div>
                         </div>
-                        <div class="tl-user-kpi-value">@_userKpi.QuotesRaisedThisMonth</div>
-                        <div class="tl-user-kpi-label">Quotes Raised</div>
-                        <div class="tl-user-kpi-sub">@_userKpi.QuotesWonThisMonth won (@_userKpi.WinRate.ToString("N0")%)</div>
-                    </div>
-                    <div class="tl-user-kpi-card">
-                        <div class="tl-user-kpi-icon gold">
-                            <MudIcon Icon="@Icons.Material.Rounded.ReceiptLong" Size="Size.Small" />
+                        <div class="tl-user-kpi-card">
+                            <div class="tl-user-kpi-icon gold">
+                                <MudIcon Icon="@Icons.Material.Rounded.ReceiptLong" Size="Size.Small" />
+                            </div>
+                            <div class="tl-user-kpi-value">@_userKpi.InvoicesClosedThisMonth</div>
+                            <div class="tl-user-kpi-label">Invoices Closed</div>
+                            <div class="tl-user-kpi-sub">@Fmt(_userKpi.InvoiceValueThisMonth)</div>
                         </div>
-                        <div class="tl-user-kpi-value">@_userKpi.InvoicesClosedThisMonth</div>
-                        <div class="tl-user-kpi-label">Invoices Closed</div>
-                        <div class="tl-user-kpi-sub">@Fmt(_userKpi.InvoiceValueThisMonth)</div>
-                    </div>
-                    <div class="tl-user-kpi-card">
-                        <div class="tl-user-kpi-icon success">
-                            <MudIcon Icon="@Icons.Material.Rounded.TrendingUp" Size="Size.Small" />
+                        <div class="tl-user-kpi-card">
+                            <div class="tl-user-kpi-icon success">
+                                <MudIcon Icon="@Icons.Material.Rounded.TrendingUp" Size="Size.Small" />
+                            </div>
+                            <div class="tl-user-kpi-value">@Fmt(_userKpi.YtdRevenue)</div>
+                            <div class="tl-user-kpi-label">YTD Revenue</div>
+                            <div class="tl-user-kpi-sub">Rank #@_userKpi.Rank in team</div>
                         </div>
-                        <div class="tl-user-kpi-value">@Fmt(_userKpi.YtdRevenue)</div>
-                        <div class="tl-user-kpi-label">YTD Revenue</div>
-                        <div class="tl-user-kpi-sub">Rank #@_userKpi.Rank in team</div>
-                    </div>
-                    <div class="tl-user-kpi-card">
-                        <div class="tl-user-kpi-icon info">
-                            <MudIcon Icon="@Icons.Material.Rounded.AccessTime" Size="Size.Small" />
+                    }
+                    @if (_userKpi != null)
+                    {
+                        <div class="tl-user-kpi-card">
+                            <div class="tl-user-kpi-icon info">
+                                <MudIcon Icon="@Icons.Material.Rounded.AccessTime" Size="Size.Small" />
+                            </div>
+                            <div class="tl-user-kpi-value">@_userKpi.PendingQuotes</div>
+                            <div class="tl-user-kpi-label">Pending Quotes</div>
+                            <div class="tl-user-kpi-sub @_userKpi.OverdueQuotes > 5 ? "warning" : "">@_userKpi.OverdueQuotes overdue</div>
                         </div>
-                        <div class="tl-user-kpi-value">@_userKpi.PendingQuotes</div>
-                        <div class="tl-user-kpi-label">Pending Quotes</div>
-                        <div class="tl-user-kpi-sub @_userKpi.OverdueQuotes > 5 ? "warning" : "">@_userKpi.OverdueQuotes overdue</div>
-                    </div>
+                    }
                 </div>
             </div>
         </MudItem>
