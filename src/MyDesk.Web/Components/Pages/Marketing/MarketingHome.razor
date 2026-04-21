@@ -1,0 +1,127 @@
+@page "/marketing/assets"
+@attribute [Authorize]
+@inject MarketingService Marketing
+
+<PageTitle>Marketing Assets - DR MyDesk</PageTitle>
+
+@* Defense in depth — already set globally, but explicit on this sensitive page *@
+<HeadContent>
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+</HeadContent>
+
+<div class="tl-page-header">
+    <div>
+        <h1 class="tl-page-title">
+            <MudIcon Icon="@Icons.Material.Rounded.Campaign" Class="mr-2" />
+            @Marketing.CompanyName — Marketing Assets
+        </h1>
+        <div class="tl-page-sub">
+            Brand identity, corporate documents and stationery.
+            <span class="tl-confidential"><MudIcon Icon="@Icons.Material.Rounded.Lock" Size="Size.Small" /> Confidential — not indexed by search engines</span>
+        </div>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Rounded.Language"
+               Href="@Marketing.WebsiteUrl" Target="_blank" rel="noopener noreferrer">
+        Visit @Marketing.CompanyName Website
+    </MudButton>
+</div>
+
+@{
+    var assets  = Marketing.GetAssets();
+    var grouped = assets.GroupBy(a => a.Category).OrderBy(g => CategoryOrder(g.Key));
+}
+
+@foreach (var group in grouped)
+{
+    <div class="tl-marketing-section">
+        <h2 class="tl-marketing-section-title">
+            <MudIcon Icon="@CategoryIcon(group.Key)" />
+            @group.Key
+        </h2>
+
+        <MudGrid Spacing="3">
+            @foreach (var a in group)
+            {
+                <MudItem xs="12" sm="6" md="4">
+                    <div class="tl-asset-card">
+                        @if (!string.IsNullOrEmpty(a.PreviewUrl))
+                        {
+                            <div class="tl-asset-preview">
+                                <img src="@a.PreviewUrl" alt="@a.Title" loading="lazy" />
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="tl-asset-preview placeholder">
+                                <MudIcon Icon="@IconFor(a.Icon)" Size="Size.Large" />
+                            </div>
+                        }
+
+                        <div class="tl-asset-body">
+                            <div class="tl-asset-title">@a.Title</div>
+                            <div class="tl-asset-desc">@a.Description</div>
+
+                            <div class="tl-asset-files">
+                                @foreach (var f in a.Files)
+                                {
+                                    <a class="tl-asset-file"
+                                       href="@($"/api/marketing/download/{a.Key}/{Uri.EscapeDataString(f.Label)}")"
+                                       download
+                                       rel="noopener noreferrer">
+                                        <MudIcon Icon="@FileIcon(f.Extension)" Size="Size.Small" />
+                                        <span class="tl-asset-file-label">@f.Label</span>
+                                        <span class="tl-asset-file-ext">@f.Extension</span>
+                                        <span class="tl-asset-file-size">@f.FormattedSize</span>
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </MudItem>
+            }
+        </MudGrid>
+    </div>
+}
+
+@code {
+    private static int CategoryOrder(string cat) => cat switch
+    {
+        "Brand Identity"    => 1,
+        "Brand Guidelines"  => 2,
+        "Corporate"         => 3,
+        "Stationery"        => 4,
+        _                   => 99
+    };
+
+    private static string CategoryIcon(string cat) => cat switch
+    {
+        "Brand Identity"    => Icons.Material.Rounded.Brush,
+        "Brand Guidelines"  => Icons.Material.Rounded.MenuBook,
+        "Corporate"         => Icons.Material.Rounded.Business,
+        "Stationery"        => Icons.Material.Rounded.ContactMail,
+        _                   => Icons.Material.Rounded.Folder
+    };
+
+    private static string FileIcon(string ext) => ext.ToUpperInvariant() switch
+    {
+        "PDF"         => Icons.Material.Rounded.PictureAsPdf,
+        "DOC" or "DOCX" => Icons.Material.Rounded.Description,
+        "SVG"         => Icons.Material.Rounded.Code,
+        "PNG" or "JPG" or "JPEG" => Icons.Material.Rounded.Image,
+        "HTML"        => Icons.Material.Rounded.Language,
+        _             => Icons.Material.Rounded.InsertDriveFile
+    };
+
+    private static string IconFor(string name) => name switch
+    {
+        "MenuBook"   => Icons.Material.Rounded.MenuBook,
+        "Article"    => Icons.Material.Rounded.Article,
+        "Language"   => Icons.Material.Rounded.Language,
+        "Assignment" => Icons.Material.Rounded.Assignment,
+        "Email"      => Icons.Material.Rounded.Email,
+        "Bookmarks"  => Icons.Material.Rounded.Bookmarks,
+        "Adjust"     => Icons.Material.Rounded.Adjust,
+        _            => Icons.Material.Rounded.InsertDriveFile
+    };
+}

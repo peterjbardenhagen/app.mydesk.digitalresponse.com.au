@@ -1,0 +1,922 @@
+@using MyDesk.Shared.Models
+@inject IDialogService DialogService
+
+<div class="tl-dashboard-carousel">
+    <div class="tl-carousel-header">
+        <div class="tl-carousel-title-section">
+            <div class="tl-carousel-icon">
+                <MudIcon Icon="@CurrentView.Icon" Size="Size.Medium" />
+            </div>
+            <div>
+                <MudText Typo="Typo.h6" Class="tl-carousel-title">@CurrentView.Title</MudText>
+                <MudText Typo="Typo.body2" Class="tl-carousel-subtitle">@CurrentView.Subtitle</MudText>
+            </div>
+        </div>
+        
+        <div class="tl-carousel-controls">
+            <MudButtonGroup Variant="Variant.Outlined" Size="Size.Small">
+                <MudButton OnClick="PreviousView" StartIcon="@Icons.Material.Rounded.ChevronLeft">
+                    Prev
+                </MudButton>
+                <MudButton OnClick="NextView" EndIcon="@Icons.Material.Rounded.ChevronRight">
+                    Next
+                </MudButton>
+            </MudButtonGroup>
+            
+            <div class="tl-carousel-indicators">
+                @for (int i = 0; i < Views.Count; i++)
+                {
+                    var index = i;
+                    <button class="tl-carousel-dot @(i == CurrentIndex ? "active" : "")" 
+                            @onclick="() => GoToView(index)"></button>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="tl-carousel-content">
+        @switch (CurrentView.Id)
+        {
+            case "revenue-trends":
+                @RevenueTrendsView
+                break;
+            case "profit-analysis":
+                @ProfitAnalysisView
+                break;
+            case "conversion-funnel":
+                @ConversionFunnelView
+                break;
+            case "team-leaderboard":
+                @TeamLeaderboardView
+                break;
+            case "health-score":
+                @HealthScoreView
+                break;
+            case "comparative":
+                @ComparativeView
+                break;
+            case "targets":
+                <TargetsView />
+                break;
+            case "customer-intel":
+                <CustomerIntelligenceView />
+                break;
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public DashboardMetrics? Metrics { get; set; }
+    [Parameter] public bool IsDirector { get; set; }
+    [Parameter] public string? UserCode { get; set; }
+
+    private int CurrentIndex { get; set; } = 0;
+
+    private List<CarouselView> Views { get; set; } = new();
+
+    private CarouselView CurrentView => Views[CurrentIndex];
+
+    protected override void OnInitialized()
+    {
+        Views = new List<CarouselView>
+        {
+            new()
+            {
+                Id = "targets",
+                Title = "Performance Targets",
+                Subtitle = "Monthly, quarterly & yearly targets — Company, Team & Individuals",
+                Icon = Icons.Material.Rounded.TrackChanges,
+                DirectorOnly = true
+            },
+            new()
+            {
+                Id = "customer-intel",
+                Title = "Customer Intelligence",
+                Subtitle = "Best, worst, at-risk & growing customers",
+                Icon = Icons.Material.Rounded.Diversity3,
+                DirectorOnly = true
+            },
+            new()
+            {
+                Id = "revenue-trends",
+                Title = "Revenue Trends",
+                Subtitle = "Monthly performance across quotes, invoices & POs",
+                Icon = Icons.Material.Rounded.TrendingUp
+            },
+            new()
+            {
+                Id = "profit-analysis",
+                Title = "Profit Analysis",
+                Subtitle = "Gross margins, average values & profitability",
+                Icon = Icons.Material.Rounded.Analytics
+            },
+            new()
+            {
+                Id = "conversion-funnel",
+                Title = "Conversion Funnel",
+                Subtitle = "Quote to invoice pipeline & win rates",
+                Icon = Icons.Material.Rounded.FilterAlt
+            },
+            new()
+            {
+                Id = "team-leaderboard",
+                Title = "Team Leadership Board",
+                Subtitle = "Individual & team performance rankings",
+                Icon = Icons.Material.Rounded.EmojiEvents
+            },
+            new()
+            {
+                Id = "health-score",
+                Title = "Business Health",
+                Subtitle = "Overall score, warnings & recommendations",
+                Icon = Icons.Material.Rounded.HealthAndSafety
+            },
+            new()
+            {
+                Id = "comparative",
+                Title = "Comparative Analysis",
+                Subtitle = "Year-over-year & month-over-month insights",
+                Icon = Icons.Material.Rounded.CompareArrows
+            }
+        };
+
+        // Filter views based on role — Directors/Admins get extra executive views
+        if (!IsDirector)
+        {
+            Views = Views.Where(v => !v.DirectorOnly && v.Id != "team-leaderboard").ToList();
+        }
+    }
+
+    private void NextView()
+    {
+        CurrentIndex = (CurrentIndex + 1) % Views.Count;
+        StateHasChanged();
+    }
+
+    private void PreviousView()
+    {
+        CurrentIndex = (CurrentIndex - 1 + Views.Count) % Views.Count;
+        StateHasChanged();
+    }
+
+    private void GoToView(int index)
+    {
+        CurrentIndex = index;
+        StateHasChanged();
+    }
+
+    private class CarouselView
+    {
+        public string Id { get; set; } = "";
+        public string Title { get; set; } = "";
+        public string Subtitle { get; set; } = "";
+        public string Icon { get; set; } = "";
+        public bool DirectorOnly { get; set; }
+    }
+
+    private RenderFragment RevenueTrendsView => __builder => {
+        if (Metrics != null) {
+    <div class="tl-view-content">
+        <MudGrid Spacing="3">
+            <MudItem xs="12" md="8">
+                <MudPaper Class="pa-4" Elevation="0" Style="background: var(--gray-50); border-radius: 12px;">
+                    <MudChart ChartType="ChartType.Line" 
+                              ChartSeries="@GetRevenueSeries()" 
+                              XAxisLabels="@GetMonthLabels()"
+                              Width="100%" Height="300px"
+                              ChartOptions="@RevenueChartOptions" />
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <div class="tl-kpi-mini-grid">
+                    <div class="tl-kpi-mini-card teal">
+                        <div class="tl-kpi-mini-value">@Fmt(Metrics.ThisMonthQuotesValue)</div>
+                        <div class="tl-kpi-mini-label">Quotes (MTD)</div>
+                        <div class="tl-kpi-mini-delta @GetDeltaClass(Metrics.ThisMonthVsLastMonthPercent)">
+                            @Metrics.ThisMonthVsLastMonthPercent.ToString("+#;-#;0")% vs last month
+                        </div>
+                    </div>
+                    <div class="tl-kpi-mini-card gold">
+                        <div class="tl-kpi-mini-value">@Fmt(Metrics.ThisMonthInvoiceValue)</div>
+                        <div class="tl-kpi-mini-label">Invoices (MTD)</div>
+                        <div class="tl-kpi-mini-delta @GetDeltaClass(Metrics.ThisMonthVsLastYearPercent)">
+                            @Metrics.ThisMonthVsLastYearPercent.ToString("+#;-#;0")% vs last year
+                        </div>
+                    </div>
+                    <div class="tl-kpi-mini-card dark">
+                        <div class="tl-kpi-mini-value">@Fmt(Metrics.ProjectedMonthlyRevenue)</div>
+                        <div class="tl-kpi-mini-label">Projected (EO Month)</div>
+                        <div class="tl-kpi-mini-delta neutral">
+                            Based on pipeline
+                        </div>
+                    </div>
+                </div>
+            </MudItem>
+        </MudGrid>
+    </div>
+        }
+    };
+
+    private RenderFragment ProfitAnalysisView => __builder => {
+        if (Metrics != null) {
+    <div class="tl-view-content">
+        <MudGrid Spacing="3">
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4" Elevation="0" Style="background: var(--gray-50); border-radius: 12px;">
+                    <div class="tl-profit-ring">
+                        <div class="tl-profit-ring-inner">
+                            <div class="tl-profit-value">@(Metrics.GrossProfitMargin == 0 && Metrics.ThisMonthQuotesValue == 0 ? "-.-%" : $"{Metrics.GrossProfitMargin:N1}%")</div>
+                            <div class="tl-profit-label">Gross Profit Margin</div>
+                        </div>
+                        <svg class="tl-profit-svg" viewBox="0 0 100 100">
+                            <circle class="tl-profit-track" cx="50" cy="50" r="45"/>
+                            <circle class="tl-profit-progress" cx="50" cy="50" r="45" 
+                                    style="stroke-dasharray: @GetCircleCircumference().ToString("F2"); 
+                                           stroke-dashoffset: @GetCircleOffset(Metrics?.GrossProfitMargin ?? 0).ToString("F2")"/>
+                        </svg>
+                    </div>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <div class="tl-profit-metrics">
+                    <div class="tl-profit-metric">
+                        <div class="tl-profit-metric-icon teal">
+                            <MudIcon Icon="@Icons.Material.Rounded.RequestQuote" Size="Size.Small" />
+                        </div>
+                        <div class="tl-profit-metric-info">
+                            <div class="tl-profit-metric-value">@Fmt(Metrics.AverageQuoteValue)</div>
+                            <div class="tl-profit-metric-label">Average Quote Value</div>
+                        </div>
+                    </div>
+                    <div class="tl-profit-metric">
+                        <div class="tl-profit-metric-icon gold">
+                            <MudIcon Icon="@Icons.Material.Rounded.ReceiptLong" Size="Size.Small" />
+                        </div>
+                        <div class="tl-profit-metric-info">
+                            <div class="tl-profit-metric-value">@Fmt(Metrics.AverageInvoiceValue)</div>
+                            <div class="tl-profit-metric-label">Average Invoice Value</div>
+                        </div>
+                    </div>
+                    <div class="tl-profit-metric">
+                        <div class="tl-profit-metric-icon success">
+                            <MudIcon Icon="@Icons.Material.Rounded.SyncAlt" Size="Size.Small" />
+                        </div>
+                        <div class="tl-profit-metric-info">
+                            <div class="tl-profit-metric-value">@Metrics.QuoteToInvoiceConversionRate.ToString("N1")%</div>
+                            <div class="tl-profit-metric-label">Quote→Invoice Conversion</div>
+                        </div>
+                    </div>
+                </div>
+            </MudItem>
+        </MudGrid>
+    </div>
+        }
+    };
+
+    private RenderFragment ConversionFunnelView => __builder => {
+        if (Metrics != null) {
+    <div class="tl-view-content">
+        <div class="tl-funnel-container">
+            <div class="tl-funnel-stage">
+                <div class="tl-funnel-bar" style="width: 100%; background: linear-gradient(90deg, var(--tl-primary-500), var(--tl-primary-400));">
+                    <span class="tl-funnel-bar-label">Open Quotes</span>
+                    <span class="tl-funnel-bar-value">@Metrics.OpenQuotesCount</span>
+                </div>
+                <div class="tl-funnel-connector"></div>
+            </div>
+            <div class="tl-funnel-stage">
+                <div class="tl-funnel-bar" style="width: 85%; background: linear-gradient(90deg, var(--tl-primary-400), var(--tl-primary-300));">
+                    <span class="tl-funnel-bar-label">Pending Approval</span>
+                    <span class="tl-funnel-bar-value">@Metrics.PendingApprovalPOs</span>
+                </div>
+                <div class="tl-funnel-connector"></div>
+            </div>
+            <div class="tl-funnel-stage">
+                <div class="tl-funnel-bar" style="width: 60%; background: linear-gradient(90deg, var(--tl-accent), var(--tl-accent-light));">
+                    <span class="tl-funnel-bar-label">Quotes Won (MTD)</span>
+                    <span class="tl-funnel-bar-value">@Metrics.ThisMonthQuotesWon</span>
+                </div>
+                <div class="tl-funnel-connector"></div>
+            </div>
+            <div class="tl-funnel-stage">
+                <div class="tl-funnel-bar" style="width: 45%; background: linear-gradient(90deg, var(--success-500), var(--success-400));">
+                    <span class="tl-funnel-bar-label">Invoices Closed (MTD)</span>
+                    <span class="tl-funnel-bar-value">@Metrics.ThisMonthInvoices</span>
+                </div>
+            </div>
+        </div>
+        <div class="tl-funnel-pipeline">
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mt-4">
+                <div class="d-flex align-center gap-2">
+                    <MudIcon Icon="@Icons.Material.Rounded.AccountBalanceWallet" Size="Size.Small" />
+                    <span>Pipeline Value: <strong>@Fmt(Metrics.PipelineValue)</strong> in open quotes</span>
+                </div>
+            </MudAlert>
+        </div>
+    </div>
+        }
+    };
+
+    private RenderFragment TeamLeaderboardView => __builder => {
+        if (Metrics?.TeamMemberKPIs != null && IsDirector) {
+    <div class="tl-view-content">
+        <MudTable Items="@Metrics.TeamMemberKPIs.OrderBy(k => k.Rank).Take(5)" Dense="true" Hover="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>Rank</MudTh>
+                <MudTh>Team Member</MudTh>
+                <MudTh Style="text-align: right;">Quotes</MudTh>
+                <MudTh Style="text-align: right;">Invoices</MudTh>
+                <MudTh Style="text-align: right;">Revenue (MTD)</MudTh>
+                <MudTh Style="text-align: right;">Win Rate</MudTh>
+                <MudTh>Status</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    @if (context.Rank <= 3)
+                    {
+                        <span class="tl-rank-badge tl-rank-@context.Rank">#@context.Rank</span>
+                    }
+                    else
+                    {
+                        <span class="tl-rank-badge">#@context.Rank</span>
+                    }
+                </MudTd>
+                <MudTd>
+                    <div class="d-flex align-center gap-2">
+                        <MudAvatar Size="Size.Small" Color="Color.Primary">@GetInitials(context.UserName)</MudAvatar>
+                        <span>@context.UserName</span>
+                        @if (context.IsDirector)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Text">Director</MudChip>
+                        }
+                    </div>
+                </MudTd>
+                <MudTd Style="text-align: right;">@context.QuotesRaisedThisMonth</MudTd>
+                <MudTd Style="text-align: right;">@context.InvoicesClosedThisMonth</MudTd>
+                <MudTd Style="text-align: right;">@Fmt(context.InvoiceValueThisMonth)</MudTd>
+                <MudTd Style="text-align: right;">@context.WinRate.ToString("N1")%</MudTd>
+                <MudTd>
+                    <MudIcon Icon="@GetTrendIcon(context.PerformanceTrend)" 
+                             Color="@GetTrendColor(context.PerformanceTrend)" 
+                             Size="Size.Small" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </div>
+        }
+    };
+
+    private RenderFragment HealthScoreView => __builder => {
+        if (Metrics != null) {
+    <div class="tl-view-content">
+        <MudGrid Spacing="3">
+            <MudItem xs="12" md="4">
+                <div class="tl-health-score-card @GetHealthScoreClass(Metrics.OverallHealthScore)">
+                    <div class="tl-health-score-value">@Metrics.OverallHealthScore</div>
+                    <div class="tl-health-score-label">Overall Health</div>
+                    <div class="tl-health-score-status">@GetHealthStatus(Metrics.OverallHealthScore)</div>
+                </div>
+            </MudItem>
+            <MudItem xs="12" md="8">
+                @if (Metrics.Warnings?.Any() == true)
+                {
+                    <div class="tl-warnings-list">
+                        @foreach (var warning in Metrics.Warnings.Take(3))
+                        {
+                            <div class="tl-warning-item @warning.Severity">
+                                <div class="tl-warning-icon">
+                                    <MudIcon Icon="@(warning.Severity == "critical" ? Icons.Material.Rounded.Error : Icons.Material.Rounded.Warning)" 
+                                             Size="Size.Small" />
+                                </div>
+                                <div class="tl-warning-content">
+                                    <div class="tl-warning-title">@warning.Title</div>
+                                    <div class="tl-warning-desc">@warning.Description</div>
+                                </div>
+                                <MudButton Href="@warning.ActionLink" 
+                                           Size="Size.Small" 
+                                           Variant="Variant.Text"
+                                           Color="Color.Primary">View</MudButton>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="tl-no-warnings">
+                        <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Large" />
+                        <div>All systems healthy</div>
+                    </div>
+                }
+            </MudItem>
+        </MudGrid>
+        
+        @if (Metrics.Recommendations?.Any() == true)
+        {
+            <div class="tl-recommendations mt-4">
+                <MudText Typo="Typo.subtitle2" Class="mb-3">Recommendations</MudText>
+                <MudChipSet T="string">
+                    @foreach (var rec in Metrics.Recommendations.Take(4))
+                    {
+                        <MudChip T="string" Color="Color.Info" Variant="Variant.Text">
+                            <MudIcon Icon="@Icons.Material.Rounded.Lightbulb" Size="Size.Small" Class="mr-1" />
+                            @rec.Title
+                        </MudChip>
+                    }
+                </MudChipSet>
+            </div>
+        }
+    </div>
+        }
+    };
+
+    private RenderFragment ComparativeView => __builder => {
+        if (Metrics != null) {
+    <div class="tl-view-content">
+        <MudGrid Spacing="3">
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.subtitle2" Class="mb-3">This Year vs Last Year</MudText>
+                <MudChart ChartType="ChartType.Bar" 
+                          ChartSeries="@GetComparisonSeries()" 
+                          XAxisLabels="@GetMonthLabels()"
+                          Width="100%" Height="250px"
+                          ChartOptions="@ComparisonChartOptions" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.subtitle2" Class="mb-3">Target vs Actual</MudText>
+                <div class="tl-target-comparison">
+                    @for (int i = 0; i < 12; i++)
+                    {
+                        var target = Metrics.TargetMonthlyRevenue[i];
+                        var actual = Metrics.MonthlyInvoicesThisYear[i];
+                        var percent = target > 0 ? (actual / target * 100) : 0;
+                        var month = new DateTime(DateTime.Now.Year, i + 1, 1).ToString("MMM");
+                        <div class="tl-target-row">
+                            <div class="tl-target-month">@month</div>
+                            <div class="tl-target-bar-container">
+                                <div class="tl-target-bar-bg"></div>
+                                <div class="tl-target-bar-fill" style="width: @Math.Min(percent, 100)%"></div>
+                            </div>
+                            <div class="tl-target-percent @(percent >= 100 ? "success" : percent >= 80 ? "warning" : "error")">
+                                @percent.ToString("N0")%
+                            </div>
+                        </div>
+                    }
+                </div>
+            </MudItem>
+        </MudGrid>
+    </div>
+        }
+    };
+}
+
+<style>
+    /* Carousel Container */
+    .tl-dashboard-carousel {
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .tl-carousel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--gray-200);
+        background: linear-gradient(135deg, var(--gray-50) 0%, white 100%);
+    }
+    
+    .tl-carousel-title-section {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    
+    .tl-carousel-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, var(--tl-primary-500) 0%, var(--tl-primary-600) 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+    }
+    
+    .tl-carousel-title {
+        font-weight: 700 !important;
+        color: var(--gray-900) !important;
+    }
+    
+    .tl-carousel-subtitle {
+        color: var(--gray-500) !important;
+    }
+    
+    .tl-carousel-controls {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    
+    .tl-carousel-indicators {
+        display: flex;
+        gap: 6px;
+    }
+    
+    .tl-carousel-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        border: none;
+        background: var(--gray-300);
+        cursor: pointer;
+        transition: all 200ms ease;
+    }
+    
+    .tl-carousel-dot.active {
+        background: var(--tl-primary-500);
+        width: 24px;
+        border-radius: 4px;
+    }
+    
+    .tl-carousel-content {
+        padding: 24px;
+    }
+    
+    /* KPI Mini Cards */
+    .tl-kpi-mini-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .tl-kpi-mini-card {
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid var(--gray-200);
+    }
+    
+    .tl-kpi-mini-card.teal {
+        background: linear-gradient(135deg, var(--tl-primary-50) 0%, white 100%);
+        border-color: var(--tl-primary-200);
+    }
+    
+    .tl-kpi-mini-card.gold {
+        background: linear-gradient(135deg, rgba(204, 160, 90, 0.1) 0%, white 100%);
+        border-color: var(--tl-accent);
+    }
+    
+    .tl-kpi-mini-card.dark {
+        background: linear-gradient(135deg, var(--tl-dark-3) 0%, var(--tl-dark-2) 100%);
+        border-color: var(--tl-dark);
+        color: white;
+    }
+    
+    .tl-kpi-mini-value {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 4px;
+    }
+    
+    .tl-kpi-mini-label {
+        font-size: 12px;
+        color: var(--gray-500);
+        margin-bottom: 8px;
+    }
+    
+    .tl-kpi-mini-delta {
+        font-size: 12px;
+        font-weight: 500;
+    }
+    
+    .tl-kpi-mini-delta.positive { color: var(--success-500); }
+    .tl-kpi-mini-delta.negative { color: var(--error-500); }
+    .tl-kpi-mini-delta.neutral { color: var(--gray-400); }
+    
+    /* Profit Ring */
+    .tl-profit-ring {
+        position: relative;
+        width: 200px;
+        height: 200px;
+        margin: 0 auto;
+    }
+    
+    .tl-profit-ring-inner {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .tl-profit-value {
+        font-size: 36px;
+        font-weight: 700;
+        color: var(--tl-primary-600);
+    }
+    
+    .tl-profit-label {
+        font-size: 12px;
+        color: var(--gray-500);
+    }
+    
+    .tl-profit-svg {
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+    }
+    
+    .tl-profit-track {
+        fill: none;
+        stroke: var(--gray-200);
+        stroke-width: 8;
+    }
+    
+    .tl-profit-progress {
+        fill: none;
+        stroke: var(--tl-primary-500);
+        stroke-width: 8;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 1s ease;
+    }
+    
+    /* Profit Metrics */
+    .tl-profit-metrics {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .tl-profit-metric {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px;
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: 12px;
+    }
+    
+    .tl-profit-metric-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+    }
+    
+    .tl-profit-metric-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--gray-900);
+    }
+    
+    .tl-profit-metric-label {
+        font-size: 12px;
+        color: var(--gray-500);
+    }
+    
+    /* Funnel */
+    .tl-funnel-container {
+        padding: 20px;
+    }
+    
+    .tl-funnel-stage {
+        margin-bottom: 8px;
+    }
+    
+    .tl-funnel-bar {
+        height: 48px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        color: white;
+        font-weight: 500;
+        transition: all 300ms ease;
+    }
+    
+    .tl-funnel-bar:hover {
+        transform: translateX(4px);
+    }
+    
+    .tl-funnel-connector {
+        width: 2px;
+        height: 16px;
+        background: var(--gray-300);
+        margin-left: 24px;
+    }
+    
+    /* Rank Badges */
+    .tl-rank-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        background: var(--gray-100);
+        color: var(--gray-600);
+    }
+    
+    .tl-rank-1 {
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        color: white;
+    }
+    
+    .tl-rank-2 {
+        background: linear-gradient(135deg, #C0C0C0 0%, #A0A0A0 100%);
+        color: white;
+    }
+    
+    .tl-rank-3 {
+        background: linear-gradient(135deg, #CD7F32 0%, #B87333 100%);
+        color: white;
+    }
+    
+    /* Health Score */
+    .tl-health-score-card {
+        padding: 30px;
+        border-radius: 16px;
+        text-align: center;
+    }
+    
+    .tl-health-score-card.excellent {
+        background: linear-gradient(135deg, var(--success-50) 0%, white 100%);
+        border: 2px solid var(--success-500);
+    }
+    
+    .tl-health-score-card.good {
+        background: linear-gradient(135deg, var(--tl-primary-50) 0%, white 100%);
+        border: 2px solid var(--tl-primary-500);
+    }
+    
+    .tl-health-score-card.warning {
+        background: linear-gradient(135deg, var(--warning-50) 0%, white 100%);
+        border: 2px solid var(--warning-500);
+    }
+    
+    .tl-health-score-card.critical {
+        background: linear-gradient(135deg, var(--error-50) 0%, white 100%);
+        border: 2px solid var(--error-500);
+    }
+    
+    .tl-health-score-value {
+        font-size: 56px;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: 8px;
+    }
+    
+    .tl-health-score-card.excellent .tl-health-score-value { color: var(--success-500); }
+    .tl-health-score-card.good .tl-health-score-value { color: var(--tl-primary-500); }
+    .tl-health-score-card.warning .tl-health-score-value { color: var(--warning-500); }
+    .tl-health-score-card.critical .tl-health-score-value { color: var(--error-500); }
+    
+    /* Target Comparison */
+    .tl-target-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+    }
+    
+    .tl-target-month {
+        width: 40px;
+        font-size: 12px;
+        color: var(--gray-500);
+    }
+    
+    .tl-target-bar-container {
+        flex: 1;
+        height: 8px;
+        background: var(--gray-100);
+        border-radius: 4px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .tl-target-bar-fill {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        background: linear-gradient(90deg, var(--tl-primary-500), var(--tl-accent));
+        border-radius: 4px;
+        transition: width 500ms ease;
+    }
+    
+    .tl-target-percent {
+        width: 50px;
+        font-size: 11px;
+        font-weight: 600;
+        text-align: right;
+    }
+    
+    .tl-target-percent.success { color: var(--success-500); }
+    .tl-target-percent.warning { color: var(--warning-500); }
+    .tl-target-percent.error { color: var(--error-500); }
+</style>
+
+@code {
+    private ChartOptions RevenueChartOptions => new()
+    {
+        ChartPalette = new[] { "#00a8b0", "#cca05a", "#6941c6" },
+        YAxisLines = true,
+        XAxisLines = false,
+        LineStrokeWidth = 3,
+        YAxisFormat = "$#,##0",
+    };
+
+    private ChartOptions ComparisonChartOptions => new()
+    {
+        ChartPalette = new[] { "#00a8b0", "#94a3b8" },
+        YAxisLines = true,
+        XAxisLines = false,
+        YAxisFormat = "$#,##0",
+    };
+
+    private List<ChartSeries> GetRevenueSeries()
+    {
+        if (Metrics == null) return new();
+        return new List<ChartSeries>
+        {
+            new() { Name = "Quotes", Data = Metrics.MonthlyQuotesThisYear.Select(v => (double)v).ToArray() },
+            new() { Name = "Invoices", Data = Metrics.MonthlyInvoicesThisYear.Select(v => (double)v).ToArray() },
+            new() { Name = "POs", Data = Metrics.MonthlyPOsThisYear.Select(v => (double)v).ToArray() },
+        };
+    }
+
+    private List<ChartSeries> GetComparisonSeries()
+    {
+        if (Metrics == null) return new();
+        return new List<ChartSeries>
+        {
+            new() { Name = "This Year", Data = Metrics.MonthlyInvoicesThisYear.Select(v => (double)v).ToArray() },
+            new() { Name = "Last Year", Data = Metrics.LastYearMonthlyRevenue.Select(v => (double)v).ToArray() },
+        };
+    }
+
+    private string[] GetMonthLabels()
+    {
+        return new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+    }
+
+    private static string Fmt(decimal v) => "$" + v.ToString("#,##0");
+
+    private string GetDeltaClass(decimal percent) => percent >= 0 ? "positive" : "negative";
+
+    private double GetCircleCircumference() => 2.0 * Math.PI * 45.0;
+
+    private double GetCircleOffset(decimal grossProfitMargin)
+    {
+        var circumference = GetCircleCircumference();
+        var marginDouble = (double)grossProfitMargin;
+        return circumference * (1.0 - marginDouble / 100.0);
+    }
+
+    private string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return string.Concat(parts.Take(2).Select(p => p[0])).ToUpper();
+    }
+
+    private string GetTrendIcon(string trend) => trend switch
+    {
+        "up" => Icons.Material.Rounded.TrendingUp,
+        "down" => Icons.Material.Rounded.TrendingDown,
+        _ => Icons.Material.Rounded.TrendingFlat
+    };
+
+    private Color GetTrendColor(string trend) => trend switch
+    {
+        "up" => Color.Success,
+        "down" => Color.Error,
+        _ => Color.Default
+    };
+
+    private string GetHealthScoreClass(int score) => score switch
+    {
+        >= 90 => "excellent",
+        >= 70 => "good",
+        >= 50 => "warning",
+        _ => "critical"
+    };
+
+    private string GetHealthStatus(int score) => score switch
+    {
+        >= 90 => "Excellent",
+        >= 70 => "Good",
+        >= 50 => "Needs Attention",
+        _ => "Critical"
+    };
+}

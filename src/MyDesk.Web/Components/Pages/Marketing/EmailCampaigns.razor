@@ -1,0 +1,212 @@
+@page "/marketing/campaigns"
+@attribute [Authorize(Roles = "Director,Administrator,Marketing")]
+@inject MarketingDataService Data
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Email Campaigns - DR MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <MudLink Href="/marketing" Underline="Underline.None">Marketing</MudLink>
+            <MudIcon Icon="@Icons.Material.Rounded.ChevronRight" Size="Size.Small" />
+            <span>Email Campaigns</span>
+        </div>
+        <h1 class="tl-page-title">
+            <MudIcon Icon="@Icons.Material.Rounded.Send" Class="mr-2" Style="color: var(--tl-accent)" />
+            Email Campaigns
+        </h1>
+        <div class="tl-page-sub">Compose and send tailored campaigns to Champions, Top-50, or custom audiences — directly from MyDesk.</div>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add" OnClick="CreateCampaign">
+        New Campaign
+    </MudButton>
+</div>
+
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+}
+else if (_campaigns == null || !_campaigns.Any())
+{
+    <MudCard Elevation="0" Outlined="true" Class="pa-8 text-center">
+        <MudIcon Icon="@Icons.Material.Rounded.MailOutline" Size="Size.Large" Color="Color.Default" Class="mb-4" />
+        <MudText Typo="Typo.h6" Class="mb-2">No campaigns yet</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4">Create your first email campaign to reach your customers.</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add" OnClick="CreateCampaign">
+            Create Campaign
+        </MudButton>
+    </MudCard>
+}
+else
+{
+    <div class="tl-mkt-grid mb-6">
+        <div class="tl-mkt-stat-card">
+            <div class="tl-mkt-stat-label">Total Sent</div>
+            <div class="tl-mkt-stat-value">@_stats.TotalSent.ToString("N0")</div>
+        </div>
+        <div class="tl-mkt-stat-card">
+            <div class="tl-mkt-stat-label">Open Rate</div>
+            <div class="tl-mkt-stat-value">@_stats.AvgOpenRate%</div>
+        </div>
+        <div class="tl-mkt-stat-card">
+            <div class="tl-mkt-stat-label">Click Rate</div>
+            <div class="tl-mkt-stat-value">@_stats.AvgClickRate%</div>
+        </div>
+        <div class="tl-mkt-stat-card">
+            <div class="tl-mkt-stat-label">Active Campaigns</div>
+            <div class="tl-mkt-stat-value">@_campaigns.Count(c => c.Status == "Draft" || c.Status == "Scheduled")</div>
+        </div>
+    </div>
+
+    <MudCard Elevation="0" Outlined="true">
+        <MudCardContent Class="pa-0">
+            <MudTable Items="_campaigns" Dense="true" Hover="true" Striped="true">
+                <HeaderContent>
+                    <MudTh>Campaign</MudTh>
+                    <MudTh>Audience</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Sent</MudTh>
+                    <MudTh>Open Rate</MudTh>
+                    <MudTh>Click Rate</MudTh>
+                    <MudTh>Sent Date</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <div class="d-flex flex-column">
+                            <span style="font-weight: 600;">@context.Name</span>
+                            <span style="font-size: 12px; color: var(--gray-500);">@context.Subject</span>
+                        </div>
+                    </MudTd>
+                    <MudTd>
+                        <span class="tl-mkt-segment-chip @GetAudienceClass(context.Audience)">@context.Audience</span>
+                    </MudTd>
+                    <MudTd>
+                        <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
+                    </MudTd>
+                    <MudTd>@context.SentCount</MudTd>
+                    <MudTd>@context.OpenRate%</MudTd>
+                    <MudTd>@context.ClickRate%</MudTd>
+                    <MudTd>@(context.SentAt?.ToString("dd MMM yyyy") ?? "—")</MudTd>
+                    <MudTd>
+                        @if (context.Status == "Draft")
+                        {
+                            <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" OnClick="() => EditCampaign(context)" />
+                            <MudIconButton Icon="@Icons.Material.Rounded.Send" Size="Size.Small" Color="Color.Primary" OnClick="() => SendCampaign(context)" />
+                        }
+                        else if (context.Status == "Scheduled")
+                        {
+                            <MudIconButton Icon="@Icons.Material.Rounded.Cancel" Size="Size.Small" Color="Color.Error" OnClick="() => CancelCampaign(context)" />
+                        }
+                        else
+                        {
+                            <MudIconButton Icon="@Icons.Material.Rounded.Visibility" Size="Size.Small" OnClick="() => ViewCampaign(context)" />
+                        }
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudCardContent>
+    </MudCard>
+}
+
+@code {
+    private List<EmailCampaign>? _campaigns;
+    private CampaignStats _stats = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _campaigns = await Data.GetCampaignsAsync();
+            _stats = await Data.GetCampaignStatsAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading campaigns: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private string GetAudienceClass(string audience) => audience?.ToLower() switch
+    {
+        "champions" => "champion",
+        "top-50" => "strategic",
+        "all customers" => "loyal",
+        "at-risk" => "at-risk",
+        _ => ""
+    };
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Sent" => Color.Success,
+        "Scheduled" => Color.Info,
+        "Draft" => Color.Default,
+        "Sending" => Color.Warning,
+        _ => Color.Default
+    };
+
+    private async Task CreateCampaign()
+    {
+        var parameters = new DialogParameters { ["AudienceOptions"] = new[] { "Champions", "Top-50", "All Customers", "At-Risk", "Custom Segment" } };
+        var dialog = await Dialogs.ShowAsync<CampaignEditorDialog>("New Campaign", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is EmailCampaign campaign)
+        {
+            Snackbar.Add("Campaign created", Severity.Success);
+            _campaigns = await Data.GetCampaignsAsync();
+        }
+    }
+
+    private async Task EditCampaign(EmailCampaign campaign)
+    {
+        var parameters = new DialogParameters { ["Campaign"] = campaign };
+        var dialog = await Dialogs.ShowAsync<CampaignEditorDialog>("Edit Campaign", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            Snackbar.Add("Campaign updated", Severity.Success);
+            _campaigns = await Data.GetCampaignsAsync();
+        }
+    }
+
+    private async Task SendCampaign(EmailCampaign campaign)
+    {
+        if (await Dialogs.ShowMessageBox("Send Campaign?", $"Send \"{campaign.Name}\" to {campaign.RecipientCount} recipients?", yesText: "Send", noText: "Cancel") == true)
+        {
+            try
+            {
+                await Data.SendCampaignAsync(campaign.Id);
+                Snackbar.Add("Campaign sent", Severity.Success);
+                _campaigns = await Data.GetCampaignsAsync();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Failed to send: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task CancelCampaign(EmailCampaign campaign)
+    {
+        if (await Dialogs.ShowMessageBox("Cancel Campaign?", "Stop this scheduled campaign?", yesText: "Cancel Campaign", noText: "Keep") == true)
+        {
+            await Data.CancelCampaignAsync(campaign.Id);
+            Snackbar.Add("Campaign cancelled", Severity.Success);
+            _campaigns = await Data.GetCampaignsAsync();
+        }
+    }
+
+    private void ViewCampaign(EmailCampaign campaign)
+    {
+        // Show campaign details / report
+    }
+}

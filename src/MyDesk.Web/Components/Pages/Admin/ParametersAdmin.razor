@@ -1,0 +1,106 @@
+@page "/admin/parameters"
+@attribute [Authorize]
+@inject SystemService Svc
+@inject ISnackbar Snackbar
+
+<PageTitle>System Parameters - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/admin/setup">Admin</a><span class="sep">/</span>
+            <span style="color:var(--gray-700);font-weight:500;">Parameters</span>
+        </div>
+        <h1>System Parameters</h1>
+        <p class="tl-subtitle">Global system settings.</p>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (_params == null)
+{
+    <MudPaper Class="pa-6" Elevation="1">
+        <MudText>No parameters configured.</MudText>
+        <MudButton Class="mt-4" Variant="Variant.Filled" Color="Color.Primary"
+                   OnClick="InitDefaults">Initialize Defaults</MudButton>
+    </MudPaper>
+}
+else
+{
+    <MudPaper Class="pa-6" Style="max-width:540px;" Elevation="1">
+        <MudGrid Spacing="3">
+            <MudItem xs="12">
+                <MudDatePicker @bind-Date="_uploadFrom" Label="Upload From Date"
+                               Variant="Variant.Outlined" Editable="true" />
+                <MudText Typo="Typo.caption" Class="mt-1" Style="color:var(--gray-500);">
+                    Legacy data upload cutoff date.
+                </MudText>
+            </MudItem>
+            <MudItem xs="12">
+                <MudNumericField @bind-Value="_minValue" Label="Minimum Value ($)"
+                                 Variant="Variant.Outlined" Step="100M" Format="N2" />
+                <MudText Typo="Typo.caption" Class="mt-1" Style="color:var(--gray-500);">
+                    Minimum quote/invoice value threshold.
+                </MudText>
+            </MudItem>
+        </MudGrid>
+
+        <div class="d-flex gap-3 mt-6">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Rounded.Save"
+                       OnClick="SaveAsync" Disabled="_saving">
+                @(_saving ? "Saving…" : "Save")
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Href="/admin/setup">Back to Setup</MudButton>
+        </div>
+    </MudPaper>
+}
+
+@code {
+    private SystemParameters? _params;
+    private DateTime? _uploadFrom;
+    private decimal _minValue;
+    private bool _loading = true;
+    private bool _saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _params = await Svc.GetSystemParametersAsync();
+            if (_params != null)
+            {
+                _uploadFrom = _params.UploadFrom;
+                _minValue = _params.MinimumValue;
+            }
+        }
+        catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
+        finally { _loading = false; }
+    }
+
+    private async Task InitDefaults()
+    {
+        _params = new SystemParameters { ParameterId = 0, UploadFrom = DateTime.Today.AddYears(-1), MinimumValue = 0 };
+        _uploadFrom = _params.UploadFrom;
+        _minValue = _params.MinimumValue;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_params == null) return;
+        _saving = true;
+        try
+        {
+            _params.UploadFrom = _uploadFrom;
+            _params.MinimumValue = _minValue;
+            await Svc.SaveSystemParametersAsync(_params);
+            Snackbar.Add("Parameters saved.", Severity.Success);
+        }
+        catch (Exception ex) { Snackbar.Add($"Save failed: {ex.Message}", Severity.Error); }
+        finally { _saving = false; }
+    }
+}
+

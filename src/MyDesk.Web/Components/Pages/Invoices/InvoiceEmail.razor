@@ -1,0 +1,141 @@
+@page "/invoices/{Id:int}/email"
+@attribute [Authorize]
+@inject InvoiceService InvoiceService
+@inject PdfService PdfService
+@inject EmailService EmailService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+@using System.Security.Claims
+
+<PageTitle>Email Invoice @Id - Techlight MyDesk</PageTitle>
+
+@if (_inv == null)
+{
+    <MudProgressCircular Indeterminate="true" Class="mx-auto my-8 d-block" />
+}
+else
+{
+    <div class="tl-page-header">
+        <div>
+            <div class="tl-breadcrumb">
+                <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+                <a href="/invoices">Invoices</a><span class="sep">/</span>
+                <a href="@($"/invoices/{Id}")">Invoice @_inv.InvoiceNum</a><span class="sep">/</span>
+                <span>Email</span>
+            </div>
+            <h1>Email Invoice</h1>
+        </div>
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ArrowBack"
+                   Href="@($"/invoices/{Id}")">Cancel</MudButton>
+    </div>
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="8">
+            <MudPaper Class="pa-6" Elevation="1">
+                <MudTextField @bind-Value="_toEmail" Label="To Email *" Required="true"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                              InputType="InputType.Email" />
+                <MudTextField @bind-Value="_ccEmail" Label="CC"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" />
+                <MudTextField @bind-Value="_attention" Label="Attention"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" />
+                <MudTextField @bind-Value="_subject" Label="Subject"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" />
+                <MudTextField @bind-Value="_notes" Label="Notes / Message"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Lines="6" Class="mb-3" />
+
+                <div class="d-flex gap-2 mt-3">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Rounded.Send"
+                               OnClick="SendAsync" Disabled="@_sending">
+                        @(_sending ? "Sending..." : "Send Email")
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Href="@($"/invoices/{Id}")">Cancel</MudButton>
+                </div>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-5" Elevation="1">
+                <MudText Typo="Typo.subtitle2" Class="mb-3"
+                         Style="color:var(--gray-500);text-transform:uppercase;">Invoice Details</MudText>
+                <MudText Typo="Typo.body2"><strong>Invoice #:</strong> @_inv.InvoiceNum</MudText>
+                <MudText Typo="Typo.body2"><strong>Customer:</strong> @_inv.CCompany</MudText>
+                <MudText Typo="Typo.body2"><strong>Amount:</strong> @_inv.TotalIncGST.ToString("C")</MudText>
+                <MudText Typo="Typo.body2"><strong>Status:</strong> @_inv.StatusName</MudText>
+                <MudDivider Class="my-3" />
+                <MudAlert Severity="Severity.Info" Class="mb-0">
+                    PDF will be attached automatically.
+                </MudAlert>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Invoice? _inv;
+    private string _toEmail = "";
+    private string _ccEmail = "";
+    private string _attention = "";
+    private string _subject = "";
+    private string _notes = "";
+    private bool   _sending;
+    private string _userCode = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        _userCode = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+
+        _inv = await InvoiceService.GetInvoiceAsync(Id);
+        if (_inv != null)
+        {
+            _attention = _inv.Attention ?? "";
+            _subject = $"Invoice {_inv.InvoiceNum} from Techlight";
+            _notes = $"Please find attached invoice {_inv.InvoiceNum}.\n\nThank you for your business.";
+        }
+    }
+
+    private async Task SendAsync()
+    {
+        if (_inv == null || string.IsNullOrWhiteSpace(_toEmail)) 
+        {
+            Snackbar.Add("Please enter a recipient email.", Severity.Warning);
+            return;
+        }
+
+        _sending = true;
+        try
+        {
+            var pdfBytes = await PdfService.GenerateInvoicePdfAsync(Id);
+
+            var sent = await EmailService.EmailInvoiceAsync(
+                invoiceId: Id,
+                toEmail: _toEmail,
+                subject: _subject,
+                message: _notes,
+                senderCode: _userCode,
+                pdfBytes: pdfBytes);
+
+            if (!sent) throw new Exception("Email send returned false");
+
+            // Promote status from Draft → Issued
+            if (_inv.InvoiceStatusId == 1)
+            {
+                await InvoiceService.UpdateStatusAsync(Id, 2, _userCode, "Issued");
+            }
+
+            Snackbar.Add($"Email sent to {_toEmail}.", Severity.Success);
+            Nav.NavigateTo($"/invoices/{Id}");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Email failed: {ex.Message}", Severity.Error);
+        }
+        finally { _sending = false; }
+    }
+}
+

@@ -1,0 +1,82 @@
+@inject NavMenuService NavMenuSvc
+
+<MudNavMenu Class="tl-nav pt-4">
+    <div class="tl-nav-section-label">Overview</div>
+    @if (NavMenuSvc.IsVisible("dashboard"))    { <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Rounded.SpaceDashboard">Dashboard</MudNavLink> }
+    @if (NavMenuSvc.IsVisible("ask-ai"))       { <MudNavLink Href="/ask-ai" Icon="@Icons.Material.Rounded.AutoAwesome">Ask AI</MudNavLink> }
+    <MudNavLink Href="/activity" Icon="@Icons.Material.Rounded.History">Recent Activity</MudNavLink>
+
+    @if (NavMenuSvc.IsVisible("quotes") || NavMenuSvc.IsVisible("invoices") || NavMenuSvc.IsVisible("despatch"))
+    {
+        <div class="tl-nav-section-label">Sales</div>
+        @if (NavMenuSvc.IsVisible("quotes"))    { <MudNavLink Href="/quotes" Icon="@Icons.Material.Rounded.RequestQuote">Quotes</MudNavLink> }
+        @if (NavMenuSvc.IsVisible("invoices"))  { <MudNavLink Href="/invoices" Icon="@Icons.Material.Rounded.ReceiptLong">Invoices</MudNavLink> }
+        @if (NavMenuSvc.IsVisible("despatch"))  { <MudNavLink Href="/despatch" Icon="@Icons.Material.Rounded.LocalShipping">Despatch</MudNavLink> }
+    }
+
+    @if (NavMenuSvc.IsVisible("purchase-orders") || NavMenuSvc.IsVisible("rfq"))
+    {
+        <div class="tl-nav-section-label">Purchasing</div>
+        @if (NavMenuSvc.IsVisible("purchase-orders")) { <MudNavLink Href="/purchase-orders" Icon="@Icons.Material.Rounded.Inventory2">Purchase Orders</MudNavLink> }
+        @if (NavMenuSvc.IsVisible("rfq"))              { <MudNavLink Href="/rfq" Icon="@Icons.Material.Rounded.QuestionAnswer">RFQ</MudNavLink> }
+    }
+
+    @if (NavMenuSvc.IsVisible("contacts") || NavMenuSvc.IsVisible("companies") || NavMenuSvc.IsVisible("call-reports") || NavMenuSvc.IsVisible("sales-projects"))
+    {
+        <div class="tl-nav-section-label">CRM</div>
+        @if (NavMenuSvc.IsVisible("contacts"))       { <MudNavLink Href="/contacts" Icon="@Icons.Material.Rounded.Contacts">Contacts</MudNavLink> }
+        @if (NavMenuSvc.IsVisible("companies"))      { <MudNavLink Href="/companies" Icon="@Icons.Material.Rounded.Business">Companies</MudNavLink> }
+        @if (NavMenuSvc.IsVisible("call-reports"))   { <MudNavLink Href="/call-reports" Icon="@Icons.Material.Rounded.Call">Call Reports</MudNavLink> }
+        @if (NavMenuSvc.IsVisible("sales-projects")) { <MudNavLink Href="/sales-projects" Icon="@Icons.Material.Rounded.TrackChanges">Sales Projects</MudNavLink> }
+    }
+
+    @if (NavMenuSvc.IsVisible("job-orders") || NavMenuSvc.IsVisible("products"))
+    {
+        <div class="tl-nav-section-label">Operations</div>
+        @if (NavMenuSvc.IsVisible("job-orders")) { <MudNavLink Href="/job-orders" Icon="@Icons.Material.Rounded.Work">Job Orders</MudNavLink> }
+        @if (NavMenuSvc.IsVisible("products"))   { <MudNavLink Href="/products" Icon="@Icons.Material.Rounded.Category">Products</MudNavLink> }
+    }
+
+    @if (NavMenuSvc.IsVisible("reports") || NavMenuSvc.IsVisible("noticeboard"))
+    {
+        <div class="tl-nav-section-label">Insights</div>
+        @if (NavMenuSvc.IsVisible("reports"))     { <MudNavLink Href="/reports" Icon="@Icons.Material.Rounded.StackedBarChart">Reports</MudNavLink> }
+        @if (NavMenuSvc.IsVisible("noticeboard")) { <MudNavLink Href="/noticeboard" Icon="@Icons.Material.Rounded.Campaign">Noticeboard</MudNavLink> }
+    }
+
+    @if (NavMenuSvc.IsVisible("marketing"))
+    {
+        <div class="tl-nav-section-label">Company</div>
+        <MudNavLink Href="/marketing" Icon="@Icons.Material.Rounded.Brush">Marketing</MudNavLink>
+    }
+
+    <div class="tl-nav-section-label">Admin</div>
+    <MudNavLink Href="/admin/setup" Icon="@Icons.Material.Rounded.Tune">Setup</MudNavLink>
+    <MudNavLink Href="/admin/users" Icon="@Icons.Material.Rounded.People">Users</MudNavLink>
+
+    <div class="tl-nav-footer">
+        <div class="tl-nav-section-label">Support</div>
+        <MudNavLink Href="/help" Icon="@Icons.Material.Rounded.HelpOutline">Help Centre</MudNavLink>
+        <MudNavLink Href="/release-notes" Icon="@Icons.Material.Rounded.NewReleases">Release Notes</MudNavLink>
+    </div>
+</MudNavMenu>
+
+<style>
+    .tl-nav-section-label {
+        padding: 14px 24px 6px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: .08em;
+    }
+    .mud-drawer-mini .tl-nav-section-label { display: none; }
+
+    .tl-nav-footer {
+        margin-top: 24px;
+        padding-top: 16px;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+</style>
+
+

@@ -1,0 +1,109 @@
+@page "/admin/po-status"
+@attribute [Authorize]
+@inject SystemService Svc
+@inject ISnackbar Snackbar
+
+<PageTitle>PO Statuses - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/admin/setup">Admin</a><span class="sep">/</span>
+            <span style="color:var(--gray-700);font-weight:500;">PO Statuses</span>
+        </div>
+        <h1>Purchase Order Statuses</h1>
+        <p class="tl-subtitle">Manage purchase order workflow status names.</p>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
+               OnClick="AddNew">Add Status</MudButton>
+</div>
+
+@if (_items == null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-0" Style="max-width:540px;">
+        <MudDataGrid T="POStatus" Items="_items" Dense="true" Hover="true" Elevation="0">
+            <Columns>
+                <PropertyColumn Property="x => x.POStatusId" Title="#" CellStyle="width:70px;" />
+                <TemplateColumn Title="Status Name">
+                    <CellTemplate>
+                        @if (_editingId == context.Item.POStatusId)
+                        {
+                            <MudTextField @bind-Value="_editingName" Immediate="true" Margin="Margin.Dense"
+                                          Variant="Variant.Outlined" AutoFocus="true" />
+                        }
+                        else { @context.Item.StatusName }
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Actions" CellStyle="width:120px;">
+                    <CellTemplate>
+                        @if (_editingId == context.Item.POStatusId)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Rounded.Check" Color="Color.Success" Size="Size.Small"
+                                           OnClick="@(() => Save(context.Item))" />
+                            <MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small" OnClick="Cancel" />
+                        }
+                        else
+                        {
+                            <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" Color="Color.Primary"
+                                           OnClick="@(() => BeginEdit(context.Item))" />
+                            <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
+                                           OnClick="@(() => Delete(context.Item))" />
+                        }
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+        </MudDataGrid>
+    </MudPaper>
+}
+
+@code {
+    private List<POStatus>? _items;
+    private int? _editingId;
+    private string _editingName = "";
+
+    protected override async Task OnInitializedAsync() => await Reload();
+    private async Task Reload() => _items = await Svc.GetPOStatusesAdminAsync();
+
+    private void BeginEdit(POStatus s) { _editingId = s.POStatusId; _editingName = s.StatusName; }
+    private void Cancel() { _editingId = null; _editingName = ""; }
+
+    private async Task Save(POStatus s)
+    {
+        try
+        {
+            s.StatusName = _editingName;
+            await Svc.SavePOStatusAsync(s);
+            Snackbar.Add("Saved", Severity.Success);
+            Cancel(); await Reload();
+        }
+        catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task AddNew()
+    {
+        try
+        {
+            await Svc.SavePOStatusAsync(new POStatus { StatusName = "New Status" });
+            await Reload();
+            var newest = _items!.OrderByDescending(x => x.POStatusId).First();
+            BeginEdit(newest);
+        }
+        catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task Delete(POStatus s)
+    {
+        try
+        {
+            await Svc.DeletePOStatusAsync(s.POStatusId);
+            Snackbar.Add("Deleted", Severity.Info);
+            await Reload();
+        }
+        catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
+    }
+}
+

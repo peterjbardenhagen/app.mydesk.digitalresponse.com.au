@@ -1,0 +1,681 @@
+@page "/admin/setup"
+@page "/admin"
+@attribute [Authorize]
+@inject SystemService SystemSvc
+@inject SetupMenuService SetupMenuSvc
+
+<PageTitle>Setup - Techlight MyDesk</PageTitle>
+
+@* ── Hero Header ─────────────────────────────────────────────────────────────── *@
+<div class="tl-setup-hero">
+    <div class="tl-setup-hero-bg">
+        <div class="tl-setup-hero-swoosh"></div>
+        <div class="tl-setup-hero-glow"></div>
+    </div>
+    <div class="tl-setup-hero-content">
+        <div class="tl-setup-hero-badge">
+            <MudIcon Icon="@Icons.Material.Rounded.AdminPanelSettings" Size="Size.Small" />
+            <span>Administration</span>
+        </div>
+        <h1 class="tl-setup-hero-title">System Setup</h1>
+        <p class="tl-setup-hero-subtitle">Configure your workspace, manage reference data, and access brand resources</p>
+        <div class="tl-setup-hero-actions">
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Rounded.Refresh" 
+                       OnClick="RefreshStatsAsync"
+                       Size="Size.Small"
+                       Class="tl-setup-hero-btn">
+                Refresh Stats
+            </MudButton>
+            <a href="https://www.techlight.com.au" target="_blank" class="tl-setup-hero-link">
+                <MudIcon Icon="@Icons.Material.Rounded.Language" Size="Size.Small" />
+                <span>Techlight Website</span>
+                <MudIcon Icon="@Icons.Material.Rounded.OpenInNew" Size="Size.Small" Style="opacity: 0.7;" />
+            </a>
+        </div>
+    </div>
+    <div class="tl-setup-hero-stats">
+        @if (_stats == null)
+        {
+            <div class="tl-setup-stat-skeleton"></div>
+            <div class="tl-setup-stat-skeleton"></div>
+            <div class="tl-setup-stat-skeleton"></div>
+        }
+        else
+        {
+            <div class="tl-setup-stat-card">
+                <div class="tl-setup-stat-icon teal">
+                    <MudIcon Icon="@Icons.Material.Rounded.TableChart" Size="Size.Small" />
+                </div>
+                <div class="tl-setup-stat-value">@_stats.Count</div>
+                <div class="tl-setup-stat-label">Database Tables</div>
+            </div>
+            <div class="tl-setup-stat-card">
+                <div class="tl-setup-stat-icon gold">
+                    <MudIcon Icon="@Icons.Material.Rounded.Dataset" Size="Size.Small" />
+                </div>
+                <div class="tl-setup-stat-value">@_stats.Sum(s => s.RowCount).ToString("N0")</div>
+                <div class="tl-setup-stat-label">Total Records</div>
+            </div>
+            <div class="tl-setup-stat-card">
+                <div class="tl-setup-stat-icon dark">
+                    <MudIcon Icon="@Icons.Material.Rounded.Storage" Size="Size.Small" />
+                </div>
+                <div class="tl-setup-stat-value">@_largest.Table</div>
+                <div class="tl-setup-stat-sublabel">@_largest.RowCount.ToString("N0") rows</div>
+                <div class="tl-setup-stat-label">Largest Table</div>
+            </div>
+        }
+    </div>
+</div>
+
+@* ── Important Files & Links ─────────────────────────────────────────────────── *@
+<ImportantFilesLinks />
+
+@* ── Setup Configuration ─────────────────────────────────────────────────────── *@
+<MudPaper Class="tl-setup-section" Elevation="0">
+    <div class="tl-setup-section-header">
+        <div class="tl-setup-section-icon">
+            <MudIcon Icon="@Icons.Material.Rounded.Settings" Size="Size.Medium" />
+        </div>
+        <div>
+            <MudText Typo="Typo.h6" Class="tl-setup-section-title">Configuration</MudText>
+            <MudText Typo="Typo.body2" Class="tl-setup-section-subtitle">Manage system settings and reference data</MudText>
+        </div>
+    </div>
+    
+    @foreach (var groupName in _visibleGroups)
+    {
+        var groupTiles = _tiles.Where(t => t.Group == groupName).ToList();
+        if (!groupTiles.Any()) continue;
+        
+        <div class="tl-setup-group">
+            <div class="tl-setup-group-header">
+                <span class="tl-setup-group-badge @GetGroupColor(groupName)">
+                    <MudIcon Icon="@GetGroupIcon(groupName)" Size="Size.Small" />
+                </span>
+                <span class="tl-setup-group-name">@groupName</span>
+                <span class="tl-setup-group-count">@groupTiles.Count</span>
+            </div>
+            
+            <div class="tl-setup-tiles-grid">
+                @foreach (var tile in groupTiles)
+                {
+                    <a href="@tile.Route" class="tl-setup-tile-v2 @GetTileGradient(tile)">
+                        <div class="tl-setup-tile-glow"></div>
+                        <div class="tl-setup-tile-content">
+                            <div class="tl-setup-tile-icon-wrap @GetIconColor(tile)">
+                                <MudIcon Icon="@SetupMenuService.IconToMudIcon(tile.Icon)" Size="Size.Medium" />
+                            </div>
+                            <div class="tl-setup-tile-info">
+                                <div class="tl-setup-tile-label">@tile.Label</div>
+                                <div class="tl-setup-tile-desc">@tile.Description</div>
+                            </div>
+                            <div class="tl-setup-tile-arrow">
+                                <MudIcon Icon="@Icons.Material.Rounded.ArrowForward" Size="Size.Small" />
+                            </div>
+                        </div>
+                    </a>
+                }
+            </div>
+        </div>
+    }
+
+    @if (!_tiles.Any())
+    {
+        <div class="tl-setup-empty">
+            <div class="tl-setup-empty-icon">
+                <MudIcon Icon="@Icons.Material.Rounded.SettingsSuggest" Size="Size.Large" />
+            </div>
+            <MudText Typo="Typo.h6" Class="mb-2">No setup items available</MudText>
+            <MudText Typo="Typo.body2" Style="color:var(--gray-500);">Contact your administrator to configure the setup menu.</MudText>
+        </div>
+    }
+</MudPaper>
+
+<style>
+    /* ── Hero Section ──────────────────────────────────────────────────────────── */
+    .tl-setup-hero {
+        position: relative;
+        padding: 40px 32px;
+        margin: -24px -24px 32px -24px;
+        background: linear-gradient(135deg, var(--tl-dark) 0%, var(--tl-dark-2) 50%, var(--tl-dark-3) 100%);
+        border-radius: 0 0 24px 24px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 40px;
+    }
+
+
+    .tl-setup-hero-bg {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        pointer-events: none;
+    }
+    
+    .tl-setup-hero-swoosh {
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 60%;
+        height: 200%;
+        background: linear-gradient(
+            135deg,
+            rgba(0, 200, 200, 0.15) 0%,
+            rgba(0, 224, 224, 0.1) 30%,
+            rgba(204, 160, 90, 0.12) 60%,
+            transparent 100%
+        );
+        border-radius: 50%;
+        transform: rotate(-15deg);
+    }
+    
+    .tl-setup-hero-glow {
+        position: absolute;
+        bottom: -100px;
+        right: 10%;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(204, 160, 90, 0.2) 0%, transparent 70%);
+        filter: blur(60px);
+    }
+    
+    .tl-setup-hero-content {
+        position: relative;
+        z-index: 1;
+        flex: 1;
+    }
+    
+    .tl-setup-hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        background: rgba(0, 200, 200, 0.15);
+        border: 1px solid rgba(0, 200, 200, 0.3);
+        border-radius: 20px;
+        color: var(--tl-primary-300);
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 16px;
+    }
+    
+    .tl-setup-hero-title {
+        font-size: 42px;
+        font-weight: 700;
+        color: white;
+        margin: 0 0 12px 0;
+        line-height: 1.2;
+    }
+    
+    .tl-setup-hero-subtitle {
+        font-size: 16px;
+        color: rgba(255, 255, 255, 0.7);
+        margin: 0 0 24px 0;
+        max-width: 400px;
+    }
+    
+    .tl-setup-hero-actions {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    
+    .tl-setup-hero-btn {
+        background: linear-gradient(135deg, var(--tl-primary-500) 0%, var(--tl-primary-600) 100%) !important;
+        box-shadow: 0 4px 16px rgba(0, 200, 200, 0.3) !important;
+    }
+    
+    .tl-setup-hero-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        color: white;
+        font-size: 13px;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 200ms ease;
+    }
+    
+    .tl-setup-hero-link:hover {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: var(--tl-accent);
+        color: white;
+    }
+    
+    /* ── Hero Stats ────────────────────────────────────────────────────────────── */
+    .tl-setup-hero-stats {
+        display: flex;
+        gap: 16px;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .tl-setup-stat-card {
+        width: 140px;
+        padding: 20px;
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        text-align: center;
+    }
+    
+    .tl-setup-stat-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 12px;
+        color: white;
+    }
+    
+    .tl-setup-stat-icon.teal {
+        background: linear-gradient(135deg, var(--tl-primary-500) 0%, var(--tl-primary-600) 100%);
+        box-shadow: 0 4px 12px rgba(0, 200, 200, 0.3);
+    }
+    
+    .tl-setup-stat-icon.gold {
+        background: linear-gradient(135deg, var(--tl-accent) 0%, var(--tl-accent-dark) 100%);
+        box-shadow: 0 4px 12px rgba(204, 160, 90, 0.3);
+    }
+    
+    .tl-setup-stat-icon.dark {
+        background: linear-gradient(135deg, var(--tl-dark-3) 0%, var(--gray-800) 100%);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .tl-setup-stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 4px;
+    }
+    
+    .tl-setup-stat-label {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.6);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .tl-setup-stat-sublabel {
+        font-size: 11px;
+        color: var(--tl-accent);
+        margin-bottom: 4px;
+    }
+    
+    .tl-setup-stat-skeleton {
+        width: 140px;
+        height: 140px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        animation: pulse 2s infinite;
+    }
+    
+    @@keyframes pulse {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 0.8; }
+    }
+    
+    /* ── Section Header ─────────────────────────────────────────────────────────── */
+    .tl-setup-section {
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: 20px;
+        padding: 32px;
+        margin-top: 24px;
+    }
+    
+    .tl-setup-section-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 32px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    
+    .tl-setup-section-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, var(--tl-primary-500) 0%, var(--tl-primary-600) 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        box-shadow: 0 4px 16px rgba(0, 200, 200, 0.25);
+    }
+    
+    .tl-setup-section-title {
+        font-weight: 700 !important;
+        color: var(--gray-900) !important;
+    }
+    
+    .tl-setup-section-subtitle {
+        color: var(--gray-500) !important;
+    }
+    
+    /* ── Setup Groups ──────────────────────────────────────────────────────────── */
+    .tl-setup-group {
+        margin-bottom: 40px;
+    }
+    
+    .tl-setup-group:last-child {
+        margin-bottom: 0;
+    }
+    
+    .tl-setup-group-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+    
+    .tl-setup-group-badge {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+    }
+    
+    .tl-setup-group-badge.primary {
+        background: linear-gradient(135deg, var(--tl-primary-500) 0%, var(--tl-primary-600) 100%);
+    }
+    
+    .tl-setup-group-badge.secondary {
+        background: linear-gradient(135deg, var(--tl-accent) 0%, var(--tl-accent-dark) 100%);
+    }
+    
+    .tl-setup-group-badge.info {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    }
+    
+    .tl-setup-group-badge.success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+    
+    .tl-setup-group-badge.warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+    
+    .tl-setup-group-name {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--gray-900);
+    }
+    
+    .tl-setup-group-count {
+        padding: 4px 12px;
+        background: var(--gray-100);
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--gray-600);
+    }
+    
+    /* ── Setup Tiles Grid ──────────────────────────────────────────────────────── */
+    .tl-setup-tiles-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 16px;
+    }
+    
+    .tl-setup-tile-v2 {
+        position: relative;
+        display: block;
+        text-decoration: none;
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: 16px;
+        overflow: hidden;
+        transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .tl-setup-tile-v2:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+        border-color: var(--tl-primary-300);
+    }
+    
+    .tl-setup-tile-glow {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--tl-primary-500) 0%, var(--tl-accent) 100%);
+        opacity: 0;
+        transition: opacity 300ms ease;
+    }
+    
+    .tl-setup-tile-v2:hover .tl-setup-tile-glow {
+        opacity: 1;
+    }
+    
+    .tl-setup-tile-content {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 20px;
+    }
+    
+    .tl-setup-tile-icon-wrap {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        color: white;
+        transition: transform 300ms ease;
+    }
+    
+    .tl-setup-tile-v2:hover .tl-setup-tile-icon-wrap {
+        transform: scale(1.05);
+    }
+    
+    .tl-setup-tile-icon-wrap.teal {
+        background: linear-gradient(135deg, var(--tl-primary-500) 0%, var(--tl-primary-600) 100%);
+        box-shadow: 0 4px 12px rgba(0, 200, 200, 0.25);
+    }
+    
+    .tl-setup-tile-icon-wrap.gold {
+        background: linear-gradient(135deg, var(--tl-accent) 0%, var(--tl-accent-dark) 100%);
+        box-shadow: 0 4px 12px rgba(204, 160, 90, 0.25);
+    }
+    
+    .tl-setup-tile-icon-wrap.blue {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+    }
+    
+    .tl-setup-tile-icon-wrap.green {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+    }
+    
+    .tl-setup-tile-icon-wrap.purple {
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+    }
+    
+    .tl-setup-tile-icon-wrap.orange {
+        background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+        box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
+    }
+    
+    .tl-setup-tile-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .tl-setup-tile-label {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin-bottom: 4px;
+        transition: color 200ms ease;
+    }
+    
+    .tl-setup-tile-v2:hover .tl-setup-tile-label {
+        color: var(--tl-primary-600);
+    }
+    
+    .tl-setup-tile-desc {
+        font-size: 13px;
+        color: var(--gray-500);
+        line-height: 1.4;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .tl-setup-tile-arrow {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: var(--gray-100);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--gray-500);
+        opacity: 0;
+        transform: translateX(-8px);
+        transition: all 200ms ease;
+    }
+    
+    .tl-setup-tile-v2:hover .tl-setup-tile-arrow {
+        opacity: 1;
+        transform: translateX(0);
+        background: var(--tl-primary-500);
+        color: white;
+    }
+    
+    /* ── Empty State ───────────────────────────────────────────────────────────── */
+    .tl-setup-empty {
+        text-align: center;
+        padding: 60px 20px;
+    }
+    
+    .tl-setup-empty-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 20px;
+        background: linear-gradient(135deg, var(--tl-primary-50) 0%, var(--tl-primary-100) 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        color: var(--tl-primary-600);
+    }
+    
+    /* ── Responsive ──────────────────────────────────────────────────────────── */
+    @@media (max-width: 960px) {
+        .tl-setup-hero {
+            flex-direction: column;
+            text-align: center;
+            padding: 32px 24px;
+        }
+        
+        .tl-setup-hero-title {
+            font-size: 32px;
+        }
+        
+        .tl-setup-hero-subtitle {
+            max-width: 100%;
+        }
+        
+        .tl-setup-hero-actions {
+            justify-content: center;
+        }
+        
+        .tl-setup-hero-stats {
+            justify-content: center;
+        }
+        
+        .tl-setup-tiles-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+@code {
+    private List<(string Table, int RowCount)>? _stats;
+    private (string Table, int RowCount) _largest = ("—", 0);
+    private List<SetupMenuService.SetupTile> _tiles = new();
+    private List<string> _visibleGroups = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _tiles = SetupMenuSvc.GetVisibleTiles();
+        _visibleGroups = _tiles.Select(t => t.Group).Distinct().ToList();
+        await RefreshStatsAsync();
+    }
+
+    private async Task RefreshStatsAsync()
+    {
+        try
+        {
+            _stats = await SystemSvc.GetTableStatsAsync();
+            if (_stats?.Count > 0) _largest = _stats.OrderByDescending(s => s.RowCount).First();
+        }
+        catch { /* non-critical */ }
+    }
+
+    private string GetGroupColor(string groupName)
+    {
+        var g = groupName?.ToLower() ?? "";
+        if (g.Contains("general")) return "primary";
+        if (g.Contains("reference")) return "secondary";
+        if (g.Contains("user")) return "info";
+        if (g.Contains("financial")) return "success";
+        if (g.Contains("product")) return "warning";
+        return "primary";
+    }
+
+    private string GetGroupIcon(string groupName)
+    {
+        var g = groupName?.ToLower() ?? "";
+        if (g.Contains("general")) return Icons.Material.Rounded.Settings;
+        if (g.Contains("reference")) return Icons.Material.Rounded.Book;
+        if (g.Contains("user")) return Icons.Material.Rounded.People;
+        if (g.Contains("financial")) return Icons.Material.Rounded.AccountBalance;
+        if (g.Contains("product")) return Icons.Material.Rounded.Inventory;
+        return Icons.Material.Rounded.Folder;
+    }
+
+    private string GetIconColor(SetupMenuService.SetupTile tile)
+    {
+        var g = tile.Group?.ToLower() ?? "";
+        if (g.Contains("general")) return "teal";
+        if (g.Contains("reference")) return "gold";
+        if (g.Contains("user")) return "blue";
+        if (g.Contains("financial")) return "green";
+        if (g.Contains("product")) return "orange";
+        return "teal";
+    }
+
+    private string GetTileGradient(SetupMenuService.SetupTile tile) => "";
+}
+
+
+
+

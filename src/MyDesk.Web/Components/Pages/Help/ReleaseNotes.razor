@@ -1,0 +1,303 @@
+@page "/release-notes"
+@inject PlatformSettingsService PlatformSettings
+
+<PageTitle>Release Notes - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="release-notes-page">
+    <MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+        <div class="mb-6">
+            <div class="d-flex align-center gap-3 mb-2">
+                <MudIcon Icon="@Icons.Material.Rounded.NewReleases" Size="Size.Large" Color="Color.Primary" />
+                <MudText Typo="Typo.h3">Release Notes</MudText>
+            </div>
+            <MudText Typo="Typo.body1" Class="mud-text-secondary">
+                Track what's new in @PlatformSettings.Current.PlatformName. We ship updates regularly to bring you the best business management experience.
+            </MudText>
+        </div>
+
+        <!-- Version 3.0 - Current Release -->
+        <MudPaper Elevation="0" Class="release-card current-release mb-6">
+            <div class="release-header">
+                <div class="d-flex align-center gap-3">
+                    <MudChip T="string" Color="Color.Primary" Size="Size.Small" Variant="Variant.Filled">v3.0</MudChip>
+                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Text">Current</MudChip>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Released 21 April 2026</MudText>
+                </div>
+                <MudText Typo="Typo.h4" Class="mt-3">🚀 MyDesk 3.0 - Complete Platform Transformation</MudText>
+                <MudText Typo="Typo.body1" Class="mt-2 mud-text-secondary">
+                    Our biggest release yet! MyDesk has been re-platformed as a modern SaaS solution with stunning new Techlight brand, AI-powered insights, and multi-tenant architecture.
+                </MudText>
+            </div>
+
+            <div class="release-body">
+                <div class="release-section">
+                    <MudText Typo="Typo.h6" Class="release-category">
+                        <MudIcon Icon="@Icons.Material.Rounded.Palette" Color="Color.Primary" /> Brand & Design
+                    </MudText>
+                    <ul class="release-list">
+                        <li><strong>New Techlight Brand:</strong> Bold new visual identity with signature teal (#00c8c8) and dark navy (#08121a) palette</li>
+                        <li><strong>Modern UI Refresh:</strong> Redesigned dashboard, login page, and all major screens with contemporary Australian SaaS styling</li>
+                        <li><strong>MyDesk Logo:</strong> Distinctive logo and brand mark for the platform</li>
+                        <li><strong>Responsive Design:</strong> Polished experience across desktop, tablet, and mobile</li>
+                        <li><strong>Custom Typography:</strong> Inter font family for improved readability</li>
+                    </ul>
+                </div>
+
+                <div class="release-section">
+                    <MudText Typo="Typo.h6" Class="release-category">
+                        <MudIcon Icon="@Icons.Material.Rounded.SmartToy" Color="Color.Primary" /> Ask AI - Intelligent Assistant
+                    </MudText>
+                    <ul class="release-list">
+                        <li><strong>Natural Language Queries:</strong> Ask questions about your business in plain English</li>
+                        <li><strong>Smart Data Insights:</strong> Get instant answers about sales, customers, and operations</li>
+                        <li><strong>Context-Aware Responses:</strong> AI understands your division, permissions, and history</li>
+                        <li><strong>Report Generation:</strong> "Show me last month's top 10 customers" - AI delivers instantly</li>
+                        <li><strong>Navigation Help:</strong> Ask "How do I create a PO?" and get step-by-step guidance</li>
+                    </ul>
+                </div>
+
+                <div class="release-section">
+                    <MudText Typo="Typo.h6" Class="release-category">
+                        <MudIcon Icon="@Icons.Material.Rounded.Insights" Color="Color.Primary" /> Business Intelligence
+                    </MudText>
+                    <ul class="release-list">
+                        <li><strong>Executive Dashboard:</strong> Revenue, quotes, profit margin, and health score at a glance</li>
+                        <li><strong>Interactive Carousel:</strong> 6 business intelligence views with drill-down capabilities</li>
+                        <li><strong>Team Leaderboard:</strong> Performance tracking for directors and administrators</li>
+                        <li><strong>Personal KPIs:</strong> Every user sees their own performance metrics</li>
+                        <li><strong>Smart Warnings:</strong> Automated alerts for overdue invoices, stalled quotes, and approval queues</li>
+                        <li><strong>Recommendations Engine:</strong> AI-powered suggestions for actions that drive revenue</li>
+                    </ul>
+                </div>
+
+                <div class="release-section">
+                    <MudText Typo="Typo.h6" Class="release-category">
+                        <MudIcon Icon="@Icons.Material.Rounded.Cloud" Color="Color.Primary" /> SaaS Platform
+                    </MudText>
+                    <ul class="release-list">
+                        <li><strong>Multi-Tenancy:</strong> Platform now supports multiple customer organisations</li>
+                        <li><strong>Tenant Isolation:</strong> Each customer gets their own isolated data space</li>
+                        <li><strong>Custom Branding:</strong> Enterprise tier supports logo and color customisation</li>
+                        <li><strong>Domain-Based Routing:</strong> Access via <code>yourcompany.mydesk.digitalresponse.com.au</code></li>
+                        <li><strong>Feature Flags:</strong> Per-tenant feature enablement</li>
+                        <li><strong>Platform Settings:</strong> Centralised configuration for all branding and features</li>
+                    </ul>
+                </div>
+
+                <div class="release-section">
+                    <MudText Typo="Typo.h6" Class="release-category">
+                        <MudIcon Icon="@Icons.Material.Rounded.AccountTree" Color="Color.Primary" /> Accounting Integration
+                    </MudText>
+                    <ul class="release-list">
+                        <li><strong>MYOB Sync:</strong> Bi-directional sync for invoices and payments</li>
+                        <li><strong>Reconciliation Dashboard:</strong> Visual matching of MYOB vs MyDesk records</li>
+                        <li><strong>Automated Invoice Export:</strong> Scheduled sync with conflict resolution</li>
+                        <li><strong>Payment Tracking:</strong> Real-time payment status updates from accounting</li>
+                    </ul>
+                </div>
+
+                <div class="release-section">
+                    <MudText Typo="Typo.h6" Class="release-category">
+                        <MudIcon Icon="@Icons.Material.Rounded.Security" Color="Color.Primary" /> Security & Compliance
+                    </MudText>
+                    <ul class="release-list">
+                        <li><strong>Australian Privacy Compliance:</strong> Full alignment with Privacy Act 1988 (Cth)</li>
+                        <li><strong>Privacy Policy:</strong> Comprehensive privacy policy at <code>/privacy-policy</code></li>
+                        <li><strong>Terms & Conditions:</strong> Updated SaaS terms at <code>/terms-and-conditions</code></li>
+                        <li><strong>Notifiable Data Breach Scheme:</strong> Proper breach notification procedures</li>
+                        <li><strong>Enhanced Authentication:</strong> Improved login security and session management</li>
+                    </ul>
+                </div>
+
+                <div class="release-section">
+                    <MudText Typo="Typo.h6" Class="release-category">
+                        <MudIcon Icon="@Icons.Material.Rounded.Speed" Color="Color.Primary" /> Performance
+                    </MudText>
+                    <ul class="release-list">
+                        <li><strong>.NET 8 Upgrade:</strong> Latest framework for improved performance and security</li>
+                        <li><strong>MudBlazor 8.x:</strong> Modern component library for consistent UI</li>
+                        <li><strong>Optimised Queries:</strong> Faster data loading across all modules</li>
+                        <li><strong>Serilog Logging:</strong> Better diagnostics and troubleshooting</li>
+                    </ul>
+                </div>
+
+                <div class="release-section">
+                    <MudText Typo="Typo.h6" Class="release-category">
+                        <MudIcon Icon="@Icons.Material.Rounded.BugReport" Color="Color.Primary" /> Quality Assurance
+                    </MudText>
+                    <ul class="release-list">
+                        <li><strong>Playwright Test Suite:</strong> 72+ automated end-to-end tests</li>
+                        <li><strong>CI/CD Pipeline:</strong> Automated testing on every deployment</li>
+                        <li><strong>Accessibility:</strong> WCAG 2.1 AA compliance improvements</li>
+                        <li><strong>Browser Coverage:</strong> Tested on Chrome, Firefox, Edge, Safari</li>
+                    </ul>
+                </div>
+            </div>
+        </MudPaper>
+
+        <!-- Version 2.x - Previous -->
+        <MudPaper Elevation="0" Class="release-card mb-4">
+            <div class="release-header-compact">
+                <div class="d-flex align-center gap-3">
+                    <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Outlined">v2.5</MudChip>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Released March 2025</MudText>
+                </div>
+                <MudText Typo="Typo.h5" Class="mt-2">Job Orders Enhancement</MudText>
+            </div>
+            <div class="release-body">
+                <ul class="release-list">
+                    <li>Added picking slip generation for warehouse fulfilment</li>
+                    <li>Third-party supply tracking for outsourced work</li>
+                    <li>Job order status workflow with customisable states</li>
+                    <li>Improved PDF generation performance</li>
+                </ul>
+            </div>
+        </MudPaper>
+
+        <MudPaper Elevation="0" Class="release-card mb-4">
+            <div class="release-header-compact">
+                <div class="d-flex align-center gap-3">
+                    <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Outlined">v2.4</MudChip>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Released January 2025</MudText>
+                </div>
+                <MudText Typo="Typo.h5" Class="mt-2">Purchase Order Workflow</MudText>
+            </div>
+            <div class="release-body">
+                <ul class="release-list">
+                    <li>Multi-level approval hierarchy based on user roles</li>
+                    <li>PO approval limits with automatic escalation</li>
+                    <li>Email notifications for approvers and requesters</li>
+                    <li>Audit trail for all PO state changes</li>
+                    <li>CapEx (Capital Expenditure) flagging</li>
+                </ul>
+            </div>
+        </MudPaper>
+
+        <MudPaper Elevation="0" Class="release-card mb-4">
+            <div class="release-header-compact">
+                <div class="d-flex align-center gap-3">
+                    <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Outlined">v2.3</MudChip>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Released November 2024</MudText>
+                </div>
+                <MudText Typo="Typo.h5" Class="mt-2">CRM & Contacts Refresh</MudText>
+            </div>
+            <div class="release-body">
+                <ul class="release-list">
+                    <li>Redesigned contact and company management screens</li>
+                    <li>Address book with delivery and invoice addresses</li>
+                    <li>Activity history tracking per contact</li>
+                    <li>Improved search with type-ahead suggestions</li>
+                </ul>
+            </div>
+        </MudPaper>
+
+        <MudPaper Elevation="0" Class="release-card mb-4">
+            <div class="release-header-compact">
+                <div class="d-flex align-center gap-3">
+                    <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Outlined">v2.2</MudChip>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Released September 2024</MudText>
+                </div>
+                <MudText Typo="Typo.h5" Class="mt-2">Dashboard Carousel</MudText>
+            </div>
+            <div class="release-body">
+                <ul class="release-list">
+                    <li>Interactive dashboard with 6 business intelligence views</li>
+                    <li>Real-time KPI tracking</li>
+                    <li>Team performance leaderboard</li>
+                    <li>Custom widgets per user role</li>
+                </ul>
+            </div>
+        </MudPaper>
+
+        <!-- Upcoming -->
+        <MudPaper Elevation="0" Class="release-card upcoming-card mt-6">
+            <div class="release-header-compact">
+                <div class="d-flex align-center gap-3">
+                    <MudChip T="string" Color="Color.Warning" Size="Size.Small" Variant="Variant.Filled">Coming Soon</MudChip>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">v3.1 - Q3 2026</MudText>
+                </div>
+                <MudText Typo="Typo.h5" Class="mt-2">🔮 What's Next</MudText>
+            </div>
+            <div class="release-body">
+                <ul class="release-list">
+                    <li><strong>Mobile App:</strong> Native iOS and Android apps for field sales</li>
+                    <li><strong>Telegram Bot:</strong> Quote approvals and notifications via Telegram</li>
+                    <li><strong>Xero Integration:</strong> Add Xero accounting alongside MYOB</li>
+                    <li><strong>Advanced Analytics:</strong> Machine learning-powered forecasting</li>
+                    <li><strong>SSO Support:</strong> Single sign-on with Microsoft Entra ID and Google Workspace</li>
+                    <li><strong>API Platform:</strong> Public REST API for third-party integrations</li>
+                </ul>
+            </div>
+        </MudPaper>
+
+        <!-- Footer note -->
+        <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-6 mud-text-secondary">
+            Have feedback or feature requests? Email us at <MudLink Href="@($"mailto:{PlatformSettings.Current.SupportEmail}")">@PlatformSettings.Current.SupportEmail</MudLink>
+        </MudText>
+    </MudContainer>
+</div>
+
+<style>
+    .release-notes-page {
+        min-height: calc(100vh - 120px);
+        background: #f8fafc;
+    }
+    .release-card {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid rgba(0,0,0,0.06);
+    }
+    .current-release {
+        border: 2px solid var(--tl-primary, #00c8c8);
+        box-shadow: 0 8px 32px rgba(0, 200, 200, 0.15);
+    }
+    .upcoming-card {
+        background: linear-gradient(135deg, #fff9e6 0%, #ffffff 100%);
+        border: 1px dashed #f59e0b;
+    }
+    .release-header {
+        padding: 24px 32px;
+        background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 100%);
+        border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+    .release-header-compact {
+        padding: 20px 24px;
+        border-bottom: 1px solid rgba(0,0,0,0.04);
+    }
+    .release-body {
+        padding: 24px 32px;
+    }
+    .release-section {
+        margin-bottom: 24px;
+    }
+    .release-section:last-child {
+        margin-bottom: 0;
+    }
+    .release-category {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        color: var(--tl-dark, #08121a);
+    }
+    .release-list {
+        margin: 0;
+        padding-left: 20px;
+    }
+    .release-list li {
+        margin-bottom: 8px;
+        line-height: 1.6;
+        color: #4b5563;
+    }
+    .release-list li strong {
+        color: #111827;
+    }
+    code {
+        background: #f3f4f6;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.85em;
+        font-family: 'Consolas', 'Monaco', monospace;
+    }
+</style>

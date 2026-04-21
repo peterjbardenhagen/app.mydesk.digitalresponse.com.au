@@ -1,1 +1,0 @@
-<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="GenerateQuote.aspx.cs" Inherits="MyDeskASPNet.GenerateQuote" %>

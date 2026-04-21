@@ -1,0 +1,93 @@
+@page "/admin/setup-menu"
+@attribute [Authorize]
+@inject SetupMenuService SetupMenuSvc
+@inject ISnackbar Snackbar
+
+<PageTitle>Setup Menu Settings - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/admin/setup">Admin</a><span class="sep">/</span>
+            <span style="color:var(--gray-700);font-weight:500;">Setup Menu</span>
+        </div>
+        <h1>Setup Menu Settings</h1>
+        <p class="tl-subtitle">Show or hide tiles on the Setup page.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Refresh"
+                   OnClick="ResetDefaults">Reset to Defaults</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Save"
+                   OnClick="SaveAsync">Save</MudButton>
+    </div>
+</div>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudAlert Severity="Severity.Info" Class="mb-4">
+        Toggle visibility of setup tiles. Hidden tiles will not appear on the Setup page but can still be accessed directly via URL.
+    </MudAlert>
+
+    @foreach (var group in _groups)
+    {
+        <MudText Typo="Typo.h6" Class="mt-4 mb-2" Style="font-weight:600; color:var(--gray-700);">@group</MudText>
+        <MudGrid Spacing="2">
+            @foreach (var tile in _tiles.Where(t => t.Group == group))
+            {
+                <MudItem xs="12" sm="6" md="4">
+                    <div class="d-flex align-center gap-3 pa-3" style="border:1px solid var(--gray-200); border-radius:8px;">
+                        <MudSwitch T="bool" 
+                                   Value="@SetupMenuSvc.IsVisible(tile.Key)"
+                                   ValueChanged="@(v => Toggle(tile.Key, v))"
+                                   Color="Color.Primary" />
+                        <div style="flex:1;">
+                            <div style="font-weight:500;">@tile.Label</div>
+                            <div style="font-size:0.875rem; color:var(--gray-500);">@tile.Description</div>
+                        </div>
+                    </div>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</MudPaper>
+
+@code {
+    private List<SetupMenuService.SetupTile> _tiles = new();
+    private List<string> _groups = new();
+
+    protected override void OnInitialized()
+    {
+        _tiles = SetupMenuSvc.GetAllTiles();
+        _groups = SetupMenuSvc.GetGroups();
+    }
+
+    private void Toggle(string key, bool visible)
+    {
+        SetupMenuSvc.SetVisible(key, visible);
+    }
+
+    private async Task SaveAsync()
+    {
+        try
+        {
+            SetupMenuSvc.SaveSettings();
+            Snackbar.Add("Setup menu settings saved.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Save failed: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ResetDefaults()
+    {
+        // Reset all to visible
+        foreach (var tile in _tiles)
+        {
+            SetupMenuSvc.SetVisible(tile.Key, true);
+        }
+        _tiles = SetupMenuSvc.GetAllTiles();
+        Snackbar.Add("Defaults restored. Click Save to apply.", Severity.Info);
+    }
+}
+

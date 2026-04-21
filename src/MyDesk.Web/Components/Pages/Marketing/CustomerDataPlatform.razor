@@ -1,0 +1,246 @@
+@page "/marketing/customers"
+@attribute [Authorize]
+@inject MarketingDataService Data
+@inject NavigationManager Nav
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+
+<PageTitle>Customer Data Platform - DR MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <MudLink Href="/marketing" Underline="Underline.None">Marketing</MudLink>
+            <MudIcon Icon="@Icons.Material.Rounded.ChevronRight" Size="Size.Small" />
+            <span>Customer Data Platform</span>
+        </div>
+        <h1 class="tl-page-title">
+            <MudIcon Icon="@Icons.Material.Rounded.Insights" Class="mr-2" Style="color: var(--tl-primary-500)" />
+            Customer Data Platform
+        </h1>
+        <div class="tl-page-sub">Deep RFM scoring, segmentation, and growth signals for every customer.</div>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Download" OnClick="ExportCsv">
+        Export CSV
+    </MudButton>
+</div>
+
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+}
+else if (_cdp == null)
+{
+    <MudAlert Severity="Severity.Error">Failed to load customer data.</MudAlert>
+}
+else
+{
+    @* Summary Stats *@
+    <div class="tl-mkt-grid">
+        <div class="tl-mkt-stat-card">
+            <div class="tl-mkt-stat-label">Total Customers</div>
+            <div class="tl-mkt-stat-value">@_cdp.All.Count.ToString("N0")</div>
+            <div class="tl-mkt-stat-sub">Active accounts with revenue history</div>
+        </div>
+        <div class="tl-mkt-stat-card">
+            <div class="tl-mkt-stat-label">YTD Revenue</div>
+            <div class="tl-mkt-stat-value">$@((_cdp.TotalYtdRevenue / 1000).ToString("N0"))k</div>
+            <div class="tl-mkt-stat-sub">@_cdp.All.Count(c => c.YtdRevenue > 0) with activity this year</div>
+        </div>
+        <div class="tl-mkt-stat-card">
+            <div class="tl-mkt-stat-label">Lifetime Revenue</div>
+            <div class="tl-mkt-stat-value">$@((_cdp.TotalLifetimeRevenue / 1000000).ToString("N1"))M</div>
+            <div class="tl-mkt-stat-sub">All-time customer value</div>
+        </div>
+        <div class="tl-mkt-stat-card">
+            <div class="tl-mkt-stat-label">Top 10% Share</div>
+            <div class="tl-mkt-stat-value">@_cdp.Top10PercentRevenueShare%</div>
+            <div class="tl-mkt-stat-sub">Revenue concentration</div>
+        </div>
+    </div>
+
+    @* Segment Distribution *@
+    <MudCard Elevation="0" Outlined="true" Class="mb-6">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h6">Segment Distribution</MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            <div class="d-flex gap-4 flex-wrap">
+                @foreach (var seg in _cdp.SegmentCounts)
+                {
+                    <div class="d-flex align-center gap-2">
+                        <span class="tl-mkt-segment-chip @GetSegmentClass(seg.Key)">@seg.Key</span>
+                        <MudText Typo="Typo.body2">@seg.Value</MudText>
+                    </div>
+                }
+            </div>
+        </MudCardContent>
+    </MudCard>
+
+    @* Champion Spotlight *@
+    @if (_cdp.Champion != null)
+    {
+        <MudCard Elevation="0" Outlined="true" Class="mb-6" Style="border-left: 4px solid var(--tl-accent);">
+            <MudCardHeader>
+                <CardHeaderAvatar>
+                    <MudAvatar Color="Color.Warning" Size="Size.Large">
+                        <MudIcon Icon="@Icons.Material.Rounded.EmojiEvents" />
+                    </MudAvatar>
+                </CardHeaderAvatar>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Champion Customer</MudText>
+                    <MudText Typo="Typo.body2">@_cdp.Champion.CompanyName</MudText>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    <MudIconButton Icon="@Icons.Material.Rounded.OpenInNew" 
+                                   Href="@($"/companies/{_cdp.Champion.CompanyId}")" 
+                                   Color="Color.Default" />
+                </CardHeaderActions>
+            </MudCardHeader>
+            <MudCardContent>
+                <div class="d-flex gap-8 flex-wrap">
+                    <div>
+                        <div class="tl-mkt-stat-label">Score</div>
+                        <div class="tl-mkt-stat-value" style="font-size: 24px;">@_cdp.Champion.TotalScore/15</div>
+                    </div>
+                    <div>
+                        <div class="tl-mkt-stat-label">YTD Revenue</div>
+                        <div class="tl-mkt-stat-value" style="font-size: 24px;">$@_cdp.Champion.YtdRevenue.ToString("N0")</div>
+                    </div>
+                    <div>
+                        <div class="tl-mkt-stat-label">Growth</div>
+                        <div class="tl-mkt-stat-value" style="font-size: 24px; color: var(--success-500);">+@_cdp.Champion.GrowthPercent.ToString("N0")%</div>
+                    </div>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    }
+
+    @* Customer Table *@
+    <MudCard Elevation="0" Outlined="true">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h6">All Customers</MudText>
+            </CardHeaderContent>
+            <CardHeaderActions>
+                <MudTextField T="string" @bind-Value="_search" Placeholder="Search customers..." 
+                             Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Search"
+                             Immediate="true" Style="width: 300px;" />
+            </CardHeaderActions>
+        </MudCardHeader>
+        <MudCardContent Class="pa-0">
+            <MudTable Items="FilteredCustomers" Dense="true" Hover="true" Striped="true">
+                <HeaderContent>
+                    <MudTh>Rank</MudTh>
+                    <MudTh>Company</MudTh>
+                    <MudTh>Segment</MudTh>
+                    <MudTh>Score</MudTh>
+                    <MudTh>YTD Revenue</MudTh>
+                    <MudTh>Growth</MudTh>
+                    <MudTh>Last Activity</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Rank</MudTd>
+                    <MudTd>
+                        <div class="d-flex flex-column">
+                            <span style="font-weight: 600;">@context.CompanyName</span>
+                            <span style="font-size: 12px; color: var(--gray-500);">@context.Rating</span>
+                        </div>
+                    </MudTd>
+                    <MudTd>
+                        <span class="tl-mkt-segment-chip @GetSegmentClass(context.Segment)">@context.Segment</span>
+                    </MudTd>
+                    <MudTd>
+                        <MudProgressLinear Value="@((double)context.TotalScore / 15 * 100)" 
+                                          Color="GetScoreColor(context.TotalScore)" 
+                                          Style="width: 60px;" />
+                        <span style="font-size: 12px; margin-left: 8px;">@context.TotalScore</span>
+                    </MudTd>
+                    <MudTd>$@context.YtdRevenue.ToString("N0")</MudTd>
+                    <MudTd Style="@(context.GrowthPercent >= 0 ? "color: var(--success-500);" : "color: var(--error-500);")">
+                        @(context.GrowthPercent >= 0 ? "+" : "")@context.GrowthPercent.ToString("N0")%
+                    </MudTd>
+                    <MudTd>
+                        @if (context.DaysSinceLastActivity < 30)
+                        {
+                            <span style="color: var(--success-500);">@context.DaysSinceLastActivity days ago</span>
+                        }
+                        else if (context.DaysSinceLastActivity < 90)
+                        {
+                            <span style="color: var(--warning-500);">@context.DaysSinceLastActivity days ago</span>
+                        }
+                        else
+                        {
+                            <span style="color: var(--error-500);">@context.DaysSinceLastActivity days ago</span>
+                        }
+                    </MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Rounded.Visibility" 
+                                       Size="Size.Small" 
+                                       OnClick="() => ViewCustomer(context)" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudCardContent>
+    </MudCard>
+}
+
+@using CDPModel = MyDesk.Shared.Models.CustomerDataPlatform
+@code {
+    private CDPModel? _cdp;
+    private bool _loading = true;
+    private string _search = "";
+
+    private IEnumerable<CustomerScoreCard> FilteredCustomers => 
+        _cdp?.All.Where(c => string.IsNullOrEmpty(_search) || 
+                             c.CompanyName.Contains(_search, StringComparison.OrdinalIgnoreCase)) 
+        ?? Enumerable.Empty<CustomerScoreCard>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _cdp = await Data.GetCustomerDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading customer data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private string GetSegmentClass(string segment) => segment?.ToLower() switch
+    {
+        "champion" => "champion",
+        "loyal" => "loyal",
+        "promising" => "promising",
+        "at-risk" => "at-risk",
+        "lost" => "lost",
+        _ => ""
+    };
+
+    private Color GetScoreColor(int score) => score switch
+    {
+        >= 12 => Color.Success,
+        >= 8 => Color.Info,
+        >= 5 => Color.Warning,
+        _ => Color.Error
+    };
+
+    private void ViewCustomer(CustomerScoreCard customer)
+    {
+        Nav.NavigateTo($"/companies/{customer.CompanyId}");
+    }
+
+    private async Task ExportCsv()
+    {
+        // TODO: Implement CSV export
+        Snackbar.Add("Export feature coming soon", Severity.Info);
+    }
+}

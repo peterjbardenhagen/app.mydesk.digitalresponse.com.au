@@ -1,0 +1,347 @@
+@page "/purchase-orders/{Id:int}"
+@attribute [Authorize]
+@inject PurchaseOrderService POService
+@inject LookupService LookupService
+@inject PdfService PdfService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject IDialogService Dialog
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JsRuntime
+@using System.Security.Claims
+@using Microsoft.JSInterop
+
+<PageTitle>PO @Id - Techlight MyDesk</PageTitle>
+
+@if (_po == null)
+{
+    <MudProgressCircular Indeterminate="true" Class="mx-auto my-8 d-block" />
+}
+else
+{
+    <div class="tl-page-header">
+        <div>
+            <div class="tl-breadcrumb">
+                <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+                <a href="/purchase-orders">Purchase Orders</a><span class="sep">/</span>
+                <span>PO #@Id</span>
+            </div>
+            <h1 style="display:flex;align-items:center;gap:.5rem;">
+                Purchase Order #@Id
+                <MudChip T="string" Size="Size.Small" Color="@StatusColour(_po.StatusName)">@_po.StatusName</MudChip>
+                @if (_po.HasCapEx)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning">CapEx</MudChip>
+                }
+            </h1>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ArrowBack"
+                       Href="/purchase-orders">Back</MudButton>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.History"
+                       Href="@($"/purchase-orders/{Id}/history")">History</MudButton>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.PictureAsPdf"
+                       OnClick="GeneratePdf" Disabled="_generatingPdf">
+                @(_generatingPdf ? "Generating..." : "PDF")
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Email"
+                       Href="@($"/purchase-orders/{Id}/email")">Email</MudButton>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Receipt"
+                       Href="@($"/purchase-orders/{Id}/invoice-details")">Invoice Details</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Rounded.Edit"
+                       Href="@($"/purchase-orders/{Id}/edit")">Edit</MudButton>
+        </div>
+    </div>
+
+    <MudGrid Spacing="3">
+        @* ── Left: PO details + lines ── *@
+        <MudItem xs="12" md="8">
+            <MudPaper Class="pa-5 mb-3" Elevation="1">
+                <MudText Typo="Typo.subtitle2" Class="mb-3"
+                         Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">PO Details</MudText>
+                <MudGrid Spacing="2">
+                    <MudItem xs="6"><span style="color:var(--gray-500)">Supplier</span><br/><strong>@_po.SupplierName</strong></MudItem>
+                    <MudItem xs="6"><span style="color:var(--gray-500)">PO Date</span><br/><strong>@_po.PODate.ToString("dd MMM yyyy")</strong></MudItem>
+                    <MudItem xs="6"><span style="color:var(--gray-500)">Project</span><br/><strong>@_po.Project</strong></MudItem>
+                    <MudItem xs="6"><span style="color:var(--gray-500)">Date Required</span><br/><strong>@(_po.DateRequired == DateTime.MinValue ? "—" : _po.DateRequired.ToString("dd MMM yyyy"))</strong></MudItem>
+                    <MudItem xs="6"><span style="color:var(--gray-500)">Division</span><br/><strong>@_po.DivisionName</strong></MudItem>
+                    <MudItem xs="6"><span style="color:var(--gray-500)">Originator</span><br/><strong>@_po.OriginatorName</strong></MudItem>
+                    <MudItem xs="6"><span style="color:var(--gray-500)">Payment Type</span><br/><strong>@(_po.PaymentType ?? "—")</strong></MudItem>
+                    <MudItem xs="6"><span style="color:var(--gray-500)">Terms</span><br/><strong>@(_po.Terms ?? "—")</strong></MudItem>
+                    @if (!string.IsNullOrEmpty(_po.LocationName) || !string.IsNullOrEmpty(_po.DeliverToLocation))
+                    {
+                        <MudItem xs="12">
+                            <span style="color:var(--gray-500)">Deliver To</span><br/>
+                            <strong>@(_po.LocationName ?? "")  @(_po.DeliverToLocation ?? "")</strong>
+                        </MudItem>
+                    }
+                    @if (_po.Qid > 0)
+                    {
+                        <MudItem xs="6"><span style="color:var(--gray-500)">Source Quote</span><br/>
+                            <MudLink Href="@($"/quotes/{_po.Qid}")">Quote #@_po.Qid</MudLink>
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudPaper>
+
+            @* Line items *@
+            <MudPaper Class="pa-5 mb-3" Elevation="1">
+                <MudText Typo="Typo.subtitle2" Class="mb-3"
+                         Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">
+                    Line Items (@_lines.Count)
+                </MudText>
+                @if (_lines.Any())
+                {
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
+                            <thead>
+                                <tr style="border-bottom:2px solid var(--mud-palette-divider);color:var(--gray-500);">
+                                    <th style="text-align:left;padding:6px 8px;">Description</th>
+                                    <th style="text-align:right;padding:6px 8px;width:60px;">Qty</th>
+                                    <th style="text-align:right;padding:6px 8px;width:100px;">Unit Price</th>
+                                    <th style="text-align:right;padding:6px 8px;width:110px;">Extended</th>
+                                    <th style="padding:6px 8px;width:90px;">Type</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var l in _lines)
+                                {
+                                    <tr style="border-bottom:1px solid var(--mud-palette-divider);">
+                                        <td style="padding:6px 8px;">@l.Description</td>
+                                        <td style="text-align:right;padding:6px 8px;">@l.Quantity</td>
+                                        <td style="text-align:right;padding:6px 8px;">@l.PriceEx.ToString("C2")</td>
+                                        <td style="text-align:right;padding:6px 8px;font-weight:500;">@l.PriceExSubTotal.ToString("C2")</td>
+                                        <td style="padding:6px 8px;font-size:.8rem;">
+                                            @l.ProductTypeName
+                                            @if (l.IsCapEx) { <MudChip T="string" Size="Size.Small" Color="Color.Warning">CapEx</MudChip> }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <MudText Style="color:var(--gray-400)">No line items recorded.</MudText>
+                }
+            </MudPaper>
+
+            @* Notes *@
+            @if (!string.IsNullOrEmpty(_po.IntroText) || !string.IsNullOrEmpty(_po.InternalNotes))
+            {
+                <MudPaper Class="pa-5 mb-3" Elevation="1">
+                    <MudGrid Spacing="2">
+                        @if (!string.IsNullOrEmpty(_po.IntroText))
+                        {
+                            <MudItem xs="12" sm="6">
+                                <div style="color:var(--gray-500);font-size:.8rem;margin-bottom:4px;">Notes to Supplier</div>
+                                <div style="white-space:pre-line;font-size:.875rem;">@_po.IntroText</div>
+                            </MudItem>
+                        }
+                        @if (!string.IsNullOrEmpty(_po.InternalNotes))
+                        {
+                            <MudItem xs="12" sm="6">
+                                <div style="color:var(--gray-500);font-size:.8rem;margin-bottom:4px;">Internal Notes</div>
+                                <div style="white-space:pre-line;font-size:.875rem;">@_po.InternalNotes</div>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </MudPaper>
+            }
+        </MudItem>
+
+        @* ── Right: Totals + Workflow ── *@
+        <MudItem xs="12" md="4">
+            @* Totals *@
+            <MudPaper Class="pa-5 mb-3" Elevation="1">
+                <MudText Typo="Typo.subtitle2" Class="mb-3"
+                         Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Totals</MudText>
+                <table style="width:100%;font-size:.9rem;">
+                    <tr><td style="color:var(--gray-500);padding:3px 0;">Ex GST</td>
+                        <td style="text-align:right;font-weight:500;">@_po.PriceExTotal.ToString("C2")</td></tr>
+                    <tr><td style="color:var(--gray-500);padding:3px 0;">GST</td>
+                        <td style="text-align:right;">@_po.PriceGSTTotal.ToString("C2")</td></tr>
+                    <tr style="border-top:1px solid var(--mud-palette-divider);">
+                        <td style="font-weight:600;padding-top:6px;">Total inc GST</td>
+                        <td style="text-align:right;font-weight:700;font-size:1.1rem;padding-top:6px;">@_po.PriceIncTotal.ToString("C2")</td>
+                    </tr>
+                </table>
+            </MudPaper>
+
+            @* Approve / Decline (Pending Approval only) *@
+            @if (_po.POStatusId == 2)
+            {
+                <MudPaper Class="pa-5 mb-3" Elevation="1">
+                    <MudText Typo="Typo.subtitle2" Class="mb-3"
+                             Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Approval</MudText>
+                    <div class="d-flex gap-2">
+                        <MudButton FullWidth="true" Variant="Variant.Filled" Color="Color.Success"
+                                   StartIcon="@Icons.Material.Rounded.CheckCircle"
+                                   OnClick="ApproveAsync" Disabled="@_actionBusy">
+                            Approve
+                        </MudButton>
+                        <MudButton FullWidth="true" Variant="Variant.Outlined" Color="Color.Error"
+                                   StartIcon="@Icons.Material.Rounded.Cancel"
+                                   OnClick="DeclineAsync" Disabled="@_actionBusy">
+                            Decline
+                        </MudButton>
+                    </div>
+                </MudPaper>
+            }
+
+            @* Change status *@
+            <MudPaper Class="pa-5 mb-3" Elevation="1">
+                <MudText Typo="Typo.subtitle2" Class="mb-3"
+                         Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Change Status</MudText>
+                <MudSelect T="int" @bind-Value="_newStatusId" Variant="Variant.Outlined" Dense="true">
+                    @foreach (var s in _statuses)
+                    {
+                        <MudSelectItem T="int" Value="@s.POStatusId">@s.StatusName</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudButton Class="mt-2" FullWidth="true" Variant="Variant.Filled" Color="Color.Primary"
+                           OnClick="UpdateStatusAsync"
+                           Disabled="@(_newStatusId == _po.POStatusId || _actionBusy)">
+                    @(_actionBusy ? "Saving…" : "Save Status")
+                </MudButton>
+            </MudPaper>
+
+            @* Delete (admin only) *@
+            @if (_isAdmin)
+            {
+                <MudPaper Class="pa-5" Elevation="1">
+                    <MudButton FullWidth="true" Variant="Variant.Outlined" Color="Color.Error"
+                               StartIcon="@Icons.Material.Rounded.Delete"
+                               OnClick="DeleteAsync">Delete PO</MudButton>
+                </MudPaper>
+            }
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private PurchaseOrder?    _po;
+    private List<POLineItem>  _lines   = new();
+    private List<POStatus>    _statuses= new();
+    private bool   _isAdmin;
+    private bool   _actionBusy;
+    private bool   _generatingPdf;
+    private int    _newStatusId;
+    private string _userCode = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth  = await AuthStateProvider.GetAuthenticationStateAsync();
+        _isAdmin  = auth.User.IsInRole("Admin") || auth.User.FindFirst("IsAdmin")?.Value == "True";
+        _userCode = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+
+        (_po, _lines, _statuses) = (
+            await POService.GetPurchaseOrderAsync(Id),
+            await POService.GetLineItemsAsync(Id),
+            await LookupService.GetPoStatusesAsync());
+
+        if (_po != null) _newStatusId = _po.POStatusId;
+    }
+
+    private async Task ApproveAsync()
+    {
+        _actionBusy = true;
+        try
+        {
+            await POService.ApproveAsync(Id, _userCode);
+            _po!.POStatusId  = 3;
+            _po.StatusName   = "Approved";
+            _newStatusId     = 3;
+            Snackbar.Add("PO approved.", Severity.Success);
+        }
+        catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
+        finally { _actionBusy = false; }
+    }
+
+    private async Task DeclineAsync()
+    {
+        _actionBusy = true;
+        try
+        {
+            await POService.DeclineAsync(Id, _userCode);
+            _po!.POStatusId  = 5;
+            _po.StatusName   = "Declined";
+            _newStatusId     = 5;
+            Snackbar.Add("PO declined.", Severity.Warning);
+        }
+        catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
+        finally { _actionBusy = false; }
+    }
+
+    private async Task UpdateStatusAsync()
+    {
+        if (_po == null) return;
+        _actionBusy = true;
+        try
+        {
+            var name = _statuses.FirstOrDefault(s => s.POStatusId == _newStatusId)?.StatusName ?? "";
+            await POService.UpdateStatusAsync(Id, _newStatusId, _userCode, name);
+            _po.POStatusId = _newStatusId;
+            _po.StatusName = name;
+            Snackbar.Add($"Status updated to {name}.", Severity.Success);
+        }
+        catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
+        finally { _actionBusy = false; }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (_po == null) return;
+        bool? ok = await Dialog.ShowMessageBox("Delete PO",
+            $"Delete PO #{Id} for {_po.SupplierName}? This cannot be undone.",
+            yesText: "Delete", cancelText: "Cancel");
+        if (ok != true) return;
+        try
+        {
+            await POService.DeleteAsync(Id);
+            Snackbar.Add("PO deleted.", Severity.Success);
+            Nav.NavigateTo("/purchase-orders");
+        }
+        catch (Exception ex) { Snackbar.Add($"Delete failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task GeneratePdf()
+    {
+        if (_po == null) return;
+        _generatingPdf = true;
+        try
+        {
+            var pdfBytes = await PdfService.GeneratePurchaseOrderPdfAsync(_po.POid);
+            var fileName = $"PO{_po.POid}.pdf";
+            var base64 = Convert.ToBase64String(pdfBytes);
+            await JsRuntime.InvokeVoidAsync("downloadBase64File", base64, "application/pdf", fileName);
+            Snackbar.Add("PDF generated.", Severity.Success);
+
+            // Auto-promote to Issued (4) if status < 4
+            if (_po.POStatusId < 4)
+            {
+                await POService.UpdateStatusAsync(Id, 4, _userCode, "Issued");
+                _po.POStatusId = 4;
+                _po.StatusName = "Issued";
+            }
+        }
+        catch (Exception ex) { Snackbar.Add($"PDF failed: {ex.Message}", Severity.Error); }
+        finally { _generatingPdf = false; }
+    }
+
+    private static Color StatusColour(string s) => s switch
+    {
+        "Draft"            => Color.Default,
+        "Pending Approval" => Color.Warning,
+        "Approved"         => Color.Success,
+        "Issued"           => Color.Info,
+        "Declined"         => Color.Error,
+        "Cancelled"        => Color.Dark,
+        _                  => Color.Default,
+    };
+}
+

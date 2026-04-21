@@ -1,0 +1,450 @@
+@page "/reports"
+@attribute [Authorize]
+@inject ReportService ReportSvc
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<PageTitle>Reports - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Home</a>
+            <span class="sep">/</span>
+            <span style="color:var(--gray-700); font-weight:500;">Reports</span>
+        </div>
+        <h1>Intelligence Hub</h1>
+        <p class="tl-subtitle">Analyze business performance with dynamic reporting and custom data builders.</p>
+    </div>
+</div>
+
+<MudTabs Elevation="0" Rounded="true" PanelClass="pa-0" Class="mt-4">
+    @* ── Presets Tab ────────────────────────────────────────────────────────────── *@
+    <MudTabPanel Text="Standard Reports" Icon="@Icons.Material.Rounded.Dashboard">
+        <MudGrid Class="mt-2">
+            <MudItem xs="12" md="3">
+                <MudPaper Class="pa-6 tl-glass">
+                    <MudText Typo="Typo.subtitle2" Class="mb-4" Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Report Configuration</MudText>
+                    
+                    <MudSelect T="ReportType" Label="Report Category" @bind-Value="_reportType" Variant="Variant.Outlined" Class="mb-4" AnchorOrigin="Origin.BottomCenter">
+                        <MudSelectItem Value="ReportType.Invoices">Invoices</MudSelectItem>
+                        <MudSelectItem Value="ReportType.Quotes">Quotes</MudSelectItem>
+                        <MudSelectItem Value="ReportType.PurchaseOrders">Purchase Orders</MudSelectItem>
+                        <MudSelectItem Value="ReportType.DeliveryNotes">Delivery Notes</MudSelectItem>
+                        <MudSelectItem Value="ReportType.Contacts">Contacts Catalog</MudSelectItem>
+                    </MudSelect>
+
+                    <MudSelect T="DateFilter" Label="Period" @bind-Value="_dateFilter" Variant="Variant.Outlined" Class="mb-4" AnchorOrigin="Origin.BottomCenter">
+                        <MudSelectItem Value="DateFilter.ThisMonth">This Month</MudSelectItem>
+                        <MudSelectItem Value="DateFilter.LastMonth">Last Month</MudSelectItem>
+                        <MudSelectItem Value="DateFilter.ThisQuarter">This Quarter</MudSelectItem>
+                        <MudSelectItem Value="DateFilter.ThisFY">Current Financial Year</MudSelectItem>
+                        <MudSelectItem Value="DateFilter.AllTime">All Time</MudSelectItem>
+                        <MudSelectItem Value="DateFilter.Custom">Custom Range...</MudSelectItem>
+                    </MudSelect>
+
+                    @if (_dateFilter == DateFilter.Custom)
+                    {
+                        <div class="d-flex gap-2 mb-4">
+                            <MudDatePicker Label="From" @bind-Date="_customStartDate" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            <MudDatePicker Label="To" @bind-Date="_customEndDate" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </div>
+                    }
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" OnClick="GenerateReport" 
+                               Disabled="_isGenerating" StartIcon="@Icons.Material.Rounded.PlayArrow" Style="height:48px; border-radius:12px;">
+                        @(_isGenerating ? "Processing..." : "Generate Analysis")
+                    </MudButton>
+
+                    <MudDivider Class="my-6" />
+                    
+                    <MudText Typo="Typo.subtitle2" Class="mb-2" Style="color:var(--gray-500);">Saved Presets</MudText>
+                    <div class="d-flex flex-column gap-2">
+                        @if (_savedReports == null) { <MudProgressLinear Indeterminate="true" /> }
+                        else if (!_savedReports.Any()) { <MudText Typo="Typo.caption">No saved presets yet.</MudText> }
+                        else
+                        {
+                            @foreach(var r in _savedReports.Take(5))
+                            {
+                                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => LoadSavedReport(r))" 
+                                           StartIcon="@Icons.Material.Rounded.History" Class="justify-start">@r.Name</MudButton>
+                            }
+                        }
+                    </div>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="9">
+                @if (_currentResult != null)
+                {
+                    <div class="d-flex flex-column gap-4">
+                        <div class="d-flex flex-wrap gap-4">
+                            <div class="tl-summary-card">
+                                <span class="label">Total Records</span>
+                                <span class="value">@_currentResult.Rows.Count</span>
+                            </div>
+                            @if (_currentResult.TotalAmount.HasValue)
+                            {
+                                <div class="tl-summary-card accent">
+                                    <span class="label">Aggregate Value</span>
+                                    <span class="value">@_currentResult.TotalAmount.Value.ToString("C0")</span>
+                                </div>
+                            }
+                            <div class="d-flex align-center ml-auto gap-2">
+                                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Download" OnClick="ExportToExcel">Export CSV</MudButton>
+                                <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Rounded.Save" OnClick="ShowSaveDialog">Save Preset</MudButton>
+                            </div>
+                        </div>
+
+                        <MudPaper Class="pa-0 tl-glass overflow-hidden">
+                            <div class="pa-4 border-b d-flex align-center justify-space-between">
+                                <MudText Typo="Typo.h6">@_currentResult.Title</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Info">Live Preview (Top 1000)</MudText>
+                            </div>
+                            <div class="report-container">
+                                <table class="tl-report-table">
+                                    <thead>
+                                        <tr>
+                                            @foreach(var h in _currentResult.Headers) { <th>@h</th> }
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach(var row in _itemsToDisplay)
+                                        {
+                                            <tr>
+                                                @foreach(var cell in row) { <td>@cell</td> }
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            @if (_currentResult.Rows.Count > 100)
+                            {
+                                <div class="pa-4 text-center border-t">
+                                    <MudText Typo="Typo.caption">Showing first 100 of @_currentResult.Rows.Count records. Export to see full details.</MudText>
+                                </div>
+                            }
+                        </MudPaper>
+                    </div>
+                }
+                else
+                {
+                    <div class="pa-12 text-center" style="border: 2px dashed var(--gray-200); border-radius: 16px; background: var(--gray-50);">
+                        <MudIcon Icon="@Icons.Material.Rounded.BarChart" Size="Size.Large" Color="Color.Info" Class="mb-4" />
+                        <MudText Typo="Typo.h6" Class="mb-2">Ready to analyze</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Select a report type and filter from the left to begin.</MudText>
+                    </div>
+                }
+            </MudItem>
+        </MudGrid>
+    </MudTabPanel>
+
+    @* ── Builder Tab ────────────────────────────────────────────────────────────── *@
+    <MudTabPanel Text="Custom Builder" Icon="@Icons.Material.Rounded.Build">
+        <MudGrid Class="mt-2">
+            <MudItem xs="12" md="3">
+                <MudPaper Class="pa-6 tl-glass">
+                    <MudText Typo="Typo.subtitle2" Class="mb-4" Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Source Table</MudText>
+                    
+                    <MudAutocomplete T="string" Value="_builderTable" ValueChanged="OnBuilderTableChanged" Label="Select Table" 
+                                     SearchFunc="SearchTables" Variant="Variant.Outlined" Class="mb-4" />
+
+                    @if (!string.IsNullOrEmpty(_builderTable))
+                    {
+                        <MudText Typo="Typo.subtitle2" Class="mb-2" Style="color:var(--gray-500);">Columns</MudText>
+                        <div class="d-flex flex-column gap-1 mb-4" style="max-height:300px; overflow-y:auto;">
+                            @foreach(var col in _availableColumns)
+                            {
+                                <MudCheckBox T="bool" Value="@(_builderSelectedColumns.Contains(col))" 
+                                             ValueChanged="@(v => ToggleColumn(col, v))" 
+                                             Label="@col" Dense="true" Color="Color.Primary" />
+                            }
+                        </div>
+                        
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" 
+                                   OnClick="GenerateCustomReport" Disabled="@(!_builderSelectedColumns.Any() || _isGenerating)">
+                            Run Custom Query
+                        </MudButton>
+                    }
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="9">
+                @if (_customResult != null)
+                {
+                    <MudPaper Class="pa-0 tl-glass overflow-hidden">
+                        <div class="pa-4 border-b d-flex align-center justify-space-between">
+                            <MudText Typo="Typo.h6">@_customResult.Title</MudText>
+                            <MudButton Size="Size.Small" StartIcon="@Icons.Material.Rounded.Download" OnClick="@(() => ExportCustomToExcel())">Export CSV</MudButton>
+                        </div>
+                        <div class="report-container">
+                            <table class="tl-report-table">
+                                <thead>
+                                    <tr>
+                                        @foreach(var h in _customResult.Headers) { <th>@h</th> }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach(var row in _customResult.Rows.Take(100))
+                                    {
+                                        <tr>
+                                            @foreach(var cell in row) { <td>@cell</td> }
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </MudPaper>
+                }
+                else
+                {
+                     <div class="pa-12 text-center" style="border: 2px dashed var(--gray-200); border-radius: 16px; background: var(--gray-50);">
+                        <MudIcon Icon="@Icons.Material.Rounded.Storage" Size="Size.Large" Color="Color.Info" Class="mb-4" />
+                        <MudText Typo="Typo.h6" Class="mb-2">Schema Explorer</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Choose a database table and select columns to build a dynamic report.</MudText>
+                    </div>
+                }
+            </MudItem>
+        </MudGrid>
+    </MudTabPanel>
+
+    @* ── Saved Tab ──────────────────────────────────────────────────────────────── *@
+    <MudTabPanel Text="Saved Collections" Icon="@Icons.Material.Rounded.Bookmarks">
+         <MudPaper Class="pa-6 mt-4 tl-glass">
+            <MudDataGrid T="ReportDefinition" Items="_savedReports ?? new()" Filterable="true" Hover="true" Elevation="0">
+                <Columns>
+                    <PropertyColumn Property="x => x.Name" Title="Report Name" />
+                    <PropertyColumn Property="x => x.Type" Title="Category" />
+                    <PropertyColumn Property="x => x.DateFilter" Title="Period" />
+                    <PropertyColumn Property="x => x.CreatedAt" Title="Saved On" Format="dd MMM yyyy" />
+                    <TemplateColumn Title="Actions" Sortable="false">
+                        <CellTemplate>
+                            <div class="d-flex gap-2">
+                                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => LoadSavedReport(context.Item))">Load</MudButton>
+                                <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteSavedReport(context.Item))" />
+                            </div>
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+            </MudDataGrid>
+         </MudPaper>
+    </MudTabPanel>
+</MudTabs>
+
+@* ── Save Dialog ────────────────────────────────────────────────────────────── *@
+<MudDialog @bind-Visible="_showSaveDialog" Options="_dialogOptions">
+    <TitleContent><MudText Typo="Typo.h6">Save Report Preset</MudText></TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_reportName" Label="Preset Name" Variant="Variant.Outlined" FullWidth="true" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showSaveDialog = false)">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveReport">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .tl-glass {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 16px !important;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
+    
+    .tl-summary-card {
+        background: white;
+        padding: 16px 24px;
+        border-radius: 12px;
+        min-width: 140px;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--gray-200);
+    }
+    .tl-summary-card.accent {
+        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        color: white;
+        border: none;
+    }
+    .tl-summary-card .label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        opacity: 0.7;
+        margin-bottom: 4px;
+    }
+    .tl-summary-card .value {
+        font-size: 24px;
+        font-weight: 700;
+    }
+
+    .report-container {
+        overflow: auto;
+        max-height: 600px;
+        border-radius: 0 0 16px 16px;
+    }
+    .tl-report-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+    .tl-report-table th {
+        background: var(--gray-50);
+        padding: 12px 16px;
+        text-align: left;
+        font-weight: 600;
+        color: var(--gray-700);
+        position: sticky;
+        top: 0;
+        border-bottom: 2px solid var(--gray-200);
+        white-space: nowrap;
+    }
+    .tl-report-table td {
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--gray-100);
+        color: var(--gray-600);
+    }
+    .tl-report-table tr:hover {
+        background: var(--gray-50);
+    }
+
+    .border-b { border-bottom: 1px solid var(--gray-200); }
+    .border-t { border-top: 1px solid var(--gray-200); }
+</style>
+
+@code {
+    private ReportType _reportType = ReportType.Invoices;
+    private DateFilter _dateFilter = DateFilter.ThisMonth;
+    private DateTime? _customStartDate;
+    private DateTime? _customEndDate;
+    private string _reportName = "";
+    private bool _isGenerating = false;
+    private ReportResult? _currentResult;
+    private List<ReportDefinition>? _savedReports;
+    private bool _showSaveDialog = false;
+    private DialogOptions _dialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    private IEnumerable<List<string>> _itemsToDisplay => _currentResult?.Rows.Take(100) ?? Enumerable.Empty<List<string>>();
+
+    // Builder State
+    private string _builderTable = "";
+    private List<string> _availableTables = new();
+    private List<string> _availableColumns = new();
+    private List<string> _builderSelectedColumns = new();
+    private ReportResult? _customResult;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSavedReports();
+        _availableTables = await ReportSvc.GetTablesAsync();
+    }
+
+    private async Task LoadSavedReports() => _savedReports = await ReportSvc.GetSavedReportsAsync();
+
+    private async Task GenerateReport()
+    {
+        _isGenerating = true;
+        try
+        {
+            var (start, end) = (null as DateTime?, null as DateTime?);
+            if (_dateFilter == DateFilter.Custom) { start = _customStartDate; end = _customEndDate; }
+            _currentResult = await ReportSvc.GenerateReportAsync(_reportType, _dateFilter, start, end);
+        }
+        catch (Exception ex) { Snackbar.Add($"Analysis failed: {ex.Message}", Severity.Error); }
+        finally { _isGenerating = false; }
+    }
+
+    private void ShowSaveDialog()
+    {
+        _reportName = $"{_reportType} - {DateTime.Now:MMM yyyy}";
+        _showSaveDialog = true;
+    }
+
+    private async Task SaveReport()
+    {
+        if (string.IsNullOrWhiteSpace(_reportName)) return;
+        try
+        {
+            var def = new ReportDefinition { 
+                Name = _reportName, Type = _reportType, DateFilter = _dateFilter,
+                StartDate = _customStartDate, EndDate = _customEndDate, CreatedBy = "Admin"
+            };
+            await ReportSvc.SaveReportAsync(def);
+            _showSaveDialog = false;
+            Snackbar.Add("Preset saved", Severity.Success);
+            await LoadSavedReports();
+        }
+        catch (Exception ex) { Snackbar.Add($"Save failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task LoadSavedReport(ReportDefinition r)
+    {
+        _reportType = r.Type;
+        _dateFilter = r.DateFilter;
+        _customStartDate = r.StartDate;
+        _customEndDate = r.EndDate;
+        await GenerateReport();
+    }
+
+    private async Task DeleteSavedReport(ReportDefinition r)
+    {
+        await ReportSvc.DeleteReportAsync(r.ReportId);
+        await LoadSavedReports();
+        Snackbar.Add("Preset removed", Severity.Success);
+    }
+
+    private async Task ExportToExcel()
+    {
+        if (_currentResult == null) return;
+        var csv = string.Join(",", _currentResult.Headers) + "\n" + string.Join("\n", _currentResult.Rows.Select(row => string.Join(",", row.Select(c => $"\"{c?.Replace("\"", "\"\"")}\""))));
+        await DownloadFile($"{_reportType}_Report_{DateTime.Now:yyyyMMdd}.csv", csv);
+    }
+
+    // Builder Logic
+    private async Task<IEnumerable<string>> SearchTables(string value, CancellationToken token)
+    {
+        if (string.IsNullOrEmpty(value)) return _availableTables;
+        return _availableTables.Where(x => x.Contains(value, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task OnBuilderTableChanged(string table)
+    {
+        _builderTable = table;
+        _builderSelectedColumns.Clear();
+        if (!string.IsNullOrEmpty(table))
+        {
+            _availableColumns = await ReportSvc.GetColumnsAsync(table);
+        }
+    }
+
+    private void ToggleColumn(string col, bool selected)
+    {
+        if (selected && !_builderSelectedColumns.Contains(col)) _builderSelectedColumns.Add(col);
+        else if (!selected) _builderSelectedColumns.Remove(col);
+    }
+
+    private async Task GenerateCustomReport()
+    {
+        _isGenerating = true;
+        try
+        {
+            _customResult = await ReportSvc.GenerateCustomReportAsync(_builderTable, _builderSelectedColumns);
+        }
+        catch (Exception ex) { Snackbar.Add($"Query failed: {ex.Message}", Severity.Error); }
+        finally { _isGenerating = false; }
+    }
+    
+    private async Task ExportCustomToExcel()
+    {
+        if (_customResult == null) return;
+        var csv = string.Join(",", _customResult.Headers) + "\n" + string.Join("\n", _customResult.Rows.Select(row => string.Join(",", row.Select(c => $"\"{c?.Replace("\"", "\"\"")}\""))));
+        await DownloadFile($"{_builderTable}_Custom_{DateTime.Now:yyyyMMdd}.csv", csv);
+    }
+
+    private async Task DownloadFile(string fileName, string content)
+    {
+        await JS.InvokeVoidAsync("downloadFile", fileName, content);
+    }
+}
+

@@ -1,7 +1,0 @@
-<Solution>
-  <Folder Name="/src/">
-    <Project Path="src/Techlight.MyDesk.Shared/Techlight.MyDesk.Shared.csproj" />
-    <Project Path="src/Techlight.MyDesk.Web/Techlight.MyDesk.Web.csproj" />
-  </Folder>
-  <Project Path="MyDeskMCP/MyDeskMCP.csproj" />
-</Solution>

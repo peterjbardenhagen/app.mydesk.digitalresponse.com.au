@@ -1,0 +1,132 @@
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+@using System.Security.Claims
+
+<div class="tl-comments-section">
+    <MudText Typo="Typo.subtitle2" Class="mb-3" Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Comments & Notes</MudText>
+    
+    <div style="display:flex;flex-direction:column;gap:16px;">
+        @if (_comments.Any())
+        {
+            @foreach (var comment in _comments.OrderByDescending(c => c.CreatedAt))
+            {
+                <div class="tl-comment-item" style="display:flex;gap:12px;padding:12px;background:var(--mud-palette-background-grey);border-radius:8px;">
+                    <div style="min-width:36px;width:36px;height:36px;background:var(--mud-palette-primary);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:0.875rem;">
+                        @(comment.UserName?.Substring(0, 1).ToUpper() ?? "U")
+                    </div>
+                    <div style="flex:1;">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                            <span style="font-weight:600;font-size:0.875rem;">@comment.UserName</span>
+                            <span style="color:var(--gray-400);font-size:0.75rem;">@comment.CreatedAt.ToString("dd MMM yyyy HH:mm")</span>
+                        </div>
+                        <div style="font-size:0.875rem;color:var(--gray-700);white-space:pre-wrap;">@comment.CommentText</div>
+                    </div>
+                    @if (CanDelete(comment))
+                    {
+                        <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
+                                       OnClick="@(() => DeleteComment(comment))" />
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Style="color:var(--gray-400);padding:12px 0;">No comments yet. Add your first comment above.</MudText>
+        }
+    </div>
+
+    <div class="mt-4">
+        <MudTextField @bind-Value="_newComment" Label="Add a comment" Variant="Variant.Outlined" 
+                      Lines="3" Placeholder="Enter your comment here..." />
+        <MudButton Class="mt-2" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Send"
+                   OnClick="AddCommentAsync" Disabled="@(_adding || string.IsNullOrWhiteSpace(_newComment))">
+            @(_adding ? "Adding..." : "Add Comment")
+        </MudButton>
+    </div>
+</div>
+
+<style>
+    .tl-comments-section {
+        margin-top: 24px;
+    }
+</style>
+
+@code {
+    [Parameter] public string EntityType { get; set; } = "";
+    [Parameter] public int EntityId { get; set; }
+    [Parameter] public EventCallback OnCommentAdded { get; set; }
+
+    private List<CommentItem> _comments = new();
+    private string _newComment = "";
+    private bool _adding;
+    private string _userCode = "";
+    private string _userName = "";
+    private bool _isAdmin;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _userCode = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+        _userName = authState.User.FindFirst(ClaimTypes.Name)?.Value ?? "";
+        _isAdmin = authState.User.IsInRole("Admin") || authState.User.IsInRole("Director");
+
+        await LoadCommentsAsync();
+    }
+
+    private async Task LoadCommentsAsync()
+    {
+        // In a real implementation, this would fetch from a TableComments table
+        // For now, we'll use in-memory storage as a placeholder
+        _comments = new List<CommentItem>();
+    }
+
+    private async Task AddCommentAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_newComment)) return;
+
+        _adding = true;
+        try
+        {
+            var comment = new CommentItem
+            {
+                CommentText = _newComment,
+                UserName = _userName,
+                CreatedAt = DateTime.Now
+            };
+
+            // In a real implementation, this would save to database
+            // await CommentService.AddCommentAsync(EntityType, EntityId, _newComment, _userCode);
+
+            _comments.Add(comment);
+            _newComment = "";
+            Snackbar.Add("Comment added successfully", Severity.Success);
+
+            await OnCommentAdded.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to add comment: {ex.Message}", Severity.Error);
+        }
+        finally { _adding = false; }
+    }
+
+    private async Task DeleteComment(CommentItem comment)
+    {
+        try
+        {
+            // In a real implementation, this would delete from database
+            // await CommentService.DeleteCommentAsync(comment.CommentId, _userCode);
+
+            _comments.Remove(comment);
+            Snackbar.Add("Comment deleted", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to delete comment: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private bool CanDelete(CommentItem comment) => _isAdmin || comment.UserCode == _userCode;
+}
+
+

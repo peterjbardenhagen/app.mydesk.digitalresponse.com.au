@@ -1,0 +1,51 @@
+@inject PlatformSettingsService PlatformSettings
+
+<MudAppBar Elevation="0" Dense="true" Bottom="true" Fixed="false" Style="background: var(--gray-900); border-top: 1px solid var(--gray-800);">
+    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="d-flex align-center justify-space-between py-2" Style="width: 100%;">
+        <div class="d-flex align-center gap-4">
+            <MudText Typo="Typo.caption" Style="color: var(--gray-500);">
+                @PlatformSettings.Current.CopyrightText
+            </MudText>
+            <MudText Typo="Typo.caption" Style="color: var(--gray-500);">
+                |
+            </MudText>
+            <MudLink Href="@PlatformSettings.Current.CompanyWebsite" Target="_blank" Typo="Typo.caption" Style="color: var(--gray-400);">
+                @PlatformSettings.Current.CompanyName
+            </MudLink>
+        </div>
+        
+        <div class="d-flex align-center gap-4">
+            <MudLink Href="@PlatformSettings.Current.PrivacyPolicyUrl" Typo="Typo.caption" Style="color: var(--gray-400);">
+                Privacy Policy
+            </MudLink>
+            <MudText Typo="Typo.caption" Style="color: var(--gray-500);">
+                |
+            </MudText>
+            <MudLink Href="@PlatformSettings.Current.TermsAndConditionsUrl" Typo="Typo.caption" Style="color: var(--gray-400);">
+                Terms & Conditions
+            </MudLink>
+            <MudText Typo="Typo.caption" Style="color: var(--gray-500);">
+                |
+            </MudText>
+            <MudLink Href="@($"mailto:{PlatformSettings.Current.SupportEmail}")" Typo="Typo.caption" Style="color: var(--gray-400);">
+                Support
+            </MudLink>
+        </div>
+        
+        <div class="d-flex align-center gap-2">
+            <MudText Typo="Typo.caption" Style="color: var(--gray-600);">
+                v@(PlatformSettings.Current.Version)
+            </MudText>
+        </div>
+    </MudContainer>
+</MudAppBar>
+
+<style>
+    :root {
+        --gray-900: #111827;
+        --gray-800: #1f2937;
+        --gray-600: #4b5563;
+        --gray-500: #6b7280;
+        --gray-400: #9ca3af;
+    }
+</style>

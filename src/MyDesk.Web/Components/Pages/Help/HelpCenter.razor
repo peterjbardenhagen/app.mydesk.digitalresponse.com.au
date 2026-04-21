@@ -1,0 +1,240 @@
+@page "/help"
+@inject PlatformSettingsService PlatformSettings
+
+<PageTitle>Help Centre - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="help-center">
+    <div class="help-hero">
+        <div class="help-hero-inner">
+            <MudIcon Icon="@Icons.Material.Rounded.LiveHelp" Size="Size.Large" Style="font-size: 64px; color: var(--tl-primary, #00c8c8);" />
+            <MudText Typo="Typo.h3" Class="mt-3">Help Centre</MudText>
+            <MudText Typo="Typo.body1" Class="mt-2 mud-text-secondary">Everything you need to know about @PlatformSettings.Current.PlatformName</MudText>
+            <MudTextField T="string" @bind-Value="_search" Placeholder="Search help articles..." Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Search" Class="mt-4" Style="max-width: 600px; margin: 0 auto;" FullWidth="true" />
+        </div>
+    </div>
+
+    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-6">
+        <!-- Quick Start Guide -->
+        <MudPaper Elevation="0" Class="pa-6 mb-6 help-section">
+            <div class="d-flex align-center gap-3 mb-4">
+                <MudIcon Icon="@Icons.Material.Rounded.RocketLaunch" Color="Color.Primary" Size="Size.Large" />
+                <MudText Typo="Typo.h5">Quick Start Guide</MudText>
+            </div>
+            <MudGrid>
+                <MudItem xs="12" md="4">
+                    <MudCard Elevation="0" Class="help-card" @onclick='() => NavigateToSection("dashboard")'>
+                        <MudCardContent>
+                            <MudIcon Icon="@Icons.Material.Rounded.Dashboard" Color="Color.Primary" />
+                            <MudText Typo="Typo.h6" Class="mt-2">Dashboard Overview</MudText>
+                            <MudText Typo="Typo.body2" Class="mt-1 mud-text-secondary">Understanding your KPI cards and business metrics at a glance.</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudCard Elevation="0" Class="help-card" @onclick='() => NavigateToSection("quotes")'>
+                        <MudCardContent>
+                            <MudIcon Icon="@Icons.Material.Rounded.RequestQuote" Color="Color.Primary" />
+                            <MudText Typo="Typo.h6" Class="mt-2">Creating Your First Quote</MudText>
+                            <MudText Typo="Typo.body2" Class="mt-1 mud-text-secondary">Step-by-step guide to creating, sending, and converting quotes.</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudCard Elevation="0" Class="help-card" @onclick='() => NavigateToSection("ask-ai")'>
+                        <MudCardContent>
+                            <MudIcon Icon="@Icons.Material.Rounded.SmartToy" Color="Color.Primary" />
+                            <MudText Typo="Typo.h6" Class="mt-2">Using Ask AI</MudText>
+                            <MudText Typo="Typo.body2" Class="mt-1 mud-text-secondary">How to get intelligent insights from your business data.</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <!-- Feature Documentation -->
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="0" Class="pa-6 help-section h-100">
+                    <MudText Typo="Typo.h5" Class="mb-4">
+                        <MudIcon Icon="@Icons.Material.Rounded.MenuBook" Color="Color.Primary" Class="mr-2" />
+                        Sales Management
+                    </MudText>
+                    <MudList T="string" Dense="false">
+                        <MudListItem T="string" Icon="@Icons.Material.Rounded.RequestQuote" Href="/help/quotes">
+                            <MudText Typo="Typo.body1"><strong>Quotes</strong></MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Create quotes, manage line items, send to customers</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Rounded.Receipt" Href="/help/invoices">
+                            <MudText Typo="Typo.body1"><strong>Invoices</strong></MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Generate invoices, track payments, MYOB integration</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Rounded.LocalShipping" Href="/help/despatch">
+                            <MudText Typo="Typo.body1"><strong>Despatch & Delivery Notes</strong></MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Manage deliveries, track shipments, print delivery notes</MudText>
+                        </MudListItem>
+                    </MudList>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="0" Class="pa-6 help-section h-100">
+                    <MudText Typo="Typo.h5" Class="mb-4">
+                        <MudIcon Icon="@Icons.Material.Rounded.ShoppingCart" Color="Color.Primary" Class="mr-2" />
+                        Procurement
+                    </MudText>
+                    <MudList T="string" Dense="false">
+                        <MudListItem T="string" Icon="@Icons.Material.Rounded.ShoppingBasket" Href="/help/purchase-orders">
+                            <MudText Typo="Typo.body1"><strong>Purchase Orders</strong></MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Create POs, approval workflow, supplier management</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Rounded.QuestionAnswer" Href="/help/rfq">
+                            <MudText Typo="Typo.body1"><strong>Request for Quote (RFQ)</strong></MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Request quotes from suppliers, compare prices</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Rounded.Assignment" Href="/help/job-orders">
+                            <MudText Typo="Typo.body1"><strong>Job Orders</strong></MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Track jobs, manage fulfilment, picking slips</MudText>
+                        </MudListItem>
+                    </MudList>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="0" Class="pa-6 help-section h-100">
+                    <MudText Typo="Typo.h5" Class="mb-4">
+                        <MudIcon Icon="@Icons.Material.Rounded.People" Color="Color.Primary" Class="mr-2" />
+                        CRM
+                    </MudText>
+                    <MudList T="string" Dense="false">
+                        <MudListItem T="string" Icon="@Icons.Material.Rounded.Person" Href="/help/contacts">
+                            <MudText Typo="Typo.body1"><strong>Contacts</strong></MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Manage contacts, addresses, communication history</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Rounded.Business" Href="/help/companies">
+                            <MudText Typo="Typo.body1"><strong>Companies</strong></MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Company profiles, ABN tracking, relationships</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Rounded.PhoneCallback" Href="/help/call-reports">
+                            <MudText Typo="Typo.body1"><strong>Call Reports</strong></MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Log interactions, track follow-ups</MudText>
+                        </MudListItem>
+                    </MudList>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="0" Class="pa-6 help-section h-100">
+                    <MudText Typo="Typo.h5" Class="mb-4">
+                        <MudIcon Icon="@Icons.Material.Rounded.Insights" Color="Color.Primary" Class="mr-2" />
+                        Intelligence & Reports
+                    </MudText>
+                    <MudList T="string" Dense="false">
+                        <MudListItem T="string" Icon="@Icons.Material.Rounded.SmartToy" Href="/help/ask-ai">
+                            <MudText Typo="Typo.body1"><strong>Ask AI Assistant</strong></MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Natural language queries, intelligent insights</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Rounded.Assessment" Href="/help/reports">
+                            <MudText Typo="Typo.body1"><strong>Business Reports</strong></MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Sales reports, analytics, custom dashboards</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Rounded.Dashboard" Href="/help/dashboard">
+                            <MudText Typo="Typo.body1"><strong>Dashboard</strong></MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">KPI cards, business intelligence carousel</MudText>
+                        </MudListItem>
+                    </MudList>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- FAQs -->
+        <MudPaper Elevation="0" Class="pa-6 mt-6 help-section">
+            <MudText Typo="Typo.h5" Class="mb-4">
+                <MudIcon Icon="@Icons.Material.Rounded.QuestionMark" Color="Color.Primary" Class="mr-2" />
+                Frequently Asked Questions
+            </MudText>
+            <MudExpansionPanels Elevation="0">
+                <MudExpansionPanel Text="How do I create my first quote?">
+                    <MudText Typo="Typo.body1">Navigate to Quotes in the side menu, then click "New Quote" button. Select a customer, add line items with your products and pricing, review the total, and save. You can then email the quote directly to the customer or convert it to an invoice or job order.</MudText>
+                </MudExpansionPanel>
+                <MudExpansionPanel Text="How does the approval workflow work for Purchase Orders?">
+                    <MudText Typo="Typo.body1">When you create a Purchase Order, it follows the approval hierarchy based on user roles. Each approver has a defined PO approval limit. If the PO value exceeds their limit, it automatically escalates to their line manager. Approvers receive email notifications.</MudText>
+                </MudExpansionPanel>
+                <MudExpansionPanel Text="Can I integrate with MYOB?">
+                    <MudText Typo="Typo.body1">Yes! @PlatformSettings.Current.PlatformName has built-in MYOB integration for invoice reconciliation and payment tracking. Go to Admin → MYOB Sync to configure your connection and sync invoices bidirectionally.</MudText>
+                </MudExpansionPanel>
+                <MudExpansionPanel Text="How do I use Ask AI?">
+                    <MudText Typo="Typo.body1">Click the "Ask AI" button in the side menu or header. Type any question about your business data in natural language (e.g., "Show me last month's top 10 customers by revenue") and get instant intelligent insights.</MudText>
+                </MudExpansionPanel>
+                <MudExpansionPanel Text="How can I reset my password?">
+                    <MudText Typo="Typo.body1">Click on your profile icon in the top-right corner, select "My Account", then "Change Password". Follow the prompts to set a new secure password. Administrators can also reset passwords for team members from the Users section.</MudText>
+                </MudExpansionPanel>
+                <MudExpansionPanel Text="What is the difference between Quotes, Invoices, and Job Orders?">
+                    <MudText Typo="Typo.body1"><strong>Quotes</strong> are estimates sent to customers before work begins. <strong>Invoices</strong> are bills sent after goods/services are delivered. <strong>Job Orders</strong> are internal workflow documents for tracking fulfilment between quote acceptance and invoicing.</MudText>
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+        </MudPaper>
+
+        <!-- Contact Support -->
+        <MudPaper Elevation="0" Class="pa-6 mt-6 help-section contact-support">
+            <MudGrid Class="align-center">
+                <MudItem xs="12" md="8">
+                    <MudText Typo="Typo.h5"><MudIcon Icon="@Icons.Material.Rounded.SupportAgent" Class="mr-2" />Still need help?</MudText>
+                    <MudText Typo="Typo.body1" Class="mt-2">
+                        Our support team is here to help. Contact us during business hours (Monday-Friday, 9am-5pm AEST).
+                    </MudText>
+                </MudItem>
+                <MudItem xs="12" md="4" Class="d-flex justify-md-end">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" StartIcon="@Icons.Material.Rounded.Email" Href="@($"mailto:{PlatformSettings.Current.SupportEmail}")">
+                        Contact Support
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+    </MudContainer>
+</div>
+
+<style>
+    .help-center {
+        min-height: calc(100vh - 120px);
+    }
+    .help-hero {
+        background: linear-gradient(135deg, #f5f9ff 0%, #e8f5fe 100%);
+        padding: 48px 24px;
+        text-align: center;
+    }
+    .help-hero-inner {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .help-section {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.06);
+    }
+    .help-card {
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid rgba(0,0,0,0.08);
+    }
+    .help-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        border-color: var(--tl-primary, #00c8c8);
+    }
+    .contact-support {
+        background: linear-gradient(135deg, #e8f5fe 0%, #f5f9ff 100%);
+    }
+    .h-100 {
+        height: 100%;
+    }
+</style>
+
+@code {
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    private string _search = "";
+
+    private void NavigateToSection(string section)
+    {
+        NavigationManager.NavigateTo($"/help/{section}");
+    }
+}

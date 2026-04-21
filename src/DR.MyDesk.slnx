@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="MyDesk.Shared/DR.MyDesk.Shared.csproj" />
+    <Project Path="MyDesk.Web/DR.MyDesk.Web.csproj" />
+  </Folder>
+</Solution>

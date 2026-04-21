@@ -1,1 +1,0 @@
-<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="GenerateInvoice.aspx.cs" Inherits="MyDeskASPNet.GenerateInvoice" %>

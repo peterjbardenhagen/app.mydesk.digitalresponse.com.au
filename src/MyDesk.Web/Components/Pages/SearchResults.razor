@@ -1,0 +1,175 @@
+@page "/search"
+@attribute [Authorize]
+@inject SearchService SearchSvc
+@inject EntityColorService ColorSvc
+@inject ISnackbar Snackbar
+
+<PageTitle>Search: @Q - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <span style="color:var(--gray-700);font-weight:500;">Search</span>
+        </div>
+        <h1>Search results</h1>
+        @if (!string.IsNullOrWhiteSpace(Q))
+        {
+            <p class="tl-subtitle">for "<strong>@Q</strong>" — @_results.Count match@(_results.Count == 1 ? "" : "es")</p>
+        }
+    </div>
+</div>
+
+<MudPaper Class="pa-4 mb-3" Elevation="1">
+    <div class="d-flex gap-2 align-center">
+        <MudTextField @bind-Value="_searchText" Label="Search"
+                      Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Search"
+                      OnKeyDown="OnKeyDown" Style="flex:1;" />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ExecuteSearch">Search</MudButton>
+    </div>
+
+    @* Entity type filter chips *@
+    <div class="d-flex flex-wrap gap-2 mt-3">
+        @foreach (var kv in ColorSvc.All)
+        {
+            var isActive = _filter == kv.Key;
+            var isAll = _filter == null;
+            var style = $"background:{(isActive ? kv.Value.Color : kv.Value.BgColor)};" +
+                        $"color:{(isActive ? "#fff" : kv.Value.Color)};" +
+                        "cursor:pointer;padding:4px 12px;border-radius:20px;font-size:.8rem;font-weight:500;";
+            var count = _results.Count(r => r.EntityType == kv.Key);
+            if (count == 0) continue;
+            <span style="@style" @onclick="@(() => SetFilter(kv.Key))">
+                @kv.Value.Label (@count)
+            </span>
+        }
+        @if (_filter != null)
+        {
+            <span style="cursor:pointer;padding:4px 12px;border-radius:20px;font-size:.8rem;color:var(--gray-600);"
+                  @onclick="@(() => SetFilter(null))">Show all</span>
+        }
+    </div>
+</MudPaper>
+
+@if (_loading)
+{
+    <div class="d-flex justify-center align-center" style="min-height:200px;">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    </div>
+}
+else if (!_results.Any())
+{
+    <MudPaper Class="pa-10 text-center" Elevation="1">
+        <MudIcon Icon="@Icons.Material.Rounded.SearchOff" Style="font-size:3rem;color:var(--gray-300);" />
+        <MudText Typo="Typo.h6" Class="mt-3">No results found</MudText>
+        <MudText Typo="Typo.body2" Style="color:var(--gray-500);">
+            Try different keywords or check spelling.
+        </MudText>
+    </MudPaper>
+}
+else
+{
+    <MudPaper Class="pa-0" Elevation="1">
+        <MudList T="SearchResult" Dense="false">
+            @foreach (var r in FilteredResults)
+            {
+                var style = ColorSvc.Get(r.EntityType);
+                <MudListItem T="SearchResult" Href="@r.Url">
+                    <div class="d-flex align-center gap-3" style="width:100%;">
+                        <span style="min-width:40px;width:40px;height:40px;border-radius:10px;
+                                     display:flex;align-items:center;justify-content:center;
+                                     background:@style.BgColor;color:@style.Color;">
+                            <MudIcon Icon="@ColorSvc.IconToMudIcon(style.Icon)" Size="Size.Medium" />
+                        </span>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                @r.Title
+                            </div>
+                            <div style="font-size:0.8rem;color:var(--gray-500);">
+                                @if (!string.IsNullOrWhiteSpace(r.Subtitle))
+                                {
+                                    <span>@r.Subtitle</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(r.Status))
+                                {
+                                    <span> · @r.Status</span>
+                                }
+                                @if (r.Date.HasValue)
+                                {
+                                    <span> · @r.Date.Value.ToString("dd MMM yyyy")</span>
+                                }
+                            </div>
+                        </div>
+                        @if (r.Amount.HasValue)
+                        {
+                            <div style="font-weight:600;color:var(--gray-900);white-space:nowrap;">
+                                @r.Amount.Value.ToString("$#,##0")
+                            </div>
+                        }
+                        <span class="tl-badge" style="background:@style.BgColor;color:@style.Color;
+                                                      font-size:0.7rem;white-space:nowrap;
+                                                      padding:3px 10px;border-radius:12px;font-weight:500;">
+                            @style.Label
+                        </span>
+                    </div>
+                </MudListItem>
+                <MudDivider />
+            }
+        </MudList>
+    </MudPaper>
+}
+
+@code {
+    [Parameter, SupplyParameterFromQuery(Name = "q")]
+    public string? Q { get; set; }
+
+    private string _searchText = "";
+    private string? _filter;
+    private List<SearchResult> _results = new();
+    private bool _loading;
+
+    private IEnumerable<SearchResult> FilteredResults =>
+        _filter == null ? _results : _results.Where(r => r.EntityType == _filter);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(Q) && Q != _searchText)
+        {
+            _searchText = Q;
+            await RunSearch();
+        }
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await ExecuteSearch();
+    }
+
+    private async Task ExecuteSearch()
+    {
+        if (string.IsNullOrWhiteSpace(_searchText)) return;
+        Q = _searchText;
+        await RunSearch();
+    }
+
+    private async Task RunSearch()
+    {
+        _loading = true;
+        try
+        {
+            _results = await SearchSvc.SearchAsync(_searchText);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Search failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void SetFilter(string? entityType) => _filter = entityType;
+}
+

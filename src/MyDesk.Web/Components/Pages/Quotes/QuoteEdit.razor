@@ -1,0 +1,372 @@
+@page "/quotes/create"
+@page "/quotes/{Id:int}/edit"
+@attribute [Authorize]
+@inject QuoteService QuoteService
+@inject LookupService LookupService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ActivityService ActivitySvc
+@using System.Security.Claims
+
+<PageTitle>@(IsNew ? "New Quote" : $"Edit Quote #{Id}") - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/quotes">Quotes</a><span class="sep">/</span>
+            <span style="color:var(--gray-700);font-weight:500;">@(IsNew ? "New Quote" : $"Edit #{Id}")</span>
+        </div>
+        <h1>@(IsNew ? "New Quote" : $"Edit Quote #{Id}")</h1>
+    </div>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ArrowBack"
+               Href="@(IsNew ? "/quotes" : $"/quotes/{Id}")">Cancel</MudButton>
+</div>
+
+@* ── Header ─────────────────────────────────────────────────────────────── *@
+<MudPaper Class="pa-6 mb-4" Elevation="1">
+    <MudText Typo="Typo.subtitle2" Class="mb-4" Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Quote Details</MudText>
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="8">
+            <MudAutocomplete T="Contact" @bind-Value="_selectedContact" Label="Contact / Customer *"
+                             SearchFunc="SearchContacts" Variant="Variant.Outlined"
+                             ToStringFunc="@(c => c == null ? "" : $"{c.CompanyName} — {c.FullName}".TrimEnd(' ').TrimEnd('—').Trim())"
+                             ResetValueOnEmptyText="false" ShowProgressIndicator="true"
+                             AdornmentIcon="@Icons.Material.Rounded.Business" />
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudSelect T="int" @bind-Value="_q.DivisionId" Label="Division" Variant="Variant.Outlined">
+                @foreach (var d in _divisions)
+                {
+                    <MudSelectItem T="int" Value="@d.DivisionId">@d.DivisionName</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_q.Reference" Label="Project / Reference" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_q.QuoteNumber" Label="Customer Quote / Ref #" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="5">
+            <MudTextField @bind-Value="_q.Attention" Label="Attention (for email / PDF)" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="5">
+            <MudTextField @bind-Value="_q.Delivery" Label="Delivery" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="6" sm="2">
+            <MudNumericField @bind-Value="_q.Validity" Label="Validity (days)" Variant="Variant.Outlined" Min="1" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudTextField @bind-Value="_q.Terms" Label="Terms" Variant="Variant.Outlined" Lines="2" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_q.CustomerNotes" Label="Customer Notes (shown on quote)" Variant="Variant.Outlined" Lines="3" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_q.InternalNotes" Label="Internal Notes (not on PDF)" Variant="Variant.Outlined" Lines="3" />
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@* ── Line Items ──────────────────────────────────────────────────────────── *@
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <div class="d-flex justify-space-between align-center mb-3">
+        <MudText Typo="Typo.subtitle2" Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Own Product Line Items</MudText>
+        <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Add"
+                   OnClick="AddLine">Add Line</MudButton>
+    </div>
+    <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--mud-palette-divider);color:var(--gray-500);">
+                    <th style="text-align:left;padding:4px 6px;width:90px;">Type</th>
+                    <th style="text-align:left;padding:4px 6px;">Description</th>
+                    <th style="text-align:right;padding:4px 6px;width:70px;">Qty</th>
+                    <th style="text-align:right;padding:4px 6px;width:60px;">Units</th>
+                    <th style="text-align:right;padding:4px 6px;width:60px;">Days</th>
+                    <th style="text-align:right;padding:4px 6px;width:90px;">Unit Cost</th>
+                    <th style="text-align:right;padding:4px 6px;width:90px;">Nett Price</th>
+                    <th style="text-align:right;padding:4px 6px;width:100px;">Ext Price</th>
+                    <th style="width:36px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in _lines)
+                {
+                    var r = row;
+                    <tr style="border-bottom:1px solid var(--mud-palette-divider);">
+                        <td style="padding:2px 4px;">
+                            <MudSelect T="string" Value="@r.Type" ValueChanged="@(v => { r.Type = v; })"
+                                       Variant="Variant.Text" Margin="Margin.Dense" Dense="true">
+                                <MudSelectItem T="string" Value="@("Supply")">Supply</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("Hire")">Hire</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("Labour")">Labour</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("Other")">Other</MudSelectItem>
+                            </MudSelect>
+                        </td>
+                        <td style="padding:2px 4px;">
+                            <MudTextField @bind-Value="@r.Description" Variant="Variant.Text"
+                                          Margin="Margin.Dense" Style="min-width:180px;" />
+                        </td>
+                        <td style="padding:2px 4px;">
+                            <MudNumericField Value="@r.Qty" ValueChanged="@((decimal v) => { r.Qty = v; StateHasChanged(); })"
+                                             Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
+                        </td>
+                        <td style="padding:2px 4px;">
+                            <MudNumericField Value="@r.Units" ValueChanged="@((decimal v) => { r.Units = v; StateHasChanged(); })"
+                                             Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
+                        </td>
+                        <td style="padding:2px 4px;">
+                            <MudNumericField Value="@r.Days" ValueChanged="@((decimal v) => { r.Days = v; StateHasChanged(); })"
+                                             Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
+                        </td>
+                        <td style="padding:2px 4px;">
+                            <MudNumericField Value="@r.UnitCost" ValueChanged="@((decimal v) => { r.UnitCost = v; StateHasChanged(); })"
+                                             Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
+                        </td>
+                        <td style="padding:2px 4px;">
+                            <MudNumericField Value="@r.NettPrice" ValueChanged="@((decimal v) => { r.NettPrice = v; StateHasChanged(); })"
+                                             Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
+                        </td>
+                        <td style="text-align:right;padding:2px 8px;white-space:nowrap;font-weight:500;">
+                            @r.ExtPrice.ToString("N2")
+                        </td>
+                        <td style="padding:2px;">
+                            <MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small" Color="Color.Error"
+                                           OnClick="@(() => RemoveLine(r))" />
+                        </td>
+                    </tr>
+                }
+                @if (!_lines.Any())
+                {
+                    <tr><td colspan="9" style="padding:16px;text-align:center;color:var(--gray-400);">No line items — click Add Line to begin.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</MudPaper>
+
+@* ── Third-Party Supply ──────────────────────────────────────────────────── *@
+<MudExpansionPanels Class="mb-4" Elevation="1">
+    <MudExpansionPanel>
+        <TitleContent>
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Rounded.LocalShipping" Size="Size.Small" />
+                <MudText Typo="Typo.subtitle2">Third-Party Supply (@_tpLines.Count item@(_tpLines.Count == 1 ? "" : "s"))</MudText>
+            </div>
+        </TitleContent>
+        <ChildContent>
+            <div class="d-flex justify-end mb-2">
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Add"
+                           OnClick="AddTpLine">Add Supplier Line</MudButton>
+            </div>
+            <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+                    <thead>
+                        <tr style="border-bottom:1px solid var(--mud-palette-divider);color:var(--gray-500);">
+                            <th style="text-align:left;padding:4px 6px;">Description</th>
+                            <th style="text-align:left;padding:4px 6px;width:130px;">Supplier</th>
+                            <th style="text-align:right;padding:4px 6px;width:60px;">Qty</th>
+                            <th style="text-align:right;padding:4px 6px;width:90px;">Unit Cost</th>
+                            <th style="text-align:right;padding:4px 6px;width:90px;">Nett Price</th>
+                            <th style="text-align:right;padding:4px 6px;width:100px;">Ext Price</th>
+                            <th style="width:36px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var tp in _tpLines)
+                        {
+                            var t = tp;
+                            <tr style="border-bottom:1px solid var(--mud-palette-divider);">
+                                <td style="padding:2px 4px;"><MudTextField @bind-Value="@t.Description" Variant="Variant.Text" Margin="Margin.Dense" Style="min-width:180px;" /></td>
+                                <td style="padding:2px 4px;"><MudTextField @bind-Value="@t.Supplier" Variant="Variant.Text" Margin="Margin.Dense" /></td>
+                                <td style="padding:2px 4px;"><MudNumericField Value="@t.Qty" ValueChanged="@((decimal v) => { t.Qty = v; StateHasChanged(); })" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" /></td>
+                                <td style="padding:2px 4px;"><MudNumericField Value="@t.UnitCost" ValueChanged="@((decimal v) => { t.UnitCost = v; StateHasChanged(); })" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" /></td>
+                                <td style="padding:2px 4px;"><MudNumericField Value="@t.NettPrice" ValueChanged="@((decimal v) => { t.NettPrice = v; StateHasChanged(); })" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" /></td>
+                                <td style="text-align:right;padding:2px 8px;font-weight:500;">@t.ExtPrice.ToString("N2")</td>
+                                <td style="padding:2px;"><MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small" Color="Color.Error" OnClick="@(() => RemoveTpLine(t))" /></td>
+                            </tr>
+                        }
+                        @if (!_tpLines.Any())
+                        {
+                            <tr><td colspan="7" style="padding:12px;text-align:center;color:var(--gray-400);">No third-party lines.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </ChildContent>
+    </MudExpansionPanel>
+</MudExpansionPanels>
+
+@* ── Totals + Save ───────────────────────────────────────────────────────── *@
+<div class="d-flex justify-space-between align-start gap-4 flex-wrap">
+    <MudPaper Class="pa-4" Elevation="1" Style="min-width:280px;">
+        <MudText Typo="Typo.subtitle2" Class="mb-2" Style="color:var(--gray-500);text-transform:uppercase;">Totals (live estimate)</MudText>
+        <table style="width:100%;font-size:0.9rem;">
+            <tr><td style="color:var(--gray-500);">Cost ex GST</td>  <td style="text-align:right;font-weight:500;">$@CostTotal.ToString("N2")</td></tr>
+            <tr><td style="color:var(--gray-500);">Price ex GST</td> <td style="text-align:right;font-weight:500;">$@PriceTotal.ToString("N2")</td></tr>
+            <tr><td style="color:var(--gray-500);">GST (10%)</td>    <td style="text-align:right;">$@GSTAmount.ToString("N2")</td></tr>
+            <tr style="border-top:1px solid var(--mud-palette-divider);"><td style="font-weight:600;padding-top:4px;">Price inc GST</td><td style="text-align:right;font-weight:600;padding-top:4px;">$@PriceIncGST.ToString("N2")</td></tr>
+            <tr><td style="color:var(--gray-500);">Margin</td>       <td style="text-align:right;font-weight:500;">@RealMargin.ToString("N1")%</td></tr>
+        </table>
+    </MudPaper>
+    <div class="d-flex gap-2 align-center flex-wrap">
+        @if (_error != null)
+        {
+            <MudText Color="Color.Error" Typo="Typo.body2">@_error</MudText>
+        }
+        <MudButton Variant="Variant.Outlined" Href="@(IsNew ? "/quotes" : $"/quotes/{Id}")">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Save"
+                   OnClick="SaveAsync" Disabled="@_saving">
+            @(_saving ? "Saving…" : "Save Quote")
+        </MudButton>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    private bool IsNew => !Id.HasValue || Id == 0;
+
+    private Quote _q = new() { Validity = 30, Terms = "F.I.S. via general road freight" };
+    private Contact? _selectedContact;
+    private List<Contact> _contacts = new();
+    private List<Division> _divisions = new();
+    private List<LineRow> _lines = new();
+    private List<TpRow> _tpLines = new();
+    private bool _saving;
+    private string? _error;
+    private string _userCode = "";
+
+    private decimal CostTotal  => _lines.Sum(l => l.CostSub)   + _tpLines.Sum(t => t.TotalCost);
+    private decimal PriceTotal => _lines.Sum(l => l.ExtPrice)  + _tpLines.Sum(t => t.ExtPrice);
+    private decimal GSTAmount  => PriceTotal * 0.10m;
+    private decimal PriceIncGST => PriceTotal + GSTAmount;
+    private decimal RealMargin  => PriceTotal > 0 ? (PriceTotal - CostTotal) / PriceTotal * 100 : 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        _userCode = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+
+        var (contacts, divisions) = (
+            await LookupService.GetContactLookupsAsync(),
+            await LookupService.GetDivisionsAsync());
+        _contacts  = contacts;
+        _divisions = divisions;
+
+        if (!IsNew)
+        {
+            var existing = await QuoteService.GetQuoteAsync(Id!.Value);
+            if (existing != null)
+            {
+                _q = existing;
+                _selectedContact = _contacts.FirstOrDefault(c => c.ContactId == _q.ContactId);
+                var items = await QuoteService.GetLineItemsAsync(Id!.Value);
+                _lines = items.Select(i => new LineRow
+                {
+                    Type = i.Type ?? "Supply", ProductCode = i.ProductCode ?? "",
+                    Description = i.Description, Qty = i.Quantity,
+                    Units = i.Units, Days = i.Days, UnitCost = i.UnitCost,
+                    MinNettPrice = i.MinNettPrice, NettPrice = i.NettPrice,
+                }).ToList();
+                var tpItems = await QuoteService.GetThirdPartyItemsAsync(Id!.Value);
+                _tpLines = tpItems.Select(i => new TpRow
+                {
+                    Description = i.Description ?? "", Supplier = i.Supplier ?? "",
+                    Qty = i.Quantity, UnitCost = i.UnitCost, NettPrice = i.NettPrice,
+                }).ToList();
+            }
+        }
+    }
+
+    private Task<IEnumerable<Contact>> SearchContacts(string value, CancellationToken _)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return Task.FromResult(_contacts.Take(25));
+        var lower = value.ToLowerInvariant();
+        return Task.FromResult(_contacts
+            .Where(c => c.CompanyName.ToLowerInvariant().Contains(lower)
+                     || c.FullName.ToLowerInvariant().Contains(lower))
+            .Take(30));
+    }
+
+    private void AddLine()   { _lines.Add(new LineRow()); StateHasChanged(); }
+    private void RemoveLine(LineRow r) { _lines.Remove(r); StateHasChanged(); }
+    private void AddTpLine() { _tpLines.Add(new TpRow()); StateHasChanged(); }
+    private void RemoveTpLine(TpRow t) { _tpLines.Remove(t); StateHasChanged(); }
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        if (_selectedContact == null) { _error = "Please select a contact."; return; }
+
+        _q.ContactId = _selectedContact.ContactId;
+        if (_q.DivisionId == 0 && _divisions.Any()) _q.DivisionId = _divisions.First().DivisionId;
+        if (_q.Validity <= 0) _q.Validity = 30;
+
+        var items = _lines.Select(r => new QuoteLineItem
+        {
+            Type = r.Type, ProductCode = r.ProductCode, Description = r.Description,
+            Quantity = r.Qty, Units = r.Units, Days = r.Days,
+            UnitCost = r.UnitCost, MinNettPrice = r.MinNettPrice, NettPrice = r.NettPrice,
+        }).ToList();
+
+        var tpItems = _tpLines.Select(t => new QuoteThirdPartyItem
+        {
+            Description = t.Description, Supplier = t.Supplier,
+            Quantity = t.Qty, UnitCost = t.UnitCost, NettPrice = t.NettPrice,
+        }).ToList();
+
+        _saving = true;
+        try
+        {
+            if (IsNew)
+            {
+                var newId = await QuoteService.CreateQuoteAsync(_q, items, tpItems, _userCode);
+                await ActivitySvc.LogAsync(_userCode, "Quote", newId, "Created quote", _q.Reference);
+                Snackbar.Add($"Quote #{newId} created.", Severity.Success);
+                Nav.NavigateTo($"/quotes/{newId}");
+            }
+            else
+            {
+                _q.Qid = Id!.Value;
+                await QuoteService.UpdateQuoteAsync(_q, items, tpItems);
+                await ActivitySvc.LogAsync(_userCode, "Quote", _q.Qid, "Updated quote", _q.Reference);
+                Snackbar.Add("Quote saved.", Severity.Success);
+                Nav.NavigateTo($"/quotes/{_q.Qid}");
+            }
+        }
+        catch (Exception ex) { Snackbar.Add($"Save failed: {ex.Message}", Severity.Error); }
+        finally { _saving = false; }
+    }
+
+    private sealed class LineRow
+    {
+        public string Type        { get; set; } = "Supply";
+        public string ProductCode { get; set; } = "";
+        public string Description { get; set; } = "";
+        public decimal Qty        { get; set; } = 1;
+        public decimal Units      { get; set; }
+        public decimal Days       { get; set; }
+        public decimal UnitCost   { get; set; }
+        public decimal MinNettPrice { get; set; }
+        public decimal NettPrice  { get; set; }
+        public decimal EffQty     => Days > 0 && Units > 0 ? Units * Days : Qty;
+        public decimal ExtPrice   => NettPrice * EffQty;
+        public decimal CostSub    => UnitCost  * EffQty;
+    }
+
+    private sealed class TpRow
+    {
+        public string  Description { get; set; } = "";
+        public string  Supplier    { get; set; } = "";
+        public decimal Qty         { get; set; } = 1;
+        public decimal UnitCost    { get; set; }
+        public decimal NettPrice   { get; set; }
+        public decimal ExtPrice    => NettPrice * Qty;
+        public decimal TotalCost   => UnitCost  * Qty;
+    }
+}
+

@@ -1,0 +1,146 @@
+@page "/activity"
+@attribute [Authorize]
+@inject ActivityService ActivityService
+@inject LookupService LookupService
+
+<PageTitle>Recent Activity - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <span style="color:var(--gray-700); font-weight:500;">Recent Activity</span>
+        </div>
+        <h1>Recent Activity</h1>
+        <p class="tl-subtitle">Track actions across quotes, invoices, purchase orders and despatch.</p>
+    </div>
+</div>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudGrid Spacing="2">
+        <MudItem xs="12" sm="4">
+            <MudSelect T="string" @bind-Value="_userCode" Label="Filter by User" Variant="Variant.Outlined" Clearable="true">
+                <MudSelectItem T="string" Value="@("")">All Users</MudSelectItem>
+                @foreach (var u in _users)
+                {
+                    <MudSelectItem T="string" Value="@u.Code">@u.Name (@u.Code)</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect T="int" @bind-Value="_limit" Label="Show" Variant="Variant.Outlined">
+                <MudSelectItem T="int" Value="50">50 items</MudSelectItem>
+                <MudSelectItem T="int" Value="100">100 items</MudSelectItem>
+                <MudSelectItem T="int" Value="200">200 items</MudSelectItem>
+                <MudSelectItem T="int" Value="500">500 items</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudButton OnClick="LoadAsync" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Rounded.FilterList">Apply Filter</MudButton>
+            <MudButton OnClick="Reset" Variant="Variant.Outlined">Reset</MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudPaper Class="pa-5" Elevation="1">
+    @if (_loading)
+    {
+        <div class="d-flex justify-center align-center" style="min-height:200px;">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        </div>
+    }
+    else if (_activity.Any())
+    {
+        <div style="display:flex;flex-direction:column;gap:2px;">
+            @foreach (var item in _activity)
+            {
+                <a href="@item.NavUrl" style="text-decoration:none;color:inherit;">
+                    <div style="display:flex;align-items:center;gap:14px;padding:9px 10px;border-radius:8px;"
+                         onmouseover="this.style.background='var(--mud-palette-background-grey)'"
+                         onmouseout="this.style.background=''">
+                        <span class="tl-stat-icon @EntityTone(item.EntityType)"
+                              style="min-width:34px;width:34px;height:34px;font-size:0;">
+                            <MudIcon Icon="@EntityIcon(item.EntityType)" Size="Size.Small" />
+                        </span>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-size:0.875rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                @item.Action
+                                @if (!string.IsNullOrWhiteSpace(item.EntityRef))
+                                {
+                                    <span style="color:var(--gray-500);font-weight:400;"> — @item.EntityRef</span>
+                                }
+                            </div>
+                            <div style="font-size:0.78rem;color:var(--gray-400);margin-top:1px;">
+                                @if (!string.IsNullOrWhiteSpace(item.UserName))
+                                {
+                                    <b style="font-weight:500;color:var(--gray-600);">@item.UserName</b>
+                                    <text> · </text>
+                                }
+                                @item.TimeAgo
+                            </div>
+                        </div>
+                        <span class="tl-badge @EntityTone(item.EntityType)"
+                              style="font-size:0.72rem;white-space:nowrap;">@item.EntityType</span>
+                    </div>
+                </a>
+            }
+        </div>
+    }
+    else
+    {
+        <div style="padding:24px;text-align:center;color:var(--gray-400);">
+            <MudIcon Icon="@Icons.Material.Rounded.History" Style="font-size:2.5rem;opacity:.3;" />
+            <p style="margin-top:8px;">No activity recorded yet. Actions on quotes, invoices, POs and despatch will appear here.</p>
+        </div>
+    }
+</MudPaper>
+
+@code {
+    private List<ActivityFeedItem> _activity = new();
+    private List<UserLookup> _users = new();
+    private bool _loading = true;
+    private string? _userCode = "";
+    private int _limit = 100;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _users = await LookupService.GetUsersAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            _activity = await ActivityService.GetRecentAsync(_limit, string.IsNullOrEmpty(_userCode) ? null : _userCode);
+        }
+        finally { _loading = false; }
+    }
+
+    private async Task Reset()
+    {
+        _userCode = "";
+        _limit = 100;
+        await LoadAsync();
+    }
+
+    private static string EntityIcon(string type) => type switch
+    {
+        "Quote"    => Icons.Material.Rounded.RequestQuote,
+        "Invoice"  => Icons.Material.Rounded.ReceiptLong,
+        "PO"       => Icons.Material.Rounded.ShoppingCart,
+        "Despatch" => Icons.Material.Rounded.LocalShipping,
+        _          => Icons.Material.Rounded.History,
+    };
+
+    private static string EntityTone(string type) => type switch
+    {
+        "Quote"    => "primary",
+        "Invoice"  => "success",
+        "PO"       => "warning",
+        "Despatch" => "info",
+        _          => "",
+    };
+}
+

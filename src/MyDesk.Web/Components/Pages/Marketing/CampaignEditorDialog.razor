@@ -1,0 +1,101 @@
+@inject MarketingDataService Data
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form">
+            <MudTextField T="string" @bind-Value="_campaign.Name" Label="Campaign Name" 
+                         Required="true" RequiredError="Name is required" 
+                         Variant="Variant.Outlined" Class="mb-4" />
+            
+            <MudTextField T="string" @bind-Value="_campaign.Subject" Label="Email Subject" 
+                         Required="true" RequiredError="Subject is required"
+                         Variant="Variant.Outlined" Class="mb-4" />
+            
+            <MudSelect T="string" @bind-Value="_campaign.Audience" Label="Target Audience"
+                      Required="true" Variant="Variant.Outlined" Class="mb-4">
+                @foreach (var option in AudienceOptions)
+                {
+                    <MudSelectItem T="string" Value="@option">@option</MudSelectItem>
+                }
+            </MudSelect>
+            
+            <MudTextField T="string" @bind-Value="_campaign.BodyHtml" Label="Email Body"
+                         Lines="10" Variant="Variant.Outlined" 
+                         Placeholder="Enter HTML email content..." />
+            
+            <MudCheckBox T="bool" @bind-Value="_scheduleForLater" 
+                        Label="Schedule for later" Class="mt-4" />
+            
+            @if (_scheduleForLater)
+            {
+                <MudDatePicker @bind-Date="_scheduledDate" Label="Date" 
+                              MinDate="DateTime.Today" Class="mt-2" />
+                <MudTimePicker @bind-Time="_scheduledTime" Label="Time" Class="mt-2" />
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Save" Disabled="_saving">
+            @(_saving ? "Saving..." : "Save Draft")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    
+    [Parameter] public EmailCampaign? Campaign { get; set; }
+    [Parameter] public string[] AudienceOptions { get; set; } = new[] { "Champions", "Top-50", "All Customers", "At-Risk", "Custom Segment" };
+
+    private MudForm _form = default!;
+    private EmailCampaign _campaign = new();
+    private bool _scheduleForLater = false;
+    private DateTime? _scheduledDate;
+    private TimeSpan? _scheduledTime;
+    private bool _saving = false;
+
+    protected override void OnInitialized()
+    {
+        if (Campaign != null)
+        {
+            _campaign = Campaign;
+        }
+        else
+        {
+            _campaign.Audience = AudienceOptions.FirstOrDefault() ?? "All Customers";
+            _campaign.Status = "Draft";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Save()
+    {
+        await _form.Validate();
+        if (!_form.IsValid) return;
+
+        _saving = true;
+        try
+        {
+            if (_scheduleForLater && _scheduledDate.HasValue && _scheduledTime.HasValue)
+            {
+                var scheduledDateTime = _scheduledDate.Value.Date + _scheduledTime.Value;
+                _campaign.ScheduledAt = scheduledDateTime;
+                _campaign.Status = "Scheduled";
+            }
+
+            await Data.SaveCampaignAsync(_campaign);
+            MudDialog.Close(DialogResult.Ok(_campaign));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving campaign: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

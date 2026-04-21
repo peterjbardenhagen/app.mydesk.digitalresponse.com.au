@@ -1,0 +1,25 @@
+@* Untitled UI-styled list row with icon, label and count badge *@
+
+<a href="@Href" style="text-decoration:none; display:block; @(Href == null ? "pointer-events:none;" : "")">
+    <div class="d-flex align-center justify-space-between"
+         style="padding:10px 12px; border:1px solid var(--gray-200); border-radius:var(--radius-lg); background:var(--surface); @(Href != null ? "cursor:pointer;" : "")">
+        <div class="d-flex align-center tl-gap-sm">
+            <span class="tl-stat-icon @Tone" style="width:36px; height:36px;">
+                <MudIcon Icon="@Icon" Size="Size.Small" />
+            </span>
+            <span style="font-size:14px; font-weight:500; color:var(--gray-800);">@Label</span>
+        </div>
+        <span class="tl-badge @Tone">@Count</span>
+    </div>
+</a>
+
+@code {
+    [Parameter, EditorRequired] public string Icon { get; set; } = default!;
+    [Parameter, EditorRequired] public string Label { get; set; } = default!;
+    [Parameter, EditorRequired] public int Count { get; set; }
+    /// <summary>info | success | warning | error | primary</summary>
+    [Parameter] public string Tone { get; set; } = "info";
+    /// <summary>Optional navigation target. When set the entire row becomes a link.</summary>
+    [Parameter] public string? Href { get; set; }
+}
+

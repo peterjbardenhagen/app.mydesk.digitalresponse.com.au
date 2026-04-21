@@ -1,0 +1,232 @@
+@page "/terms-and-conditions"
+@layout EmptyLayout
+@inject PlatformSettingsService PlatformSettings
+
+<PageTitle>Terms & Conditions - @PlatformSettings.Current.PlatformName</PageTitle>
+
+<div class="legal-page">
+    <MudContainer MaxWidth="MaxWidth.Medium" Class="py-8">
+        <div class="text-center mb-8">
+            <MudText Typo="Typo.h3" Class="mb-2">Terms & Conditions</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Last updated: 21 April 2026</MudText>
+        </div>
+
+        <MudPaper Class="pa-6 legal-content" Elevation="0">
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">1. Agreement to Terms</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    These Terms and Conditions ("Terms") constitute a legally binding agreement between you and 
+                    @PlatformSettings.Current.CompanyLegalName ("Company", "we", "us", or "our") governing your 
+                    access to and use of the @PlatformSettings.Current.PlatformName software as a service platform 
+                    ("Service" or "Platform").
+                </MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    By accessing or using the Service, you agree to be bound by these Terms. If you disagree with 
+                    any part of the Terms, you may not access the Service.
+                </MudText>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">2. Definitions</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    <strong>"Account"</strong> means a unique account created for you to access our Service.
+                </MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    <strong>"Content"</strong> means all data, text, images, and other materials you upload, store, 
+                    or transmit through the Service.
+                </MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    <strong>"Subscription"</strong> means the recurring payment arrangement for access to the Service.
+                </MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    <strong>"User"</strong> means any individual who accesses or uses the Service under your Account.
+                </MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    <strong>"Tenant"</strong> means a separate instance of the Service for a specific organisation.
+                </MudText>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">3. Account Registration and Security</MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string">You must provide accurate, current, and complete information during registration</MudListItem>
+                    <MudListItem T="string">You are responsible for maintaining the confidentiality of your account credentials</MudListItem>
+                    <MudListItem T="string">You agree to notify us immediately of any unauthorized access or security breach</MudListItem>
+                    <MudListItem T="string">We reserve the right to disable accounts that violate these Terms</MudListItem>
+                </MudList>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">4. Subscription and Payment</MudText>
+                
+                <MudText Typo="Typo.subtitle1" Class="mb-2 mt-4">4.1 Subscription Plans</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    We offer various subscription plans with different features and user limits. Current plans include:
+                </MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string"><strong>Starter:</strong> Up to 5 users, basic features</MudListItem>
+                    <MudListItem T="string"><strong>Professional:</strong> Up to 25 users, advanced features</MudListItem>
+                    <MudListItem T="string"><strong>Enterprise:</strong> Unlimited users, all features, custom integrations</MudListItem>
+                </MudList>
+
+                <MudText Typo="Typo.subtitle1" Class="mb-2 mt-4">4.2 Billing</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    All fees are exclusive of GST. You are responsible for all applicable taxes. 
+                    Payments are processed in Australian Dollars (AUD). We use secure third-party payment processors.
+                </MudText>
+
+                <MudText Typo="Typo.subtitle1" Class="mb-2 mt-4">4.3 Refunds</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    We offer a 14-day free trial for new subscriptions. After the trial period, fees are non-refundable 
+                    except where required by Australian Consumer Law.
+                </MudText>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">5. Acceptable Use</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    You agree not to use the Service for any unlawful purpose or in any way that could damage, 
+                    disable, overburden, or impair the Service. Prohibited activities include:
+                </MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string">Uploading viruses, malware, or other malicious code</MudListItem>
+                    <MudListItem T="string">Attempting to gain unauthorised access to the Service or related systems</MudListItem>
+                    <MudListItem T="string">Interfering with other users' access to the Service</MudListItem>
+                    <MudListItem T="string">Using the Service to store or transmit illegal content</MudListItem>
+                    <MudListItem T="string">Reverse engineering, decompiling, or disassembling the Service</MudListItem>
+                    <MudListItem T="string">Reselling or sublicensing the Service without authorisation</MudListItem>
+                </MudList>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">6. Intellectual Property</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    The Service and its original content (excluding Content provided by users), features, and 
+                    functionality are and will remain the exclusive property of @PlatformSettings.Current.CompanyLegalName 
+                    and its licensors. The Service is protected by copyright, trademark, and other laws of Australia 
+                    and foreign countries.
+                </MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    You retain ownership of any Content you upload to the Service. By uploading Content, you grant us 
+                    a licence to use, store, and process that Content solely for the purpose of providing the Service 
+                    to you.
+                </MudText>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">7. Data Protection and Privacy</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    Our collection and use of personal information is governed by our 
+                    <MudLink Href="/privacy-policy">Privacy Policy</MudLink>. By using the Service, you consent 
+                    to the collection and use of information as described therein.
+                </MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    We comply with the Australian Privacy Act 1988 (Cth) and implement appropriate security measures 
+                    to protect your data as required by the Notifiable Data Breaches scheme.
+                </MudText>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">8. Service Level Agreement</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    We strive to maintain 99.9% uptime for the Service. Scheduled maintenance will be communicated 
+                    in advance. We are not liable for downtime caused by circumstances beyond our reasonable control, 
+                    including internet service provider failures, third-party service outages, or force majeure events.
+                </MudText>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">9. Termination</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    You may terminate your subscription at any time by providing 30 days' written notice. We may 
+                    terminate or suspend your account immediately for violations of these Terms.
+                </MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    Upon termination:
+                </MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string">Your access to the Service will be disabled</MudListItem>
+                    <MudListItem T="string">We will retain your data for 90 days to allow for export</MudListItem>
+                    <MudListItem T="string">After 90 days, data may be permanently deleted</MudListItem>
+                    <MudListItem T="string">Outstanding fees for the current billing period remain due</MudListItem>
+                </MudList>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">10. Limitation of Liability</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    To the maximum extent permitted by law, @PlatformSettings.Current.CompanyLegalName shall not be 
+                    liable for any indirect, incidental, special, consequential, or punitive damages, including 
+                    loss of profits, data, or business opportunities, arising from your use of the Service.
+                </MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    Our total liability for any claim arising from these Terms or the Service shall not exceed the 
+                    amount you paid us in the 12 months preceding the event giving rise to liability.
+                </MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    Nothing in these Terms excludes or limits our liability for fraud, gross negligence, or any 
+                    other liability that cannot be excluded by law.
+                </MudText>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">11. Australian Consumer Law</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    Our goods and services come with guarantees that cannot be excluded under the Australian 
+                    Consumer Law. You are entitled to a replacement or refund for a major failure and compensation 
+                    for any other reasonably foreseeable loss or damage. You are also entitled to have the goods 
+                    repaired or replaced if the goods fail to be of acceptable quality.
+                </MudText>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">12. Governing Law</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    These Terms shall be governed by and construed in accordance with the laws of New South Wales, 
+                    Australia. Any disputes arising under these Terms shall be subject to the exclusive jurisdiction 
+                    of the courts of New South Wales.
+                </MudText>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">13. Changes to Terms</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    We reserve the right to modify these Terms at any time. We will provide at least 30 days' notice 
+                    of material changes via email or through the Service. Continued use of the Service after changes 
+                    constitutes acceptance of the revised Terms.
+                </MudText>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">14. Contact Information</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    For questions about these Terms, please contact us:
+                </MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string">Email: <MudLink Href="@($"mailto:{PlatformSettings.Current.SupportEmail}")">@PlatformSettings.Current.SupportEmail</MudLink></MudListItem>
+                    <MudListItem T="string">Website: <MudLink Href="@PlatformSettings.Current.CompanyWebsite" Target="_blank">@PlatformSettings.Current.CompanyWebsite</MudLink></MudListItem>
+                </MudList>
+            </div>
+        </MudPaper>
+
+        <div class="text-center mt-6">
+            <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/" StartIcon="@Icons.Material.Rounded.ArrowBack">
+                Return to Login
+            </MudButton>
+        </div>
+    </MudContainer>
+</div>
+
+<style>
+    .legal-page {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+    .legal-content {
+        background: white;
+        border-radius: 12px;
+    }
+    .legal-section {
+        margin-bottom: 2rem;
+    }
+</style>

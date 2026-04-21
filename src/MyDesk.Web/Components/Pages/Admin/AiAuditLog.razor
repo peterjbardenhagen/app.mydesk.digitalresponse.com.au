@@ -1,0 +1,91 @@
+@page "/admin/ai-audit"
+@attribute [Authorize]
+@inject AiAuditService AuditSvc
+@using MyDesk.Shared.Services
+
+<PageTitle>AI Audit Log - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/admin">Setup</a><span class="sep">/</span>
+            <span>AI Audit Log</span>
+        </div>
+        <h1 style="display:flex; align-items:center; gap:10px;">
+            <MudIcon Icon="@Icons.Material.Rounded.Security" Style="color:var(--tl-primary);" />
+            AI Interaction Audit Log
+        </h1>
+        <p class="tl-subtitle">Compliance trail of all AI interactions (web, telegram, voice).</p>
+    </div>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Refresh" OnClick="LoadAsync">
+        Refresh
+    </MudButton>
+</div>
+
+<MudPaper Class="pa-5" Elevation="1">
+    @if (_loading)
+    {
+        <MudProgressCircular Indeterminate="true" Class="mx-auto my-4 d-block" />
+    }
+    else if (_entries.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">No audit entries yet. Interactions will appear here as users query the AI.</MudAlert>
+    }
+    else
+    {
+        <MudTable Items="_entries" Dense="true" Hover="true">
+            <HeaderContent>
+                <MudTh>Time</MudTh>
+                <MudTh>User</MudTh>
+                <MudTh>Channel</MudTh>
+                <MudTh>Prompt</MudTh>
+                <MudTh>Success</MudTh>
+                <MudTh>Duration</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Value">@context.DateEntered.ToString("dd MMM yyyy HH:mm:ss")</MudTd>
+                <MudTd DataLabel="Value">@context.UserCode</MudTd>
+                <MudTd DataLabel="Value">
+                    <MudChip T="string" Size="Size.Small" Color="@ChannelColor(context.Channel)">
+                        @context.Channel
+                    </MudChip>
+                </MudTd>
+                <MudTd Style="max-width:400px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                    @(context.Prompt?.Length > 80 ? context.Prompt.Substring(0, 80) + "..." : context.Prompt)
+                </MudTd>
+                <MudTd DataLabel="Value">
+                    <MudIcon Icon="@(context.Success ? Icons.Material.Rounded.Check : Icons.Material.Rounded.Close)"
+                             Color="@(context.Success ? Color.Success : Color.Error)" Size="Size.Small" />
+                </MudTd>
+                <MudTd DataLabel="Value">@(context.DurationMs.HasValue ? $"{context.DurationMs}ms" : "-")</MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudPaper>
+
+@code {
+    private List<AiAuditEntry> _entries = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try { _entries = await AuditSvc.GetRecentAsync(200); }
+        finally { _loading = false; }
+    }
+
+    private static Color ChannelColor(string ch) => ch.ToLower() switch
+    {
+        "web"      => Color.Primary,
+        "telegram" => Color.Info,
+        "voice"    => Color.Secondary,
+        "api"      => Color.Warning,
+        _          => Color.Default,
+    };
+}
+
+
+

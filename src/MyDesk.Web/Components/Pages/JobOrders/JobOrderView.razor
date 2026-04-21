@@ -1,0 +1,210 @@
+@page "/job-orders/{Id:int}"
+@attribute [Authorize]
+@inject JobOrderService Svc
+@inject LookupService LookupSvc
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject TransporterService TransporterSvc
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Job Order #@Id - Techlight MyDesk</PageTitle>
+
+@if (_jo == null)
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="mx-auto my-8 d-block" />
+}
+else
+{
+    <div class="tl-page-header">
+        <div>
+            <div class="tl-breadcrumb">
+                <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+                <a href="/job-orders">Job Orders</a><span class="sep">/</span>
+                <span style="color:var(--gray-700);font-weight:500;">Job #@_jo.JobOrderNumber</span>
+            </div>
+            <h1 style="display:flex;align-items:center;gap:12px;">
+                Job Order #@_jo.JobOrderNumber
+                <span class="tl-badge @StatusTone(_jo.JobOrderStatusId)">@(_jo.StatusName ?? "—")</span>
+            </h1>
+            <p class="tl-subtitle">@(_jo.CompanyName ?? _jo.ContactCompany ?? "—")</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ArrowBack"
+                       Href="/job-orders" Size="Size.Small">All Jobs</MudButton>
+            @if (_jo.Qid.HasValue)
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Rounded.RequestQuote"
+                           Href="@($"/quotes/{_jo.Qid}")" Size="Size.Small">View Quote</MudButton>
+            }
+            <MudButton Variant="Variant.Outlined" Color="Color.Success"
+                       StartIcon="@Icons.Material.Rounded.ReceiptLong"
+                       OnClick="ConvertToInvoiceAsync" Size="Size.Small" Disabled="@_converting">
+                @(_converting ? "Converting..." : "Convert to Invoice")
+            </MudButton>
+        </div>
+    </div>
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="8">
+            <MudPaper Elevation="1" Class="pa-5 mb-4">
+                <MudText Typo="Typo.subtitle2" Class="mb-3" Style="color:var(--gray-500);text-transform:uppercase;">Job Details</MudText>
+                <MudGrid Spacing="2">
+                    <MudItem xs="6"><span style="color:var(--gray-500);">Customer</span><br/><strong>@(_jo.CompanyName ?? _jo.ContactCompany ?? "—")</strong></MudItem>
+                    <MudItem xs="6"><span style="color:var(--gray-500);">Contact</span><br/>@(_jo.ContactName ?? "—")</MudItem>
+                    <MudItem xs="6"><span style="color:var(--gray-500);">Job Date</span><br/>@(_jo.JobOrderDate?.ToString("dd/MM/yyyy") ?? "—")</MudItem>
+                    <MudItem xs="6"><span style="color:var(--gray-500);">Division</span><br/>@(_jo.DivisionName ?? "—")</MudItem>
+                    <MudItem xs="6"><span style="color:var(--gray-500);">Originator</span><br/>@(_jo.OriginatorName ?? "—")</MudItem>
+                    <MudItem xs="6"><span style="color:var(--gray-500);">Source Quote</span><br/>
+                        @if (_jo.Qid.HasValue)
+                        {
+                            <MudLink Href="@($"/quotes/{_jo.Qid}")">@(_jo.SourceQuoteRef ?? $"#{_jo.Qid}")</MudLink>
+                        }
+                        else { <text>—</text> }
+                    </MudItem>
+                </MudGrid>
+                @if (!string.IsNullOrEmpty(_jo.Notes))
+                {
+                    <MudDivider Class="my-3" />
+                    <MudText Typo="Typo.caption" Style="color:var(--gray-500);">NOTES</MudText>
+                    <MudText Typo="Typo.body2" Style="white-space:pre-line;">@_jo.Notes</MudText>
+                }
+            </MudPaper>
+
+            <MudPaper Elevation="1" Class="pa-4 mb-4">
+                <MudText Typo="Typo.subtitle2" Class="mb-3" Style="color:var(--gray-500);text-transform:uppercase;">Line Items</MudText>
+                @if (_lines == null)
+                {
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                }
+                else if (!_lines.Any())
+                {
+                    <MudText Typo="Typo.body2" Style="color:var(--gray-400);">No line items recorded.</MudText>
+                }
+                else
+                {
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
+                            <thead>
+                                <tr style="border-bottom:2px solid var(--mud-palette-divider);color:var(--gray-500);">
+                                    <th style="text-align:left;padding:6px 8px;">Description</th>
+                                    <th style="text-align:right;padding:6px 8px;width:60px;">Qty</th>
+                                    <th style="text-align:left;padding:6px 8px;width:120px;">Category</th>
+                                    <th style="text-align:right;padding:6px 8px;width:110px;">Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var l in _lines)
+                                {
+                                    <tr style="border-bottom:1px solid var(--mud-palette-divider);">
+                                        <td style="padding:6px 8px;">@l.Description</td>
+                                        <td style="text-align:right;padding:6px 8px;">@l.Qty</td>
+                                        <td style="padding:6px 8px;">@l.CategoryName</td>
+                                        <td style="text-align:right;padding:6px 8px;font-weight:500;">@l.LineTotal.ToString("C2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-3 text-right" style="font-weight:600;">
+                        Total: @_lines.Sum(l => l.LineTotal).ToString("C2")
+                    </div>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-5 mb-3" Elevation="1">
+                <MudText Typo="Typo.subtitle2" Class="mb-3" Style="color:var(--gray-500);text-transform:uppercase;">Change Status</MudText>
+                <MudSelect T="int" @bind-Value="_newStatusId" Variant="Variant.Outlined" Dense="true">
+                    @foreach (var s in _statuses)
+                    {
+                        <MudSelectItem T="int" Value="@s.JobOrderStatusId">@s.StatusName</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudButton Class="mt-2" FullWidth="true" Variant="Variant.Filled" Color="Color.Primary"
+                           OnClick="UpdateStatusAsync"
+                           Disabled="@(_newStatusId == _jo.JobOrderStatusId || _saving)">
+                    @(_saving ? "Saving…" : "Save Status")
+                </MudButton>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private JobOrderDetail? _jo;
+    private List<JobOrderLineItem> _lines = new();
+    private List<JobOrderStatus> _statuses = new();
+    private int _newStatusId;
+    private bool _saving;
+    private bool _converting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _jo = await Svc.GetJobOrderAsync(Id);
+            if (_jo != null)
+            {
+                _newStatusId = _jo.JobOrderStatusId;
+                _lines = await Svc.GetLineItemsAsync(Id);
+            }
+            _statuses = await LookupSvc.GetJobOrderStatusesAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task UpdateStatusAsync()
+    {
+        if (_jo == null) return;
+        _saving = true;
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userCode = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
+            
+            await Svc.UpdateStatusAsync(_jo.JobOrderId, _newStatusId, userCode);
+            Snackbar.Add("Status updated successfully", Severity.Success);
+            _jo.JobOrderStatusId = _newStatusId;
+        }
+        catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
+        finally { _saving = false; }
+    }
+
+    private async Task ConvertToInvoiceAsync()
+    {
+        if (_jo == null) return;
+        _converting = true;
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userCode = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
+            
+            var invoiceId = await TransporterSvc.JobOrderToInvoiceAsync(_jo.JobOrderId, userCode);
+            if (invoiceId.HasValue)
+            {
+                Snackbar.Add("Job Order converted to Invoice successfully", Severity.Success);
+                Nav.NavigateTo($"/invoices/{invoiceId}");
+            }
+            else
+            {
+                Snackbar.Add("Failed to convert Job Order to Invoice", Severity.Error);
+            }
+        }
+        catch (Exception ex) { Snackbar.Add($"Conversion failed: {ex.Message}", Severity.Error); }
+        finally { _converting = false; }
+    }
+
+    private static string StatusTone(int statusId) => statusId switch
+    {
+        1 => "primary",   // Open
+        2 => "info",     // In Progress
+        3 => "success",  // Complete
+        4 => "error",    // Cancelled
+        _ => "info"
+    };
+}
+

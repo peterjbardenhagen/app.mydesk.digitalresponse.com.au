@@ -1,0 +1,287 @@
+@page "/invoices/create"
+@page "/invoices/{Id:int}/edit"
+@attribute [Authorize]
+@inject InvoiceService InvoiceService
+@inject LookupService LookupService
+@inject QuoteService QuoteService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+@using System.Security.Claims
+
+<PageTitle>@(IsNew ? "New Invoice" : $"Edit Invoice #{Id}") - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/invoices">Invoices</a><span class="sep">/</span>
+            <span>@(IsNew ? "New Invoice" : $"Edit #{Id}")</span>
+        </div>
+        <h1>@(IsNew ? "New Invoice" : $"Edit Invoice #{Id}")</h1>
+    </div>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ArrowBack"
+               Href="@(IsNew ? "/invoices" : $"/invoices/{Id}")">Cancel</MudButton>
+</div>
+
+@* ── Header fields ── *@
+<MudPaper Class="pa-6 mb-4" Elevation="1">
+    <MudText Typo="Typo.subtitle2" Class="mb-4"
+             Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Invoice Details</MudText>
+    <MudGrid Spacing="3">
+        <MudItem xs="12" sm="4">
+            <MudTextField @bind-Value="_inv.InvoiceNum" Label="Invoice Number" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudDatePicker @bind-Date="_invoiceDate" Label="Invoice Date *" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect T="int" @bind-Value="_inv.DivisionId" Label="Division" Variant="Variant.Outlined">
+                @foreach (var d in _divisions)
+                {
+                    <MudSelectItem T="int" Value="@d.DivisionId">@d.DivisionName</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudTextField @bind-Value="_inv.CCompany" Label="Customer Company *" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudTextField @bind-Value="_inv.CustomerPO" Label="Customer PO / Reference" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudTextField @bind-Value="_inv.Attention" Label="Attention" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_inv.InvCompany" Label="Invoice To — Company" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_inv.DelCompany" Label="Deliver To — Company" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_inv.InvAddress" Label="Invoice Address" Variant="Variant.Outlined" Lines="3" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_inv.DelAddress" Label="Delivery Address" Variant="Variant.Outlined" Lines="3" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_inv.Terms" Label="Terms" Variant="Variant.Outlined" Lines="2" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_inv.Account" Label="Account" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_inv.CustomerNotes" Label="Customer Notes (shown on invoice)" Variant="Variant.Outlined" Lines="3" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_inv.InternalNotes" Label="Internal Notes (not printed)" Variant="Variant.Outlined" Lines="3" />
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@* ── Line Items ── *@
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <div class="d-flex justify-space-between align-center mb-3">
+        <MudText Typo="Typo.subtitle2"
+                 Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Line Items</MudText>
+        <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Add"
+                   OnClick="AddLine">Add Line</MudButton>
+    </div>
+    <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--mud-palette-divider);color:var(--gray-500);">
+                    <th style="text-align:left;padding:4px 6px;">Description</th>
+                    <th style="text-align:right;padding:4px 6px;width:70px;">Qty</th>
+                    <th style="text-align:right;padding:4px 6px;width:100px;">Unit Price</th>
+                    <th style="text-align:right;padding:4px 6px;width:110px;">Extended</th>
+                    <th style="width:36px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in _lines)
+                {
+                    var r = row;
+                    <tr style="border-bottom:1px solid var(--mud-palette-divider);">
+                        <td style="padding:2px 4px;">
+                            <MudTextField @bind-Value="r.Description" Variant="Variant.Text"
+                                          Margin="Margin.Dense" Style="min-width:200px;" />
+                        </td>
+                        <td style="padding:2px 4px;">
+                            <MudNumericField Value="@r.Qty"
+                                             ValueChanged="@((decimal v) => { r.Qty = v; StateHasChanged(); })"
+                                             Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
+                        </td>
+                        <td style="padding:2px 4px;">
+                            <MudNumericField Value="@r.NettPrice"
+                                             ValueChanged="@((decimal v) => { r.NettPrice = v; StateHasChanged(); })"
+                                             Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
+                        </td>
+                        <td style="text-align:right;padding:2px 8px;white-space:nowrap;font-weight:500;">
+                            @r.ExtPrice.ToString("N2")
+                        </td>
+                        <td>
+                            <MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small"
+                                           Color="Color.Error" OnClick="@(() => RemoveLine(r))" />
+                        </td>
+                    </tr>
+                }
+                @if (!_lines.Any())
+                {
+                    <tr><td colspan="5" style="padding:16px;text-align:center;color:var(--gray-400);">
+                        No lines — click Add Line.
+                    </td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</MudPaper>
+
+@* ── Totals + Save ── *@
+<div class="d-flex justify-space-between align-start gap-4 flex-wrap">
+    <MudPaper Class="pa-4" Elevation="1" Style="min-width:260px;">
+        <MudText Typo="Typo.subtitle2" Class="mb-2"
+                 Style="color:var(--gray-500);text-transform:uppercase;">Totals</MudText>
+        <table style="width:100%;font-size:.9rem;">
+            <tr><td style="color:var(--gray-500);">Ex GST</td>
+                <td style="text-align:right;font-weight:500;">$@NettTotal.ToString("N2")</td></tr>
+            <tr><td style="color:var(--gray-500);">GST (10%)</td>
+                <td style="text-align:right;">$@GSTAmount.ToString("N2")</td></tr>
+            <tr style="border-top:1px solid var(--mud-palette-divider);">
+                <td style="font-weight:600;padding-top:4px;">Total inc GST</td>
+                <td style="text-align:right;font-weight:700;padding-top:4px;">$@TotalIncGST.ToString("N2")</td></tr>
+        </table>
+    </MudPaper>
+    <div class="d-flex gap-2 align-center flex-wrap">
+        @if (_error != null)
+        {
+            <MudText Color="Color.Error" Typo="Typo.body2">@_error</MudText>
+        }
+        <MudButton Variant="Variant.Outlined" Href="@(IsNew ? "/invoices" : $"/invoices/{Id}")">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Save"
+                   OnClick="SaveAsync" Disabled="@_saving">
+            @(_saving ? "Saving…" : "Save Invoice")
+        </MudButton>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    [SupplyParameterFromQuery(Name = "qid")] public int? Qid { get; set; }
+    private bool IsNew => !Id.HasValue || Id == 0;
+
+    private Invoice _inv  = new() { InvoiceDate = DateTime.Today };
+    private DateTime? _invoiceDate = DateTime.Today;
+    private List<LineRow>     _lines     = new();
+    private List<Division>    _divisions = new();
+    private bool   _saving;
+    private string? _error;
+    private string _userCode = "";
+
+    private decimal NettTotal  => _lines.Sum(l => l.ExtPrice);
+    private decimal GSTAmount  => NettTotal * 0.10m;
+    private decimal TotalIncGST=> NettTotal + GSTAmount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        _userCode  = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+        _divisions = await LookupService.GetDivisionsAsync();
+
+        if (!IsNew)
+        {
+            var existing = await InvoiceService.GetInvoiceAsync(Id!.Value);
+            if (existing != null)
+            {
+                _inv         = existing;
+                _invoiceDate = existing.InvoiceDate;
+                var items    = await InvoiceService.GetLineItemsAsync(Id!.Value);
+                _lines       = items.Select(i => new LineRow
+                {
+                    Description = i.Description,
+                    ProductCode = i.ProductCode ?? "",
+                    Qty         = i.Quantity,
+                    NettPrice   = i.NettPrice,
+                }).ToList();
+            }
+        }
+        else if (Qid.HasValue && Qid.Value > 0)
+        {
+            var q = await QuoteService.GetQuoteAsync(Qid.Value);
+            if (q != null)
+            {
+                _inv.Qid        = q.Qid;
+                _inv.CCompany   = q.CompanyName;
+                _inv.InvCompany = q.CompanyName;
+                _inv.Attention  = q.Attention;
+                _inv.Terms      = q.Terms;
+                _inv.CustomerNotes = q.CustomerNotes;
+                if (_divisions.Any(d => d.DivisionId == q.DivisionId))
+                    _inv.DivisionId = q.DivisionId;
+
+                var items = await QuoteService.GetLineItemsAsync(Qid.Value);
+                _lines = items.Select(i => new LineRow
+                {
+                    Description = i.Description,
+                    ProductCode = i.ProductCode ?? "",
+                    Qty         = i.EffectiveQty,
+                    NettPrice   = i.NettPrice,
+                }).ToList();
+            }
+        }
+    }
+
+    private void AddLine()             { _lines.Add(new LineRow()); StateHasChanged(); }
+    private void RemoveLine(LineRow r) { _lines.Remove(r); StateHasChanged(); }
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_inv.CCompany)) { _error = "Customer Company is required."; return; }
+
+        _inv.InvoiceDate    = _invoiceDate ?? DateTime.Today;
+        _inv.NettPriceTotal = NettTotal;
+        _inv.GSTTotal       = GSTAmount;
+
+        var lineItems = _lines
+            .Where(r => r.Qty > 0 && !string.IsNullOrWhiteSpace(r.Description))
+            .Select(r => new InvoiceLineItem
+            {
+                Description  = r.Description,
+                ProductCode  = string.IsNullOrEmpty(r.ProductCode) ? null : r.ProductCode,
+                Quantity     = r.Qty,
+                NettPrice    = r.NettPrice,
+                ExtNettPrice = r.ExtPrice,
+            }).ToList();
+
+        _saving = true;
+        try
+        {
+            if (IsNew)
+            {
+                var newId = await InvoiceService.CreateInvoiceAsync(_inv, lineItems, _userCode);
+                Snackbar.Add($"Invoice created.", Severity.Success);
+                Nav.NavigateTo($"/invoices/{newId}");
+            }
+            else
+            {
+                _inv.InvoiceId = Id!.Value;
+                await InvoiceService.UpdateInvoiceAsync(_inv, lineItems, _userCode);
+                Snackbar.Add("Invoice saved.", Severity.Success);
+                Nav.NavigateTo($"/invoices/{Id}");
+            }
+        }
+        catch (Exception ex) { Snackbar.Add($"Save failed: {ex.Message}", Severity.Error); }
+        finally { _saving = false; }
+    }
+
+    private sealed class LineRow
+    {
+        public string  Description { get; set; } = "";
+        public string  ProductCode { get; set; } = "";
+        public decimal Qty         { get; set; } = 1;
+        public decimal NettPrice   { get; set; }
+        public decimal ExtPrice    => Qty * NettPrice;
+    }
+}
+

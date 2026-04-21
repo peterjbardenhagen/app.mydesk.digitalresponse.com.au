@@ -1,0 +1,181 @@
+@page "/privacy-policy"
+@layout EmptyLayout
+@inject PlatformSettingsService PlatformSettings
+
+<PageTitle>Privacy Policy - @PlatformSettings.Current.PlatformName</PageTitle>
+
+<div class="legal-page">
+    <MudContainer MaxWidth="MaxWidth.Medium" Class="py-8">
+        <div class="text-center mb-8">
+            <MudText Typo="Typo.h3" Class="mb-2">Privacy Policy</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Last updated: 21 April 2026</MudText>
+        </div>
+
+        <MudPaper Class="pa-6 legal-content" Elevation="0">
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">1. Introduction</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    @PlatformSettings.Current.CompanyLegalName ("we", "us", or "our") operates the @PlatformSettings.Current.PlatformName platform 
+                    (the "Service"). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our Service.
+                </MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    We are committed to protecting your privacy in accordance with the Australian Privacy Principles (APPs) 
+                    under the Privacy Act 1988 (Cth) and the Privacy Amendment (Notifiable Data Breaches) Act 2017.
+                </MudText>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">2. Information We Collect</MudText>
+                
+                <MudText Typo="Typo.subtitle1" Class="mb-2 mt-4">2.1 Personal Information</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    We may collect personal information including:
+                </MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string">Name, email address, and contact details</MudListItem>
+                    <MudListItem T="string">Business information (company name, ABN, addresses)</MudListItem>
+                    <MudListItem T="string">User credentials and authentication data</MudListItem>
+                    <MudListItem T="string">IP address and device information</MudListItem>
+                    <MudListItem T="string">Usage data and analytics</MudListItem>
+                </MudList>
+
+                <MudText Typo="Typo.subtitle1" Class="mb-2 mt-4">2.2 Business Data</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    As a business management platform, we store your business data including:
+                </MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string">Quotes, invoices, and financial records</MudListItem>
+                    <MudListItem T="string">Customer and supplier information</MudListItem>
+                    <MudListItem T="string">Product and inventory data</MudListItem>
+                    <MudListItem T="string">Purchase orders and job orders</MudListItem>
+                    <MudListItem T="string">Documents and attachments</MudListItem>
+                </MudList>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">3. How We Use Your Information</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    We use your information to:
+                </MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string">Provide, maintain, and improve our Service</MudListItem>
+                    <MudListItem T="string">Process transactions and send related information</MudListItem>
+                    <MudListItem T="string">Send administrative notifications and updates</MudListItem>
+                    <MudListItem T="string">Respond to your comments and support requests</MudListItem>
+                    <MudListItem T="string">Monitor and analyze usage patterns and trends</MudListItem>
+                    <MudListItem T="string">Protect against fraudulent or illegal activity</MudListItem>
+                    <MudListItem T="string">Comply with legal obligations</MudListItem>
+                </MudList>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">4. Data Security</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    We implement appropriate technical and organisational measures to protect your personal information:
+                </MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string">Encryption of data in transit (TLS 1.3) and at rest (AES-256)</MudListItem>
+                    <MudListItem T="string">Secure data centres located in Australia</MudListItem>
+                    <MudListItem T="string">Regular security assessments and penetration testing</MudListItem>
+                    <MudListItem T="string">Access controls and authentication mechanisms</MudListItem>
+                    <MudListItem T="string">Employee training on data protection</MudListItem>
+                </MudList>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">5. Data Retention and Deletion</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    We retain your personal information for as long as necessary to provide the Service and comply with 
+                    legal obligations. You may request deletion of your data by contacting us. Upon account termination, 
+                    we will delete your data within 90 days, except where required to retain by law.
+                </MudText>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">6. Your Rights</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    Under Australian privacy law, you have the right to:
+                </MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string">Access your personal information</MudListItem>
+                    <MudListItem T="string">Correct inaccurate or outdated information</MudListItem>
+                    <MudListItem T="string">Request deletion of your personal information</MudListItem>
+                    <MudListItem T="string">Opt-out of marketing communications</MudListItem>
+                    <MudListItem T="string">Lodge a complaint with the Office of the Australian Information Commissioner</MudListItem>
+                </MudList>
+                <MudText Typo="Typo.body1" Class="mb-4 mt-4">
+                    To exercise these rights, please contact us at <MudLink Href="@($"mailto:{PlatformSettings.Current.SupportEmail}")">@PlatformSettings.Current.SupportEmail</MudLink>.
+                </MudText>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">7. Notifiable Data Breaches</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    In accordance with the Notifiable Data Breaches scheme, we will notify you and the Office of the 
+                    Australian Information Commissioner if we become aware of a data breach that is likely to result in 
+                    serious harm to you.
+                </MudText>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">8. Third-Party Services</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    We may use third-party service providers to assist in providing our Service. These providers are 
+                    bound by confidentiality obligations and are only permitted to use your information as necessary 
+                    to provide services to us. Current third-party services include:
+                </MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string">Cloud hosting and infrastructure providers</MudListItem>
+                    <MudListItem T="string">Email delivery services</MudListItem>
+                    <MudListItem T="string">AI/ML services (OpenAI) for Ask AI feature</MudListItem>
+                    <MudListItem T="string">Analytics and monitoring services</MudListItem>
+                </MudList>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">9. Changes to This Policy</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    We may update this Privacy Policy from time to time. We will notify you of any changes by posting 
+                    the new policy on this page and updating the "Last updated" date. Continued use of the Service 
+                    after changes constitutes acceptance of the revised policy.
+                </MudText>
+            </div>
+
+            <div class="legal-section">
+                <MudText Typo="Typo.h5" Class="mb-4">10. Contact Us</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">
+                    If you have any questions about this Privacy Policy, please contact us:
+                </MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string">Email: <MudLink Href="@($"mailto:{PlatformSettings.Current.SupportEmail}")">@PlatformSettings.Current.SupportEmail</MudLink></MudListItem>
+                    <MudListItem T="string">Website: <MudLink Href="@PlatformSettings.Current.CompanyWebsite" Target="_blank">@PlatformSettings.Current.CompanyWebsite</MudLink></MudListItem>
+                    <MudListItem T="string">Business Hours: Monday to Friday, 9:00 AM - 5:00 PM AEST</MudListItem>
+                </MudList>
+            </div>
+        </MudPaper>
+
+        <div class="text-center mt-6">
+            <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/" StartIcon="@Icons.Material.Rounded.ArrowBack">
+                Return to Login
+            </MudButton>
+        </div>
+    </MudContainer>
+</div>
+
+<style>
+    .legal-page {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+    .legal-content {
+        background: white;
+        border-radius: 12px;
+    }
+    .legal-section {
+        margin-bottom: 2rem;
+    }
+</style>
+
+@code {
+    // EmptyLayout is a simple layout without navigation for legal pages
+}

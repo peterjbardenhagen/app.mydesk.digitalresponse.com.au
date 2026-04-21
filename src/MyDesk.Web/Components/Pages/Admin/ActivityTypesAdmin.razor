@@ -1,0 +1,109 @@
+@page "/admin/activity-types"
+@attribute [Authorize]
+@inject SystemService Svc
+@inject ISnackbar Snackbar
+
+<PageTitle>Activity Types - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/admin/setup">Admin</a><span class="sep">/</span>
+            <span style="color:var(--gray-700);font-weight:500;">Activity Types</span>
+        </div>
+        <h1>Activity Types</h1>
+        <p class="tl-subtitle">Categories for activity tracking.</p>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
+               OnClick="AddNew">Add Type</MudButton>
+</div>
+
+@if (_items == null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-0" Style="max-width:540px;">
+        <MudDataGrid T="ActivityType" Items="_items" Dense="true" Hover="true" Elevation="0">
+            <Columns>
+                <PropertyColumn Property="x => x.ActivityTypeId" Title="#" CellStyle="width:70px;" />
+                <TemplateColumn Title="Activity Type">
+                    <CellTemplate>
+                        @if (_editingId == context.Item.ActivityTypeId)
+                        {
+                            <MudTextField @bind-Value="_editingName" Immediate="true" Margin="Margin.Dense"
+                                          Variant="Variant.Outlined" AutoFocus="true" />
+                        }
+                        else { @context.Item.ActivityTypeName }
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Actions" CellStyle="width:120px;">
+                    <CellTemplate>
+                        @if (_editingId == context.Item.ActivityTypeId)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Rounded.Check" Color="Color.Success" Size="Size.Small"
+                                           OnClick="@(() => Save(context.Item))" />
+                            <MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small" OnClick="Cancel" />
+                        }
+                        else
+                        {
+                            <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" Color="Color.Primary"
+                                           OnClick="@(() => BeginEdit(context.Item))" />
+                            <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
+                                           OnClick="@(() => Delete(context.Item))" />
+                        }
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+        </MudDataGrid>
+    </MudPaper>
+}
+
+@code {
+    private List<ActivityType>? _items;
+    private int? _editingId;
+    private string _editingName = "";
+
+    protected override async Task OnInitializedAsync() => await Reload();
+    private async Task Reload() => _items = await Svc.GetActivityTypesAsync();
+
+    private void BeginEdit(ActivityType a) { _editingId = a.ActivityTypeId; _editingName = a.ActivityTypeName; }
+    private void Cancel() { _editingId = null; _editingName = ""; }
+
+    private async Task Save(ActivityType a)
+    {
+        try
+        {
+            a.ActivityTypeName = _editingName;
+            await Svc.SaveActivityTypeAsync(a);
+            Snackbar.Add("Saved", Severity.Success);
+            Cancel(); await Reload();
+        }
+        catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task AddNew()
+    {
+        try
+        {
+            await Svc.SaveActivityTypeAsync(new ActivityType { ActivityTypeName = "New Type" });
+            await Reload();
+            var newest = _items!.OrderByDescending(x => x.ActivityTypeId).First();
+            BeginEdit(newest);
+        }
+        catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task Delete(ActivityType a)
+    {
+        try
+        {
+            await Svc.DeleteActivityTypeAsync(a.ActivityTypeId);
+            Snackbar.Add("Deleted", Severity.Info);
+            await Reload();
+        }
+        catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
+    }
+}
+

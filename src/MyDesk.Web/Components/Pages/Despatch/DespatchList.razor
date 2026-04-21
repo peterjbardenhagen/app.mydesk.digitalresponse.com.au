@@ -1,0 +1,87 @@
+@page "/despatch"
+@attribute [Authorize]
+@inject DespatchService Svc
+
+<PageTitle>Despatch - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb"><a href="/">Techlight MyDesk</a><span class="sep">/</span><span style="color:var(--gray-700); font-weight:500;">Despatch</span></div>
+        <h1>Despatch</h1>
+        <p class="tl-subtitle">Shipment tracking linked to invoices.</p>
+    </div>
+</div>
+
+@if (_items == null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-0">
+        <MudDataGrid T="DespatchRow" Items="_items" Dense="true" Hover="true" Elevation="0"
+                     Filterable="true" QuickFilter="@QuickFilter" Class="tl-compact-grid">
+            <ToolBarContent>
+                <MudTextField T="string" Placeholder="Search shipments..." @bind-Value="_search" Immediate="true"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Search"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" />
+                <MudSpacer />
+                <MudText Typo="Typo.caption" Class="mt-2" Style="color:var(--gray-500);">
+                    Showing latest 500 records
+                </MudText>
+            </ToolBarContent>
+            <Columns>
+                <PropertyColumn Property="x => x.DespatchId" Title="#" CellStyle="width:80px;" />
+                <PropertyColumn Property="x => x.DespatchDate" Title="Date" Format="yyyy-MM-dd" CellStyle="width:120px;" />
+                <PropertyColumn Property="x => x.CompanyName" Title="Customer" CellStyle="width:200px;" />
+                <TemplateColumn Title="Invoice #" CellStyle="width:100px;">
+                    <CellTemplate>
+                        @if (context.Item.InvoiceId.HasValue && !string.IsNullOrEmpty(context.Item.InvoiceNumber))
+                        {
+                            <MudLink Href="@($"/invoices/{context.Item.InvoiceId}")" Color="Color.Primary">
+                                @context.Item.InvoiceNumber
+                            </MudLink>
+                        }
+                        else
+                        {
+                            <MudText>@context.Item.InvoiceNumber</MudText>
+                        }
+                    </CellTemplate>
+                </TemplateColumn>
+                <PropertyColumn Property="x => x.Carrier" Title="Carrier" CellStyle="width:120px;" />
+                <PropertyColumn Property="x => x.TrackingNumber" Title="Tracking" CellStyle="width:150px;" />
+                <TemplateColumn Title="Actions" CellStyle="width:140px;" Sortable="false">
+                    <CellTemplate>
+                        <div class="d-flex gap-1">
+                            @if (context.Item.InvoiceId.HasValue)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Rounded.Visibility" Size="Size.Small" Color="Color.Info"
+                                               Href="@($"/invoices/{context.Item.InvoiceId}")" title="View Invoice" />
+                                <MudIconButton Icon="@Icons.Material.Rounded.LocalShipping" Size="Size.Small" Color="Color.Secondary"
+                                               Href="@($"/invoices/{context.Item.InvoiceId}/delivery-note")" title="Delivery Note" />
+                            }
+                        </div>
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+            <PagerContent><MudDataGridPager T="DespatchRow" /></PagerContent>
+        </MudDataGrid>
+    </MudPaper>
+}
+
+@code {
+    private List<DespatchRow>? _items;
+    private string _search = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _items = await Svc.GetAllAsync();
+    }
+
+    private Func<DespatchRow, bool> QuickFilter => d =>
+        string.IsNullOrWhiteSpace(_search) ||
+        (d.CompanyName?.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+        (d.InvoiceNumber?.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+        (d.TrackingNumber?.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false);
+}
+

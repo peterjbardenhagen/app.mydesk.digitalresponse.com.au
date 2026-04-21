@@ -1,0 +1,473 @@
+@page "/"
+@attribute [Authorize]
+@inject DashboardService DashboardService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IDialogService DialogService
+
+<PageTitle>Dashboard - Techlight MyDesk</PageTitle>
+
+<AuthorizeView Context="authContext">
+    @* ── Enterprise Dashboard Header ──────────────────────────────────────────── *@
+    <div class="tl-dashboard-header">
+        <div class="tl-dashboard-header-bg">
+            <div class="tl-header-swoosh"></div>
+            <div class="tl-header-glow"></div>
+        </div>
+        <div class="tl-dashboard-header-content">
+            <div class="tl-dashboard-welcome">
+                <div class="tl-welcome-badge">
+                    <MudIcon Icon="@Icons.Material.Rounded.Dashboard" Size="Size.Small" />
+                    <span>Executive Dashboard</span>
+                </div>
+                <h1 class="tl-welcome-title">Welcome back, @FirstName(authContext.User.Identity?.Name)</h1>
+                <p class="tl-welcome-subtitle">
+                    Real-time business intelligence for Techlight. 
+                    @if (_isDirectorOrAdmin)
+                    {
+                        <span>Accessing full company analytics and team performance metrics.</span>
+                    }
+                    else
+                    {
+                        <span>Viewing your personal performance metrics.</span>
+                    }
+                </p>
+            </div>
+            <div class="tl-dashboard-actions">
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           Href="/quotes/create"
+                           StartIcon="@Icons.Material.Rounded.Add"
+                           Class="tl-action-btn">
+                    New Quote
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Href="/admin/setup"
+                           StartIcon="@Icons.Material.Rounded.Settings"
+                           Class="tl-action-btn-secondary">
+                    Settings
+                </MudButton>
+            </div>
+        </div>
+    </div>
+</AuthorizeView>
+
+@if (_metrics == null)
+{
+    <div class="tl-loading-container">
+        <div class="tl-loading-content">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+            <MudText Class="mt-4" Style="color: var(--gray-500);">Loading business intelligence...</MudText>
+        </div>
+    </div>
+}
+else
+{
+    @* ── Executive KPI Cards ──────────────────────────────────────────────────── *@
+    <div class="tl-kpi-section">
+        <div class="tl-kpi-grid">
+            @* Revenue Card *@
+            <a href="/invoices?filter=thismonth" class="tl-kpi-card tl-kpi-revenue">
+                <div class="tl-kpi-header">
+                    <div class="tl-kpi-icon-wrap gold">
+                        <MudIcon Icon="@Icons.Material.Rounded.AttachMoney" Size="Size.Medium" />
+                    </div>
+                    <div class="tl-kpi-trend @GetTrendClass(_metrics.ThisMonthVsLastMonthPercent)">
+                        <MudIcon Icon="@GetTrendIcon(_metrics.ThisMonthVsLastMonthPercent)" Size="Size.Small" />
+                        <span>@Math.Abs(_metrics.ThisMonthVsLastMonthPercent).ToString("N1")%</span>
+                    </div>
+                </div>
+                <div class="tl-kpi-body">
+                    <div class="tl-kpi-value">@Fmt(_metrics.ThisMonthInvoiceValue)</div>
+                    <div class="tl-kpi-label">Revenue This Month</div>
+                </div>
+                <div class="tl-kpi-footer">
+                    <span>@_metrics.ThisMonthInvoices invoices</span>
+                    <span class="tl-kpi-divider">|</span>
+                    <span>YTD: @Fmt(_metrics.YtdInvoiceValue)</span>
+                </div>
+                <div class="tl-kpi-glow"></div>
+            </a>
+
+            @* Quotes Card *@
+            <a href="/quotes?filter=thismonth" class="tl-kpi-card tl-kpi-quotes">
+                <div class="tl-kpi-header">
+                    <div class="tl-kpi-icon-wrap teal">
+                        <MudIcon Icon="@Icons.Material.Rounded.RequestQuote" Size="Size.Medium" />
+                    </div>
+                    <div class="tl-kpi-trend @GetTrendClass(_metrics.ThisMonthQuotesWon - _metrics.LastMonthQuotesWon)">
+                        <MudIcon Icon="@GetTrendIcon(_metrics.ThisMonthQuotesWon - _metrics.LastMonthQuotesWon)" Size="Size.Small" />
+                        <span>@_metrics.ThisMonthQuotes quotes</span>
+                    </div>
+                </div>
+                <div class="tl-kpi-body">
+                    <div class="tl-kpi-value">@_metrics.ThisMonthQuotesWon</div>
+                    <div class="tl-kpi-label">Quotes Won This Month</div>
+                </div>
+                <div class="tl-kpi-footer">
+                    <span>@_metrics.QuoteToInvoiceConversionRate.ToString("N1")% conversion</span>
+                    <span class="tl-kpi-divider">|</span>
+                    <span>Pipeline: @Fmt(_metrics.PipelineValue)</span>
+                </div>
+                <div class="tl-kpi-glow"></div>
+            </a>
+
+            @* Profit Margin Card *@
+            <div class="tl-kpi-card tl-kpi-margin">
+                <div class="tl-kpi-header">
+                    <div class="tl-kpi-icon-wrap success">
+                        <MudIcon Icon="@Icons.Material.Rounded.PieChart" Size="Size.Medium" />
+                    </div>
+                    <div class="tl-kpi-status @GetMarginStatusClass(_metrics.GrossProfitMargin)">
+                        @GetMarginStatusText(_metrics.GrossProfitMargin)
+                    </div>
+                </div>
+                <div class="tl-kpi-body">
+                    <div class="tl-kpi-value">@_metrics.GrossProfitMargin.ToString("N1")%</div>
+                    <div class="tl-kpi-label">Gross Profit Margin</div>
+                </div>
+                <div class="tl-kpi-footer">
+                    <span>Avg Quote: @Fmt(_metrics.AverageQuoteValue)</span>
+                    <span class="tl-kpi-divider">|</span>
+                    <span>Avg Invoice: @Fmt(_metrics.AverageInvoiceValue)</span>
+                </div>
+                <div class="tl-kpi-glow"></div>
+            </div>
+
+            @* Health Score Card *@
+            <div class="tl-kpi-card tl-kpi-health @GetHealthCardClass(_metrics.OverallHealthScore)">
+                <div class="tl-kpi-header">
+                    <div class="tl-kpi-icon-wrap @GetHealthIconClass(_metrics.OverallHealthScore)">
+                        <MudIcon Icon="@Icons.Material.Rounded.HealthAndSafety" Size="Size.Medium" />
+                    </div>
+                    @if (_metrics.Warnings?.Any() == true)
+                    {
+                        <div class="tl-kpi-badge warning">
+                            <MudIcon Icon="@Icons.Material.Rounded.Warning" Size="Size.Small" />
+                            <span>@_metrics.Warnings.Count</span>
+                        </div>
+                    }
+                </div>
+                <div class="tl-kpi-body">
+                    <div class="tl-kpi-value">@_metrics.OverallHealthScore</div>
+                    <div class="tl-kpi-label">Business Health Score</div>
+                </div>
+                <div class="tl-kpi-footer">
+                    <span>@GetHealthStatusText(_metrics.OverallHealthScore)</span>
+                    @if (_metrics.Recommendations?.Any() == true)
+                    {
+                        <span class="tl-kpi-divider">|</span>
+                        <span>@_metrics.Recommendations.Count recommendations</span>
+                    }
+                </div>
+                <div class="tl-kpi-glow"></div>
+            </div>
+        </div>
+    </div>
+
+    @* ── Dashboard Carousel (Business Intelligence) ─────────────────────────── *@
+    <MudItem xs="12" Class="pa-0 mb-6">
+        <DashboardCarousel Metrics="_metrics" IsDirector="_isDirectorOrAdmin" UserCode="_userCode" />
+    </MudItem>
+
+    @* ── User KPI Card (Personal Performance) ───────────────────────────────── *@
+    @if (_userKpi != null)
+    {
+        <MudItem xs="12" Class="pa-0 mb-6">
+            <div class="tl-user-kpi-section">
+                <div class="tl-section-header">
+                    <div class="tl-section-icon personal">
+                        <MudIcon Icon="@Icons.Material.Rounded.Person" Size="Size.Medium" />
+                    </div>
+                    <div>
+                        <MudText Typo="Typo.h6" Class="tl-section-title">Your Performance This Month</MudText>
+                        <MudText Typo="Typo.body2" Class="tl-section-subtitle">Personal KPIs and targets</MudText>
+                    </div>
+                </div>
+                
+                <div class="tl-user-kpi-grid">
+                    <div class="tl-user-kpi-card">
+                        <div class="tl-user-kpi-icon teal">
+                            <MudIcon Icon="@Icons.Material.Rounded.RequestQuote" Size="Size.Small" />
+                        </div>
+                        <div class="tl-user-kpi-value">@_userKpi.QuotesRaisedThisMonth</div>
+                        <div class="tl-user-kpi-label">Quotes Raised</div>
+                        <div class="tl-user-kpi-sub">@_userKpi.QuotesWonThisMonth won (@_userKpi.WinRate.ToString("N0")%)</div>
+                    </div>
+                    <div class="tl-user-kpi-card">
+                        <div class="tl-user-kpi-icon gold">
+                            <MudIcon Icon="@Icons.Material.Rounded.ReceiptLong" Size="Size.Small" />
+                        </div>
+                        <div class="tl-user-kpi-value">@_userKpi.InvoicesClosedThisMonth</div>
+                        <div class="tl-user-kpi-label">Invoices Closed</div>
+                        <div class="tl-user-kpi-sub">@Fmt(_userKpi.InvoiceValueThisMonth)</div>
+                    </div>
+                    <div class="tl-user-kpi-card">
+                        <div class="tl-user-kpi-icon success">
+                            <MudIcon Icon="@Icons.Material.Rounded.TrendingUp" Size="Size.Small" />
+                        </div>
+                        <div class="tl-user-kpi-value">@Fmt(_userKpi.YtdRevenue)</div>
+                        <div class="tl-user-kpi-label">YTD Revenue</div>
+                        <div class="tl-user-kpi-sub">Rank #@_userKpi.Rank in team</div>
+                    </div>
+                    <div class="tl-user-kpi-card">
+                        <div class="tl-user-kpi-icon info">
+                            <MudIcon Icon="@Icons.Material.Rounded.AccessTime" Size="Size.Small" />
+                        </div>
+                        <div class="tl-user-kpi-value">@_userKpi.PendingQuotes</div>
+                        <div class="tl-user-kpi-label">Pending Quotes</div>
+                        <div class="tl-user-kpi-sub @_userKpi.OverdueQuotes > 5 ? "warning" : "">@_userKpi.OverdueQuotes overdue</div>
+                    </div>
+                </div>
+            </div>
+        </MudItem>
+    }
+
+    @* ── Warnings & Recommendations ─────────────────────────────────────────── *@
+    @if (_metrics.Warnings?.Any() == true || _metrics.Recommendations?.Any() == true)
+    {
+        <MudGrid Spacing="4" Class="mt-4">
+            @if (_metrics.Warnings?.Any() == true)
+            {
+                <MudItem xs="12" md="6">
+                    <MudPaper Class="tl-alerts-panel" Elevation="0">
+                        <div class="tl-alerts-header warning">
+                            <MudIcon Icon="@Icons.Material.Rounded.WarningAmber" Size="Size.Medium" />
+                            <span>Business Alerts</span>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Filled">
+                                @_metrics.Warnings.Count
+                            </MudChip>
+                        </div>
+                        <div class="tl-alerts-list">
+                            @foreach (var warning in _metrics.Warnings.Take(3))
+                            {
+                                <div class="tl-alert-item @warning.Severity">
+                                    <div class="tl-alert-icon">
+                                        <MudIcon Icon="@(warning.Severity == "critical" ? Icons.Material.Rounded.Error : Icons.Material.Rounded.Warning)" 
+                                                 Size="Size.Small" />
+                                    </div>
+                                    <div class="tl-alert-content">
+                                        <div class="tl-alert-title">@warning.Title</div>
+                                        <div class="tl-alert-desc">@warning.Description</div>
+                                        <div class="tl-alert-metric">@warning.Metric: @warning.CurrentValue (threshold: @warning.Threshold)</div>
+                                    </div>
+                                    <MudIconButton Icon="@Icons.Material.Rounded.ArrowForward" 
+                                                   Size="Size.Small"
+                                                   Href="@warning.ActionLink"
+                                                   Color="Color.Primary" />
+                                </div>
+                            }
+                        </div>
+                    </MudPaper>
+                </MudItem>
+            }
+
+            @if (_metrics.Recommendations?.Any() == true)
+            {
+                <MudItem xs="12" md="6">
+                    <MudPaper Class="tl-alerts-panel" Elevation="0">
+                        <div class="tl-alerts-header info">
+                            <MudIcon Icon="@Icons.Material.Rounded.Lightbulb" Size="Size.Medium" />
+                            <span>Smart Recommendations</span>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">
+                                @_metrics.Recommendations.Count
+                            </MudChip>
+                        </div>
+                        <div class="tl-alerts-list">
+                            @foreach (var rec in _metrics.Recommendations.Take(3))
+                            {
+                                <div class="tl-alert-item recommendation">
+                                    <div class="tl-alert-icon rec">
+                                        <MudIcon Icon="@Icons.Material.Rounded.AutoAwesome" Size="Size.Small" />
+                                    </div>
+                                    <div class="tl-alert-content">
+                                        <div class="tl-alert-title">@rec.Title</div>
+                                        <div class="tl-alert-desc">@rec.Description</div>
+                                        <div class="tl-alert-metric rec">Expected: @rec.ExpectedImpact</div>
+                                    </div>
+                                    <MudIconButton Icon="@Icons.Material.Rounded.ArrowForward" 
+                                                   Size="Size.Small"
+                                                   Href="@rec.ActionLink"
+                                                   Color="Color.Primary" />
+                                </div>
+                            }
+                        </div>
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+
+    @* ── Quick Actions Bar ──────────────────────────────────────────────────── *@
+    <div class="tl-quick-actions-bar">
+        <MudButton Href="/quotes/create" 
+                   Variant="Variant.Filled" 
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Rounded.Add"
+                   Size="Size.Large"
+                   Class="tl-quick-btn">
+            <div class="tl-quick-btn-content">
+                <span class="tl-quick-btn-label">New Quote</span>
+                <span class="tl-quick-btn-hint">Create sales quotation</span>
+            </div>
+        </MudButton>
+        <MudButton Href="/invoices/create" 
+                   Variant="Variant.Outlined"
+                   StartIcon="@Icons.Material.Rounded.ReceiptLong"
+                   Size="Size.Large"
+                   Class="tl-quick-btn">
+            <div class="tl-quick-btn-content">
+                <span class="tl-quick-btn-label">New Invoice</span>
+                <span class="tl-quick-btn-hint">Bill for services</span>
+            </div>
+        </MudButton>
+        <MudButton Href="/purchase-orders/create" 
+                   Variant="Variant.Outlined"
+                   StartIcon="@Icons.Material.Rounded.ShoppingCart"
+                   Size="Size.Large"
+                   Class="tl-quick-btn">
+            <div class="tl-quick-btn-content">
+                <span class="tl-quick-btn-label">New PO</span>
+                <span class="tl-quick-btn-hint">Purchase order</span>
+            </div>
+        </MudButton>
+        <MudButton Href="/contacts" 
+                   Variant="Variant.Text"
+                   StartIcon="@Icons.Material.Rounded.People"
+                   Size="Size.Large"
+                   Class="tl-quick-btn">
+            <div class="tl-quick-btn-content">
+                <span class="tl-quick-btn-label">Contacts</span>
+                <span class="tl-quick-btn-hint">Manage customers</span>
+            </div>
+        </MudButton>
+    </div>
+}
+
+@code {
+    private DashboardMetrics? _metrics;
+    private UserKPI? _userKpi;
+    private bool _isDirectorOrAdmin;
+    private string? _userCode;
+    private List<ChartSeries> _chartSeries = new();
+    private string[]          _xAxisLabels = Array.Empty<string>();
+    private ChartPeriod       _chartPeriod = ChartPeriod.ThisYear;
+    private string            _chartSubtitle = "Quotes \u00b7 invoices \u00b7 purchase orders \u2014 value by month (all, excluding lost quotes)";
+
+    private static readonly IReadOnlyDictionary<ChartPeriod, string> _periodOptions =
+        new Dictionary<ChartPeriod, string>
+        {
+            [ChartPeriod.ThisYear]       = "This Year",
+            [ChartPeriod.FyToDate]       = "FY to Date",
+            [ChartPeriod.LastYear]       = "Last Year",
+            [ChartPeriod.SinceInception] = "Since Inception",
+        };
+
+    private readonly ChartOptions _chartOptions = new()
+    {
+        ChartPalette  = new[] { "#00a8b0", "#cca05a", "#6941c6", "#2e90fa" },
+        YAxisLines    = true, XAxisLines = false, LineStrokeWidth = 2,
+        YAxisFormat   = "$#,##0",
+    };
+
+    private string ChartWidth => _xAxisLabels.Length > 12
+        ? $"{Math.Min(_xAxisLabels.Length * 50, 1200)}px"
+        : "100%";
+
+    private static string Fmt(decimal v) => "$" + v.ToString("#,##0");
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get user info
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        _userCode = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        _isDirectorOrAdmin = user.IsInRole("Director") || user.IsInRole("Admin");
+
+        _metrics = await DashboardService.GetMetricsAsync();
+        
+        // Find current user's KPI
+        _userKpi = _metrics?.TeamMemberKPIs?.FirstOrDefault(k => k.UserCode == _userCode);
+
+        // Seed chart from already-loaded metrics data
+        _xAxisLabels = new[]{"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
+        _chartSeries = new List<ChartSeries>
+        {
+            new() { Name = "Quotes",          Data = _metrics?.MonthlyQuotesThisYear?.Select(v => (double)v).ToArray() ?? new double[12] },
+            new() { Name = "Invoices",        Data = _metrics?.MonthlyInvoicesThisYear?.Select(v => (double)v).ToArray() ?? new double[12] },
+            new() { Name = "Purchase Orders", Data = _metrics?.MonthlyPOsThisYear?.Select(v => (double)v).ToArray() ?? new double[12] },
+        };
+    }
+
+    private async Task SelectPeriodAsync(ChartPeriod period)
+    {
+        if (_chartPeriod == period) return;
+        _chartPeriod  = period;
+        StateHasChanged();
+
+        var data = await DashboardService.GetChartDataAsync(period);
+        ApplyChartData(data);
+    }
+
+    private void ApplyChartData(DashboardChartData data)
+    {
+        _xAxisLabels   = data.Labels;
+        _chartSubtitle = _chartPeriod == ChartPeriod.SinceInception
+            ? "Quotes \u00b7 invoices \u00b7 purchase orders \u2014 value by year (all, excluding lost quotes)"
+            : "Quotes \u00b7 invoices \u00b7 purchase orders \u2014 value by month (all, excluding lost quotes)";
+        _chartSeries = new List<ChartSeries>
+        {
+            new() { Name = "Quotes",          Data = data.QuotesWon.Select(v => (double)v).ToArray() },
+            new() { Name = "Invoices",        Data = data.Invoices.Select(v => (double)v).ToArray() },
+            new() { Name = "Purchase Orders", Data = data.POs.Select(v => (double)v).ToArray() },
+        };
+    }
+
+    private static string FirstName(string? n) =>
+        string.IsNullOrWhiteSpace(n) ? "there"
+        : n.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "there";
+
+    // Helper methods for KPI cards
+    private string GetTrendClass(decimal value) => value >= 0 ? "positive" : "negative";
+    private string GetTrendIcon(decimal value) => value >= 0 ? Icons.Material.Rounded.TrendingUp : Icons.Material.Rounded.TrendingDown;
+
+    private string GetMarginStatusClass(decimal margin) => margin switch
+    {
+        >= 30 => "excellent",
+        >= 20 => "good",
+        >= 15 => "warning",
+        _ => "critical"
+    };
+
+    private string GetMarginStatusText(decimal margin) => margin switch
+    {
+        >= 30 => "Excellent",
+        >= 20 => "Good",
+        >= 15 => "Fair",
+        _ => "Low"
+    };
+
+    private string GetHealthCardClass(int score) => score switch
+    {
+        >= 90 => "excellent",
+        >= 70 => "good",
+        >= 50 => "warning",
+        _ => "critical"
+    };
+
+    private string GetHealthIconClass(int score) => score switch
+    {
+        >= 90 => "success",
+        >= 70 => "primary",
+        >= 50 => "warning",
+        _ => "error"
+    };
+
+    private string GetHealthStatusText(int score) => score switch
+    {
+        >= 90 => "Excellent",
+        >= 70 => "Good",
+        >= 50 => "Needs Attention",
+        _ => "Critical"
+    };
+}
+

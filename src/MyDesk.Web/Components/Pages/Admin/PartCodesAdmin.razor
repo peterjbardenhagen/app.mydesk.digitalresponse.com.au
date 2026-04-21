@@ -1,0 +1,127 @@
+@page "/admin/part-codes"
+@attribute [Authorize]
+@inject SystemService Svc
+@inject ISnackbar Snackbar
+
+<PageTitle>Part Codes - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/admin/setup">Admin</a><span class="sep">/</span>
+            <span style="color:var(--gray-700);font-weight:500;">Part Codes</span>
+        </div>
+        <h1>Part Codes</h1>
+        <p class="tl-subtitle">Purchase order product codes and descriptions.</p>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
+               OnClick="AddNew">Add Part Code</MudButton>
+</div>
+
+@if (_items == null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-0" Style="max-width:720px;">
+        <MudDataGrid T="PartCode" Items="_items" Dense="true" Hover="true" Elevation="0">
+            <Columns>
+                <PropertyColumn Property="x => x.PartCodeId" Title="#" CellStyle="width:70px;" />
+                <TemplateColumn Title="Part Code">
+                    <CellTemplate>
+                        @if (_editingId == context.Item.PartCodeId)
+                        {
+                            <MudTextField @bind-Value="_editingName" Immediate="true" Margin="Margin.Dense"
+                                          Variant="Variant.Outlined" AutoFocus="true" Label="Code" />
+                        }
+                        else { @context.Item.PartCodeName }
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Description">
+                    <CellTemplate>
+                        @if (_editingId == context.Item.PartCodeId)
+                        {
+                            <MudTextField @bind-Value="_editingDesc" Immediate="true" Margin="Margin.Dense"
+                                          Variant="Variant.Outlined" Label="Description" />
+                        }
+                        else { @context.Item.Description }
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Actions" CellStyle="width:120px;">
+                    <CellTemplate>
+                        @if (_editingId == context.Item.PartCodeId)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Rounded.Check" Color="Color.Success" Size="Size.Small"
+                                           OnClick="@(() => Save(context.Item))" />
+                            <MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small" OnClick="Cancel" />
+                        }
+                        else
+                        {
+                            <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" Color="Color.Primary"
+                                           OnClick="@(() => BeginEdit(context.Item))" />
+                            <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
+                                           OnClick="@(() => Delete(context.Item))" />
+                        }
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+        </MudDataGrid>
+    </MudPaper>
+}
+
+@code {
+    private List<PartCode>? _items;
+    private int? _editingId;
+    private string _editingName = "";
+    private string _editingDesc = "";
+
+    protected override async Task OnInitializedAsync() => await Reload();
+    private async Task Reload() => _items = await Svc.GetPartCodesAsync();
+
+    private void BeginEdit(PartCode p)
+    {
+        _editingId = p.PartCodeId;
+        _editingName = p.PartCodeName;
+        _editingDesc = p.Description ?? "";
+    }
+
+    private void Cancel() { _editingId = null; _editingName = ""; _editingDesc = ""; }
+
+    private async Task Save(PartCode p)
+    {
+        try
+        {
+            p.PartCodeName = _editingName;
+            p.Description = _editingDesc;
+            await Svc.SavePartCodeAsync(p);
+            Snackbar.Add("Saved", Severity.Success);
+            Cancel(); await Reload();
+        }
+        catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task AddNew()
+    {
+        try
+        {
+            await Svc.SavePartCodeAsync(new PartCode { PartCodeName = "NEW-CODE", Description = "" });
+            await Reload();
+            var newest = _items!.OrderByDescending(x => x.PartCodeId).First();
+            BeginEdit(newest);
+        }
+        catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task Delete(PartCode p)
+    {
+        try
+        {
+            await Svc.DeletePartCodeAsync(p.PartCodeId);
+            Snackbar.Add("Deleted", Severity.Info);
+            await Reload();
+        }
+        catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
+    }
+}
+

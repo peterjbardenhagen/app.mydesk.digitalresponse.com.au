@@ -1,0 +1,320 @@
+@page "/marketing/assets"
+@attribute [Authorize]
+@inject MarketingService Service
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<PageTitle>Brand Assets - DR MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <MudLink Href="/marketing" Underline="Underline.None">Marketing</MudLink>
+            <MudIcon Icon="@Icons.Material.Rounded.ChevronRight" Size="Size.Small" />
+            <span>Brand Assets</span>
+        </div>
+        <h1 class="tl-page-title">
+            <MudIcon Icon="@Icons.Material.Rounded.Business" Class="mr-2" Style="color: var(--tl-accent)" />
+            Brand Assets
+        </h1>
+        <div class="tl-page-sub">Logos, brand guidelines, company profile, email signatures — download the full kit.</div>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+}
+else
+{
+    @* Primary Brand Assets *@
+    <MudText Typo="Typo.h6" Class="mb-4">Brand Kit</MudText>
+    <div class="tl-mkt-grid mb-6">
+        @foreach (var asset in _brandAssets)
+        {
+            <MudCard Elevation="0" Outlined="true" Class="tl-asset-card">
+                <MudCardContent Class="d-flex flex-column align-center pa-6">
+                    <div class="tl-asset-icon">
+                        <MudIcon Icon="@asset.Icon" Size="Size.Large" />
+                    </div>
+                    <MudText Typo="Typo.h6" Align="Align.Center" Class="mt-4 mb-1">@asset.Title</MudText>
+                    <MudText Typo="Typo.body2" Align="Align.Center" Style="color: var(--gray-500);" Class="mb-4">
+                        @asset.Description
+                    </MudText>
+                    <div class="d-flex gap-2 mt-auto">
+                        @if (asset.HasView)
+                        {
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Rounded.Visibility"
+                                      OnClick="() => ViewAsset(asset)">View</MudButton>
+                        }
+                        @if (asset.HasDownload)
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" 
+                                      StartIcon="@Icons.Material.Rounded.Download"
+                                      OnClick="() => DownloadAsset(asset)" Disabled="!asset.Exists">
+                                Download
+                            </MudButton>
+                        }
+                    </div>
+                    @if (!asset.Exists)
+                    {
+                        <MudText Typo="Typo.caption" Style="color: var(--error-500);" Class="mt-2">
+                            File not found
+                        </MudText>
+                    }
+                </MudCardContent>
+            </MudCard>
+        }
+    </div>
+
+    @* Important Files & Links Section (moved from Setup) *@
+    <MudText Typo="Typo.h6" Class="mb-4">Important Files & Links</MudText>
+    <MudCard Elevation="0" Outlined="true">
+        <MudCardContent>
+            <MudGrid Spacing="3">
+                @foreach (var link in _importantLinks)
+                {
+                    <MudItem xs="12" md="6" lg="4">
+                        <div class="d-flex align-center gap-3 p-3" style="background: var(--gray-50); border-radius: 8px;">
+                            <MudIcon Icon="@link.Icon" Color="link.Color" />
+                            <div class="flex-grow-1">
+                                <MudText Typo="Typo.body1" Style="font-weight: 500;">@link.Title</MudText>
+                                <MudText Typo="Typo.caption" Style="color: var(--gray-500);">@link.Description</MudText>
+                            </div>
+                            <MudIconButton Icon="@Icons.Material.Rounded.OpenInNew" Size="Size.Small" 
+                                          Href="@link.Url" Target="_blank" />
+                        </div>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudCardContent>
+    </MudCard>
+
+    @* Additional Resources *@
+    <MudText Typo="Typo.h6" Class="mb-4 mt-6">Additional Resources</MudText>
+    <div class="tl-mkt-grid">
+        <MudCard Elevation="0" Outlined="true">
+            <MudCardHeader>
+                <CardHeaderAvatar>
+                    <MudAvatar Color="Color.Primary">
+                        <MudIcon Icon="@Icons.Material.Rounded.Palette" />
+                    </MudAvatar>
+                </CardHeaderAvatar>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.subtitle1">Colour Palette</MudText>
+                    <MudText Typo="Typo.caption">Official brand colours</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <div class="d-flex gap-2 flex-wrap">
+                    <div class="d-flex align-center gap-2">
+                        <div style="width: 24px; height: 24px; background: #ff6b35; border-radius: 4px;"></div>
+                        <MudText Typo="Typo.caption">Primary #ff6b35</MudText>
+                    </div>
+                    <div class="d-flex align-center gap-2">
+                        <div style="width: 24px; height: 24px; background: #004e89; border-radius: 4px;"></div>
+                        <MudText Typo="Typo.caption">Secondary #004e89</MudText>
+                    </div>
+                    <div class="d-flex align-center gap-2">
+                        <div style="width: 24px; height: 24px; background: #1a1a2e; border-radius: 4px;"></div>
+                        <MudText Typo="Typo.caption">Dark #1a1a2e</MudText>
+                    </div>
+                </div>
+            </MudCardContent>
+        </MudCard>
+
+        <MudCard Elevation="0" Outlined="true">
+            <MudCardHeader>
+                <CardHeaderAvatar>
+                    <MudAvatar Color="Color.Secondary">
+                        <MudIcon Icon="@Icons.Material.Rounded.FontDownload" />
+                    </MudAvatar>
+                </CardHeaderAvatar>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.subtitle1">Typography</MudText>
+                    <MudText Typo="Typo.caption">Official brand fonts</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <div class="d-flex flex-column gap-2">
+                    <div>
+                        <MudText Typo="Typo.body2" Style="font-family: 'Inter', sans-serif; font-weight: 600;">Inter</MudText>
+                        <MudText Typo="Typo.caption">Headings & UI</MudText>
+                    </div>
+                    <div>
+                        <MudText Typo="Typo.body2" Style="font-family: 'Open Sans', sans-serif;">Open Sans</MudText>
+                        <MudText Typo="Typo.caption">Body text</MudText>
+                    </div>
+                </div>
+            </MudCardContent>
+        </MudCard>
+
+        <MudCard Elevation="0" Outlined="true">
+            <MudCardHeader>
+                <CardHeaderAvatar>
+                    <MudAvatar Color="Color.Tertiary">
+                        <MudIcon Icon="@Icons.Material.Rounded.ContactMail" />
+                    </MudAvatar>
+                </CardHeaderAvatar>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.subtitle1">Contact Details</MudText>
+                    <MudText Typo="Typo.caption">For brand enquiries</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <div class="d-flex flex-column gap-1">
+                    <MudText Typo="Typo.body2">marketing@techlight.com.au</MudText>
+                    <MudText Typo="Typo.caption">1300 DR MYDESK</MudText>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    </div>
+}
+
+@code {
+    private bool _loading = true;
+    private List<AssetItem> _brandAssets = new();
+    private List<ImportantLink> _importantLinks = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Check which files actually exist
+            var logos = await Service.GetBrandAssetsAsync();
+            
+            _brandAssets = new List<AssetItem>
+            {
+                new AssetItem 
+                { 
+                    Title = "Logos", 
+                    Description = "PNG and SVG formats, colour and mono",
+                    Icon = Icons.Material.Rounded.Image,
+                    HasView = false, HasDownload = true,
+                    Exists = logos.LogoExists,
+                    Path = logos.LogoPath
+                },
+                new AssetItem 
+                { 
+                    Title = "Brand Guidelines", 
+                    Description = "PDF with usage rules and examples",
+                    Icon = Icons.Material.Rounded.MenuBook,
+                    HasView = true, HasDownload = true,
+                    Exists = logos.GuidelinesExists,
+                    Path = logos.GuidelinesPath
+                },
+                new AssetItem 
+                { 
+                    Title = "Company Profile", 
+                    Description = "About Techlight for partners and press",
+                    Icon = Icons.Material.Rounded.Business,
+                    HasView = true, HasDownload = true,
+                    Exists = logos.ProfileExists,
+                    Path = logos.ProfilePath
+                },
+                new AssetItem 
+                { 
+                    Title = "Email Signature", 
+                    Description = "HTML template for Outlook/Gmail",
+                    Icon = Icons.Material.Rounded.AlternateEmail,
+                    HasView = false, HasDownload = true,
+                    Exists = logos.SignatureExists,
+                    Path = logos.SignaturePath
+                }
+            };
+
+            _importantLinks = new List<ImportantLink>
+            {
+                new ImportantLink 
+                { 
+                    Title = "Help Centre", 
+                    Description = "Documentation and guides",
+                    Icon = Icons.Material.Rounded.Help,
+                    Url = "/help",
+                    Color = Color.Info
+                },
+                new ImportantLink 
+                { 
+                    Title = "Release Notes", 
+                    Description = "What's new in MyDesk",
+                    Icon = Icons.Material.Rounded.NewReleases,
+                    Url = "/release-notes",
+                    Color = Color.Success
+                },
+                new ImportantLink 
+                { 
+                    Title = "Techlight Website", 
+                    Description = "techlight.com.au",
+                    Icon = Icons.Material.Rounded.Public,
+                    Url = "https://techlight.com.au",
+                    Color = Color.Primary
+                },
+                new ImportantLink 
+                { 
+                    Title = "DR Website", 
+                    Description = "digitalresponse.com.au",
+                    Icon = Icons.Material.Rounded.Public,
+                    Url = "https://digitalresponse.com.au",
+                    Color = Color.Primary
+                },
+                new ImportantLink 
+                { 
+                    Title = "Google Analytics", 
+                    Description = "Marketing analytics dashboard",
+                    Icon = Icons.Material.Rounded.Analytics,
+                    Url = "https://analytics.google.com",
+                    Color = Color.Warning
+                },
+                new ImportantLink 
+                { 
+                    Title = "Meta Business Suite", 
+                    Description = "Facebook & Instagram management",
+                    Icon = Icons.Material.Rounded.Facebook,
+                    Url = "https://business.facebook.com",
+                    Color = Color.Info
+                }
+            };
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void ViewAsset(AssetItem asset)
+    {
+        if (!string.IsNullOrEmpty(asset.Path))
+        {
+            Nav.NavigateTo(asset.Path);
+        }
+    }
+
+    private async Task DownloadAsset(AssetItem asset)
+    {
+        if (!string.IsNullOrEmpty(asset.Path))
+        {
+            await JS.InvokeVoidAsync("window.open", asset.Path, "_blank");
+        }
+    }
+
+    private class AssetItem
+    {
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Icon { get; set; } = "";
+        public bool HasView { get; set; }
+        public bool HasDownload { get; set; }
+        public bool Exists { get; set; }
+        public string Path { get; set; } = "";
+    }
+
+    private class ImportantLink
+    {
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Icon { get; set; } = "";
+        public string Url { get; set; } = "";
+        public Color Color { get; set; }
+    }
+}

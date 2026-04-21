@@ -1,0 +1,140 @@
+@page "/admin/currency"
+@attribute [Authorize]
+@inject SystemService Svc
+@inject ISnackbar Snackbar
+
+<PageTitle>Currency Rates - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/admin/setup">Admin</a><span class="sep">/</span>
+            <span style="color:var(--gray-700);font-weight:500;">Currency Rates</span>
+        </div>
+        <h1>Currency Exchange Rates</h1>
+        <p class="tl-subtitle">Manage currency codes and exchange rates.</p>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
+               OnClick="AddNew">Add Currency</MudButton>
+</div>
+
+@if (_items == null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-0" Style="max-width:720px;">
+        <MudDataGrid T="CurrencyRate" Items="_items" Dense="true" Hover="true" Elevation="0">
+            <Columns>
+                <PropertyColumn Property="x => x.CurrencyId" Title="#" CellStyle="width:70px;" />
+                <TemplateColumn Title="Code">
+                    <CellTemplate>
+                        @if (_editingId == context.Item.CurrencyId)
+                        {
+                            <MudTextField @bind-Value="_editingCode" Immediate="true" Margin="Margin.Dense"
+                                          Variant="Variant.Outlined" AutoFocus="true" Style="width:80px;" />
+                        }
+                        else { <strong>@context.Item.Code</strong> }
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Name">
+                    <CellTemplate>
+                        @if (_editingId == context.Item.CurrencyId)
+                        {
+                            <MudTextField @bind-Value="_editingName" Immediate="true" Margin="Margin.Dense"
+                                          Variant="Variant.Outlined" />
+                        }
+                        else { @context.Item.Name }
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Rate" CellStyle="width:140px;">
+                    <CellTemplate>
+                        @if (_editingId == context.Item.CurrencyId)
+                        {
+                            <MudNumericField @bind-Value="_editingRate" Immediate="true" Margin="Margin.Dense"
+                                            Variant="Variant.Outlined" Step="0.01M" Format="F4" />
+                        }
+                        else { @context.Item.Rate.ToString("F4") }
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Actions" CellStyle="width:100px;">
+                    <CellTemplate>
+                        @if (_editingId == context.Item.CurrencyId)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Rounded.Check" Color="Color.Success" Size="Size.Small"
+                                           OnClick="@(() => Save(context.Item))" />
+                            <MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small" OnClick="Cancel" />
+                        }
+                        else
+                        {
+                            <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" Color="Color.Primary"
+                                           OnClick="@(() => BeginEdit(context.Item))" />
+                            <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
+                                           OnClick="@(() => Delete(context.Item))" />
+                        }
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+        </MudDataGrid>
+    </MudPaper>
+}
+
+@code {
+    private List<CurrencyRate>? _items;
+    private int? _editingId;
+    private string _editingCode = "";
+    private string _editingName = "";
+    private decimal _editingRate = 1m;
+
+    protected override async Task OnInitializedAsync() => await Reload();
+    private async Task Reload() => _items = await Svc.GetCurrencyRatesAsync();
+
+    private void BeginEdit(CurrencyRate c)
+    {
+        _editingId = c.CurrencyId;
+        _editingCode = c.Code;
+        _editingName = c.Name;
+        _editingRate = c.Rate;
+    }
+
+    private void Cancel() { _editingId = null; _editingCode = ""; _editingName = ""; _editingRate = 1m; }
+
+    private async Task Save(CurrencyRate c)
+    {
+        try
+        {
+            c.Code = _editingCode;
+            c.Name = _editingName;
+            c.Rate = _editingRate;
+            await Svc.SaveCurrencyRateAsync(c);
+            Snackbar.Add("Saved", Severity.Success);
+            Cancel(); await Reload();
+        }
+        catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task AddNew()
+    {
+        try
+        {
+            await Svc.SaveCurrencyRateAsync(new CurrencyRate { Code = "XXX", Name = "New Currency", Rate = 1m });
+            await Reload();
+            var newest = _items!.OrderByDescending(x => x.CurrencyId).First();
+            BeginEdit(newest);
+        }
+        catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task Delete(CurrencyRate c)
+    {
+        try
+        {
+            await Svc.DeleteCurrencyRateAsync(c.CurrencyId);
+            Snackbar.Add("Deleted", Severity.Info);
+            await Reload();
+        }
+        catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
+    }
+}
+

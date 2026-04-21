@@ -1,0 +1,135 @@
+@page "/companies/new"
+@page "/companies/{Id:int}/edit"
+@attribute [Authorize]
+@inject CompanyService Svc
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>@(_isNew ? "New Company" : "Edit Company") - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/companies">Companies</a><span class="sep">/</span>
+            <span style="color:var(--gray-700);font-weight:500;">@(_isNew ? "New Company" : _c.CompanyName)</span>
+        </div>
+        <h1>@(_isNew ? "New Company" : "Edit Company")</h1>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-6" Style="max-width:720px;" Elevation="1">
+        <MudGrid Spacing="3">
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_c.CompanyName" Label="Company Name" Variant="Variant.Outlined"
+                              Required="true" @ref="_nameField" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_c.Phone" Label="Phone" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_c.Fax" Label="Fax" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_c.Email" Label="Email" Variant="Variant.Outlined"
+                              InputType="InputType.Email" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_c.Website" Label="Website" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_c.Address1" Label="Address Line 1" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_c.Address2" Label="Address Line 2" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="5">
+                <MudTextField @bind-Value="_c.Suburb" Label="Suburb" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudTextField @bind-Value="_c.State" Label="State" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="6" sm="4">
+                <MudTextField @bind-Value="_c.PostCode" Label="Post Code" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_c.ABN" Label="ABN" Variant="Variant.Outlined" />
+            </MudItem>
+        </MudGrid>
+
+        <div class="d-flex gap-3 mt-6">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Rounded.Save"
+                       OnClick="SaveAsync" Disabled="_saving">
+                @(_saving ? "Saving…" : "Save")
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Href="/companies">Cancel</MudButton>
+            @if (!_isNew)
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Error"
+                           StartIcon="@Icons.Material.Rounded.Delete"
+                           OnClick="DeleteAsync" Style="margin-left:auto;">Delete</MudButton>
+            }
+        </div>
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private Company _c = new();
+    private bool _loading = true;
+    private bool _saving;
+    private bool _isNew => !Id.HasValue || Id == 0;
+    private MudTextField<string>? _nameField;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (!_isNew)
+            {
+                var loaded = await Svc.GetCompanyAsync(Id!.Value);
+                if (loaded != null) _c = loaded;
+            }
+        }
+        catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
+        finally { _loading = false; }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_c.CompanyName))
+        {
+            Snackbar.Add("Company name is required.", Severity.Warning);
+            return;
+        }
+        _saving = true;
+        try
+        {
+            var id = await Svc.SaveCompanyAsync(_c);
+            Snackbar.Add("Saved.", Severity.Success);
+            Nav.NavigateTo("/companies");
+        }
+        catch (Exception ex) { Snackbar.Add($"Save failed: {ex.Message}", Severity.Error); }
+        finally { _saving = false; }
+    }
+
+    private async Task DeleteAsync()
+    {
+        try
+        {
+            await Svc.DeleteCompanyAsync(Id!.Value);
+            Snackbar.Add("Company deleted.", Severity.Info);
+            Nav.NavigateTo("/companies");
+        }
+        catch (Exception ex) { Snackbar.Add($"Delete failed: {ex.Message}", Severity.Error); }
+    }
+}
+

@@ -1,0 +1,272 @@
+@page "/ask-ai"
+@attribute [Authorize]
+@inject AzureAIService AI
+@inject McpIntegrationService McpSvc
+@inject AiAuditService AuditSvc
+@inject AuthenticationStateProvider AuthState
+@inject IJSRuntime JsRuntime
+@using MyDesk.Web.Services
+@using MyDesk.Shared.Services
+@using System.Security.Claims
+@using Microsoft.JSInterop
+
+<PageTitle>Ask AI - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <span style="color:var(--gray-700);font-weight:500;">Ask AI</span>
+        </div>
+        <h1 style="display:flex;align-items:center;gap:10px;">
+            <MudIcon Icon="@Icons.Material.Rounded.AutoAwesome" Style="color:var(--tl-primary);" />
+            Ask Techlight AI
+        </h1>
+        <p class="tl-subtitle">Ask questions about your business data.</p>
+    </div>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Clear"
+               OnClick="Clear" Disabled="@(!_history.Any())">Clear</MudButton>
+</div>
+
+@if (!AI.IsConfigured)
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-4">
+        Azure OpenAI is not configured. Set <code>Azure:OpenAIEndpoint</code>, <code>Azure:OpenAIModel</code>,
+        <code>Azure:OpenAIApiVersion</code>, and <code>Azure:OpenAIApiKey</code> in appsettings.json.
+    </MudAlert>
+}
+
+<MudPaper Elevation="1" Class="pa-4 mb-3"
+          Style="min-height:420px;max-height:520px;overflow-y:auto;background:var(--mud-palette-background);"
+          @ref="_chatBox">
+    @if (!_history.Any())
+    {
+        <div class="d-flex flex-column align-center justify-center" style="height:360px;opacity:.45;">
+            <MudIcon Icon="@Icons.Material.Rounded.AutoAwesome" Style="font-size:3rem;" />
+            <MudText Typo="Typo.body1" Class="mt-3">Ask anything about your quotes, invoices, customers, or sales data.</MudText>
+            <MudText Typo="Typo.caption">Ctrl+Enter to send</MudText>
+        </div>
+    }
+    @foreach (var msg in _history)
+    {
+        <div class="@(msg.IsUser ? "d-flex justify-end" : "d-flex justify-start") mb-3">
+            <div style="max-width:80%;padding:12px 16px;border-radius:12px;font-size:.875rem;white-space:pre-wrap;
+                        background:@(msg.IsUser ? "var(--tl-primary)" : "var(--mud-palette-surface)");
+                        color:@(msg.IsUser ? "#fff" : "inherit");
+                        border:@(msg.IsUser ? "none" : "1px solid var(--gray-200)");">
+                @msg.Content
+            </div>
+        </div>
+    }
+    @if (_thinking)
+    {
+        <div class="d-flex justify-start mb-3">
+            <div style="padding:12px 16px;border-radius:12px;border:1px solid var(--gray-200);">
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" />
+                <span style="margin-left:8px;font-size:.875rem;color:var(--gray-500);">Thinking…</span>
+            </div>
+        </div>
+    }
+</MudPaper>
+
+@if (!_history.Any())
+{
+    <MudPaper Elevation="0" Class="pa-3 mb-3" Style="background:transparent;">
+        <MudText Typo="Typo.caption" Class="mb-2" Style="color:var(--gray-500);">Try asking:</MudText>
+        <div class="d-flex flex-wrap gap-2">
+            @foreach (var prompt in _suggestedPrompts)
+            {
+                <MudChip T="string" OnClick="@(() => UseSuggested(prompt))"
+                         Color="Color.Default" Variant="Variant.Outlined" Size="Size.Small">
+                    @prompt
+                </MudChip>
+            }
+        </div>
+    </MudPaper>
+}
+
+<MudPaper Elevation="1" Class="pa-3">
+    <div class="d-flex gap-2 align-end">
+        <MudTextField @bind-Value="_input" Placeholder="Ask a question…" Variant="Variant.Outlined"
+                      Lines="2" Immediate="true" OnKeyDown="OnKeyDown" Style="flex:1;"
+                      Margin="Margin.Dense" Disabled="@_thinking" />
+        <MudIconButton Icon="@(_listening ? Icons.Material.Rounded.MicOff : Icons.Material.Rounded.Mic)"
+                       Color="@(_listening ? Color.Error : Color.Default)"
+                       OnClick="ToggleVoiceAsync" Disabled="@_thinking" Size="Size.Large"
+                       title="Voice input (browser speech recognition)" />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Rounded.Send"
+                   OnClick="SendAsync"
+                   Disabled="@(_thinking || string.IsNullOrWhiteSpace(_input))">
+            Send
+        </MudButton>
+    </div>
+    <MudText Typo="Typo.caption" Class="mt-1" Style="color:var(--gray-500);">
+        Ctrl+Enter to send · 🎤 to speak · All interactions are logged for compliance
+    </MudText>
+</MudPaper>
+
+@code {
+    private string _input = "";
+    private bool _thinking;
+    private MudPaper? _chatBox;
+
+    private record UiMessage(bool IsUser, string Content);
+    private readonly List<UiMessage> _history = new();
+
+    private readonly List<AzureChatMessage> _apiMessages = new();
+    private string? _userCode;
+    private bool _contextLoaded;
+    private bool _listening;
+    private DotNetObjectReference<AskAI>? _dotNetRef;
+
+    private readonly string[] _suggestedPrompts = new[]
+    {
+        "What's our cash position?",
+        "Who owes us money over 30 days?",
+        "Show quotes pending approval over $10,000",
+        "End-of-month summary",
+        "Find unsynced invoices to MYOB",
+        "Compare this month's revenue to last year",
+        "Brief me on today",
+        "Any GST mismatches?",
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthState.GetAuthenticationStateAsync();
+        _userCode = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "unknown";
+        
+        // Initialize with system message
+        _apiMessages.Add(AzureChatMessage.System(
+            "You are a helpful AI assistant embedded in Techlight MyDesk, a business management system " +
+            "for Techlight — an Australian project lighting specialist. " +
+            "You have access to both Techlight MyDesk data (quotes, invoices, purchase orders, contacts) " +
+            "and MYOB accounting data (customers, invoices, payments, bank balance, profit/loss reports). " +
+            "Help users with questions about their business operations and finances. Be concise and practical. " +
+            "When discussing customer financials, you can reference both Techlight and MYOB data."));
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && e.CtrlKey) await SendAsync();
+    }
+
+    private async Task SendAsync()
+    {
+        var question = _input.Trim();
+        if (string.IsNullOrEmpty(question) || _thinking) return;
+
+        _history.Add(new UiMessage(true, question));
+        _input = "";
+        _thinking = true;
+        StateHasChanged();
+
+        var startTime = DateTime.Now;
+        var success = true;
+        var replyContent = "";
+
+        try
+        {
+            if (!AI.IsConfigured)
+            {
+                throw new InvalidOperationException("Azure OpenAI is not configured. Please set Azure:OpenAIEndpoint, Azure:OpenAIModel, Azure:OpenAIApiVersion, and Azure:OpenAIApiKey in appsettings.json");
+            }
+
+            // Load MCP context periodically or for specific queries
+            if (!_contextLoaded || ShouldRefreshContext(question))
+            {
+                var context = await McpSvc.GetCombinedContextAsync(_userCode!);
+                _apiMessages.Add(AzureChatMessage.System($"Current business context:\n{context}"));
+                _contextLoaded = true;
+            }
+
+            _apiMessages.Add(AzureChatMessage.User(question));
+
+            var reply = await AI.ChatAsync(_apiMessages);
+            replyContent = reply.Content;
+            success = reply.IsSuccess;
+
+            _history.Add(new UiMessage(false, reply.Content));
+            if (reply.IsSuccess)
+                _apiMessages.Add(AzureChatMessage.Assistant(reply.Content));
+        }
+        catch (Exception ex)
+        {
+            success = false;
+            replyContent = $"Error: {ex.Message}";
+            _history.Add(new UiMessage(false, replyContent));
+        }
+        finally
+        {
+            // Compliance audit log (Proposal #272)
+            var duration = (int)(DateTime.Now - startTime).TotalMilliseconds;
+            _ = Task.Run(() => AuditSvc.LogAsync(_userCode!, "web", question, replyContent,
+                success: success, durationMs: duration));
+        }
+
+        _thinking = false;
+        StateHasChanged();
+    }
+
+    private void UseSuggested(string prompt)
+    {
+        _input = prompt;
+    }
+
+    private async Task ToggleVoiceAsync()
+    {
+        try
+        {
+            if (_dotNetRef == null)
+                _dotNetRef = DotNetObjectReference.Create(this);
+
+            if (!_listening)
+            {
+                await JsRuntime.InvokeVoidAsync("startSpeechRecognition", _dotNetRef);
+                _listening = true;
+            }
+            else
+            {
+                await JsRuntime.InvokeVoidAsync("stopSpeechRecognition");
+                _listening = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _listening = false;
+            _history.Add(new UiMessage(false, $"Voice input not available: {ex.Message}"));
+        }
+    }
+
+    [JSInvokable]
+    public void OnSpeechResult(string transcript)
+    {
+        _input = transcript;
+        _listening = false;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void OnSpeechEnd()
+    {
+        _listening = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private static bool ShouldRefreshContext(string question)
+    {
+        var financialKeywords = new[] { "revenue", "profit", "loss", "balance", "payment", "outstanding", 
+            "overdue", "bank", "account", "financial", "report", "myob", "receivable", "customer balance" };
+        return financialKeywords.Any(k => question.Contains(k, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void Clear()
+    {
+        _history.Clear();
+        _apiMessages.RemoveRange(1, _apiMessages.Count - 1); // keep system message
+        _input = "";
+    }
+
+}
+

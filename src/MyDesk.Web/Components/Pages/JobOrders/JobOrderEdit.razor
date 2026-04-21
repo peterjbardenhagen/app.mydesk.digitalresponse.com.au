@@ -1,0 +1,263 @@
+@page "/job-orders/create"
+@page "/job-orders/{Id:int}/edit"
+@attribute [Authorize]
+@inject JobOrderService JobOrderService
+@inject LookupService LookupSvc
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ActivityService ActivitySvc
+@using System.Security.Claims
+
+<PageTitle>@(IsNew ? "New Job Order" : $"Edit Job Order #{Id}") - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/job-orders">Job Orders</a><span class="sep">/</span>
+            <span style="color:var(--gray-700);font-weight:500;">@(IsNew ? "New Job Order" : $"Edit #{Id}")</span>
+        </div>
+        <h1>@(IsNew ? "New Job Order" : $"Edit Job Order #{Id}")</h1>
+    </div>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ArrowBack"
+               Href="@(IsNew ? "/job-orders" : $"/job-orders/{Id}")">Cancel</MudButton>
+</div>
+
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" Class="mx-auto my-8 d-block" />
+}
+else
+{
+    <MudPaper Class="pa-6 mb-4" Elevation="1">
+        <MudText Typo="Typo.subtitle2" Class="mb-4" Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Job Order Details</MudText>
+        <MudGrid Spacing="3">
+            <MudItem xs="12" md="6">
+                <MudAutocomplete T="Contact" @bind-Value="_selectedContact" Label="Contact / Customer *"
+                                 SearchFunc="SearchContacts" Variant="Variant.Outlined"
+                                 ToStringFunc="@(c => c == null ? "" : $"{c.CompanyName} — {c.FullName}".TrimEnd(' ').TrimEnd('—').Trim())"
+                                 ResetValueOnEmptyText="false" ShowProgressIndicator="true"
+                                 AdornmentIcon="@Icons.Material.Rounded.Business" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="int?" @bind-Value="_jo.DivisionId" Label="Division" Variant="Variant.Outlined">
+                    @foreach (var d in _divisions)
+                    {
+                        <MudSelectItem T="int?" Value="@((int?)d.DivisionId)">@d.DivisionName</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudDatePicker @bind-Date="_jo.JobOrderDate" Label="Job Date" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="int" @bind-Value="_jo.JobOrderStatusId" Label="Status" Variant="Variant.Outlined">
+                    @foreach (var s in _statuses)
+                    {
+                        <MudSelectItem T="int" Value="@s.JobOrderStatusId">@s.StatusName</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_jo.Notes" Label="Notes" Variant="Variant.Outlined" Lines="3" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudPaper Class="pa-4 mb-4" Elevation="1">
+        <div class="d-flex justify-space-between align-center mb-3">
+            <MudText Typo="Typo.subtitle2" Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Line Items</MudText>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Add"
+                       OnClick="AddLine">Add Line</MudButton>
+        </div>
+        <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--mud-palette-divider);color:var(--gray-500);">
+                        <th style="text-align:left;padding:4px 6px;">Description</th>
+                        <th style="text-align:right;padding:4px 6px;width:70px;">Qty</th>
+                        <th style="text-align:left;padding:4px 6px;width:120px;">Category</th>
+                        <th style="text-align:right;padding:4px 6px;width:90px;">Unit Price</th>
+                        <th style="text-align:right;padding:4px 6px;width:100px;">Line Total</th>
+                        <th style="width:36px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _lines)
+                    {
+                        var r = row;
+                        <tr style="border-bottom:1px solid var(--mud-palette-divider);">
+                            <td style="padding:2px 4px;">
+                                <MudTextField @bind-Value="@r.Description" Variant="Variant.Text"
+                                              Margin="Margin.Dense" Style="min-width:200px;" />
+                            </td>
+                            <td style="padding:2px 4px;">
+                                <MudNumericField Value="@r.Qty" ValueChanged="@((int v) => { r.Qty = v; CalculateLineTotal(r); StateHasChanged(); })"
+                                                 Variant="Variant.Text" Margin="Margin.Dense" Min="0" />
+                            </td>
+                            <td style="padding:2px 4px;">
+                                <MudTextField @bind-Value="@r.CategoryName" Variant="Variant.Text" Margin="Margin.Dense" />
+                            </td>
+                            <td style="padding:2px 4px;">
+                                <MudNumericField Value="@r.Price" ValueChanged="@((decimal v) => { r.Price = v; CalculateLineTotal(r); StateHasChanged(); })"
+                                                 Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
+                            </td>
+                            <td style="text-align:right;padding:2px 8px;white-space:nowrap;font-weight:500;">
+                                @r.LineTotal.ToString("C2")
+                            </td>
+                            <td style="padding:2px;">
+                                <MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small" Color="Color.Error"
+                                               OnClick="@(() => RemoveLine(r))" />
+                            </td>
+                        </tr>
+                    }
+                    @if (!_lines.Any())
+                    {
+                        <tr><td colspan="6" style="padding:16px;text-align:center;color:var(--gray-400);">No line items — click Add Line to begin.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-3 text-right" style="font-weight:600;">
+            Total: @_lines.Sum(l => l.LineTotal).ToString("C2")
+        </div>
+    </MudPaper>
+
+    <div class="d-flex justify-end gap-2">
+        @if (_error != null)
+        {
+            <MudText Color="Color.Error" Typo="Typo.body2">@_error</MudText>
+        }
+        <MudButton Variant="Variant.Outlined" Href="@(IsNew ? "/job-orders" : $"/job-orders/{Id}")">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Save"
+                   OnClick="SaveAsync" Disabled="@_saving">
+            @(_saving ? "Saving…" : "Save Job Order")
+        </MudButton>
+    </div>
+}
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    private bool IsNew => !Id.HasValue || Id == 0;
+
+    private JobOrderDetail _jo = new() { JobOrderStatusId = 1 };
+    private Contact? _selectedContact;
+    private List<Contact> _contacts = new();
+    private List<Division> _divisions = new();
+    private List<JobOrderStatus> _statuses = new();
+    private List<JobOrderLineItemEdit> _lines = new();
+    private bool _loading;
+    private bool _saving;
+    private string? _error;
+    private string _userCode = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            _userCode = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+
+            _divisions = await LookupSvc.GetDivisionsAsync();
+            _statuses = await LookupSvc.GetJobOrderStatusesAsync();
+
+            if (!IsNew)
+            {
+                _jo = await JobOrderService.GetJobOrderAsync(Id ?? 0) ?? new JobOrderDetail();
+                var existingLines = await JobOrderService.GetLineItemsAsync(Id ?? 0);
+                _lines = existingLines.Select(l => new JobOrderLineItemEdit
+                {
+                    Description = l.Description,
+                    Qty = l.Qty,
+                    CategoryName = l.CategoryName,
+                    Price = l.Qty > 0 ? l.LineTotal / l.Qty : 0m,
+                    LineTotal = l.LineTotal
+                }).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Load failed: {ex.Message}", Severity.Error);
+        }
+        finally { _loading = false; }
+    }
+
+    private Task<IEnumerable<Contact>> SearchContacts(string value, CancellationToken token)
+    {
+        return Task.FromResult(_contacts.Where(c =>
+            string.IsNullOrEmpty(value) ||
+            (c.CompanyName?.Contains(value, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (c.FullName?.Contains(value, StringComparison.OrdinalIgnoreCase) ?? false)));
+    }
+
+    private void AddLine()
+    {
+        _lines.Add(new JobOrderLineItemEdit { Qty = 1 });
+        StateHasChanged();
+    }
+
+    private void RemoveLine(JobOrderLineItemEdit line)
+    {
+        _lines.Remove(line);
+        StateHasChanged();
+    }
+
+    private void CalculateLineTotal(JobOrderLineItemEdit line)
+    {
+        line.LineTotal = line.Qty * line.Price;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_selectedContact == null)
+        {
+            _error = "Please select a contact/customer";
+            return;
+        }
+
+        if (!_lines.Any())
+        {
+            _error = "Please add at least one line item";
+            return;
+        }
+
+        _saving = true;
+        _error = null;
+        try
+        {
+            _jo.ContactId = _selectedContact.ContactId;
+            _jo.CompanyId = _selectedContact.CompanyId;
+
+            var lineItemsToSave = _lines.Select(l => new JobOrderLineItem
+            {
+                Qty = l.Qty,
+                Description = l.Description,
+                CategoryName = l.CategoryName,
+                LineTotal = l.LineTotal
+            }).ToList();
+
+            var savedId = await JobOrderService.SaveAsync(_jo, lineItemsToSave, _userCode);
+
+            Snackbar.Add(IsNew ? "Job Order created successfully" : "Job Order updated successfully", Severity.Success);
+
+            if (IsNew)
+            {
+                Nav.NavigateTo($"/job-orders/{savedId}");
+            }
+            else
+            {
+                Nav.NavigateTo($"/job-orders/{Id}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Save failed: {ex.Message}";
+            Snackbar.Add(_error, Severity.Error);
+        }
+        finally { _saving = false; }
+    }
+}
+
+

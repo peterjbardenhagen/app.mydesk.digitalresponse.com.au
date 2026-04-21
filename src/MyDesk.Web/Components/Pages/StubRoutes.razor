@@ -1,0 +1,59 @@
+@* Stubs for modules NOT yet implemented.
+   Implemented pages are removed from this list.
+   Retired modules (Expenses, Timesheets, TMail, Files, Call Reports, Employment)
+   are NOT listed here and will show a proper 404 when accessed. *@
+
+@page "/admin/financial-year"
+@page "/sales-projects"
+@page "/rfq"
+@page "/call-reports"
+@attribute [Authorize]
+@inject NavigationManager Nav
+
+<PageTitle>@_title - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Techlight MyDesk</a>
+            <span class="sep">/</span>
+            <span style="color:var(--gray-700); font-weight:500;">@_title</span>
+        </div>
+        <h1>@_title</h1>
+        <p class="tl-subtitle">This module is scheduled for the next release.</p>
+    </div>
+</div>
+
+<MudPaper Class="pa-10 text-center">
+    <span class="tl-stat-icon accent" style="width:64px; height:64px; margin:0 auto 16px;">
+        <MudIcon Icon="@Icons.Material.Rounded.Construction" Size="Size.Large" />
+    </span>
+    <MudText Typo="Typo.h5" Class="mb-2" Style="font-weight:600;">Coming soon</MudText>
+    <MudText Typo="Typo.body2" Style="color:var(--gray-600); max-width:460px; margin:0 auto 24px;">
+        Full <strong>@_title</strong> functionality is being built in the new Blazor platform.
+        For now, use the dashboard or one of the completed modules below.
+    </MudText>
+    <div class="d-flex justify-center tl-gap-sm">
+        <MudButton Href="/" Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Home">Dashboard</MudButton>
+    </div>
+</MudPaper>
+
+@code {
+    private string _title = "Coming Soon";
+
+    protected override void OnParametersSet()
+    {
+        var uri = new Uri(Nav.Uri);
+        var path = uri.AbsolutePath.Trim('/');
+        _title = ToTitleCase(path);
+    }
+
+    private static string ToTitleCase(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return "Coming Soon";
+        return string.Join(" / ", s.Split('/').Select(part =>
+            string.Join(" ", part.Split('-').Select(w =>
+                w.Length == 0 ? "" : char.ToUpper(w[0]) + w[1..]))));
+    }
+}
+

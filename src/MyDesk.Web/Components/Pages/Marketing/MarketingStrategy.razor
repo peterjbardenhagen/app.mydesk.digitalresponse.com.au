@@ -1,0 +1,253 @@
+@page "/marketing/strategy"
+@attribute [Authorize(Roles = "Director,Administrator,Marketing")]
+@inject MarketingDataService Data
+@inject ISnackbar Snackbar
+
+<PageTitle>Marketing Strategy - DR MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <MudLink Href="/marketing" Underline="Underline.None">Marketing</MudLink>
+            <MudIcon Icon="@Icons.Material.Rounded.ChevronRight" Size="Size.Small" />
+            <span>Marketing Strategy</span>
+        </div>
+        <h1 class="tl-page-title">
+            <MudIcon Icon="@Icons.Material.Rounded.Lightbulb" Class="mr-2" Style="color: var(--tl-accent)" />
+            Marketing Strategy
+        </h1>
+        <div class="tl-page-sub">Document your ideal customer profile, positioning, quarterly initiatives and KPIs.</div>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Save" OnClick="SaveStrategy" Disabled="_saving">
+        @(_saving ? "Saving..." : "Save Changes")
+    </MudButton>
+</div>
+
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+}
+else if (_strategy == null)
+{
+    <MudAlert Severity="Severity.Error">Failed to load strategy document.</MudAlert>
+}
+else
+{
+    <MudGrid Spacing="3">
+        @* Ideal Customer Profile *@
+        <MudItem xs="12" md="6">
+            <MudCard Elevation="0" Outlined="true" Class="h-100">
+                <MudCardHeader>
+                    <CardHeaderAvatar>
+                        <MudAvatar Color="Color.Primary">
+                            <MudIcon Icon="@Icons.Material.Rounded.PersonPin" />
+                        </MudAvatar>
+                    </CardHeaderAvatar>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Ideal Customer Profile</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudTextField T="string" @bind-Value="_strategy.IcpIndustries" 
+                                 Label="Target Industries" 
+                                 Placeholder="e.g. Healthcare, Manufacturing, Education..."
+                                 Lines="2" Variant="Variant.Outlined" Class="mb-4" />
+                    
+                    <MudTextField T="string" @bind-Value="_strategy.IcpCompanySize" 
+                                 Label="Company Size" 
+                                 Placeholder="e.g. 50-500 employees, $5M-$50M revenue..."
+                                 Variant="Variant.Outlined" Class="mb-4" />
+                    
+                    <MudTextField T="string" @bind-Value="_strategy.IcpPainPoints" 
+                                 Label="Key Pain Points" 
+                                 Placeholder="What problems do they need solved?"
+                                 Lines="3" Variant="Variant.Outlined" Class="mb-4" />
+                    
+                    <MudTextField T="string" @bind-Value="_strategy.IcpBuyingTriggers" 
+                                 Label="Buying Triggers" 
+                                 Placeholder="What events drive purchase decisions?"
+                                 Lines="2" Variant="Variant.Outlined" />
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        @* Positioning *@
+        <MudItem xs="12" md="6">
+            <MudCard Elevation="0" Outlined="true" Class="h-100">
+                <MudCardHeader>
+                    <CardHeaderAvatar>
+                        <MudAvatar Color="Color.Secondary">
+                            <MudIcon Icon="@Icons.Material.Rounded.BrandingWatermark" />
+                        </MudAvatar>
+                    </CardHeaderAvatar>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Positioning</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudTextField T="string" @bind-Value="_strategy.ValueProposition" 
+                                 Label="Value Proposition" 
+                                 Placeholder="What unique value do you deliver?"
+                                 Lines="2" Variant="Variant.Outlined" Class="mb-4" />
+                    
+                    <MudTextField T="string" @bind-Value="_strategy.Differentiators" 
+                                 Label="Key Differentiators" 
+                                 Placeholder="Why choose you over competitors?"
+                                 Lines="3" Variant="Variant.Outlined" Class="mb-4" />
+                    
+                    <MudTextField T="string" @bind-Value="_strategy.PositioningStatement" 
+                                 Label="Positioning Statement" 
+                                 Placeholder="For [target], [brand] is the [category] that [benefit]..."
+                                 Lines="2" Variant="Variant.Outlined" />
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        @* Quarterly Initiatives *@
+        <MudItem xs="12" md="8">
+            <MudCard Elevation="0" Outlined="true">
+                <MudCardHeader>
+                    <CardHeaderAvatar>
+                        <MudAvatar Color="Color.Tertiary">
+                            <MudIcon Icon="@Icons.Material.Rounded.Flag" />
+                        </MudAvatar>
+                    </CardHeaderAvatar>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Quarterly Initiatives</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12" md="6">
+                            <MudTextField T="string" @bind-Value="_strategy.Q1Initiatives" 
+                                         Label="Q1 Initiatives" Lines="3" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField T="string" @bind-Value="_strategy.Q2Initiatives" 
+                                         Label="Q2 Initiatives" Lines="3" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField T="string" @bind-Value="_strategy.Q3Initiatives" 
+                                         Label="Q3 Initiatives" Lines="3" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField T="string" @bind-Value="_strategy.Q4Initiatives" 
+                                         Label="Q4 Initiatives" Lines="3" Variant="Variant.Outlined" />
+                        </MudItem>
+                    </MudGrid>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        @* KPIs *@
+        <MudItem xs="12" md="4">
+            <MudCard Elevation="0" Outlined="true" Class="h-100">
+                <MudCardHeader>
+                    <CardHeaderAvatar>
+                        <MudAvatar Color="Color.Warning">
+                            <MudIcon Icon="@Icons.Material.Rounded.TrendingUp" />
+                        </MudAvatar>
+                    </CardHeaderAvatar>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">KPI Targets</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <div class="d-flex align-center gap-4 mb-4">
+                        <MudNumericField T="int" @bind-Value="_strategy.KpiLeadTarget" 
+                                        Label="Lead Target" Variant="Variant.Outlined" Min="0" />
+                        <MudText Typo="Typo.caption" Class="mt-4">/quarter</MudText>
+                    </div>
+                    <div class="d-flex align-center gap-4 mb-4">
+                        <MudNumericField T="decimal" @bind-Value="_strategy.KpiConversionRate" 
+                                        Label="Conversion %" Variant="Variant.Outlined" Min="0" Max="100" 
+                                        Adornment="Adornment.End" AdornmentText="%" />
+                    </div>
+                    <div class="d-flex align-center gap-4 mb-4">
+                        <MudNumericField T="decimal" @bind-Value="_strategy.KpiCacTarget" 
+                                        Label="Target CAC" Variant="Variant.Outlined" Min="0"
+                                        Adornment="Adornment.Start" AdornmentText="$" />
+                    </div>
+                    <div class="d-flex align-center gap-4">
+                        <MudNumericField T="int" @bind-Value="_strategy.KpiNpsTarget" 
+                                        Label="NPS Target" Variant="Variant.Outlined" Min="0" Max="100" />
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        @* Notes *@
+        <MudItem xs="12">
+            <MudCard Elevation="0" Outlined="true">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Strategic Notes</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudTextField T="string" @bind-Value="_strategy.Notes" 
+                                 Placeholder="Additional strategy notes, market insights, competitive observations..."
+                                 Lines="5" Variant="Variant.Outlined" />
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <div class="d-flex justify-end gap-2 mt-6">
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="LoadStrategy" Disabled="_saving">
+            Reset
+        </MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Save" 
+                  OnClick="SaveStrategy" Disabled="_saving">
+            @(_saving ? "Saving..." : "Save Changes")
+        </MudButton>
+    </div>
+}
+
+@code {
+    private MarketingStrategyDoc? _strategy;
+    private bool _loading = true;
+    private bool _saving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadStrategy();
+    }
+
+    private async Task LoadStrategy()
+    {
+        _loading = true;
+        try
+        {
+            _strategy = await Data.GetStrategyAsync() ?? new MarketingStrategyDoc();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading strategy: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task SaveStrategy()
+    {
+        if (_strategy == null) return;
+
+        _saving = true;
+        try
+        {
+            await Data.SaveStrategyAsync(_strategy);
+            Snackbar.Add("Strategy saved", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

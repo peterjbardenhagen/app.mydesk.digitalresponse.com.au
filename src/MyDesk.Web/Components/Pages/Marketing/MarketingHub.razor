@@ -1,0 +1,72 @@
+@page "/marketing"
+@attribute [Authorize]
+@inject MarketingService Marketing
+@inject NavigationManager Nav
+
+<PageTitle>Marketing - DR MyDesk</PageTitle>
+
+<HeadContent>
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+</HeadContent>
+
+<div class="tl-page-header">
+    <div>
+        <h1 class="tl-page-title">
+            <MudIcon Icon="@Icons.Material.Rounded.Campaign" Class="mr-2" />
+            Marketing Hub
+        </h1>
+        <div class="tl-page-sub">
+            Customer & supplier intelligence, AI-driven planning, email campaigns, and brand assets for
+            <strong>@Marketing.CompanyName</strong>.
+            <span class="tl-confidential"><MudIcon Icon="@Icons.Material.Rounded.Lock" Size="Size.Small" /> Confidential</span>
+        </div>
+    </div>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Language"
+               Href="@Marketing.WebsiteUrl" Target="_blank">
+        Website
+    </MudButton>
+</div>
+
+<MudGrid Spacing="3">
+    @foreach (var tile in _tiles)
+    {
+        <MudItem xs="12" sm="6" md="4">
+            <div class="tl-hub-tile" @onclick="() => Nav.NavigateTo(tile.Href)">
+                <div class="tl-hub-tile-icon @tile.Tone">
+                    <MudIcon Icon="@tile.Icon" Size="Size.Large" />
+                </div>
+                <div class="tl-hub-tile-title">@tile.Title</div>
+                <div class="tl-hub-tile-desc">@tile.Description</div>
+                <div class="tl-hub-tile-cta">
+                    Open <MudIcon Icon="@Icons.Material.Rounded.ArrowForward" Size="Size.Small" />
+                </div>
+            </div>
+        </MudItem>
+    }
+</MudGrid>
+
+@code {
+    private record Tile(string Title, string Description, string Icon, string Href, string Tone);
+
+    private readonly List<Tile> _tiles = new()
+    {
+        new("Customer Data Platform",
+            "Deep RFM scoring of every customer. Champions, at-risk, lost — plus growth signals.",
+            Icons.Material.Rounded.Insights, "/marketing/customers", "teal"),
+        new("Supplier Data Platform",
+            "Score and tier every supplier by spend, dependency, reliability and region.",
+            Icons.Material.Rounded.LocalShipping, "/marketing/suppliers", "gold"),
+        new("Marketing AI",
+            "Ask AI to build ideal customer profiles, marketing plans, and top-50 target lists using your data.",
+            Icons.Material.Rounded.AutoAwesome, "/marketing/ai", "purple"),
+        new("Email Campaigns",
+            "Compose and send tailored campaigns to Champions, Top-50, or custom audiences — directly from MyDesk.",
+            Icons.Material.Rounded.Send, "/marketing/campaigns", "green"),
+        new("Marketing Strategy",
+            "Document your ideal customer profile, positioning, quarterly initiatives and KPIs.",
+            Icons.Material.Rounded.Article, "/marketing/strategy", "blue"),
+        new("Brand Assets",
+            "Logos, brand guidelines, company profile, email signatures — download the full kit.",
+            Icons.Material.Rounded.Brush, "/marketing/assets", "orange"),
+    };
+}

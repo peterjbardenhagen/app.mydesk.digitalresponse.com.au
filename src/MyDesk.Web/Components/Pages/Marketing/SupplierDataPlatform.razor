@@ -1,0 +1,203 @@
+@page "/marketing/suppliers"
+@attribute [Authorize]
+@inject MarketingDataService Data
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Supplier Data Platform - DR MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <MudLink Href="/marketing" Underline="Underline.None">Marketing</MudLink>
+            <MudIcon Icon="@Icons.Material.Rounded.ChevronRight" Size="Size.Small" />
+            <span>Supplier Data Platform</span>
+        </div>
+        <h1 class="tl-page-title">
+            <MudIcon Icon="@Icons.Material.Rounded.LocalShipping" Class="mr-2" Style="color: var(--tl-accent)" />
+            Supplier Data Platform
+        </h1>
+        <div class="tl-page-sub">Score and tier every supplier by spend, dependency, reliability and region.</div>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Download" OnClick="ExportCsv">
+        Export CSV
+    </MudButton>
+</div>
+
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+}
+else if (_sdp == null)
+{
+    <MudAlert Severity="Severity.Error">Failed to load supplier data.</MudAlert>
+}
+else
+{
+    @* Summary Stats *@
+    <div class="tl-mkt-grid">
+        <div class="tl-mkt-stat-card">
+            <div class="tl-mkt-stat-label">Total Suppliers</div>
+            <div class="tl-mkt-stat-value">@_sdp.All.Count.ToString("N0")</div>
+            <div class="tl-mkt-stat-sub">Active vendor accounts</div>
+        </div>
+        <div class="tl-mkt-stat-card">
+            <div class="tl-mkt-stat-label">YTD Spend</div>
+            <div class="tl-mkt-stat-value">$@((_sdp.TotalYtdSpend / 1000).ToString("N0"))k</div>
+            <div class="tl-mkt-stat-sub">Purchase order value this year</div>
+        </div>
+        <div class="tl-mkt-stat-card">
+            <div class="tl-mkt-stat-label">Lifetime Spend</div>
+            <div class="tl-mkt-stat-value">$@((_sdp.TotalLifetimeSpend / 1000000).ToString("N1"))M</div>
+            <div class="tl-mkt-stat-sub">All-time purchase value</div>
+        </div>
+        <div class="tl-mkt-stat-card">
+            <div class="tl-mkt-stat-label">Strategic Suppliers</div>
+            <div class="tl-mkt-stat-value">@_sdp.StrategicSupplierCount</div>
+            <div class="tl-mkt-stat-sub">Critical to operations</div>
+        </div>
+    </div>
+
+    @* Tier Distribution *@
+    <MudCard Elevation="0" Outlined="true" Class="mb-6">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h6">Tier Distribution</MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            <div class="d-flex gap-4 flex-wrap">
+                @foreach (var tier in _sdp.TierCounts)
+                {
+                    <div class="d-flex align-center gap-2">
+                        <span class="tl-mkt-segment-chip @GetTierClass(tier.Key)">@tier.Key</span>
+                        <MudText Typo="Typo.body2">@tier.Value</MudText>
+                    </div>
+                }
+            </div>
+        </MudCardContent>
+    </MudCard>
+
+    @* Supplier Table *@
+    <MudCard Elevation="0" Outlined="true">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h6">All Suppliers</MudText>
+            </CardHeaderContent>
+            <CardHeaderActions>
+                <MudTextField T="string" @bind-Value="_search" Placeholder="Search suppliers..." 
+                             Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Search"
+                             Immediate="true" Style="width: 300px;" />
+            </CardHeaderActions>
+        </MudCardHeader>
+        <MudCardContent Class="pa-0">
+            <MudTable Items="FilteredSuppliers" Dense="true" Hover="true" Striped="true">
+                <HeaderContent>
+                    <MudTh>Rank</MudTh>
+                    <MudTh>Company</MudTh>
+                    <MudTh>Tier</MudTh>
+                    <MudTh>Region</MudTh>
+                    <MudTh>Score</MudTh>
+                    <MudTh>YTD Spend</MudTh>
+                    <MudTh>Growth</MudTh>
+                    <MudTh>Open POs</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Rank</MudTd>
+                    <MudTd>
+                        <div class="d-flex flex-column">
+                            <span style="font-weight: 600;">@context.CompanyName</span>
+                        </div>
+                    </MudTd>
+                    <MudTd>
+                        <span class="tl-mkt-segment-chip @GetTierClass(context.Tier)">@context.Tier</span>
+                    </MudTd>
+                    <MudTd>@(string.IsNullOrEmpty(context.Region) ? "—" : context.Region)</MudTd>
+                    <MudTd>
+                        <MudProgressLinear Value="@((double)context.TotalScore / 15 * 100)" 
+                                          Color="GetScoreColor(context.TotalScore)" 
+                                          Style="width: 60px;" />
+                        <span style="font-size: 12px; margin-left: 8px;">@context.TotalScore</span>
+                    </MudTd>
+                    <MudTd>$@context.YtdSpend.ToString("N0")</MudTd>
+                    <MudTd Style="@(context.SpendGrowthPercent >= 0 ? "color: var(--success-500);" : "color: var(--error-500);")">
+                        @(context.SpendGrowthPercent >= 0 ? "+" : "")@context.SpendGrowthPercent.ToString("N0")%
+                    </MudTd>
+                    <MudTd>
+                        @if (context.OpenPOCount > 0)
+                        {
+                            <MudBadge Content="@context.OpenPOCount" Color="Color.Warning" Overlap="true">
+                                <span>$@context.OpenPOValue.ToString("N0")</span>
+                            </MudBadge>
+                        }
+                        else
+                        {
+                            <span>—</span>
+                        }
+                    </MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Rounded.Visibility" 
+                                       Size="Size.Small" 
+                                       OnClick="() => ViewSupplier(context)" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudCardContent>
+    </MudCard>
+}
+
+@using SDPModel = MyDesk.Shared.Models.SupplierDataPlatform
+@code {
+    private SDPModel? _sdp;
+    private bool _loading = true;
+    private string _search = "";
+
+    private IEnumerable<SupplierScoreCard> FilteredSuppliers => 
+        _sdp?.All.Where(s => string.IsNullOrEmpty(_search) || 
+                             s.CompanyName.Contains(_search, StringComparison.OrdinalIgnoreCase)) 
+        ?? Enumerable.Empty<SupplierScoreCard>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _sdp = await Data.GetSupplierDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading supplier data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private string GetTierClass(string tier) => tier?.ToLower() switch
+    {
+        "strategic" => "strategic",
+        "preferred" => "preferred",
+        "transactional" => "transactional",
+        "trial" => "trial",
+        _ => ""
+    };
+
+    private Color GetScoreColor(int score) => score switch
+    {
+        >= 12 => Color.Success,
+        >= 8 => Color.Info,
+        >= 5 => Color.Warning,
+        _ => Color.Error
+    };
+
+    private void ViewSupplier(SupplierScoreCard supplier)
+    {
+        Nav.NavigateTo($"/companies/{supplier.CompanyId}");
+    }
+
+    private async Task ExportCsv()
+    {
+        Snackbar.Add("Export feature coming soon", Severity.Info);
+    }
+}

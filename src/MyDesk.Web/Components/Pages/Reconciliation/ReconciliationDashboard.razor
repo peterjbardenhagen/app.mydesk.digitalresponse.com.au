@@ -1,0 +1,243 @@
+@page "/reconciliation"
+@attribute [Authorize]
+@inject ReconciliationService ReconSvc
+@inject McpIntegrationService McpSvc
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+@using MyDesk.Shared.Services
+@using MyDesk.Web.Services
+@using System.Security.Claims
+
+<PageTitle>Reconciliation Dashboard - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <span>Reconciliation</span>
+        </div>
+        <h1 style="display:flex; align-items:center; gap:10px;">
+            <MudIcon Icon="@Icons.Material.Rounded.Compare" Style="color:var(--tl-primary);" />
+            MyDesk ↔ MYOB Reconciliation
+        </h1>
+        <p class="tl-subtitle">Cross-system data quality, sync status, and reconciliation workflows.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Refresh"
+                   OnClick="RefreshAsync" Disabled="_loading">
+            Refresh
+        </MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Rounded.Sync"
+                   Href="/reconciliation/sync">
+            Run Sync
+        </MudButton>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" Class="mx-auto my-8 d-block" />
+}
+else
+{
+    @* ── Summary Cards ── *@
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudText Typo="Typo.overline" Style="color:var(--gray-500);">Unsynced Invoices</MudText>
+                <MudText Typo="Typo.h4" Style="@($"color:{(Summary.UnsyncedCount > 0 ? "var(--mud-palette-warning)" : "var(--mud-palette-success)")};")">
+                    @Summary.UnsyncedCount
+                </MudText>
+                <MudText Typo="Typo.caption">@Summary.UnsyncedTotal.ToString("C") pending MYOB</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudText Typo="Typo.overline" Style="color:var(--gray-500);">Outstanding AR</MudText>
+                <MudText Typo="Typo.h4">@Summary.OutstandingTotal.ToString("C")</MudText>
+                <MudText Typo="Typo.caption">@Summary.OutstandingCount invoice(s)</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudText Typo="Typo.overline" Style="color:var(--gray-500);">Monthly Sales</MudText>
+                <MudText Typo="Typo.h4">@Summary.MonthlySalesTotal.ToString("C")</MudText>
+                <MudText Typo="Typo.caption">@Summary.MonthlySalesCount invoices</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudText Typo="Typo.overline" Style="color:var(--gray-500);">GST (90 days)</MudText>
+                <MudText Typo="Typo.h4">@Summary.QuarterlyGstTotal.ToString("C")</MudText>
+                <MudText Typo="Typo.caption">collected this quarter</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    @* ── Aged Receivables ── *@
+    <MudPaper Class="pa-5 mb-4" Elevation="1">
+        <MudText Typo="Typo.h6" Class="mb-3">Aged Receivables</MudText>
+        <MudGrid Spacing="2">
+            <MudItem xs="6" md="3">
+                <div style="padding:12px; border-radius:8px; background:#f0fdf4;">
+                    <MudText Typo="Typo.caption">Current (0-30 days)</MudText>
+                    <MudText Typo="Typo.h6" Style="color:#166534;">@Aged.Current.ToString("C")</MudText>
+                </div>
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <div style="padding:12px; border-radius:8px; background:#fefce8;">
+                    <MudText Typo="Typo.caption">31-60 days</MudText>
+                    <MudText Typo="Typo.h6" Style="color:#854d0e;">@Aged.Days31_60.ToString("C")</MudText>
+                </div>
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <div style="padding:12px; border-radius:8px; background:#fff7ed;">
+                    <MudText Typo="Typo.caption">61-90 days</MudText>
+                    <MudText Typo="Typo.h6" Style="color:#9a3412;">@Aged.Days61_90.ToString("C")</MudText>
+                </div>
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <div style="padding:12px; border-radius:8px; background:#fef2f2;">
+                    <MudText Typo="Typo.caption">Over 90 days</MudText>
+                    <MudText Typo="Typo.h6" Style="color:#991b1b;">@Aged.Over90.ToString("C")</MudText>
+                </div>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    @* ── Data Quality Issues ── *@
+    <MudPaper Class="pa-5 mb-4" Elevation="1">
+        <div class="d-flex justify-space-between align-center mb-3">
+            <MudText Typo="Typo.h6">Data Quality Issues</MudText>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined"
+                       OnClick="RunDataQualityAsync" Disabled="_runningChecks">
+                @(_runningChecks ? "Running..." : "Run Checks")
+            </MudButton>
+        </div>
+
+        @if (Issues.Count == 0)
+        {
+            <MudAlert Severity="Severity.Success">No data quality issues detected.</MudAlert>
+        }
+        else
+        {
+            <MudTable Items="Issues" Dense="true" Hover="true">
+                <HeaderContent>
+                    <MudTh>Severity</MudTh>
+                    <MudTh>Category</MudTh>
+                    <MudTh>Entity</MudTh>
+                    <MudTh>Description</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <MudChip T="string" Size="Size.Small" Color="@SeverityColour(context.Severity)">
+                            @context.Severity
+                        </MudChip>
+                    </MudTd>
+                    <MudTd>@context.Category</MudTd>
+                    <MudTd>@context.EntityType #@context.EntityLabel</MudTd>
+                    <MudTd>@context.Description</MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudPaper>
+
+    @* ── Quick Actions via AI ── *@
+    <MudPaper Class="pa-5" Elevation="1">
+        <MudText Typo="Typo.h6" Class="mb-3">Ask AI — Cross-System Queries</MudText>
+        <div class="d-flex flex-wrap gap-2">
+            @foreach (var action in _quickActions)
+            {
+                <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                           OnClick="() => RunQuickAction(action)"
+                           Disabled="_aiBusy">
+                    @action
+                </MudButton>
+            }
+        </div>
+
+        @if (!string.IsNullOrEmpty(_aiResponse))
+        {
+            <MudAlert Severity="Severity.Info" Class="mt-3" Style="white-space:pre-wrap;">
+                @_aiResponse
+            </MudAlert>
+        }
+    </MudPaper>
+}
+
+@code {
+    private bool _loading = true;
+    private bool _runningChecks;
+    private bool _aiBusy;
+    private string _aiResponse = "";
+    private string _userCode = "";
+
+    private ReconciliationSummary Summary { get; set; } = new();
+    private AgedReceivables Aged { get; set; } = new();
+    private List<DataQualityIssue> Issues { get; set; } = new();
+
+    private readonly string[] _quickActions = new[]
+    {
+        "Show me unsynced invoices",
+        "Reconcile yesterday's sales",
+        "Check GST totals match",
+        "Who owes us money over 30 days?",
+        "End-of-month summary",
+        "Find duplicate invoices",
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        _userCode = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        _loading = true;
+        try
+        {
+            Summary = await ReconSvc.GetSummaryAsync();
+            Aged    = await ReconSvc.GetAgedReceivablesAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
+        finally { _loading = false; }
+    }
+
+    private async Task RunDataQualityAsync()
+    {
+        _runningChecks = true;
+        try
+        {
+            Issues = await ReconSvc.RunDataQualityChecksAsync();
+            Snackbar.Add($"{Issues.Count} issue(s) found.", Issues.Count == 0 ? Severity.Success : Severity.Warning);
+        }
+        catch (Exception ex) { Snackbar.Add($"Check failed: {ex.Message}", Severity.Error); }
+        finally { _runningChecks = false; }
+    }
+
+    private async Task RunQuickAction(string prompt)
+    {
+        _aiBusy = true;
+        _aiResponse = "Thinking...";
+        try
+        {
+            var context = await McpSvc.GetCombinedContextAsync(_userCode);
+            _aiResponse = $"[AI Context loaded]\n\nQuery: {prompt}\n\n{context}";
+        }
+        catch (Exception ex) { _aiResponse = $"Error: {ex.Message}"; }
+        finally { _aiBusy = false; }
+    }
+
+    private static Color SeverityColour(string s) => s switch
+    {
+        "High"   => Color.Error,
+        "Medium" => Color.Warning,
+        "Low"    => Color.Info,
+        _        => Color.Default,
+    };
+}
+

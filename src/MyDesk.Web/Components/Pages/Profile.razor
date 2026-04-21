@@ -1,0 +1,162 @@
+@page "/profile"
+@attribute [Authorize]
+@inject UserService UserSvc
+@inject AuthService AuthSvc
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>My Profile - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <span style="color:var(--gray-700);font-weight:500;">My Profile</span>
+        </div>
+        <h1>My Profile</h1>
+        <p class="tl-subtitle">View and manage your account details.</p>
+    </div>
+</div>
+
+@if (_user == null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudGrid Spacing="4">
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-6" Elevation="1">
+                <MudText Typo="Typo.h6" Class="mb-4">Account Information</MudText>
+                
+                <MudGrid Spacing="3">
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_user.Code" Label="User Code" Variant="Variant.Outlined" 
+                                      ReadOnly="true" Disabled="true" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_user.Name" Label="Full Name" Variant="Variant.Outlined" 
+                                      @ref="_nameField" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_user.Email" Label="Email" Variant="Variant.Outlined" 
+                                      InputType="InputType.Email" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_user.Phone" Label="Phone" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_user.Mobile" Label="Mobile" Variant="Variant.Outlined" />
+                    </MudItem>
+                </MudGrid>
+
+                <div class="d-flex gap-3 mt-6">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Rounded.Save" 
+                               OnClick="SaveProfileAsync" Disabled="_saving">
+                        @(_saving ? "Saving..." : "Save Changes")
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Href="/settings">Account Settings</MudButton>
+                </div>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-6" Elevation="1">
+                <MudText Typo="Typo.h6" Class="mb-4">Security</MudText>
+                
+                <MudAlert Severity="Severity.Info" Class="mb-4">
+                    To change your password, use the Account Settings page.
+                </MudAlert>
+
+                <div class="d-flex flex-column gap-3">
+                    <MudButton Variant="Variant.Outlined" 
+                               StartIcon="@Icons.Material.Rounded.Lock" 
+                               Href="/settings">Change Password</MudButton>
+                    
+                    <MudDivider Class="my-2" />
+                    
+                    <MudText Typo="Typo.subtitle2" Class="mt-2">Session</MudText>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Error"
+                               StartIcon="@Icons.Material.Rounded.Logout"
+                               OnClick="LogoutAsync">Sign Out</MudButton>
+                </div>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudPaper Class="pa-6" Elevation="1">
+                <MudText Typo="Typo.h6" Class="mb-4">Role & Permissions</MudText>
+                
+                <div class="d-flex flex-wrap gap-2">
+                    <MudChip T="string" Color="Color.Primary" Variant="Variant.Filled">
+                        @(_user.UserRole ?? "User")
+                    </MudChip>
+                    @if (_isAdmin)
+                    {
+                        <MudChip T="string" Color="Color.Error" Variant="Variant.Filled">Administrator</MudChip>
+                    }
+                </div>
+
+                <MudText Typo="Typo.body2" Class="mt-4" Style="color:var(--gray-500);">
+                    Your role determines which features and data you can access. 
+                    Contact an administrator to request role changes.
+                </MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    private User? _user;
+    private bool _saving;
+    private bool _isAdmin;
+    private MudTextField<string>? _nameField;
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateTask!;
+            var userCode = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            _isAdmin = authState.User.IsInRole("Admin") || authState.User.IsInRole("Director");
+            
+            if (!string.IsNullOrEmpty(userCode))
+            {
+                _user = await UserSvc.GetByCodeAsync(userCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load profile: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SaveProfileAsync()
+    {
+        if (_user == null) return;
+        
+        _saving = true;
+        try
+        {
+            await UserSvc.UpdateAsync(_user, null);
+            Snackbar.Add("Profile updated successfully.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Save failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task LogoutAsync()
+    {
+        Nav.NavigateTo("/logout", forceLoad: true);
+    }
+}
+

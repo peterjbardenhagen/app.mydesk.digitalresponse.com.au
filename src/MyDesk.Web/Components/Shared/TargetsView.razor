@@ -1,0 +1,134 @@
+@using MyDesk.Shared.Models
+@inject MyDesk.Shared.Services.IntelligenceService Intel
+
+@if (_targets == null)
+{
+    <div class="tl-view-content">
+        <MudProgressCircular Indeterminate="true" />
+    </div>
+}
+else
+{
+    <div class="tl-view-content">
+        <MudGrid Spacing="3">
+            <MudItem xs="12" md="4">
+                @RenderTargetCard("Monthly", _targets.CompanyMonthlyActual, _targets.CompanyMonthlyTarget,
+                                  _targets.MonthlyProgress, _targets.ExpectedMonthlyProgress,
+                                  _targets.MonthlyForecast,
+                                  $"{_targets.DaysIntoMonth} of {_targets.DaysInMonth} days",
+                                  "teal")
+            </MudItem>
+            <MudItem xs="12" md="4">
+                @RenderTargetCard("Quarterly", _targets.CompanyQuarterlyActual, _targets.CompanyQuarterlyTarget,
+                                  _targets.QuarterlyProgress, _targets.ExpectedQuarterlyProgress,
+                                  _targets.QuarterlyForecast,
+                                  $"{_targets.DaysIntoQuarter} of {_targets.DaysInQuarter} days",
+                                  "gold")
+            </MudItem>
+            <MudItem xs="12" md="4">
+                @RenderTargetCard("Yearly", _targets.CompanyYearlyActual, _targets.CompanyYearlyTarget,
+                                  _targets.YearlyProgress, _targets.ExpectedYearlyProgress,
+                                  _targets.YearlyForecast,
+                                  $"{_targets.DaysIntoYear} of {_targets.DaysInYear} days",
+                                  "dark")
+            </MudItem>
+        </MudGrid>
+
+        @if (_leaderboard != null && _leaderboard.Members.Any())
+        {
+            <MudPaper Class="pa-4 mt-4" Elevation="0" Style="background:var(--gray-50); border-radius:12px;">
+                <div class="tl-section-title-row">
+                    <MudText Typo="Typo.subtitle1" Class="tl-section-title">
+                        <MudIcon Icon="@Icons.Material.Rounded.Groups" Size="Size.Small" Class="mr-1" />
+                        Sales Team Target Tracking
+                    </MudText>
+                    <MudText Typo="Typo.caption" Class="tl-muted">
+                        @_leaderboard.MembersMeetingTarget of @_leaderboard.TotalMembers meeting monthly target
+                    </MudText>
+                </div>
+
+                <div class="tl-target-list">
+                    @foreach (var m in _leaderboard.Members.Take(10))
+                    {
+                        var pct = Math.Min((double)m.MonthlyProgress, 150);
+                        var band = m.PerformanceBand;
+                        <div class="tl-target-row">
+                            <div class="tl-target-row-name">
+                                <span class="tl-target-rank">#@m.Rank</span>
+                                <span>@m.UserName</span>
+                            </div>
+                            <div class="tl-target-row-bar">
+                                <div class="tl-target-bar-track">
+                                    <div class="tl-target-bar-fill @band" style="width:@(pct.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                                </div>
+                            </div>
+                            <div class="tl-target-row-values">
+                                <span class="tl-target-actual">@Fmt(m.InvoiceValueThisMonth)</span>
+                                <span class="tl-target-target">/ @Fmt(m.MonthlyTarget)</span>
+                                <span class="tl-target-pct @band">@m.MonthlyProgress.ToString("0")%</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </MudPaper>
+        }
+    </div>
+}
+
+@code {
+    private PerformanceTargets? _targets;
+    private TeamLeaderboard?    _leaderboard;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _targets     = await Intel.GetPerformanceTargetsAsync();
+        _leaderboard = await Intel.GetTeamLeaderboardAsync();
+    }
+
+    private RenderFragment RenderTargetCard(
+        string period, decimal actual, decimal target,
+        decimal actualPct, decimal expectedPct, decimal forecast,
+        string periodLabel, string color) => __builder =>
+    {
+        var band = actualPct >= expectedPct ? "on-track"
+                 : actualPct >= expectedPct * 0.9m ? "at-risk"
+                 : "behind";
+
+        <div class="tl-target-card @color">
+            <div class="tl-target-card-header">
+                <span class="tl-target-card-period">@period Target</span>
+                <span class="tl-target-card-badge @band">@BandLabel(band)</span>
+            </div>
+            <div class="tl-target-card-values">
+                <div class="tl-target-card-actual">@Fmt(actual)</div>
+                <div class="tl-target-card-target">of @Fmt(target)</div>
+            </div>
+            <div class="tl-target-card-bar">
+                <div class="tl-target-card-bar-track">
+                    <div class="tl-target-card-bar-expected" style="width:@(((double)expectedPct).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                    <div class="tl-target-card-bar-actual @band" style="width:@(Math.Min((double)actualPct, 150).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                </div>
+            </div>
+            <div class="tl-target-card-meta">
+                <span>@periodLabel</span>
+                <span class="tl-target-card-pct">@actualPct.ToString("0.#")%</span>
+            </div>
+            <div class="tl-target-card-forecast">
+                <MudIcon Icon="@Icons.Material.Rounded.Insights" Size="Size.Small" />
+                Forecast: <strong>@Fmt(forecast)</strong>
+                (@((forecast >= target ? "+" : "") + ((target > 0 ? (forecast - target) / target * 100 : 0)).ToString("0.#"))%)
+            </div>
+        </div>
+    };
+
+    private static string BandLabel(string band) => band switch
+    {
+        "on-track" => "On Track",
+        "at-risk"  => "At Risk",
+        _          => "Behind"
+    };
+
+    private static string Fmt(decimal v) =>
+        v >= 1_000_000 ? $"${v / 1_000_000:N2}M" :
+        v >= 1_000 ? $"${v / 1_000:N1}K" : $"${v:N0}";
+}

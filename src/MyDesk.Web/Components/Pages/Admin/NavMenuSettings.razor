@@ -1,0 +1,97 @@
+@page "/admin/nav-menu"
+@attribute [Authorize]
+@inject NavMenuService NavMenuSvc
+@inject ISnackbar Snackbar
+
+<PageTitle>Navigation Menu - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/admin/setup">Setup</a><span class="sep">/</span>
+            <span>Navigation Menu</span>
+        </div>
+        <h1>Navigation Menu</h1>
+        <p class="tl-subtitle">Show or hide items in the application side menu.</p>
+    </div>
+</div>
+
+<MudPaper Elevation="1" Class="pa-6" Style="max-width:680px;">
+    <MudText Typo="Typo.subtitle2" Class="mb-1" Style="color:var(--gray-500); text-transform:uppercase; letter-spacing:.06em; font-size:11px;">
+        Admin section (always visible — cannot be hidden)
+    </MudText>
+    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-5">
+        Setup, Users, Divisions and Locations are fixed admin items and are not configurable here.
+    </MudAlert>
+
+    @foreach (var group in _groups)
+    {
+        <MudText Typo="Typo.subtitle1" Class="mb-2 mt-4" Style="font-weight:600; color:var(--gray-800);">@group</MudText>
+        <MudPaper Outlined="true" Class="mb-2" Style="border-radius:10px; overflow:hidden;">
+            @foreach (var item in NavMenuService.AllItems.Where(i => i.Group == group))
+            {
+                <div class="d-flex align-center justify-space-between"
+                     style="padding:12px 16px; border-bottom:1px solid var(--gray-100);">
+                    <div class="d-flex align-center" style="gap:10px;">
+                        <MudText Style="font-size:14px; font-weight:500; color:var(--gray-800);">@item.Label</MudText>
+                        <MudText Style="font-size:12px; color:var(--gray-400);">@item.Href</MudText>
+                    </div>
+                    <MudSwitch T="bool"
+                               Value="_state[item.Key]"
+                               ValueChanged="v => Toggle(item.Key, v)"
+                               Color="Color.Primary"
+                               UnCheckedColor="Color.Default" />
+                </div>
+            }
+        </MudPaper>
+    }
+
+    <div class="d-flex gap-3 mt-6">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Rounded.Save"
+                   OnClick="SaveAsync" Disabled="_saving">
+            @(_saving ? "Saving…" : "Save changes")
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="ResetAll">
+            Show all
+        </MudButton>
+    </div>
+</MudPaper>
+
+@code {
+    private Dictionary<string, bool> _state = new();
+    private bool _saving;
+
+    private static readonly IReadOnlyList<string> _groups =
+        NavMenuService.AllItems.Select(i => i.Group).Distinct().ToList();
+
+    protected override void OnInitialized()
+    {
+        _state = NavMenuSvc.GetAll();
+    }
+
+    private void Toggle(string key, bool value) => _state[key] = value;
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        try
+        {
+            await NavMenuSvc.SaveAsync(_state);
+            Snackbar.Add("Navigation menu saved.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Save failed: {ex.Message}", Severity.Error);
+        }
+        finally { _saving = false; }
+    }
+
+    private void ResetAll()
+    {
+        foreach (var item in NavMenuService.AllItems)
+            _state[item.Key] = true;
+    }
+}
+

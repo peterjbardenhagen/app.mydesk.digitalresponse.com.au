@@ -1,0 +1,153 @@
+@page "/purchase-orders/{Id:int}/invoice-details"
+@attribute [Authorize]
+@inject PurchaseOrderService POService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+@using System.Security.Claims
+
+<PageTitle>PO Invoice Details @Id - Techlight MyDesk</PageTitle>
+
+@if (_po == null)
+{
+    <MudProgressCircular Indeterminate="true" Class="mx-auto my-8 d-block" />
+}
+else
+{
+    <div class="tl-page-header">
+        <div>
+            <div class="tl-breadcrumb">
+                <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+                <a href="/purchase-orders">Purchase Orders</a><span class="sep">/</span>
+                <a href="@($"/purchase-orders/{Id}")">PO @Id</a><span class="sep">/</span>
+                <span>Invoice Details</span>
+            </div>
+            <h1>Enter Supplier Invoice Details</h1>
+            <p class="tl-subtitle">Record supplier invoices for PO #@Id — @_po.SupplierName</p>
+        </div>
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ArrowBack"
+                   Href="@($"/purchase-orders/{Id}")">Cancel</MudButton>
+    </div>
+
+    <MudPaper Class="pa-6" Elevation="1" Style="max-width:900px;">
+        <MudText Typo="Typo.body2" Class="mb-4" Style="color:var(--gray-600);">
+            Up to 5 supplier invoices can be recorded against this PO. PO Total:
+            <strong>@_po.PriceIncTotal.ToString("C")</strong>
+        </MudText>
+
+        @for (int i = 0; i < _invoices.Count; i++)
+        {
+            var invoice = _invoices[i];
+            var idx = i;
+            <MudGrid Spacing="2" Class="mb-2 pa-2" Style="border:1px solid var(--gray-200);border-radius:8px;">
+                <MudItem xs="1">
+                    <MudText Typo="Typo.h6" Class="mt-2">#@(idx + 1)</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="invoice.InvoiceNumber" Label="Invoice Number"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" sm="3">
+                    <MudNumericField @bind-Value="invoice.Amount" Label="Amount"
+                                     Variant="Variant.Outlined" Margin="Margin.Dense"
+                                     Format="N2" Adornment="Adornment.Start" AdornmentText="$" />
+                </MudItem>
+                <MudItem xs="12" sm="3">
+                    <MudDatePicker @bind-Date="invoice.InvoiceDate" Label="Invoice Date"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="1">
+                    <MudIconButton Icon="@Icons.Material.Rounded.Delete" Color="Color.Error"
+                                   OnClick="() => RemoveInvoice(idx)" />
+                </MudItem>
+            </MudGrid>
+        }
+
+        @if (_invoices.Count < 5)
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Rounded.Add"
+                       OnClick="AddInvoice" Class="mt-3">
+                Add Invoice Entry
+            </MudButton>
+        }
+
+        <MudDivider Class="my-4" />
+
+        <div class="d-flex justify-space-between align-center">
+            <MudText Typo="Typo.body1">
+                <strong>Total Invoiced:</strong> @_invoices.Sum(i => i.Amount).ToString("C")
+                <span style="color:@(VariancePositive() ? "var(--mud-palette-error)" : "var(--mud-palette-success)");">
+                    (@(_po.PriceIncTotal - _invoices.Sum(i => i.Amount)).ToString("C") remaining)
+                </span>
+            </MudText>
+            <div class="d-flex gap-2">
+                <MudButton Variant="Variant.Outlined" Href="@($"/purchase-orders/{Id}")">Cancel</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Rounded.Save"
+                           OnClick="SaveAsync" Disabled="_saving">
+                    @(_saving ? "Saving..." : "Save Invoice Details")
+                </MudButton>
+            </div>
+        </div>
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private PurchaseOrder? _po;
+    private List<POInvoiceEntry> _invoices = new();
+    private bool _saving;
+    private string _userCode = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        _userCode = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+
+        _po = await POService.GetPurchaseOrderAsync(Id);
+        
+        // Load existing invoice records
+        _invoices = await POService.GetInvoiceEntriesAsync(Id);
+        if (_invoices.Count == 0)
+        {
+            _invoices.Add(new POInvoiceEntry { InvoiceDate = DateTime.Today });
+        }
+    }
+
+    private void AddInvoice()
+    {
+        if (_invoices.Count < 5)
+            _invoices.Add(new POInvoiceEntry { InvoiceDate = DateTime.Today });
+    }
+
+    private void RemoveInvoice(int index)
+    {
+        if (index < _invoices.Count)
+            _invoices.RemoveAt(index);
+    }
+
+    private bool VariancePositive()
+    {
+        return _po != null && _invoices.Sum(i => i.Amount) > _po.PriceIncTotal;
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        try
+        {
+            // Only save entries that have invoice numbers
+            var valid = _invoices.Where(i => !string.IsNullOrWhiteSpace(i.InvoiceNumber)).ToList();
+            await POService.SaveInvoiceEntriesAsync(Id, valid, _userCode);
+            Snackbar.Add("Invoice details saved.", Severity.Success);
+            Nav.NavigateTo($"/purchase-orders/{Id}");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Save failed: {ex.Message}", Severity.Error);
+        }
+        finally { _saving = false; }
+    }
+}
+

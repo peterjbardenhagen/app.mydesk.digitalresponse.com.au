@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
+  <defs>
+    <filter id="tealGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <radialGradient id="innerDot" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="60%" stop-color="#c0f0f0"/>
+      <stop offset="100%" stop-color="#40d8d8"/>
+    </radialGradient>
+  </defs>
+  <g transform="translate(40,40)" filter="url(#tealGlow)">
+    <circle cx="0" cy="0" r="30" fill="none" stroke="#00c8c8" stroke-width="1.5" opacity="0.25"/>
+    <circle cx="0" cy="0" r="33" fill="none" stroke="#00b8b8" stroke-width="0.8" opacity="0.15"/>
+    <circle cx="0" cy="0" r="26" fill="none" stroke="#00e0e0" stroke-width="2.5" opacity="0.9"/>
+    <circle cx="0" cy="0" r="20.5" fill="none" stroke="#00cccc" stroke-width="2" opacity="0.75"/>
+    <circle cx="0" cy="0" r="16.5" fill="#061212" opacity="0.95"/>
+    <circle cx="0" cy="0" r="16" fill="none" stroke="#00b8b8" stroke-width="2" opacity="0.85"/>
+    <circle cx="0" cy="0" r="12" fill="#040e0e"/>
+    <circle cx="0" cy="0" r="11.5" fill="none" stroke="#009999" stroke-width="1.5" opacity="0.7"/>
+    <circle cx="0" cy="0" r="8" fill="#030a0a"/>
+    <circle cx="0" cy="0" r="5.5" fill="url(#innerDot)" opacity="0.95"/>
+  </g>
+</svg>

@@ -1,0 +1,192 @@
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+@using System.Security.Claims
+
+<div class="tl-file-upload-section">
+    <MudText Typo="Typo.subtitle2" Class="mb-3" Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Attachments</MudText>
+    
+    <div class="tl-upload-zone">
+        <MudIcon Icon="@Icons.Material.Rounded.CloudUpload" Size="Size.Large" Class="mb-2" Style="color:var(--gray-400);" />
+        <MudText Typo="Typo.body2" Style="color:var(--gray-500);">Select files to attach to this record</MudText>
+        
+        <MudFileUpload T="IReadOnlyList<IBrowserFile>" FilesChanged="HandleFileSelected" Class="mt-3">
+            <ActivatorContent>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Rounded.Add">
+                    Browse Files
+                </MudButton>
+            </ActivatorContent>
+        </MudFileUpload>
+    </div>
+
+    @if (_files.Any())
+    {
+        <div class="mt-4" style="display:flex;flex-direction:column;gap:8px;">
+            @foreach (var file in _files)
+            {
+                <div class="tl-file-item" style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--mud-palette-background-grey);border-radius:8px;">
+                    <MudIcon Icon="@Icons.Material.Rounded.InsertDriveFile" Color="Color.Info" />
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:500;font-size:0.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@file.Name</div>
+                        <div style="color:var(--gray-400);font-size:0.75rem;">@FormatFileSize(file.Size)</div>
+                    </div>
+                    <MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => RemoveFile(file))" />
+                </div>
+            }
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="UploadFilesAsync" Class="mt-2" StartIcon="@Icons.Material.Rounded.CloudUpload">
+                Upload All Selected
+            </MudButton>
+        </div>
+    }
+
+    @if (_uploadedFiles.Any())
+    {
+        <MudDivider Class="my-4" />
+        <MudText Typo="Typo.subtitle2" Class="mb-3" Style="color:var(--gray-500);">Uploaded Files</MudText>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+            @foreach (var file in _uploadedFiles.OrderByDescending(f => f.UploadedAt))
+            {
+                <div class="tl-file-item" style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--mud-palette-divider);border-radius:8px;">
+                    <MudIcon Icon="@Icons.Material.Rounded.Description" Color="Color.Primary" />
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:500;font-size:0.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            <MudLink Href="@($"/api/files/{file.FileId}")" Target="_blank">@file.FileName</MudLink>
+                        </div>
+                        <div style="color:var(--gray-400);font-size:0.75rem;">
+                            @FormatFileSize(file.FileSize) • Uploaded by @file.UploadedBy • @file.UploadedAt.ToString("dd MMM yyyy HH:mm")
+                        </div>
+                    </div>
+                    @if (CanDelete(file))
+                    {
+                        <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
+                                       OnClick="@(() => DeleteFile(file))" />
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .tl-file-upload-section {
+        margin-top: 24px;
+    }
+    .tl-upload-zone {
+        border: 2px dashed var(--gray-200);
+        border-radius: 12px;
+        padding: 40px;
+        text-align: center;
+        background: var(--gray-50);
+        transition: all 0.2s ease;
+    }
+    .tl-upload-zone:hover {
+        border-color: #6366f1; /* Using hex instead of var to ensure visibility in hover */
+        background: white;
+    }
+</style>
+
+@code {
+    [Parameter] public string EntityType { get; set; } = "";
+    [Parameter] public int EntityId { get; set; }
+    [Parameter] public EventCallback OnFileUploaded { get; set; }
+
+    private List<IBrowserFile> _files = new();
+    private List<UploadedFile> _uploadedFiles = new();
+    private string _userCode = "";
+    private string _userName = "";
+    private bool _isAdmin;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _userCode = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+        _userName = authState.User.FindFirst(ClaimTypes.Name)?.Value ?? "";
+        _isAdmin = authState.User.IsInRole("Admin") || authState.User.IsInRole("Director");
+
+        await LoadUploadedFilesAsync();
+    }
+
+    private async Task LoadUploadedFilesAsync()
+    {
+        // To be implemented: API call to load existing files
+        _uploadedFiles = new List<UploadedFile>();
+    }
+
+    private void HandleFileSelected(IReadOnlyList<IBrowserFile> files)
+    {
+        foreach (var file in files)
+        {
+            if (!_files.Any(f => f.Name == file.Name))
+            {
+                _files.Add(file);
+            }
+        }
+    }
+
+    private void RemoveFile(IBrowserFile file)
+    {
+        _files.Remove(file);
+    }
+
+    private async Task UploadFilesAsync()
+    {
+        if (!_files.Any()) return;
+
+        try
+        {
+            // Simulate upload or call FileService
+            foreach (var file in _files)
+            {
+                // In real app, call FileService.UploadAsync(file, EntityType, EntityId, _userCode);
+                _uploadedFiles.Add(new UploadedFile
+                {
+                    FileId = Guid.NewGuid(),
+                    FileName = file.Name,
+                    FileSize = file.Size,
+                    UploadedBy = _userName,
+                    UploadedAt = DateTime.Now
+                });
+            }
+
+            _files.Clear();
+            Snackbar.Add("Files uploaded successfully", Severity.Success);
+            await OnFileUploaded.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to upload files: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteFile(UploadedFile file)
+    {
+        try
+        {
+            // In real app, call FileService.DeleteAsync(file.FileId, _userCode);
+            _uploadedFiles.Remove(file);
+            Snackbar.Add("File deleted", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to delete file: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private bool CanDelete(UploadedFile file) => _isAdmin || file.UploadedBy == _userName;
+
+    private static string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        int order = 0;
+        double size = bytes;
+        while (size >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            size /= 1024;
+        }
+        return $"{size:0.##} {sizes[order]}";
+    }
+}
+

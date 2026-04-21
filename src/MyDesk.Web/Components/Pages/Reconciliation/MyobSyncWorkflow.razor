@@ -1,0 +1,218 @@
+@page "/reconciliation/sync"
+@attribute [Authorize]
+@inject ReconciliationService ReconSvc
+@inject McpIntegrationService McpSvc
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+@using MyDesk.Shared.Services
+@using MyDesk.Web.Services
+@using System.Security.Claims
+
+<PageTitle>MYOB Sync Workflow - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/reconciliation">Reconciliation</a><span class="sep">/</span>
+            <span>MYOB Sync</span>
+        </div>
+        <h1 style="display:flex; align-items:center; gap:10px;">
+            <MudIcon Icon="@Icons.Material.Rounded.CloudSync" Style="color:var(--tl-primary);" />
+            Push Invoices to MYOB
+        </h1>
+        <p class="tl-subtitle">Review approved invoices and sync them to MYOB AccountRight.</p>
+    </div>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ArrowBack"
+               Href="/reconciliation">Back</MudButton>
+</div>
+
+@* ── Workflow Steps ── *@
+<MudPaper Class="pa-5 mb-4" Elevation="1">
+    <MudText Typo="Typo.h6" Class="mb-3">Sync Workflow</MudText>
+    <MudStepper @ref="_stepper" NonLinear="false" ShowResetButton="true">
+        <MudStep Title="Identify" SecondaryText="Find unsynced invoices">
+            <ChildContent>
+                <MudText Typo="Typo.body2" Class="mb-3">
+                    Showing approved invoices (Status ≥ Issued) that have not yet been marked as exported to MYOB.
+                </MudText>
+                <MudGrid Spacing="2" Class="mb-3">
+                    <MudItem xs="12" sm="4">
+                        <MudDatePicker @bind-Date="_dateFrom" Label="From Date" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudDatePicker @bind-Date="_dateTo" Label="To Date" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" sm="4" Class="d-flex align-end">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                   OnClick="LoadUnsyncedAsync" Disabled="_loading">
+                            @(_loading ? "Loading..." : "Find Unsynced")
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+
+                @if (_invoices.Count > 0)
+                {
+                    <MudAlert Severity="Severity.Info" Class="mb-2">
+                        Found <strong>@_invoices.Count</strong> invoice(s) totalling
+                        <strong>@_invoices.Sum(i => i.TotalIncGST).ToString("C")</strong>
+                    </MudAlert>
+                }
+            </ChildContent>
+        </MudStep>
+
+        <MudStep Title="Validate" SecondaryText="Review and select">
+            <ChildContent>
+                @if (_invoices.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info">No invoices loaded. Go back to step 1 to find unsynced invoices.</MudAlert>
+                }
+                else
+                {
+                    <div class="d-flex gap-2 mb-2">
+                        <MudButton Size="Size.Small" OnClick="SelectAll">Select All</MudButton>
+                        <MudButton Size="Size.Small" OnClick="SelectNone">Select None</MudButton>
+                    </div>
+
+                    <MudTable Items="_invoices" Dense="true" Hover="true">
+                        <HeaderContent>
+                            <MudTh>Select</MudTh>
+                            <MudTh>Invoice #</MudTh>
+                            <MudTh>Date</MudTh>
+                            <MudTh>Customer</MudTh>
+                            <MudTh Style="text-align:right;">Nett</MudTh>
+                            <MudTh Style="text-align:right;">GST</MudTh>
+                            <MudTh Style="text-align:right;">Total Inc</MudTh>
+                            <MudTh>Status</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>
+                                <MudCheckBox T="bool" @bind-Value="context.Selected" />
+                            </MudTd>
+                            <MudTd>@context.InvoiceNum</MudTd>
+                            <MudTd>@context.InvoiceDate.ToString("dd MMM yyyy")</MudTd>
+                            <MudTd>@context.CustomerName</MudTd>
+                            <MudTd Style="text-align:right;">@context.NettTotal.ToString("N2")</MudTd>
+                            <MudTd Style="text-align:right;">@context.GstTotal.ToString("N2")</MudTd>
+                            <MudTd Style="text-align:right;"><strong>@context.TotalIncGST.ToString("C")</strong></MudTd>
+                            <MudTd>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success">@context.MyobStatus</MudChip>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+
+                    <MudAlert Severity="Severity.Warning" Class="mt-3">
+                        <strong>Selected: @_invoices.Count(i => i.Selected)</strong> invoice(s) —
+                        Total: <strong>@_invoices.Where(i => i.Selected).Sum(i => i.TotalIncGST).ToString("C")</strong>
+                    </MudAlert>
+                }
+            </ChildContent>
+        </MudStep>
+
+        <MudStep Title="Push" SecondaryText="Commit to MYOB">
+            <ChildContent>
+                @if (!_syncComplete)
+                {
+                    <MudAlert Severity="Severity.Warning" Class="mb-3">
+                        <strong>Ready to push @_invoices.Count(i => i.Selected) invoice(s) to MYOB.</strong>
+                        This will mark them as exported and prevent duplicate sends.
+                    </MudAlert>
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large"
+                               StartIcon="@Icons.Material.Rounded.CloudUpload"
+                               OnClick="PushToMyobAsync" Disabled="_syncing">
+                        @(_syncing ? "Pushing..." : "Push to MYOB")
+                    </MudButton>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Success" Class="mb-3">
+                        <strong>Sync complete!</strong> @_syncedCount invoice(s) successfully pushed to MYOB.
+                    </MudAlert>
+                    <MudButton Variant="Variant.Outlined" Href="/reconciliation">
+                        Back to Dashboard
+                    </MudButton>
+                }
+            </ChildContent>
+        </MudStep>
+    </MudStepper>
+</MudPaper>
+
+@code {
+    private MudStepper? _stepper;
+    private DateTime? _dateFrom = DateTime.Now.AddMonths(-1);
+    private DateTime? _dateTo   = DateTime.Now;
+    private List<UnsyncedInvoice> _invoices = new();
+    private bool _loading;
+    private bool _syncing;
+    private bool _syncComplete;
+    private int _syncedCount;
+    private string _userCode = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        _userCode = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+    }
+
+    private async Task LoadUnsyncedAsync()
+    {
+        _loading = true;
+        try
+        {
+            _invoices = await ReconSvc.GetUnsyncedInvoicesAsync(_dateFrom, _dateTo);
+            Snackbar.Add($"Found {_invoices.Count} unsynced invoice(s).", Severity.Info);
+        }
+        catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
+        finally { _loading = false; }
+    }
+
+    private void SelectAll() => _invoices.ForEach(i => i.Selected = true);
+    private void SelectNone() => _invoices.ForEach(i => i.Selected = false);
+
+    private async Task PushToMyobAsync()
+    {
+        _syncing = true;
+        try
+        {
+            var selected = _invoices.Where(i => i.Selected).ToList();
+            if (selected.Count == 0)
+            {
+                Snackbar.Add("No invoices selected.", Severity.Warning);
+                return;
+            }
+
+            // Push each invoice to MYOB via MCP
+            int succeeded = 0;
+            foreach (var inv in selected)
+            {
+                try
+                {
+                    // Call MYOB MCP to create invoice
+                    await McpSvc.CallMYOBToolAsync("myob_create_invoice_from_mydesk",
+                        new() { ["mydesk_invoice_id"] = inv.InvoiceId });
+                    succeeded++;
+                }
+                catch (Exception ex)
+                {
+                    Snackbar.Add($"Failed invoice {inv.InvoiceNum}: {ex.Message}", Severity.Error);
+                }
+            }
+
+            // Mark as exported in MyDesk
+            var successIds = selected.Take(succeeded).Select(i => i.InvoiceId).ToList();
+            if (successIds.Count > 0)
+            {
+                await ReconSvc.MarkInvoicesExportedAsync(successIds, _userCode);
+            }
+
+            _syncedCount = succeeded;
+            _syncComplete = true;
+            Snackbar.Add($"{succeeded}/{selected.Count} invoice(s) synced to MYOB.", Severity.Success);
+        }
+        catch (Exception ex) { Snackbar.Add($"Sync failed: {ex.Message}", Severity.Error); }
+        finally { _syncing = false; }
+    }
+}
+

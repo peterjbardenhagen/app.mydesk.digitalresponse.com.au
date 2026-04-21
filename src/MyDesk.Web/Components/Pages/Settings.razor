@@ -1,0 +1,210 @@
+@page "/settings"
+@attribute [Authorize]
+@inject UserPreferencesService PrefsSvc
+@inject UserService UserSvc
+@inject ISnackbar Snackbar
+@using System.Security.Claims
+
+<PageTitle>Settings - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <span style="color:var(--gray-700);font-weight:500;">Settings</span>
+        </div>
+        <h1>Account Settings</h1>
+        <p class="tl-subtitle">Manage your preferences and security.</p>
+    </div>
+</div>
+
+<MudGrid Spacing="4">
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-6" Elevation="1">
+            <MudText Typo="Typo.h6" Class="mb-4">Regional & Locale</MudText>
+
+            <MudSelect T="string" @bind-Value="_prefs.Timezone" Label="Timezone"
+                       Variant="Variant.Outlined" Margin="Margin.Normal">
+                @foreach (var tz in UserPreferencesService.CommonTimezones)
+                {
+                    <MudSelectItem T="string" Value="@tz.Id">@tz.Label</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudTextField @bind-Value="_prefs.Location" Label="Location"
+                          Variant="Variant.Outlined" Margin="Margin.Normal"
+                          HelperText="City / office location (free text)" />
+
+            <MudSelect T="string" @bind-Value="_prefs.DateFormat" Label="Date Format"
+                       Variant="Variant.Outlined" Margin="Margin.Normal">
+                <MudSelectItem T="string" Value="@("dd/MM/yyyy")">dd/MM/yyyy (31/12/2026)</MudSelectItem>
+                <MudSelectItem T="string" Value="@("MM/dd/yyyy")">MM/dd/yyyy (12/31/2026)</MudSelectItem>
+                <MudSelectItem T="string" Value="@("yyyy-MM-dd")">yyyy-MM-dd (2026-12-31)</MudSelectItem>
+                <MudSelectItem T="string" Value="@("d MMM yyyy")">d MMM yyyy (31 Dec 2026)</MudSelectItem>
+            </MudSelect>
+
+            <div class="d-flex gap-2 mt-4">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Rounded.Save"
+                           OnClick="SavePreferencesAsync" Disabled="_saving">
+                    @(_saving ? "Saving…" : "Save Preferences")
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" OnClick="ResetDefaults">Reset to Defaults</MudButton>
+            </div>
+
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mt-4">
+                <strong>Current time in @_prefs.Location:</strong>
+                @CurrentTime.ToString("dddd dd MMM yyyy HH:mm")
+            </MudAlert>
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-6" Elevation="1">
+            <MudText Typo="Typo.h6" Class="mb-4">Change Password</MudText>
+
+            <MudTextField @bind-Value="_currentPassword" Label="Current Password"
+                          InputType="InputType.Password" Variant="Variant.Outlined" Margin="Margin.Normal" />
+
+            <MudTextField @bind-Value="_newPassword" Label="New Password"
+                          InputType="InputType.Password" Variant="Variant.Outlined" Margin="Margin.Normal"
+                          HelperText="Minimum 8 characters, include uppercase, lowercase, number" />
+
+            <MudTextField @bind-Value="_confirmPassword" Label="Confirm New Password"
+                          InputType="InputType.Password" Variant="Variant.Outlined" Margin="Margin.Normal" />
+
+            @if (!string.IsNullOrEmpty(_newPassword))
+            {
+                var strength = CalculatePasswordStrength(_newPassword);
+                <div class="mt-2">
+                    <MudProgressLinear Color="@strength.Color" Value="@strength.Score" Max="100" Class="mb-1" />
+                    <MudText Typo="Typo.caption" Style="@($"color:{strength.ColorHex};")">
+                        Strength: @strength.Label
+                    </MudText>
+                </div>
+            }
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4"
+                       StartIcon="@Icons.Material.Rounded.Lock"
+                       OnClick="ChangePasswordAsync" Disabled="_changingPassword">
+                @(_changingPassword ? "Changing…" : "Change Password")
+            </MudButton>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState>? AuthStateTask { get; set; }
+
+    private UserPrefs _prefs = new();
+    private string _userCode = "";
+    private bool _saving;
+    private bool _changingPassword;
+
+    private string _currentPassword = "";
+    private string _newPassword = "";
+    private string _confirmPassword = "";
+
+    private DateTime CurrentTime
+    {
+        get
+        {
+            try
+            {
+                var tz = TimeZoneInfo.FindSystemTimeZoneById(_prefs.Timezone);
+                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+            }
+            catch { return DateTime.Now; }
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthStateTask != null)
+        {
+            var auth = await AuthStateTask;
+            _userCode = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+            _prefs = PrefsSvc.Get(_userCode);
+        }
+    }
+
+    private async Task SavePreferencesAsync()
+    {
+        _saving = true;
+        try
+        {
+            PrefsSvc.Set(_userCode, _prefs);
+            Snackbar.Add("Preferences saved.", Severity.Success);
+        }
+        catch (Exception ex) { Snackbar.Add($"Save failed: {ex.Message}", Severity.Error); }
+        finally { _saving = false; }
+    }
+
+    private void ResetDefaults()
+    {
+        _prefs = new UserPrefs();
+        Snackbar.Add("Defaults restored. Click Save to apply.", Severity.Info);
+    }
+
+    private async Task ChangePasswordAsync()
+    {
+        if (string.IsNullOrEmpty(_currentPassword) ||
+            string.IsNullOrEmpty(_newPassword) ||
+            string.IsNullOrEmpty(_confirmPassword))
+        {
+            Snackbar.Add("Fill in all password fields.", Severity.Warning);
+            return;
+        }
+
+        if (_newPassword != _confirmPassword)
+        {
+            Snackbar.Add("Passwords do not match.", Severity.Warning);
+            return;
+        }
+
+        var strength = CalculatePasswordStrength(_newPassword);
+        if (strength.Score < 50)
+        {
+            Snackbar.Add("Password too weak. Use uppercase, lowercase, number, and 8+ characters.", Severity.Warning);
+            return;
+        }
+
+        _changingPassword = true;
+        try
+        {
+            var ok = await UserSvc.ChangePasswordAsync(_userCode, _currentPassword, _newPassword);
+            if (ok)
+            {
+                Snackbar.Add("Password changed successfully.", Severity.Success);
+                _currentPassword = _newPassword = _confirmPassword = "";
+            }
+            else
+            {
+                Snackbar.Add("Current password is incorrect.", Severity.Error);
+            }
+        }
+        catch (Exception ex) { Snackbar.Add($"Password change failed: {ex.Message}", Severity.Error); }
+        finally { _changingPassword = false; }
+    }
+
+    private static (int Score, string Label, Color Color, string ColorHex) CalculatePasswordStrength(string pwd)
+    {
+        if (string.IsNullOrEmpty(pwd)) return (0, "Empty", Color.Default, "#9ca3af");
+        var score = 0;
+        if (pwd.Length >= 8)  score += 25;
+        if (pwd.Length >= 12) score += 15;
+        if (pwd.Any(char.IsUpper)) score += 15;
+        if (pwd.Any(char.IsLower)) score += 15;
+        if (pwd.Any(char.IsDigit)) score += 15;
+        if (pwd.Any(c => !char.IsLetterOrDigit(c))) score += 15;
+
+        return score switch
+        {
+            < 40  => (score, "Weak",        Color.Error,   "#ef4444"),
+            < 60  => (score, "Fair",        Color.Warning, "#f59e0b"),
+            < 80  => (score, "Good",        Color.Info,    "#3b82f6"),
+            _     => (score, "Strong",      Color.Success, "#10b981"),
+        };
+    }
+}
+

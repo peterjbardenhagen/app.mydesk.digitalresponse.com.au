@@ -1,0 +1,174 @@
+@page "/marketing/ai"
+@attribute [Authorize(Roles = "Director,Administrator,Marketing")]
+@inject MarketingAIService AIService
+@inject MarketingDataService DataService
+@inject ISnackbar Snackbar
+
+<PageTitle>Marketing AI - DR MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <MudLink Href="/marketing" Underline="Underline.None">Marketing</MudLink>
+            <MudIcon Icon="@Icons.Material.Rounded.ChevronRight" Size="Size.Small" />
+            <span>Marketing AI</span>
+        </div>
+        <h1 class="tl-page-title">
+            <MudIcon Icon="@Icons.Material.Rounded.Psychology" Class="mr-2" Style="color: var(--tl-accent)" />
+            Marketing AI
+        </h1>
+        <div class="tl-page-sub">Ask AI to build ideal customer profiles, marketing plans, and top-50 target lists using your data.</div>
+    </div>
+</div>
+
+<div class="d-flex gap-4" style="height: calc(100vh - 200px); min-height: 500px;">
+    @* Sidebar with prompts *@
+    <MudCard Elevation="0" Outlined="true" Style="width: 280px; flex-shrink: 0;">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h6">Quick Prompts</MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent Class="pa-0">
+            <MudList T="string" Dense="true">
+                <MudListItem T="string" Text="Analyse top customers" Icon="@Icons.Material.Rounded.Insights"
+                           OnClick="() => SetPrompt(Prompts.TopCustomers)" />
+                <MudListItem T="string" Text="Build ICP from Champions" Icon="@Icons.Material.Rounded.PersonPin"
+                           OnClick="() => SetPrompt(Prompts.BuildICP)" />
+                <MudListItem T="string" Text="Find at-risk accounts" Icon="@Icons.Material.Rounded.Warning"
+                           OnClick="() => SetPrompt(Prompts.AtRisk)" />
+                <MudListItem T="string" Text="Marketing strategy Q2" Icon="@Icons.Material.Rounded.Campaign"
+                           OnClick="() => SetPrompt(Prompts.StrategyQ2)" />
+                <MudListItem T="string" Text="Top-50 target list" Icon="@Icons.Material.Rounded.FormatListNumbered"
+                           OnClick="() => SetPrompt(Prompts.Top50)" />
+                <MudListItem T="string" Text="Email campaign ideas" Icon="@Icons.Material.Rounded.Email"
+                           OnClick="() => SetPrompt(Prompts.EmailIdeas)" />
+            </MudList>
+        </MudCardContent>
+        <MudDivider />
+        <MudCardContent>
+            <MudText Typo="Typo.caption" Style="color: var(--gray-500);">
+                AI has access to customer scores, supplier tiers, and campaign history. No raw financial data is shared.
+            </MudText>
+        </MudCardContent>
+    </MudCard>
+
+    @* Chat area *@
+    <MudCard Elevation="0" Outlined="true" Class="flex-grow-1 d-flex flex-column">
+        <MudCardContent Class="flex-grow-1 overflow-auto" Style="background: var(--gray-50);">
+            @if (_messages.Count == 0)
+            {
+                <div class="d-flex flex-column align-center justify-center" style="height: 100%; opacity: 0.6;">
+                    <MudIcon Icon="@Icons.Material.Rounded.SmartToy" Size="Size.Large" Class="mb-4" />
+                    <MudText Typo="Typo.h6">How can I help with your marketing today?</MudText>
+                    <MudText Typo="Typo.body2">Select a quick prompt or type your own question.</MudText>
+                </div>
+            }
+            else
+            {
+                <div class="d-flex flex-column gap-4">
+                    @foreach (var msg in _messages)
+                    {
+                        <div class="d-flex @(msg.IsUser ? "justify-end" : "justify-start")">
+                            <div class="tl-ai-message @(msg.IsUser ? "user" : "ai")">
+                                @if (!msg.IsUser)
+                                {
+                                    <MudAvatar Size="Size.Small" Color="Color.Primary" Class="mr-2">
+                                        <MudIcon Icon="@Icons.Material.Rounded.SmartToy" Size="Size.Small" />
+                                    </MudAvatar>
+                                }
+                                <div class="tl-ai-content">
+                                    <MudMarkdown Value="@msg.Content" />
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    @if (_thinking)
+                    {
+                        <div class="d-flex justify-start">
+                            <div class="tl-ai-message ai">
+                                <MudAvatar Size="Size.Small" Color="Color.Primary" Class="mr-2">
+                                    <MudIcon Icon="@Icons.Material.Rounded.SmartToy" Size="Size.Small" />
+                                </MudAvatar>
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </MudCardContent>
+        <MudDivider />
+        <MudCardContent Class="pa-4">
+            <div class="d-flex gap-2">
+                <MudTextField T="string" @bind-Value="_input" Placeholder="Ask about customer profiles, marketing strategy, or target lists..."
+                             Immediate="true" OnKeyDown="OnKeyDown" Disabled="_thinking"
+                             Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Rounded.Send"
+                             OnAdornmentClick="SendMessage" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_thinking || string.IsNullOrWhiteSpace(_input)"
+                          OnClick="SendMessage">
+                    Send
+                </MudButton>
+            </div>
+        </MudCardContent>
+    </MudCard>
+</div>
+
+@code {
+    private List<ChatMessage> _messages = new();
+    private string _input = "";
+    private bool _thinking = false;
+
+    private static class Prompts
+    {
+        public const string TopCustomers = "Analyse my top 10 customers by RFM score. What makes them champions? What industries are they in?";
+        public const string BuildICP = "Based on my Champion customers, build an Ideal Customer Profile. What firmographics, behaviours, and needs define my best prospects?";
+        public const string AtRisk = "Identify customers flagged as 'at-risk' or 'lost'. What patterns do you see? What reactivation tactics should I consider?";
+        public const string StrategyQ2 = "Help me draft a Q2 marketing strategy. What should my priorities be based on my current customer mix?";
+        public const string Top50 = "Generate a top-50 target list of prospects who look like my Champions. Which segments should I prioritise?";
+        public const string EmailIdeas = "Suggest 5 email campaign ideas for engaging my Champion and Loyal customer segments.";
+    }
+
+    private void SetPrompt(string text)
+    {
+        _input = text;
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendMessage();
+        }
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(_input)) return;
+
+        var userMsg = _input.Trim();
+        _messages.Add(new ChatMessage { Content = userMsg, IsUser = true });
+        _input = "";
+        _thinking = true;
+        StateHasChanged();
+
+        try
+        {
+            var response = await AIService.AskMarketingQuestionAsync(userMsg);
+            _messages.Add(new ChatMessage { Content = response, IsUser = false });
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"AI error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _thinking = false;
+        }
+    }
+
+    private record ChatMessage
+    {
+        public string Content { get; set; } = "";
+        public bool IsUser { get; set; }
+    }
+}

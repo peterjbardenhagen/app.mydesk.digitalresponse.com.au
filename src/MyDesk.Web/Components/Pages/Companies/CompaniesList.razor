@@ -1,0 +1,89 @@
+@page "/companies"
+@attribute [Authorize]
+@inject CompanyService CompanyService
+@inject ISnackbar Snackbar
+
+<PageTitle>Companies - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <span style="color:var(--gray-700);font-weight:500;">Companies</span>
+        </div>
+        <h1>Companies</h1>
+        <p class="tl-subtitle">Customer and supplier organisations.</p>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Rounded.Add" Href="/companies/new">
+        Add Company
+    </MudButton>
+</div>
+
+<MudPaper Class="pa-4 mb-3" Elevation="1" Style="max-width:480px;">
+    <div class="d-flex gap-2">
+        <MudTextField @bind-Value="_search" Label="Search companies" Variant="Variant.Outlined"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Search"
+                      Clearable="true" Margin="Margin.Dense" Style="flex:1;" />
+        <MudButton OnClick="LoadAsync" Color="Color.Primary" Variant="Variant.Filled"
+                   Size="Size.Small">Search</MudButton>
+    </div>
+</MudPaper>
+
+<MudPaper Class="pa-0" Elevation="1">
+    <MudDataGrid T="Company" Items="@_companies" Loading="@_loading" Dense="true" Hover="true"
+                 FixedHeader="true" Height="600px" Elevation="0">
+        <Columns>
+            <PropertyColumn Property="x => x.CompanyId" Title="#" CellStyle="width:70px;" />
+            <TemplateColumn Title="Company">
+                <CellTemplate>
+                    <MudLink Href="@($"/companies/{context.Item.CompanyId}/edit")" Style="font-weight:500;">
+                        @context.Item.CompanyName
+                    </MudLink>
+                </CellTemplate>
+            </TemplateColumn>
+            <PropertyColumn Property="x => x.Phone" Title="Phone" />
+            <PropertyColumn Property="x => x.Email" Title="Email" />
+            <PropertyColumn Property="x => x.Suburb" Title="Suburb" />
+            <PropertyColumn Property="x => x.State" Title="State" CellStyle="width:70px;" />
+            <TemplateColumn Title="" CellStyle="width:80px;">
+                <CellTemplate>
+                    <div class="d-flex gap-1">
+                        <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" Color="Color.Primary"
+                                       Href="@($"/companies/{context.Item.CompanyId}/edit")" />
+                        <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
+                                       OnClick="@(() => DeleteAsync(context.Item))" />
+                    </div>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+    </MudDataGrid>
+</MudPaper>
+
+@code {
+    private List<Company> _companies = new();
+    private bool _loading = true;
+    private string? _search;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try { _companies = await CompanyService.GetCompaniesAsync(_search); }
+        catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
+        finally { _loading = false; }
+    }
+
+    private async Task DeleteAsync(Company c)
+    {
+        try
+        {
+            await CompanyService.DeleteCompanyAsync(c.CompanyId);
+            Snackbar.Add($"'{c.CompanyName}' deleted.", Severity.Info);
+            await LoadAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Delete failed: {ex.Message}", Severity.Error); }
+    }
+}
+

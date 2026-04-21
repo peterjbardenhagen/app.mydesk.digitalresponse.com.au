@@ -1,0 +1,146 @@
+@page "/login"
+@layout EmptyLayout
+@attribute [AllowAnonymous]
+@inject PlatformSettingsService PlatformSettings
+
+<PageTitle>Login - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-login-root">
+    <!-- LEFT: brand hero -->
+    <aside class="tl-login-hero">
+        <div class="tl-login-hero-brand">
+            @if (PlatformSettings.IsTechlightTenant())
+            {
+                <img src="/images/techlight-logo.svg" alt="Techlight MyDesk" />
+            }
+            else
+            {
+                <div class="mydesk-brand">
+                    <svg viewBox="0 0 200 50" class="mydesk-logo">
+                        <defs>
+                            <linearGradient id="mydeskGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#00c8c8;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#008b8b;stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        <rect x="5" y="15" width="20" height="20" rx="4" fill="url(#mydeskGradient)" />
+                        <text x="35" y="35" font-family="Inter, sans-serif" font-size="28" font-weight="700" fill="#1f2937">MyDesk</text>
+                    </svg>
+                </div>
+            }
+        </div>
+
+        <div class="tl-login-quote">
+            <div class="q">Your complete sales & operations platform — quotes, invoices, purchase orders, and insights, all in one place.</div>
+            <div class="by">
+                @if (PlatformSettings.IsTechlightTenant())
+                {
+                    <span>Techlight MyDesk &middot; Powered by <MudLink Href="https://www.digitalresponse.com.au/" Target="_blank" Style="color: inherit; text-decoration: underline;">Digital Response</MudLink></span>
+                }
+                else
+                {
+                    <span>MyDesk &middot; Powered by <MudLink Href="https://www.digitalresponse.com.au/" Target="_blank" Style="color: inherit; text-decoration: underline;">Digital Response</MudLink></span>
+                }
+            </div>
+        </div>
+
+        <div class="legal-links">
+            <MudLink Href="/privacy-policy" Typo="Typo.caption" Style="color: var(--gray-400);">Privacy Policy</MudLink>
+            <span class="mx-2" style="color: var(--gray-500);">|</span>
+            <MudLink Href="/terms-and-conditions" Typo="Typo.caption" Style="color: var(--gray-400);">Terms & Conditions</MudLink>
+        </div>
+
+        <div style="position:relative; z-index:1; font-size:12px; color:var(--gray-400);">
+            Copyright @DateTime.Now.Year <MudLink Href="https://www.digitalresponse.com.au/" Target="_blank" Style="color: inherit; text-decoration: underline;">Digital Response</MudLink>. All rights reserved.
+        </div>
+    </aside>
+
+    <!-- RIGHT: form -->
+    <section class="tl-login-form">
+        <div class="tl-login-form-inner">
+            @if (PlatformSettings.IsTechlightTenant())
+            {
+                <img src="/images/techlight-mark.svg" alt="" class="tl-mark" />
+            }
+            else
+            {
+                <div class="mydesk-mark">
+                    <svg viewBox="0 0 40 40" width="48" height="48">
+                        <defs>
+                            <linearGradient id="markGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#00c8c8;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#008b8b;stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        <rect x="4" y="4" width="32" height="32" rx="6" fill="url(#markGradient)" />
+                        <path d="M12 20 L20 28 L28 12" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            }
+            <h1>Welcome back</h1>
+            <p class="sub">Sign in to your @PlatformSettings.GetBrandingName() account</p>
+
+            @if (ShowError)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4" Variant="Variant.Outlined">
+                    Invalid login credentials. Please try again.
+                </MudAlert>
+            }
+
+            <form method="post" action="/api/auth/login">
+                <AntiforgeryToken />
+
+                <MudTextField T="string" name="login" Label="Username"
+                              Variant="Variant.Outlined" Margin="Margin.Normal"
+                              HelperText="Your full name or user code"
+                              Required="true" FullWidth="true"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Rounded.PersonOutline" />
+
+                <MudTextField T="string" name="password" Label="Password" InputType="InputType.Password"
+                              Variant="Variant.Outlined" Margin="Margin.Normal"
+                              Required="true" FullWidth="true" Class="mb-4"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Rounded.Lock" />
+
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary"
+                           Size="Size.Large" FullWidth="true">
+                    Sign in
+                </MudButton>
+            </form>
+
+            <div class="tl-login-footer">
+                Need help? Contact <MudLink Href="mailto:support@digitalresponse.com.au">support@digitalresponse.com.au</MudLink>
+            </div>
+        </div>
+    </section>
+</div>
+
+<style>
+    .mydesk-brand {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .mydesk-logo {
+        width: 200px;
+        height: 50px;
+    }
+    .mydesk-mark {
+        margin-bottom: 1rem;
+    }
+    .legal-links {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+</style>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? Error { get; set; }
+
+    private bool ShowError => Error == "1";
+}
+

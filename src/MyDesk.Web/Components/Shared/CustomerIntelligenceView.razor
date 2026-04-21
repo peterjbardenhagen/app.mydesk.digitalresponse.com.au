@@ -1,0 +1,108 @@
+@using MyDesk.Shared.Models
+@inject MyDesk.Shared.Services.IntelligenceService Intel
+@inject NavigationManager Nav
+
+@if (_ci == null)
+{
+    <div class="tl-view-content">
+        <MudProgressCircular Indeterminate="true" />
+    </div>
+}
+else
+{
+    <div class="tl-view-content">
+        <MudGrid Spacing="3">
+            <MudItem xs="6" md="3">
+                <div class="tl-mini-stat"><div class="tl-mini-stat-value">@_ci.TotalCustomers.ToString("N0")</div><div class="tl-mini-stat-label">Total Customers</div></div>
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <div class="tl-mini-stat"><div class="tl-mini-stat-value success">@_ci.ActiveCustomers.ToString("N0")</div><div class="tl-mini-stat-label">Active (90d)</div></div>
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <div class="tl-mini-stat"><div class="tl-mini-stat-value warning">@_ci.DormantCustomers.ToString("N0")</div><div class="tl-mini-stat-label">Dormant (180d+)</div></div>
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <div class="tl-mini-stat"><div class="tl-mini-stat-value">@_ci.Top10CustomerConcentration.ToString("0.#")%</div><div class="tl-mini-stat-label">Top 10 Revenue %</div></div>
+            </MudItem>
+        </MudGrid>
+
+        <MudTabs Elevation="0" ApplyEffectsToContainer="true" PanelClass="pa-4" Rounded="true" Class="mt-3">
+            <MudTabPanel Text="@($"Best ({_ci.BestCustomers.Count})")" Icon="@Icons.Material.Rounded.Star">
+                @RenderList(_ci.BestCustomers, "best", "No customer revenue yet this year")
+            </MudTabPanel>
+            <MudTabPanel Text="@($"Growing ({_ci.GrowthCustomers.Count})")" Icon="@Icons.Material.Rounded.TrendingUp">
+                @RenderList(_ci.GrowthCustomers, "growth", "No growth customers identified")
+            </MudTabPanel>
+            <MudTabPanel Text="@($"At Risk ({_ci.AtRiskCustomers.Count})")" Icon="@Icons.Material.Rounded.Warning">
+                @RenderList(_ci.AtRiskCustomers, "at-risk", "No at-risk customers — great retention!")
+            </MudTabPanel>
+            <MudTabPanel Text="@($"Wasting Time ({_ci.WorstCustomers.Count})")" Icon="@Icons.Material.Rounded.AccessTime">
+                @RenderList(_ci.WorstCustomers, "worst", "No customers wasting excessive quoting effort")
+            </MudTabPanel>
+        </MudTabs>
+    </div>
+}
+
+@code {
+    private CustomerIntelligence? _ci;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _ci = await Intel.GetCustomerIntelligenceAsync();
+    }
+
+    private RenderFragment RenderList(List<CustomerPerformance> items, string tone, string emptyMessage) => __builder =>
+    {
+        if (items.Count == 0)
+        {
+            <div class="tl-empty-state">
+                <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Size="Size.Medium" />
+                <MudText Typo="Typo.body2">@emptyMessage</MudText>
+            </div>
+            return;
+        }
+
+        <div class="tl-customer-list">
+            @foreach (var c in items)
+            {
+                <div class="tl-customer-row @tone" @onclick="() => Go(c.CompanyId)">
+                    <div class="tl-customer-rank">#@c.Rank</div>
+                    <div class="tl-customer-main">
+                        <div class="tl-customer-name">
+                            @c.CompanyName
+                            <span class="tl-customer-badge rating-@c.Rating.ToLower()">@c.Rating</span>
+                        </div>
+                        <div class="tl-customer-sub">
+                            @if (c.InvoiceCount > 0) { <span>@c.InvoiceCount invoices</span> }
+                            @if (c.QuoteCount > 0) { <span>· @c.QuoteCount quotes</span> }
+                            @if (c.WinRate > 0) { <span>· @c.WinRate.ToString("0")% win</span> }
+                            @if (c.LastActivity.HasValue) { <span>· @c.DaysSinceLastActivity days since last</span> }
+                        </div>
+                    </div>
+                    <div class="tl-customer-values">
+                        <div class="tl-customer-revenue">@Fmt(c.YtdRevenue)</div>
+                        @if (c.GrowthPercent != 0)
+                        {
+                            var up = c.GrowthPercent >= 0;
+                            <div class="tl-customer-growth @(up ? "up" : "down")">
+                                @(up ? "+" : "")@c.GrowthPercent.ToString("0.#")% YoY
+                            </div>
+                        }
+                        else if (tone == "worst" && c.QuoteValue > 0)
+                        {
+                            <div class="tl-customer-growth down">
+                                @Fmt(c.QuoteValue) quoted / $0 won
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    };
+
+    private void Go(int companyId) => Nav.NavigateTo($"/companies/{companyId}");
+
+    private static string Fmt(decimal v) =>
+        v >= 1_000_000 ? $"${v / 1_000_000:N2}M" :
+        v >= 1_000 ? $"${v / 1_000:N1}K" : $"${v:N0}";
+}

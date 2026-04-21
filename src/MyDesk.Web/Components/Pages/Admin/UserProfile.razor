@@ -1,0 +1,232 @@
+@page "/admin/users/{UserId:int}/profile"
+@attribute [Authorize]
+@inject UserService UserSvc
+@inject IntelligenceService Intel
+@inject IHttpContextAccessor HttpContext
+@inject NavigationManager Nav
+
+<PageTitle>@(_user?.Name ?? "User Profile") - DR MyDesk</PageTitle>
+
+@if (!_isAuthorized)
+{
+    <MudAlert Severity="Severity.Warning">
+        You need Director or Administrator access to view user profiles.
+    </MudAlert>
+}
+else if (_user == null || _leaderboard == null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <div class="tl-page-header">
+        <div>
+            <div class="tl-breadcrumb">
+                <a href="/admin/setup">Admin</a>
+                <span class="sep">/</span>
+                <a href="/admin/users">Users</a>
+                <span class="sep">/</span>
+                <span style="color:var(--gray-700); font-weight:500;">@_user.Name</span>
+            </div>
+            <h1>@_user.Name <span class="tl-user-code">@_user.Code</span></h1>
+            <div class="tl-user-sub">@_user.Email · @_user.UserRole</div>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <MudButton Variant="Variant.Outlined" OnClick="@(() => Nav.NavigateTo($"/admin/users/{UserId}/edit"))"
+                       StartIcon="@Icons.Material.Rounded.Edit">Edit</MudButton>
+            <MudButton Variant="Variant.Outlined" OnClick="@(() => Nav.NavigateTo("/admin/users"))">Back</MudButton>
+        </div>
+    </div>
+
+    @if (_kpi == null)
+    {
+        <MudAlert Severity="Severity.Info">
+            No performance data yet for this user. They will appear here once they've created quotes or invoices.
+        </MudAlert>
+    }
+    else
+    {
+        <MudGrid Spacing="3" Class="mt-3">
+            <!-- Rank & Performance Band -->
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4 tl-rank-card" Elevation="0">
+                    <div class="tl-rank-top">
+                        <div class="tl-rank-badge @_kpi.PerformanceBand">#@_kpi.Rank</div>
+                        <div>
+                            <div class="tl-rank-label">Team Rank</div>
+                            <div class="tl-rank-of">of @_leaderboard.TotalMembers members</div>
+                        </div>
+                    </div>
+                    <div class="tl-rank-status @_kpi.PerformanceBand">@BandText(_kpi.PerformanceBand)</div>
+                    <div class="tl-rank-trend">
+                        <MudIcon Icon="@TrendIcon(_kpi.PerformanceTrend)" Size="Size.Small" />
+                        <span>@TrendText(_kpi.PerformanceTrend) vs last month</span>
+                    </div>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Monthly Target -->
+            <MudItem xs="12" md="8">
+                <MudPaper Class="pa-4" Elevation="0" Style="background:var(--gray-50); border-radius:12px;">
+                    @RenderTarget("This Month", _kpi.InvoiceValueThisMonth, _kpi.MonthlyTarget, _kpi.MonthlyProgress, _kpi.PerformanceBand)
+                    @RenderTarget("This Quarter", _kpi.QuarterlyRevenue, _kpi.QuarterlyTarget, _kpi.QuarterlyProgress, BandFor(_kpi.QuarterlyProgress))
+                    @RenderTarget("Year to Date", _kpi.YtdRevenue, _kpi.YearlyTarget, _kpi.YearlyProgress, BandFor(_kpi.YearlyProgress))
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- KPI Cards -->
+        <MudGrid Spacing="3" Class="mt-3">
+            <MudItem xs="6" md="3">
+                <div class="tl-profile-kpi">
+                    <div class="tl-profile-kpi-value">@_kpi.QuotesRaisedThisMonth</div>
+                    <div class="tl-profile-kpi-label">Quotes This Month</div>
+                    <div class="tl-profile-kpi-compare">@Fmt(_kpi.QuoteValueThisMonth) value</div>
+                </div>
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <div class="tl-profile-kpi">
+                    <div class="tl-profile-kpi-value">@_kpi.QuotesWonThisMonth</div>
+                    <div class="tl-profile-kpi-label">Quotes Won</div>
+                    <div class="tl-profile-kpi-compare">@_kpi.WinRate.ToString("0.#")% win rate</div>
+                </div>
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <div class="tl-profile-kpi">
+                    <div class="tl-profile-kpi-value">@_kpi.InvoicesClosedThisMonth</div>
+                    <div class="tl-profile-kpi-label">Invoices Closed</div>
+                    <div class="tl-profile-kpi-compare">@Fmt(_kpi.InvoiceValueThisMonth) billed</div>
+                </div>
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <div class="tl-profile-kpi">
+                    <div class="tl-profile-kpi-value">@_kpi.PendingQuotes</div>
+                    <div class="tl-profile-kpi-label">Open Quotes</div>
+                    <div class="tl-profile-kpi-compare">@_kpi.OverdueQuotes over 30 days</div>
+                </div>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Team Comparison -->
+        <MudPaper Class="pa-4 mt-4" Elevation="0" Style="background:var(--gray-50); border-radius:12px;">
+            <div class="tl-section-title-row">
+                <MudText Typo="Typo.subtitle1" Class="tl-section-title">
+                    <MudIcon Icon="@Icons.Material.Rounded.Groups" Size="Size.Small" Class="mr-1" />
+                    How @_user.Name Compares to the Team
+                </MudText>
+            </div>
+
+            @RenderComparisonRow("Monthly Revenue", _kpi.InvoiceValueThisMonth, _leaderboard.TeamAverageRevenue, true)
+            @RenderComparisonRow("Win Rate", _kpi.WinRate, _leaderboard.TeamAverageWinRate, false, "%")
+            @RenderComparisonRow("Quotes Raised",
+                                 _kpi.QuotesRaisedThisMonth,
+                                 _leaderboard.Members.Count > 0 ? (decimal)_leaderboard.Members.Average(m => (double)m.QuotesRaisedThisMonth) : 0,
+                                 false, "")
+            @RenderComparisonRow("Avg Quote Value",
+                                 _kpi.AverageQuoteValue,
+                                 _leaderboard.Members.Count > 0 ? (decimal)_leaderboard.Members.Average(m => (double)m.AverageQuoteValue) : 0,
+                                 true)
+        </MudPaper>
+    }
+}
+
+@code {
+    [Parameter] public int UserId { get; set; }
+
+    private User? _user;
+    private UserKPI? _kpi;
+    private TeamLeaderboard? _leaderboard;
+    private bool _isAuthorized;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Director/Admin only
+        var userType = HttpContext.HttpContext?.User.FindFirst("UserTypeId")?.Value;
+        _isAuthorized = userType is "1" or "2"; // 1=Admin, 2=Director typically
+        if (!_isAuthorized) return;
+
+        _user = await UserSvc.GetAsync(UserId);
+        if (_user == null) return;
+
+        _leaderboard = await Intel.GetTeamLeaderboardAsync();
+        _kpi = _leaderboard.Members.FirstOrDefault(m =>
+            string.Equals(m.UserCode, _user.Code, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private RenderFragment RenderTarget(string label, decimal actual, decimal target, decimal pct, string band) => __builder =>
+    {
+        var barPct = Math.Min((double)pct, 150);
+        <div class="tl-profile-target">
+            <div class="tl-profile-target-header">
+                <span class="tl-profile-target-label">@label</span>
+                <span class="tl-profile-target-pct @band">@pct.ToString("0.#")%</span>
+            </div>
+            <div class="tl-target-bar-track" style="margin:6px 0;">
+                <div class="tl-target-bar-fill @band" style="width:@(barPct.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+            </div>
+            <div class="tl-profile-target-values">
+                <span class="tl-target-actual">@Fmt(actual)</span>
+                <span class="tl-target-target">/ @Fmt(target)</span>
+            </div>
+        </div>
+    };
+
+    private RenderFragment RenderComparisonRow(string label, decimal value, decimal teamAvg, bool isCurrency, string suffix = "") => __builder =>
+    {
+        var diff = teamAvg > 0 ? ((value - teamAvg) / teamAvg) * 100 : 0;
+        var better = value >= teamAvg;
+        var pct = teamAvg > 0 ? Math.Min((double)(value / teamAvg) * 50, 150) : 0;
+
+        <div class="tl-compare-row">
+            <div class="tl-compare-label">@label</div>
+            <div class="tl-compare-bars">
+                <div class="tl-compare-bar team"><div class="tl-compare-bar-fill team" style="width:50%"></div></div>
+                <div class="tl-compare-bar user"><div class="tl-compare-bar-fill @(better ? "up" : "down")" style="width:@(pct.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%"></div></div>
+            </div>
+            <div class="tl-compare-values">
+                <div class="tl-compare-user">@FormatValue(value, isCurrency, suffix)</div>
+                <div class="tl-compare-team">Team: @FormatValue(teamAvg, isCurrency, suffix)</div>
+                @if (teamAvg > 0)
+                {
+                    <div class="tl-compare-diff @(better ? "up" : "down")">
+                        @(better ? "+" : "")@diff.ToString("0.#")%
+                    </div>
+                }
+            </div>
+        </div>
+    };
+
+    private static string FormatValue(decimal v, bool currency, string suffix) =>
+        currency ? Fmt(v) : $"{v:N1}{suffix}";
+
+    private static string Fmt(decimal v) =>
+        v >= 1_000_000 ? $"${v / 1_000_000:N2}M" :
+        v >= 1_000 ? $"${v / 1_000:N1}K" : $"${v:N0}";
+
+    private static string BandFor(decimal pct) =>
+        pct >= 110 ? "exceeding" :
+        pct >= 90 ? "on-track" :
+        pct >= 70 ? "at-risk" : "behind";
+
+    private static string BandText(string band) => band switch
+    {
+        "exceeding" => "Exceeding Target",
+        "on-track"  => "On Track",
+        "at-risk"   => "At Risk",
+        _           => "Behind Target"
+    };
+
+    private static string TrendText(string trend) => trend switch
+    {
+        "up"   => "Improving",
+        "down" => "Declining",
+        _      => "Stable"
+    };
+
+    private static string TrendIcon(string trend) => trend switch
+    {
+        "up"   => Icons.Material.Rounded.TrendingUp,
+        "down" => Icons.Material.Rounded.TrendingDown,
+        _      => Icons.Material.Rounded.TrendingFlat
+    };
+}
