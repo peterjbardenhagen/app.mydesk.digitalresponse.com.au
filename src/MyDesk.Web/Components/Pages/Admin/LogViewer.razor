@@ -1,0 +1,348 @@
+@page "/admin/logs"
+@attribute [Authorize]
+@inject LogService LogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Log Viewer - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/admin/setup">System Setup</a><span class="sep">/</span>
+            <span>Log Viewer</span>
+        </div>
+        <h1>Log Viewer</h1>
+        <p class="tl-subtitle">View application logs, filter errors, and manage log retention</p>
+    </div>
+</div>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudGrid Spacing="2">
+        <MudItem xs="12" sm="4">
+            <MudSelect T="LogType" @bind-Value="_logType" Label="Log Type" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelectItem T="LogType" Value="LogType.Application">Application Logs</MudSelectItem>
+                <MudSelectItem T="LogType" Value="LogType.Error">Error Logs Only</MudSelectItem>
+                <MudSelectItem T="LogType" Value="LogType.All">All Logs</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect T="LogLevel" @bind-Value="_logLevel" Label="Minimum Level" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelectItem T="LogLevel" Value="LogLevel.All">All Levels</MudSelectItem>
+                <MudSelectItem T="LogLevel" Value="LogLevel.Error">Errors Only</MudSelectItem>
+                <MudSelectItem T="LogLevel" Value="LogLevel.Warning">Warnings & Errors</MudSelectItem>
+                <MudSelectItem T="LogLevel" Value="LogLevel.Info">Info, Warnings & Errors</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudTextField @bind-Value="_searchTerm" Label="Search" Placeholder="Search logs..." Variant="Variant.Outlined" 
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Search" Margin="Margin.Dense" />
+        </MudItem>
+    </MudGrid>
+    <div class="d-flex gap-2 mt-3">
+        <MudButton OnClick="LoadLogsAsync" Color="Color.Primary" Variant="Variant.Filled"
+                   StartIcon="@Icons.Material.Rounded.Refresh" Size="Size.Small">Refresh</MudButton>
+        <MudButton OnClick="ToggleAutoRefresh" Variant="Variant.Outlined" Size="Small"
+                   Color="@(_autoRefresh ? Color.Primary : Color.Default)">
+            <MudIcon Icon="@(_autoRefresh ? Icons.Material.Rounded.Pause : Icons.Material.Rounded.Play)" Size="Size.Small" />
+            @(_autoRefresh ? "Pause Auto-Refresh" : "Auto-Refresh")
+        </MudButton>
+        <MudButton OnClick="ShowPurgeDialog" Color="Color.Error" Variant="Variant.Outlined" Size="Small"
+                   StartIcon="@Icons.Material.Rounded.Delete">Purge Logs</MudButton>
+    </div>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+
+<MudPaper Class="pa-0" Elevation="1">
+    <div class="tl-log-viewer">
+        @if (_logs.Count == 0)
+        {
+            <div class="tl-log-empty">
+                <MudIcon Icon="@Icons.Material.Rounded.Description" Size="Size.Large" Color="Color.Primary" />
+                <MudText Typo="Typo.h6" Class="mt-4">No logs found</MudText>
+                <MudText Typo="Typo.body2" Class="text-center">Try adjusting your filters or refresh the logs.</MudText>
+            </div>
+        }
+        else
+        {
+            <div class="tl-log-header">
+                <span class="tl-log-count">@_logs.Count entries</span>
+                <span class="tl-log-info">Last updated: @_lastUpdated</span>
+            </div>
+            <div class="tl-log-entries">
+                @foreach (var log in _logs)
+                {
+                    <div class="tl-log-entry @GetLogLevelClass(log.Level)">
+                        <div class="tl-log-meta">
+                            <span class="tl-log-timestamp">@log.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</span>
+                            <span class="tl-log-level">@log.Level</span>
+                            <span class="tl-log-source">@log.Source</span>
+                        </div>
+                        <div class="tl-log-message">@log.Message</div>
+                        @if (!string.IsNullOrEmpty(log.Exception))
+                        {
+                            <div class="tl-log-exception">@log.Exception</div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</MudPaper>
+
+@* Purge Dialog *@
+<MudDialog @bind-IsOpen="_showPurgeDialog">
+    <DialogTitle>Purge Logs</DialogTitle>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-4">
+            Select the type of logs you want to purge. This action cannot be undone.
+        </MudText>
+        <MudRadioGroup T="PurgeOption" @bind-Value="_purgeOption">
+            <MudRadioItem T="PurgeOption" Value="PurgeOption.OlderThan30Days">Logs older than 30 days</MudRadioItem>
+            <MudRadioItem T="PurgeOption" Value="PurgeOption.OlderThan7Days">Logs older than 7 days</MudRadioItem>
+            <MudRadioItem T="PurgeOption" Value="PurgeOption.ErrorLogsOnly">Error logs only</MudRadioItem>
+            <MudRadioItem T="PurgeOption" Value="PurgeOption.AllLogs">All logs (use with caution)</MudRadioItem>
+        </MudRadioGroup>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showPurgeDialog = false)" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="PurgeLogsAsync" Color="Color.Error" Variant="Variant.Filled">Purge</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .tl-log-viewer {
+        max-height: 600px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .tl-log-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--gray-200);
+        background: var(--gray-50);
+        font-size: 13px;
+        color: var(--gray-600);
+    }
+
+    .tl-log-entries {
+        overflow-y: auto;
+        flex: 1;
+        max-height: 550px;
+    }
+
+    .tl-log-entry {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--gray-200);
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .tl-log-entry:hover {
+        background: var(--gray-50);
+    }
+
+    .tl-log-entry.error {
+        background: rgba(239, 68, 68, 0.05);
+        border-left: 3px solid #ef4444;
+    }
+
+    .tl-log-entry.warning {
+        background: rgba(245, 158, 11, 0.05);
+        border-left: 3px solid #f59e0b;
+    }
+
+    .tl-log-entry.info {
+        background: rgba(59, 130, 246, 0.05);
+        border-left: 3px solid #3b82f6;
+    }
+
+    .tl-log-meta {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 6px;
+        font-size: 11px;
+        color: var(--gray-500);
+    }
+
+    .tl-log-timestamp {
+        color: var(--gray-600);
+        font-weight: 500;
+    }
+
+    .tl-log-level {
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 10px;
+    }
+
+    .tl-log-entry.error .tl-log-level {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .tl-log-entry.warning .tl-log-level {
+        background: #fef3c7;
+        color: #d97706;
+    }
+
+    .tl-log-entry.info .tl-log-level {
+        background: #dbeafe;
+        color: #2563eb;
+    }
+
+    .tl-log-source {
+        color: var(--gray-500);
+    }
+
+    .tl-log-message {
+        color: var(--gray-900);
+        word-break: break-word;
+    }
+
+    .tl-log-exception {
+        margin-top: 8px;
+        padding: 8px 12px;
+        background: var(--gray-100);
+        border-radius: 6px;
+        color: var(--gray-700);
+        font-size: 12px;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+
+    .tl-log-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px 20px;
+        color: var(--gray-500);
+    }
+</style>
+
+@code {
+    private List<LogEntry> _logs = new();
+    private bool _loading;
+    private bool _autoRefresh;
+    private bool _showPurgeDialog;
+    private LogType _logType = LogType.Application;
+    private LogLevel _logLevel = LogLevel.All;
+    private string? _searchTerm;
+    private PurgeOption _purgeOption = PurgeOption.OlderThan30Days;
+    private DateTime _lastUpdated;
+    private System.Threading.Timer? _refreshTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLogsAsync();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (_autoRefresh)
+        {
+            _refreshTimer = new System.Threading.Timer(async _ => await LoadLogsAsync(), null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+        }
+    }
+
+    public void Dispose()
+    {
+        _refreshTimer?.Dispose();
+    }
+
+    private async Task LoadLogsAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+        try
+        {
+            _logs = await LogService.GetLogsAsync(_logType, _logLevel, _searchTerm);
+            _lastUpdated = DateTime.Now;
+        }
+        catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
+        finally { _loading = false; StateHasChanged(); }
+    }
+
+    private void ToggleAutoRefresh()
+    {
+        _autoRefresh = !_autoRefresh;
+        if (_autoRefresh)
+        {
+            _refreshTimer = new System.Threading.Timer(async _ => await LoadLogsAsync(), null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+            Snackbar.Add("Auto-refresh enabled", Severity.Info);
+        }
+        else
+        {
+            _refreshTimer?.Dispose();
+            Snackbar.Add("Auto-refresh disabled", Severity.Info);
+        }
+    }
+
+    private void ShowPurgeDialog()
+    {
+        _showPurgeDialog = true;
+    }
+
+    private async Task PurgeLogsAsync()
+    {
+        _showPurgeDialog = false;
+        try
+        {
+            var count = await LogService.PurgeLogsAsync(_purgeOption);
+            Snackbar.Add($"Purged {count} log entries", Severity.Success);
+            await LoadLogsAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Purge failed: {ex.Message}", Severity.Error); }
+    }
+
+    private string GetLogLevelClass(string level) => level?.ToLower() switch
+    {
+        "error" => "error",
+        "warning" => "warning",
+        "info" => "info",
+        _ => ""
+    };
+}
+
+public enum LogType
+{
+    Application,
+    Error,
+    All
+}
+
+public enum LogLevel
+{
+    All,
+    Error,
+    Warning,
+    Info
+}
+
+public enum PurgeOption
+{
+    OlderThan30Days,
+    OlderThan7Days,
+    ErrorLogsOnly,
+    AllLogs
+}
+
+public class LogEntry
+{
+    public DateTime Timestamp { get; set; }
+    public string Level { get; set; } = string.Empty;
+    public string Source { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public string? Exception { get; set; }
+}

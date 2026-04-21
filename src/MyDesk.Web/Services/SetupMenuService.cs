@@ -103,6 +103,7 @@ public class SetupMenuService
         new("jobOrderStatus", "Job Order Status", "Job order states", "/admin/job-order-status", "Work", "Workflow status", true),
         new("parameters", "Parameters", "Global settings", "/admin/parameters", "Tune", "System", true),
         new("navMenu", "Navigation Menu", "Side menu visibility", "/admin/nav-menu", "Menu", "System", true),
+        new("logs", "Log Viewer", "View application logs and errors", "/admin/logs", "Description", "System", true),
     };
 
     public static string IconToMudIcon(string icon) => icon switch

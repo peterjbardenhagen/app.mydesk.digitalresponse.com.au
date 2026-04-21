@@ -18,20 +18,20 @@
             <span>Administration</span>
         </div>
         <h1 class="tl-setup-hero-title">System Setup</h1>
-        <p class="tl-setup-hero-subtitle">Configure your workspace, manage reference data, and access brand resources</p>
+        <p class="tl-setup-hero-subtitle">Configure your workspace, manage reference data, and access system tools</p>
         <div class="tl-setup-hero-actions">
-            <MudButton Variant="Variant.Filled" 
+            <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
-                       StartIcon="@Icons.Material.Rounded.Refresh" 
+                       StartIcon="@Icons.Material.Rounded.Refresh"
                        OnClick="RefreshStatsAsync"
                        Size="Size.Small"
                        Class="tl-setup-hero-btn">
                 Refresh Stats
             </MudButton>
-            <a href="https://www.techlight.com.au" target="_blank" class="tl-setup-hero-link">
-                <MudIcon Icon="@Icons.Material.Rounded.Language" Size="Size.Small" />
-                <span>Techlight Website</span>
-                <MudIcon Icon="@Icons.Material.Rounded.OpenInNew" Size="Size.Small" Style="opacity: 0.7;" />
+            <a href="/admin/logs" class="tl-setup-hero-link">
+                <MudIcon Icon="@Icons.Material.Rounded.Description" Size="Size.Small" />
+                <span>Log Viewer</span>
+                <MudIcon Icon="@Icons.Material.Rounded.ArrowForward" Size="Size.Small" Style="opacity: 0.7;" />
             </a>
         </div>
     </div>
@@ -70,6 +70,34 @@
     </div>
 </div>
 
+@* ── Search Bar ─────────────────────────────────────────────────────────────── *@
+<MudPaper Class="tl-setup-search-bar" Elevation="0">
+    <MudTextField @bind-Value="_searchTerm"
+                  Placeholder="Search setup items..."
+                  Variant="Variant.Outlined"
+                  Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Rounded.Search"
+                  Class="tl-setup-search-field"
+                  Clearable="true"
+                  OnClear="@(() => _searchTerm = "")" />
+</MudPaper>
+
+@* ── Quick Actions ───────────────────────────────────────────────────────────── *@
+<div class="tl-setup-quick-actions">
+    <MudButton Href="/admin/users" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
+        <MudIcon Icon="@Icons.Material.Rounded.People" Size="Size.Small" />
+        Manage Users
+    </MudButton>
+    <MudButton Href="/admin/logs" Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small">
+        <MudIcon Icon="@Icons.Material.Rounded.Description" Size="Size.Small" />
+        View Logs
+    </MudButton>
+    <MudButton Href="/admin/parameters" Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small">
+        <MudIcon Icon="@Icons.Material.Rounded.Tune" Size="Size.Small" />
+        Parameters
+    </MudButton>
+</div>
+
 @* ── Setup Configuration ─────────────────────────────────────────────────────── *@
 <MudPaper Class="tl-setup-section" Elevation="0">
     <div class="tl-setup-section-header">
@@ -85,6 +113,15 @@
     @foreach (var groupName in _visibleGroups)
     {
         var groupTiles = _tiles.Where(t => t.Group == groupName).ToList();
+        // Filter by search term if provided
+        if (!string.IsNullOrWhiteSpace(_searchTerm))
+        {
+            groupTiles = groupTiles.Where(t =>
+                t.Label.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                t.Description.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                t.Group.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+        }
         if (!groupTiles.Any()) continue;
         
         <div class="tl-setup-group">
@@ -327,7 +364,28 @@
         50% { opacity: 0.8; }
     }
     
-    /* ── Section Header ─────────────────────────────────────────────────────────── */
+    /* ── Search Bar ───────────────────────────────────────────────────────────── */
+    .tl-setup-search-bar {
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: 16px;
+        padding: 16px 24px;
+        margin-bottom: 24px;
+    }
+
+    .tl-setup-search-field {
+        width: 100%;
+    }
+
+    /* ── Quick Actions ──────────────────────────────────────────────────────────── */
+    .tl-setup-quick-actions {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+    }
+
+    /* ── Section Header ──────────────────────────────────────────────────────────── */
     .tl-setup-section {
         background: white;
         border: 1px solid var(--gray-200);
@@ -619,6 +677,7 @@
     private (string Table, int RowCount) _largest = ("—", 0);
     private List<SetupMenuService.SetupTile> _tiles = new();
     private List<string> _visibleGroups = new();
+    private string? _searchTerm;
 
     protected override async Task OnInitializedAsync()
     {

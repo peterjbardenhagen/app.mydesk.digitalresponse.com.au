@@ -125,6 +125,7 @@ builder.Services.AddScoped<NoticeboardService>();
 builder.Services.AddScoped<SearchService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<TransporterService>();
+builder.Services.AddScoped<LogService>();
 
 builder.Services.AddHttpClient();
 builder.Services.Configure<AzureAIOptions>(builder.Configuration.GetSection(AzureAIOptions.Section));
