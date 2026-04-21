@@ -32,6 +32,41 @@ public class Quote
     public string? DivisionName { get; set; }
 }
 
+// ============================================================================
+// Log Viewer Models
+// ============================================================================
+public enum LogType
+{
+    Application,
+    Error,
+    All
+}
+
+public enum LogLevel
+{
+    All,
+    Error,
+    Warning,
+    Info
+}
+
+public enum PurgeOption
+{
+    OlderThan30Days,
+    OlderThan7Days,
+    ErrorLogsOnly,
+    AllLogs
+}
+
+public class LogEntry
+{
+    public DateTime Timestamp { get; set; }
+    public string Level { get; set; } = string.Empty;
+    public string Source { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public string? Exception { get; set; }
+}
+
 public class QuoteLineItem
 {
     public int QuoteItemId { get; set; }

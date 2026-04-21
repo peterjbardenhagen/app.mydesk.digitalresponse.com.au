@@ -1,5 +1,6 @@
 @page "/admin/logs"
 @attribute [Authorize]
+@using MudBlazor
 @inject LogService LogService
 @inject ISnackbar Snackbar
 
@@ -41,12 +42,12 @@
     <div class="d-flex gap-2 mt-3">
         <MudButton OnClick="LoadLogsAsync" Color="Color.Primary" Variant="Variant.Filled"
                    StartIcon="@Icons.Material.Rounded.Refresh" Size="Size.Small">Refresh</MudButton>
-        <MudButton OnClick="ToggleAutoRefresh" Variant="Variant.Outlined" Size="Small"
+        <MudButton OnClick="ToggleAutoRefresh" Variant="Variant.Outlined" Size="Size.Small"
                    Color="@(_autoRefresh ? Color.Primary : Color.Default)">
-            <MudIcon Icon="@(_autoRefresh ? Icons.Material.Rounded.Pause : Icons.Material.Rounded.Play)" Size="Size.Small" />
+            <MudIcon Icon="@(_autoRefresh ? Icons.Material.Rounded.Pause : Icons.Material.Rounded.PlayArrow)" Size="Size.Small" />
             @(_autoRefresh ? "Pause Auto-Refresh" : "Auto-Refresh")
         </MudButton>
-        <MudButton OnClick="ShowPurgeDialog" Color="Color.Error" Variant="Variant.Outlined" Size="Small"
+        <MudButton OnClick="ShowPurgeDialog" Color="Color.Error" Variant="Variant.Outlined" Size="Size.Small"
                    StartIcon="@Icons.Material.Rounded.Delete">Purge Logs</MudButton>
     </div>
 </MudPaper>
@@ -94,17 +95,19 @@
 </MudPaper>
 
 @* Purge Dialog *@
-<MudDialog @bind-IsOpen="_showPurgeDialog">
-    <DialogTitle>Purge Logs</DialogTitle>
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Purge Logs</MudText>
+    </TitleContent>
     <DialogContent>
         <MudText Typo="Typo.body2" Class="mb-4">
             Select the type of logs you want to purge. This action cannot be undone.
         </MudText>
         <MudRadioGroup T="PurgeOption" @bind-Value="_purgeOption">
-            <MudRadioItem T="PurgeOption" Value="PurgeOption.OlderThan30Days">Logs older than 30 days</MudRadioItem>
-            <MudRadioItem T="PurgeOption" Value="PurgeOption.OlderThan7Days">Logs older than 7 days</MudRadioItem>
-            <MudRadioItem T="PurgeOption" Value="PurgeOption.ErrorLogsOnly">Error logs only</MudRadioItem>
-            <MudRadioItem T="PurgeOption" Value="PurgeOption.AllLogs">All logs (use with caution)</MudRadioItem>
+            <MudRadioItem Value="@PurgeOption.OlderThan30Days" Label="Logs older than 30 days" />
+            <MudRadioItem Value="@PurgeOption.OlderThan7Days" Label="Logs older than 7 days" />
+            <MudRadioItem Value="@PurgeOption.ErrorLogsOnly" Label="Error logs only" />
+            <MudRadioItem Value="@PurgeOption.AllLogs" Label="All logs (use with caution)" />
         </MudRadioGroup>
     </DialogContent>
     <DialogActions>
@@ -313,36 +316,4 @@
         "info" => "info",
         _ => ""
     };
-}
-
-public enum LogType
-{
-    Application,
-    Error,
-    All
-}
-
-public enum LogLevel
-{
-    All,
-    Error,
-    Warning,
-    Info
-}
-
-public enum PurgeOption
-{
-    OlderThan30Days,
-    OlderThan7Days,
-    ErrorLogsOnly,
-    AllLogs
-}
-
-public class LogEntry
-{
-    public DateTime Timestamp { get; set; }
-    public string Level { get; set; } = string.Empty;
-    public string Source { get; set; } = string.Empty;
-    public string Message { get; set; } = string.Empty;
-    public string? Exception { get; set; }
 }
