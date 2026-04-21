@@ -20,15 +20,16 @@ public class QuoteService
         //   QuoteStatus.QuoteStatus provides the human-readable status label.
         var sql = @"
             SELECT q.*,
-                   ISNULL(co.Company, '')         AS CompanyName,
+                   COALESCE(NULLIF(co.Company, ''), NULLIF(cco.Company, ''), '') AS CompanyName,
                    ISNULL(u.Name, '')             AS Originator,
                    ISNULL(qs.QuoteStatus, '')     AS QuoteStatusName
             FROM Quotes q
             LEFT JOIN Contacts    c  ON q.ContactId     = c.ContactId
-            LEFT JOIN Companies   co ON c.CompanyId     = co.CompanyId
+            LEFT JOIN Companies   co ON q.CompanyId     = co.CompanyId
+            LEFT JOIN Companies   cco ON c.CompanyId    = cco.CompanyId
             LEFT JOIN Users       u  ON q.Code          = u.Code
             LEFT JOIN QuoteStatus qs ON q.QuoteStatusId = qs.QuoteStatusId
-            WHERE (@c IS NULL OR co.Company LIKE '%' + @c + '%')
+            WHERE (@c IS NULL OR co.Company LIKE '%' + @c + '%' OR cco.Company LIKE '%' + @c + '%')
               AND (@k IS NULL OR q.Reference LIKE '%' + @k + '%' OR q.CustomerNotes LIKE '%' + @k + '%')
               AND (@f IS NULL OR q.QuoteDate >= @f)
               AND (@t IS NULL OR q.QuoteDate <= @t)
@@ -50,12 +51,13 @@ public class QuoteService
     {
         var dt = await _db.QueryAsync(@"
             SELECT q.*,
-                   ISNULL(co.Company, '')         AS CompanyName,
+                   COALESCE(NULLIF(co.Company, ''), NULLIF(cco.Company, ''), '') AS CompanyName,
                    ISNULL(u.Name, '')             AS Originator,
                    ISNULL(qs.QuoteStatus, '')     AS QuoteStatusName
             FROM Quotes q
             LEFT JOIN Contacts    c  ON q.ContactId     = c.ContactId
-            LEFT JOIN Companies   co ON c.CompanyId     = co.CompanyId
+            LEFT JOIN Companies   co ON q.CompanyId     = co.CompanyId
+            LEFT JOIN Companies   cco ON c.CompanyId    = cco.CompanyId
             LEFT JOIN Users       u  ON q.Code          = u.Code
             LEFT JOIN QuoteStatus qs ON q.QuoteStatusId = qs.QuoteStatusId
             WHERE q.Qid = @id", new() { ["id"] = id });

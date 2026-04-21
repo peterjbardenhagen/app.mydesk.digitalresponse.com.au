@@ -30,7 +30,7 @@ public class InvoiceService
         ISNULL(i.Qid, 0)           AS Qid,
         ISNULL(i.CompanyId, 0)     AS CompanyId,
         NULL                       AS ContactId,
-        ISNULL(co.Company, '')     AS CCompany,
+        COALESCE(NULLIF(co.Company, ''), NULLIF(i.InvCompany, ''), NULLIF(i.DelCompany, ''), '') AS CCompany,
         ISNULL(i.InvCompany,'')    AS InvCompany,
         ISNULL(i.DelCompany,'')    AS DelCompany,
         ISNULL(i.InvAddress,'')    AS InvAddress,
@@ -61,7 +61,7 @@ public class InvoiceService
         else if (statusId > 0)    { sql += " AND i.InvoiceStatusId = @Sid"; p["Sid"] = statusId; }
         if (dateFrom.HasValue)    { sql += " AND i.InvoiceDate >= @F"; p["F"] = dateFrom.Value; }
         if (dateTo.HasValue)      { sql += " AND i.InvoiceDate <= @T"; p["T"] = dateTo.Value; }
-        if (!string.IsNullOrEmpty(customer))       { sql += " AND (co.Company LIKE @C OR i.CCompany LIKE @C)"; p["C"] = $"%{customer}%"; }
+        if (!string.IsNullOrEmpty(customer))       { sql += " AND (co.Company LIKE @C OR i.InvCompany LIKE @C OR i.DelCompany LIKE @C)"; p["C"] = $"%{customer}%"; }
         if (!string.IsNullOrEmpty(originatorCode)) { sql += " AND i.Code = @OC"; p["OC"] = originatorCode; }
         if (divisionId.HasValue)  { sql += " AND i.DivisionId = @DivId"; p["DivId"] = divisionId.Value; }
 
@@ -239,7 +239,7 @@ public class InvoiceService
         var dt = await _db.QueryAsync(@"
             SELECT i.InvoiceId, CAST(i.InvoiceId AS NVARCHAR(20)) AS InvoiceNum,
                    i.InvoiceDate,
-                   ISNULL(co.Company, ISNULL(i.CCompany,'')) AS Company,
+                   COALESCE(NULLIF(co.Company, ''), NULLIF(i.InvCompany, ''), NULLIF(i.DelCompany, ''), '') AS Company,
                    '' AS FirstName,
                    '' AS LastName,
                    ISNULL(i.NettPriceTotal,0) AS PriceExGST
@@ -314,8 +314,12 @@ public class InvoiceService
         ["Qid"]            = inv.Qid,
         ["CompanyId"]      = inv.CompanyId == 0 ? 142 : inv.CompanyId,
         ["ContactId"]      = (object?)inv.ContactId ?? DBNull.Value,
-        ["InvCompany"]     = inv.InvCompany,
-        ["DelCompany"]     = inv.DelCompany,
+        ["InvCompany"]     = string.IsNullOrWhiteSpace(inv.InvCompany) ? inv.CCompany : inv.InvCompany,
+        ["DelCompany"]     = string.IsNullOrWhiteSpace(inv.DelCompany)
+            ? (string.IsNullOrWhiteSpace(inv.CCompany)
+                ? (string.IsNullOrWhiteSpace(inv.InvCompany) ? DBNull.Value : inv.InvCompany)
+                : inv.CCompany)
+            : inv.DelCompany,
         ["InvAddress"]     = inv.InvAddress,
         ["DelAddress"]     = inv.DelAddress,
         ["CustomerPO"]     = (object?)inv.CustomerPO ?? DBNull.Value,

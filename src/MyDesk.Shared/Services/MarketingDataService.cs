@@ -378,7 +378,7 @@ public class MarketingDataService
         {
             new EmailCampaign
             {
-                Id = 1,
+                Id = "1",
                 Name = "Q1 Champion Nurture",
                 Subject = "Your exclusive early access to new arrivals",
                 Audience = "Champions",
@@ -391,7 +391,7 @@ public class MarketingDataService
             },
             new EmailCampaign
             {
-                Id = 2,
+                Id = "2",
                 Name = "At-Risk Reactivation",
                 Subject = "We miss you — here's 10% off your next order",
                 Audience = "At-Risk",
@@ -401,7 +401,7 @@ public class MarketingDataService
             },
             new EmailCampaign
             {
-                Id = 3,
+                Id = "3",
                 Name = "New Product Launch",
                 Subject = "Introducing the 2026 Collection",
                 Audience = "All Customers",
@@ -432,14 +432,14 @@ public class MarketingDataService
         await Task.Delay(100); // Simulate async work
     }
 
-    public async Task SendCampaignAsync(int campaignId)
+    public async Task SendCampaignAsync(string campaignId)
     {
         // TODO: Implement actual send logic
         _logger.LogInformation("Sending campaign: {Id}", campaignId);
         await Task.Delay(500); // Simulate async work
     }
 
-    public async Task CancelCampaignAsync(int campaignId)
+    public async Task CancelCampaignAsync(string campaignId)
     {
         // TODO: Update status in database
         _logger.LogInformation("Cancelling campaign: {Id}", campaignId);

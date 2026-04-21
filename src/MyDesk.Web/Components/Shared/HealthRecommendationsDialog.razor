@@ -1,0 +1,201 @@
+@inject DashboardService DashboardService
+@inject IDialogService DialogService
+
+<MudDialog Class="tl-health-dialog">
+    <DialogContent Class="pa-0">
+        @if (_recommendations == null)
+        {
+            <div class="tl-dialog-loading">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+            </div>
+        }
+        else if (!_recommendations.Any())
+        {
+            <div class="tl-dialog-empty">
+                <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Large" />
+                <MudText Typo="Typo.h6" Class="mt-4">No Recommendations</MudText>
+                <MudText Typo="Typo.body2" Class="text-center">Your business is running smoothly!</MudText>
+            </div>
+        }
+        else
+        {
+            <div class="tl-dialog-header">
+                <MudIcon Icon="@Icons.Material.Rounded.HealthAndSafety" Size="Size.Large" Color="Color.Primary" />
+                <div>
+                    <MudText Typo="Typo.h6">Business Health Recommendations</MudText>
+                    <MudText Typo="Typo.body2">@_recommendations.Count action(s) to improve your score</MudText>
+                </div>
+            </div>
+            <div class="tl-dialog-content">
+                @foreach (var rec in _recommendations)
+                {
+                    <div class="tl-rec-item @rec.Priority">
+                        <div class="tl-rec-icon">
+                            <MudIcon Icon="@GetRecIcon(rec.Priority)" Size="Size.Medium" />
+                        </div>
+                        <div class="tl-rec-body">
+                            <div class="tl-rec-title">@rec.Title</div>
+                            <div class="tl-rec-desc">@rec.Description</div>
+                            @if (!string.IsNullOrEmpty(rec.ExpectedImpact))
+                            {
+                                <div class="tl-rec-impact">Expected impact: @rec.ExpectedImpact</div>
+                            }
+                        </div>
+                        @if (!string.IsNullOrEmpty(rec.ActionLink))
+                        {
+                            <MudButton Href="@rec.ActionLink" 
+                                       Variant="Variant.Text" 
+                                       Color="Color.Primary"
+                                       Size="Size.Small">
+                                <MudIcon Icon="@Icons.Material.Rounded.ArrowForward" Size="Size.Small" />
+                            </MudButton>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .tl-health-dialog {
+        max-width: 600px;
+    }
+    
+    .tl-dialog-loading,
+    .tl-dialog-empty {
+        padding: 60px 40px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+    }
+    
+    .tl-dialog-header {
+        padding: 24px 24px 16px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        border-bottom: 1px solid var(--gray-200);
+        background: linear-gradient(135deg, var(--gray-50) 0%, white 100%);
+    }
+    
+    .tl-dialog-content {
+        padding: 16px 24px 24px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .tl-rec-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 16px;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        border: 1px solid var(--gray-200);
+        background: white;
+        transition: all 200ms ease;
+    }
+    
+    .tl-rec-item:hover {
+        border-color: var(--tl-primary-300);
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .tl-rec-item.critical {
+        border-left: 4px solid var(--error-500);
+    }
+    
+    .tl-rec-item.high {
+        border-left: 4px solid var(--warning-500);
+    }
+    
+    .tl-rec-item.medium {
+        border-left: 4px solid var(--info-500);
+    }
+    
+    .tl-rec-item.low {
+        border-left: 4px solid var(--success-500);
+    }
+    
+    .tl-rec-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    
+    .tl-rec-item.critical .tl-rec-icon {
+        background: var(--error-50);
+        color: var(--error-500);
+    }
+    
+    .tl-rec-item.high .tl-rec-icon {
+        background: var(--warning-50);
+        color: var(--warning-500);
+    }
+    
+    .tl-rec-item.medium .tl-rec-icon {
+        background: var(--info-50);
+        color: var(--info-500);
+    }
+    
+    .tl-rec-item.low .tl-rec-icon {
+        background: var(--success-50);
+        color: var(--success-500);
+    }
+    
+    .tl-rec-body {
+        flex: 1;
+    }
+    
+    .tl-rec-title {
+        font-weight: 600;
+        color: var(--gray-900);
+        margin-bottom: 4px;
+    }
+    
+    .tl-rec-desc {
+        font-size: 14px;
+        color: var(--gray-600);
+        margin-bottom: 8px;
+    }
+    
+    .tl-rec-impact {
+        font-size: 12px;
+        color: var(--gray-500);
+        font-style: italic;
+    }
+</style>
+
+@code {
+    private List<BusinessRecommendation>? _recommendations;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var metrics = await DashboardService.GetMetricsAsync();
+        _recommendations = metrics?.Recommendations?.ToList() ?? new List<BusinessRecommendation>();
+    }
+
+    private void Cancel()
+    {
+        DialogService.Close(DialogInstance);
+    }
+
+    private string GetRecIcon(string priority) => priority switch
+    {
+        "critical" => Icons.Material.Rounded.Error,
+        "high" => Icons.Material.Rounded.Warning,
+        "medium" => Icons.Material.Rounded.Info,
+        "low" => Icons.Material.Rounded.CheckCircle,
+        _ => Icons.Material.Rounded.Lightbulb
+    };
+}

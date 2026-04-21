@@ -35,6 +35,18 @@ public class MarketingFile
     };
 }
 
+public class BrandAssetsInfo
+{
+    public bool LogoExists { get; set; }
+    public string LogoPath { get; set; } = "";
+    public bool GuidelinesExists { get; set; }
+    public string GuidelinesPath { get; set; } = "";
+    public bool ProfileExists { get; set; }
+    public string ProfilePath { get; set; } = "";
+    public bool SignatureExists { get; set; }
+    public string SignaturePath { get; set; } = "";
+}
+
 /// <summary>
 /// Curates Techlight's marketing assets (logos, brand guidelines, company profile).
 /// Files are served through a secure endpoint — not exposed directly.
@@ -193,6 +205,29 @@ public class MarketingService
         var asset = GetAsset(assetKey);
         return asset?.Files.FirstOrDefault(f =>
             string.Equals(f.Label, label, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Returns brand asset file existence info for the BrandAssets page
+    /// </summary>
+    public Task<BrandAssetsInfo> GetBrandAssetsAsync()
+    {
+        var brand = Path.Combine(_opts.AssetsRoot, "images", "brand");
+        var profilesRoot = _opts.CompanyProfilesRoot;
+
+        var info = new BrandAssetsInfo
+        {
+            LogoExists = Directory.Exists(brand) && File.Exists(Path.Combine(brand, "techlight-logo-full-dark.svg")),
+            LogoPath = "/images/brand/techlight-logo-full-dark.svg",
+            GuidelinesExists = File.Exists(Path.Combine(_opts.AssetsRoot, "techlight-branding.html")),
+            GuidelinesPath = "/techlight-branding.html",
+            ProfileExists = !string.IsNullOrEmpty(profilesRoot) && File.Exists(Path.Combine(profilesRoot, "Company Profile _ Techlight _ PDF.pdf")),
+            ProfilePath = "/api/marketing/download?type=company-profile",
+            SignatureExists = File.Exists(Path.Combine(_opts.AssetsRoot, "email-signature-01.html")),
+            SignaturePath = "/email-signature-01.html"
+        };
+
+        return Task.FromResult(info);
     }
 
     private MarketingAsset BuildAsset(

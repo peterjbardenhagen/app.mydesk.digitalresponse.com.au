@@ -61,12 +61,13 @@ public class EmailService
         {
             var dt = await _db.QueryAsync(@"
                 SELECT ISNULL(q.Reference,'')      AS Reference,
-                       ISNULL(c.CCompany,'')        AS Company,
+                       ISNULL(co.Company,'')       AS Company,
                        ISNULL(c.FirstName,'')      AS FirstName,
                        ISNULL(u.Name,'')           AS OriginatorName,
                        ISNULL(u.Email,'')          AS OriginatorEmail
                 FROM Quotes q
                 LEFT JOIN Contacts c ON c.ContactId = q.ContactId
+                LEFT JOIN Companies co ON co.CompanyId = q.CompanyId
                 LEFT JOIN Users u    ON u.Code = q.Code
                 WHERE q.Qid = @Id",
                 new() { ["Id"] = quoteId });
@@ -111,12 +112,13 @@ public class EmailService
         {
             var dt = await _db.QueryAsync(@"
                 SELECT CAST(i.InvoiceId AS NVARCHAR(20)) AS InvoiceNumber,
-                       ISNULL(c.CCompany,'')        AS Company,
+                       COALESCE(NULLIF(co.Company, ''), NULLIF(i.InvCompany, ''), NULLIF(i.DelCompany, ''), '') AS Company,
                        ISNULL(c.FirstName,'')      AS FirstName,
                        ISNULL(u.Name,'')           AS OriginatorName,
                        ISNULL(u.Email,'')          AS OriginatorEmail
                 FROM Invoices i
                 LEFT JOIN Contacts c ON c.ContactId = i.ContactId
+                LEFT JOIN Companies co ON co.CompanyId = i.CompanyId
                 LEFT JOIN Users u    ON u.Code = i.Code
                 WHERE i.InvoiceId = @Id",
                 new() { ["Id"] = invoiceId });
@@ -165,11 +167,12 @@ public class EmailService
         {
             var dt = await _db.QueryAsync(@"
                 SELECT CAST(p.POid AS NVARCHAR(20)) AS PONumber,
-                       ISNULL(c.CCompany,'')               AS SupplierName,
+                       COALESCE(NULLIF(s.Company,''), NULLIF(LTRIM(RTRIM(CONCAT(ISNULL(c.FirstName,''), ' ', ISNULL(c.Surname,'')))), ''), '') AS SupplierName,
                        ISNULL(u.Name,'')                   AS OriginatorName,
                        ISNULL(u.Email,'')                  AS OriginatorEmail
                 FROM PurchaseOrders p
                 LEFT JOIN Contacts c ON c.ContactId = p.ContactId
+                LEFT JOIN Companies s ON s.CompanyId = c.CompanyId
                 LEFT JOIN Users u    ON u.Code = p.Code
                 WHERE p.POid = @Id",
                 new() { ["Id"] = poId });

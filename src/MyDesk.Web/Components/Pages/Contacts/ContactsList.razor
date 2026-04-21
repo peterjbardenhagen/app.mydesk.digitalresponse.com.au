@@ -5,9 +5,15 @@
 
 <PageTitle>Contacts - Techlight MyDesk</PageTitle>
 
-<div class="d-flex justify-space-between align-center mb-4">
-    <MudText Typo="Typo.h4" Class="font-weight-bold">Contacts</MudText>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <span>Contacts</span>
+        </div>
+        <h1>Contacts</h1>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
                OnClick="@(() => Nav.NavigateTo("/contacts/create"))">New Contact</MudButton>
 </div>
 

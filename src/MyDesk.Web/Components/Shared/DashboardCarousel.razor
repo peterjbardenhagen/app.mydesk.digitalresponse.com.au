@@ -14,21 +14,30 @@
         </div>
         
         <div class="tl-carousel-controls">
-            <MudButtonGroup Variant="Variant.Outlined" Size="Size.Small">
-                <MudButton OnClick="PreviousView" StartIcon="@Icons.Material.Rounded.ChevronLeft">
-                    Prev
+            <div class="tl-carousel-nav-buttons">
+                <MudButton OnClick="PreviousView" 
+                           Variant="Variant.Filled" 
+                           Color="Color.Primary"
+                           Size="Size.Small"
+                           Class="tl-nav-btn">
+                    <MudIcon Icon="@Icons.Material.Rounded.ChevronLeft" Size="Size.Small" />
                 </MudButton>
-                <MudButton OnClick="NextView" EndIcon="@Icons.Material.Rounded.ChevronRight">
-                    Next
+                <MudButton OnClick="NextView" 
+                           Variant="Variant.Filled" 
+                           Color="Color.Primary"
+                           Size="Size.Small"
+                           Class="tl-nav-btn">
+                    <MudIcon Icon="@Icons.Material.Rounded.ChevronRight" Size="Size.Small" />
                 </MudButton>
-            </MudButtonGroup>
+            </div>
             
             <div class="tl-carousel-indicators">
                 @for (int i = 0; i < Views.Count; i++)
                 {
                     var index = i;
                     <button class="tl-carousel-dot @(i == CurrentIndex ? "active" : "")" 
-                            @onclick="() => GoToView(index)"></button>
+                            @onclick="() => GoToView(index)"
+                            title="@Views[index].Title"></button>
                 }
             </div>
         </div>
@@ -55,11 +64,11 @@
             case "comparative":
                 @ComparativeView
                 break;
+            case "customer-supplier-intel":
+                @CustomerSupplierIntelligenceView
+                break;
             case "targets":
                 <TargetsView />
-                break;
-            case "customer-intel":
-                <CustomerIntelligenceView />
                 break;
         }
     </div>
@@ -73,6 +82,7 @@
     private int CurrentIndex { get; set; } = 0;
 
     private List<CarouselView> Views { get; set; } = new();
+    private CustomerSupplierView _customerSupplierView = CustomerSupplierView.Customers;
 
     private CarouselView CurrentView => Views[CurrentIndex];
 
@@ -90,10 +100,10 @@
             },
             new()
             {
-                Id = "customer-intel",
-                Title = "Customer Intelligence",
-                Subtitle = "Best, worst, at-risk & growing customers",
-                Icon = Icons.Material.Rounded.Diversity3,
+                Id = "customer-supplier-intel",
+                Title = "Customer & Supplier Intelligence",
+                Subtitle = "Best, worst, at-risk & growing customers and suppliers",
+                Icon = Icons.Material.Rounded.Analytics,
                 DirectorOnly = true
             },
             new()
@@ -172,6 +182,12 @@
         public string Subtitle { get; set; } = "";
         public string Icon { get; set; } = "";
         public bool DirectorOnly { get; set; }
+    }
+
+    private enum CustomerSupplierView
+    {
+        Customers,
+        Suppliers
     }
 
     private RenderFragment RevenueTrendsView => __builder => {
@@ -259,7 +275,7 @@
                     </div>
                     <div class="tl-profit-metric">
                         <div class="tl-profit-metric-icon success">
-                            <MudIcon Icon="@Icons.Material.Rounded.SyncAlt" Size="Size.Small" />
+                            <MudIcon Icon="@Icons.Material.Rounded.Percent" Size="Size.Small" />
                         </div>
                         <div class="tl-profit-metric-info">
                             <div class="tl-profit-metric-value">@Metrics.QuoteToInvoiceConversionRate.ToString("N1")%</div>
@@ -467,6 +483,205 @@
     </div>
         }
     };
+
+    private RenderFragment CustomerSupplierIntelligenceView => __builder => {
+        <div class="tl-view-content">
+            <div class="tl-cs-tabs">
+                <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary">
+                    <MudButton @onclick="@(() => _customerSupplierView = CustomerSupplierView.Customers)" 
+                               Variant="@(_customerSupplierView == CustomerSupplierView.Customers ? Variant.Filled : Variant.Outlined)">
+                        <MudIcon Icon="@Icons.Material.Rounded.People" Size="Size.Small" Class="mr-2" />
+                        Customers
+                    </MudButton>
+                    <MudButton @onclick="@(() => _customerSupplierView = CustomerSupplierView.Suppliers)" 
+                               Variant="@(_customerSupplierView == CustomerSupplierView.Suppliers ? Variant.Filled : Variant.Outlined)">
+                        <MudIcon Icon="@Icons.Material.Rounded.LocalShipping" Size="Size.Small" Class="mr-2" />
+                        Suppliers
+                    </MudButton>
+                </MudButtonGroup>
+            </div>
+
+            @if (_customerSupplierView == CustomerSupplierView.Customers)
+            {
+                <MudGrid Spacing="3" Class="mt-4">
+                    <MudItem xs="12" md="6">
+                        <MudPaper Class="pa-4" Elevation="0" Style="background: linear-gradient(135deg, var(--success-50) 0%, white 100%); border-radius: 12px; border: 1px solid var(--success-200);">
+                            <div class="tl-cs-header success">
+                                <MudIcon Icon="@Icons.Material.Rounded.TrendingUp" Size="Size.Medium" />
+                                <div>
+                                    <MudText Typo="Typo.h6">Best Customers</MudText>
+                                    <MudText Typo="Typo.body2">Top 5 by revenue and margin</MudText>
+                                </div>
+                            </div>
+                            <MudTable Items="@GetBestCustomers()" Dense="true" Hover="true" Elevation="0" Class="mt-3">
+                                <HeaderContent>
+                                    <MudTh>Customer</MudTh>
+                                    <MudTh Style="text-align: right;">Revenue</MudTh>
+                                    <MudTh Style="text-align: right;">Margin</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd>@context.Name</MudTd>
+                                    <MudTd Style="text-align: right;">@Fmt(context.Revenue)</MudTd>
+                                    <MudTd Style="text-align: right;">@context.Margin.ToString("N1")%</MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudPaper Class="pa-4" Elevation="0" Style="background: linear-gradient(135deg, var(--error-50) 0%, white 100%); border-radius: 12px; border: 1px solid var(--error-200);">
+                            <div class="tl-cs-header error">
+                                <MudIcon Icon="@Icons.Material.Rounded.TrendingDown" Size="Size.Medium" />
+                                <div>
+                                    <MudText Typo="Typo.h6">At-Risk Customers</MudText>
+                                    <MudText Typo="Typo.body2">Declining revenue or low activity</MudText>
+                                </div>
+                            </div>
+                            <MudTable Items="@GetAtRiskCustomers()" Dense="true" Hover="true" Elevation="0" Class="mt-3">
+                                <HeaderContent>
+                                    <MudTh>Customer</MudTh>
+                                    <MudTh Style="text-align: right;">Revenue</MudTh>
+                                    <MudTh Style="text-align: right;">Trend</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd>@context.Name</MudTd>
+                                    <MudTd Style="text-align: right;">@Fmt(context.Revenue)</MudTd>
+                                    <MudTd Style="text-align: right;">
+                                        <MudIcon Icon="@GetTrendIcon(context.Trend)" 
+                                                 Color="@GetTrendColor(context.Trend)" 
+                                                 Size="Size.Small" />
+                                    </MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            }
+            else
+            {
+                <MudGrid Spacing="3" Class="mt-4">
+                    <MudItem xs="12" md="6">
+                        <MudPaper Class="pa-4" Elevation="0" Style="background: linear-gradient(135deg, var(--success-50) 0%, white 100%); border-radius: 12px; border: 1px solid var(--success-200);">
+                            <div class="tl-cs-header success">
+                                <MudIcon Icon="@Icons.Material.Rounded.LocalShipping" Size="Size.Medium" />
+                                <div>
+                                    <MudText Typo="Typo.h6">Best Suppliers</MudText>
+                                    <MudText Typo="Typo.body2">Top 5 by volume and reliability</MudText>
+                                </div>
+                            </div>
+                            <MudTable Items="@GetBestSuppliers()" Dense="true" Hover="true" Elevation="0" Class="mt-3">
+                                <HeaderContent>
+                                    <MudTh>Supplier</MudTh>
+                                    <MudTh Style="text-align: right;">Volume</MudTh>
+                                    <MudTh Style="text-align: right;">On-Time</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd>@context.Name</MudTd>
+                                    <MudTd Style="text-align: right;">@Fmt(context.Volume)</MudTd>
+                                    <MudTd Style="text-align: right;">@context.OnTimeRate.ToString("N0")%</MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudPaper Class="pa-4" Elevation="0" Style="background: linear-gradient(135deg, var(--error-50) 0%, white 100%); border-radius: 12px; border: 1px solid var(--error-200);">
+                            <div class="tl-cs-header error">
+                                <MudIcon Icon="@Icons.Material.Rounded.Warning" Size="Size.Medium" />
+                                <div>
+                                    <MudText Typo="Typo.h6">Problem Suppliers</MudText>
+                                    <MudText Typo="Typo.body2">Late deliveries or quality issues</MudText>
+                                </div>
+                            </div>
+                            <MudTable Items="@GetProblemSuppliers()" Dense="true" Hover="true" Elevation="0" Class="mt-3">
+                                <HeaderContent>
+                                    <MudTh>Supplier</MudTh>
+                                    <MudTh Style="text-align: right;">Issues</MudTh>
+                                    <MudTh Style="text-align: right;">Status</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd>@context.Name</MudTd>
+                                    <MudTd Style="text-align: right;">@context.IssueCount</MudTd>
+                                    <MudTd Style="text-align: right;">
+                                        <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)" Variant="Variant.Filled">@context.Status</MudChip>
+                                    </MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            }
+        </div>
+    };
+
+    private class CustomerMetric
+    {
+        public string Name { get; set; } = "";
+        public decimal Revenue { get; set; }
+        public decimal Margin { get; set; }
+        public string Trend { get; set; } = "";
+    }
+
+    private class SupplierMetric
+    {
+        public string Name { get; set; } = "";
+        public decimal Volume { get; set; }
+        public decimal OnTimeRate { get; set; }
+        public int IssueCount { get; set; }
+        public string Status { get; set; } = "";
+    }
+
+    private List<CustomerMetric> GetBestCustomers()
+    {
+        return new List<CustomerMetric>
+        {
+            new() { Name = "ABC Corp", Revenue = 125000, Margin = 32.5m, Trend = "up" },
+            new() { Name = "XYZ Industries", Revenue = 98000, Margin = 28.3m, Trend = "up" },
+            new() { Name = "Tech Solutions", Revenue = 87500, Margin = 35.1m, Trend = "up" },
+            new() { Name = "Global Services", Revenue = 72000, Margin = 29.8m, Trend = "stable" },
+            new() { Name = "Prime Contractors", Revenue = 65000, Margin = 31.2m, Trend = "up" }
+        };
+    }
+
+    private List<CustomerMetric> GetAtRiskCustomers()
+    {
+        return new List<CustomerMetric>
+        {
+            new() { Name = "Delta Corp", Revenue = 45000, Margin = 18.5m, Trend = "down" },
+            new() { Name = "Omega Systems", Revenue = 32000, Margin = 22.1m, Trend = "down" },
+            new() { Name = "Beta Tech", Revenue = 28000, Margin = 19.8m, Trend = "down" },
+            new() { Name = "Alpha Services", Revenue = 15000, Margin = 15.2m, Trend = "stable" }
+        };
+    }
+
+    private List<SupplierMetric> GetBestSuppliers()
+    {
+        return new List<SupplierMetric>
+        {
+            new() { Name = "ElectroSupply Co", Volume = 185000, OnTimeRate = 98.5m, IssueCount = 0, Status = "Excellent" },
+            new() { Name = "Lighting Pro", Volume = 142000, OnTimeRate = 96.2m, IssueCount = 1, Status = "Good" },
+            new() { Name = "PowerParts Inc", Volume = 98000, OnTimeRate = 94.8m, IssueCount = 2, Status = "Good" },
+            new() { Name = "TechComponents", Volume = 87000, OnTimeRate = 93.5m, IssueCount = 2, Status = "Good" },
+            new() { Name = "Global Lighting", Volume = 65000, OnTimeRate = 92.1m, IssueCount = 3, Status = "Fair" }
+        };
+    }
+
+    private List<SupplierMetric> GetProblemSuppliers()
+    {
+        return new List<SupplierMetric>
+        {
+            new() { Name = "QuickSupply", Volume = 32000, OnTimeRate = 78.5m, IssueCount = 8, Status = "Poor" },
+            new() { Name = "BudgetParts", Volume = 28000, OnTimeRate = 82.1m, IssueCount = 6, Status = "Poor" },
+            new() { Name = "ExpressDeliver", Volume = 22000, OnTimeRate = 85.3m, IssueCount = 5, Status = "Fair" }
+        };
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Excellent" => Color.Success,
+        "Good" => Color.Primary,
+        "Fair" => Color.Warning,
+        "Poor" => Color.Error,
+        _ => Color.Default
+    };
 }
 
 <style>
@@ -520,25 +735,43 @@
         gap: 16px;
     }
     
+    .tl-carousel-nav-buttons {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .tl-nav-btn {
+        min-width: 40px;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border-radius: 10px;
+    }
+    
     .tl-carousel-indicators {
         display: flex;
-        gap: 6px;
+        gap: 8px;
     }
     
     .tl-carousel-dot {
-        width: 8px;
-        height: 8px;
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
-        border: none;
-        background: var(--gray-300);
+        border: 2px solid var(--gray-300);
+        background: transparent;
         cursor: pointer;
         transition: all 200ms ease;
     }
     
+    .tl-carousel-dot:hover {
+        border-color: var(--tl-primary-400);
+    }
+    
     .tl-carousel-dot.active {
         background: var(--tl-primary-500);
-        width: 24px;
-        border-radius: 4px;
+        border-color: var(--tl-primary-500);
+        width: 32px;
+        border-radius: 5px;
     }
     
     .tl-carousel-content {
@@ -824,6 +1057,30 @@
     .tl-target-percent.success { color: var(--success-500); }
     .tl-target-percent.warning { color: var(--warning-500); }
     .tl-target-percent.error { color: var(--error-500); }
+
+    /* Customer/Supplier Tabs */
+    .tl-cs-tabs {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 16px;
+    }
+
+    .tl-cs-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .tl-cs-header.success {
+        color: var(--success-600);
+    }
+
+    .tl-cs-header.error {
+        color: var(--error-600);
+    }
 </style>
 
 @code {

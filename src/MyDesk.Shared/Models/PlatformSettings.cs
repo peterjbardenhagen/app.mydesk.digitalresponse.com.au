@@ -47,6 +47,9 @@ public class PlatformSettings
     public string DefaultDateFormat { get; set; } = "dd/MM/yyyy";
     public string DefaultCountry { get; set; } = "AU";
     
+    // Regional Settings
+    public bool UseEnglishAustralianSpelling { get; set; } = true; // Use "analyse", "colour", etc.
+    
     // SMTP Configuration (per tenant override possible)
     public SmtpSettings Smtp { get; set; } = new();
     

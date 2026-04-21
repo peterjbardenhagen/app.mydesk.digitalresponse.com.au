@@ -35,11 +35,13 @@ public class ReconciliationService
         if (to.HasValue)   { where += " AND i.InvoiceDate <= @To";   p["To"]   = to.Value;   }
 
         var dt = await _db.QueryAsync($@"
-            SELECT i.InvoiceId, CAST(i.InvoiceId AS NVARCHAR(20)) AS InvoiceNum, i.InvoiceDate, i.CCompany AS CustomerName,
+            SELECT i.InvoiceId, CAST(i.InvoiceId AS NVARCHAR(20)) AS InvoiceNum, i.InvoiceDate,
+                   COALESCE(NULLIF(co.Company, ''), NULLIF(i.InvCompany, ''), NULLIF(i.DelCompany, ''), '') AS CustomerName,
                    i.NettPriceTotal, i.GSTTotal,
                    (i.NettPriceTotal + i.GSTTotal) AS TotalIncGST,
                    i.InvoiceStatusId
             FROM Invoices i
+            LEFT JOIN Companies co ON co.CompanyId = i.CompanyId
             {where}
             ORDER BY i.InvoiceDate DESC", p);
 

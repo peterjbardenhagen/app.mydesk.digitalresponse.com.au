@@ -70,9 +70,6 @@
     </div>
 </div>
 
-@* ── Important Files & Links ─────────────────────────────────────────────────── *@
-<ImportantFilesLinks />
-
 @* ── Setup Configuration ─────────────────────────────────────────────────────── *@
 <MudPaper Class="tl-setup-section" Elevation="0">
     <div class="tl-setup-section-header">
@@ -140,7 +137,7 @@
         position: relative;
         padding: 40px 32px;
         margin: -24px -24px 32px -24px;
-        background: linear-gradient(135deg, var(--tl-dark) 0%, var(--tl-dark-2) 50%, var(--tl-dark-3) 100%);
+        background: linear-gradient(135deg, #0a4d4d 0%, #0d5f5f 25%, #cca05a 75%, #b88a4a 100%);
         border-radius: 0 0 24px 24px;
         overflow: hidden;
         display: flex;
@@ -165,9 +162,9 @@
         height: 200%;
         background: linear-gradient(
             135deg,
-            rgba(0, 200, 200, 0.15) 0%,
-            rgba(0, 224, 224, 0.1) 30%,
-            rgba(204, 160, 90, 0.12) 60%,
+            rgba(0, 200, 200, 0.25) 0%,
+            rgba(0, 224, 224, 0.15) 30%,
+            rgba(204, 160, 90, 0.2) 60%,
             transparent 100%
         );
         border-radius: 50%;
@@ -180,7 +177,7 @@
         right: 10%;
         width: 300px;
         height: 300px;
-        background: radial-gradient(circle, rgba(204, 160, 90, 0.2) 0%, transparent 70%);
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
         filter: blur(60px);
     }
     
@@ -283,17 +280,17 @@
     }
     
     .tl-setup-stat-icon.teal {
-        background: linear-gradient(135deg, var(--tl-primary-500) 0%, var(--tl-primary-600) 100%);
-        box-shadow: 0 4px 12px rgba(0, 200, 200, 0.3);
+        background: linear-gradient(135deg, #00c8c8 0%, #00e0e0 100%);
+        box-shadow: 0 4px 12px rgba(0, 200, 200, 0.4);
     }
     
     .tl-setup-stat-icon.gold {
-        background: linear-gradient(135deg, var(--tl-accent) 0%, var(--tl-accent-dark) 100%);
-        box-shadow: 0 4px 12px rgba(204, 160, 90, 0.3);
+        background: linear-gradient(135deg, #cca05a 0%, #d4a86a 100%);
+        box-shadow: 0 4px 12px rgba(204, 160, 90, 0.4);
     }
     
     .tl-setup-stat-icon.dark {
-        background: linear-gradient(135deg, var(--tl-dark-3) 0%, var(--gray-800) 100%);
+        background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
     
@@ -352,12 +349,12 @@
         width: 56px;
         height: 56px;
         border-radius: 16px;
-        background: linear-gradient(135deg, var(--tl-primary-500) 0%, var(--tl-primary-600) 100%);
+        background: linear-gradient(135deg, #00c8c8 0%, #00e0e0 100%);
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
-        box-shadow: 0 4px 16px rgba(0, 200, 200, 0.25);
+        box-shadow: 0 4px 16px rgba(0, 200, 200, 0.35);
     }
     
     .tl-setup-section-title {
@@ -493,33 +490,33 @@
     }
     
     .tl-setup-tile-icon-wrap.teal {
-        background: linear-gradient(135deg, var(--tl-primary-500) 0%, var(--tl-primary-600) 100%);
-        box-shadow: 0 4px 12px rgba(0, 200, 200, 0.25);
+        background: linear-gradient(135deg, #00c8c8 0%, #00e0e0 100%);
+        box-shadow: 0 4px 12px rgba(0, 200, 200, 0.35);
     }
     
     .tl-setup-tile-icon-wrap.gold {
-        background: linear-gradient(135deg, var(--tl-accent) 0%, var(--tl-accent-dark) 100%);
-        box-shadow: 0 4px 12px rgba(204, 160, 90, 0.25);
+        background: linear-gradient(135deg, #cca05a 0%, #d4a86a 100%);
+        box-shadow: 0 4px 12px rgba(204, 160, 90, 0.35);
     }
     
     .tl-setup-tile-icon-wrap.blue {
         background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
     }
     
     .tl-setup-tile-icon-wrap.green {
         background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
     }
     
     .tl-setup-tile-icon-wrap.purple {
         background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.35);
     }
     
     .tl-setup-tile-icon-wrap.orange {
         background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-        box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
+        box-shadow: 0 4px 12px rgba(249, 115, 22, 0.35);
     }
     
     .tl-setup-tile-info {

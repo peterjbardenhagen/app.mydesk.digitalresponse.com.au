@@ -30,7 +30,7 @@ public class SearchService
                 SELECT TOP (@Limit)
                     q.Qid AS Id,
                     ISNULL(q.Reference,'') AS Title,
-                    ISNULL(co.Company, ISNULL(c.CCompany,'')) AS Subtitle,
+                    ISNULL(co.Company, '') AS Subtitle,
                     q.QuoteDate AS [Date],
                     ISNULL(qs.QuoteStatus,'') AS Status,
                     ISNULL(q.NettPriceTotal, 0) AS Amount
@@ -39,7 +39,7 @@ public class SearchService
                 LEFT JOIN Companies co ON co.CompanyId = q.CompanyId
                 LEFT JOIN QuoteStatus qs ON qs.QuoteStatusId = q.QuoteStatusId
                 WHERE q.Reference LIKE @Q
-                   OR c.CCompany LIKE @Q
+                   OR (ISNULL(c.FirstName,'') + ' ' + ISNULL(c.Surname,'')) LIKE @Q
                    OR co.Company LIKE @Q
                    OR CAST(q.Qid AS VARCHAR(20)) LIKE @Q
                 ORDER BY q.QuoteDate DESC",
@@ -68,7 +68,7 @@ public class SearchService
             var dt = await _db.QueryAsync($@"
                 SELECT TOP (@Limit)
                     i.InvoiceId AS Id,
-                    ISNULL(i.CCompany, ISNULL(co.Company, '')) AS Title,
+                    COALESCE(NULLIF(co.Company, ''), NULLIF(i.InvCompany, ''), NULLIF(i.DelCompany, ''), '') AS Title,
                     ISNULL(i.InvCompany, '') AS Subtitle,
                     i.InvoiceDate AS [Date],
                     ISNULL(ins.InvoiceStatus,'') AS Status,
@@ -76,8 +76,8 @@ public class SearchService
                 FROM Invoices i
                 LEFT JOIN Companies co ON co.CompanyId = i.CompanyId
                 LEFT JOIN InvoiceStatus ins ON ins.InvoiceStatusId = i.InvoiceStatusId
-                WHERE i.CCompany LIKE @Q
-                   OR i.InvCompany LIKE @Q
+                WHERE i.InvCompany LIKE @Q
+                   OR i.DelCompany LIKE @Q
                    OR co.Company LIKE @Q
                    OR CAST(i.InvoiceId AS VARCHAR(20)) LIKE @Q
                 ORDER BY i.InvoiceDate DESC",
@@ -106,15 +106,18 @@ public class SearchService
             var dt = await _db.QueryAsync($@"
                 SELECT TOP (@Limit)
                     po.POid AS Id,
-                    ISNULL(s.Company, '') AS Title,
+                    COALESCE(NULLIF(s.Company, ''), NULLIF(LTRIM(RTRIM(CONCAT(ISNULL(cn.FirstName,''), ' ', ISNULL(cn.Surname,'')))), ''), '') AS Title,
                     ISNULL(po.Project, '') AS Subtitle,
                     po.PODate AS [Date],
                     ISNULL(pos.POStatus,'') AS Status,
                     ISNULL(po.PriceIncTotal, 0) AS Amount
                 FROM PurchaseOrders po
-                LEFT JOIN Companies s ON s.CompanyId = po.SupplierId
+                LEFT JOIN Contacts cn ON cn.ContactId = po.ContactId
+                LEFT JOIN Companies s ON s.CompanyId = cn.CompanyId
                 LEFT JOIN PurchaseOrderStatus pos ON pos.POStatusId = po.POStatusId
                 WHERE s.Company LIKE @Q
+                   OR cn.FirstName LIKE @Q
+                   OR cn.Surname LIKE @Q
                    OR po.Project LIKE @Q
                    OR CAST(po.POid AS VARCHAR(20)) LIKE @Q
                 ORDER BY po.PODate DESC",
@@ -144,11 +147,11 @@ public class SearchService
                 SELECT TOP (@Limit)
                     c.ContactId AS Id,
                     ISNULL(c.FirstName,'') + ' ' + ISNULL(c.Surname,'') AS Title,
-                    ISNULL(co.Company, ISNULL(c.CCompany,'')) AS Subtitle,
+                    ISNULL(co.Company, '') AS Subtitle,
                     CAST(NULL AS DATETIME) AS [Date],
                     ISNULL(c.Email,'') AS Status
                 FROM Contacts c
-                LEFT JOIN Companies co ON co.CompanyId = c.CCompanyId
+                LEFT JOIN Companies co ON co.CompanyId = c.CompanyId
                 WHERE c.FirstName LIKE @Q
                    OR c.Surname LIKE @Q
                    OR c.Email LIKE @Q

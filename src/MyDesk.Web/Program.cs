@@ -232,6 +232,20 @@ app.MapPost("/api/auth/login", async (HttpContext ctx, AuthService auth) =>
     return Results.Redirect("/login?error=1");
 });
 
+// Forgot password endpoint
+app.MapPost("/api/auth/forgot-password", async (HttpContext ctx) =>
+{
+    var form = await ctx.Request.ReadFormAsync();
+    var email = form["email"].ToString();
+
+    Log.Information("Password reset requested for {Email} from {RemoteIP}",
+        email, ctx.Connection.RemoteIpAddress);
+
+    // TODO: Implement actual password reset email sending
+    // For now, redirect to success state to avoid 404
+    return Results.Redirect("/forgot-password?success=1");
+});
+
 // ── PDF Download endpoints (authenticated — uses existing session cookie) ──────
 app.MapGet("/api/pdf/quote/{id:int}", async (int id, PdfService pdfSvc) =>
 {

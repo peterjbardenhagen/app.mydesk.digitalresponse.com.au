@@ -16,5 +16,6 @@
   "reconciliation": true,
   "products": true,
   "reports": true,
-  "noticeboard": false
+  "noticeboard": false,
+  "marketing": true
 }

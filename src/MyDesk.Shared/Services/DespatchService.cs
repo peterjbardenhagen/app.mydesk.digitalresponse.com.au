@@ -14,7 +14,7 @@ public class DespatchService
     {
         var sql = $@"
             SELECT TOP {limit} d.DespatchId, d.DespatchDate, d.Carrier,
-                   COALESCE(co.Company, i.CCompany, 'No Customer') AS CompanyName,
+                   COALESCE(co.Company, i.InvCompany, i.DelCompany, 'No Customer') AS CompanyName,
                    i.InvoiceId
             FROM Despatch d
             LEFT JOIN Invoices i ON i.InvoiceId = d.InvoiceId

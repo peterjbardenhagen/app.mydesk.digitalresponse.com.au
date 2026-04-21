@@ -58,7 +58,7 @@ public class PdfService
                    ISNULL(q.CustomerNotes,'')                        AS CustomerNotes,
                    ISNULL(q.Terms,'')                                AS Terms,
                    ISNULL(q.NettPriceTotal,0)                        AS NettPriceTotal,
-                   ISNULL(c.CCompany,'')                              AS CompanyName,
+                   ISNULL(co.Company,'')                             AS CompanyName,
                    ISNULL(LTRIM(RTRIM(
                        CONCAT(ISNULL(c.FirstName,''),' ',ISNULL(c.Surname,''))
                    )),'')                                            AS ContactName,
@@ -70,6 +70,7 @@ public class PdfService
                    ISNULL(u.Email,'')                                AS OriginatorEmail
             FROM Quotes q
             LEFT JOIN Contacts c ON c.ContactId = q.ContactId
+            LEFT JOIN Companies co ON co.CompanyId = q.CompanyId
             LEFT JOIN Users u    ON u.Code = q.Code
             WHERE q.Qid = @Id",
             new() { ["Id"] = quoteId });
@@ -262,7 +263,7 @@ public class PdfService
                    ISNULL(i.GSTTotal,0)                              AS GST,
                    ISNULL(i.CustomerPO,'')                           AS Reference,
                    ISNULL(ists.InvoiceStatus,'')                     AS StatusName,
-                   ISNULL(c.CCompany,'')                              AS CompanyName,
+                   COALESCE(NULLIF(co.Company, ''), NULLIF(i.InvCompany, ''), NULLIF(i.DelCompany, ''), '') AS CompanyName,
                    ISNULL(LTRIM(RTRIM(
                        CONCAT(ISNULL(c.FirstName,''),' ',ISNULL(c.Surname,''))
                    )),'')                                            AS ContactName,
@@ -274,6 +275,7 @@ public class PdfService
                    ISNULL(u.Email,'')                                AS OriginatorEmail
             FROM Invoices i
             LEFT JOIN Contacts c       ON c.ContactId = i.ContactId
+            LEFT JOIN Companies co     ON co.CompanyId = i.CompanyId
             LEFT JOIN InvoiceStatus ists ON ists.InvoiceStatusId = i.InvoiceStatusId
             LEFT JOIN Users u          ON u.Code = i.Code
             WHERE i.InvoiceId = @Id",
@@ -363,11 +365,12 @@ public class PdfService
                    ISNULL(p.PriceIncTotal,0)         AS Amount,
                    ISNULL(p.Project,'')              AS Reference,
                    ISNULL(ps.POStatus,'')            AS StatusName,
-                   ISNULL(c.CCompany,'')             AS SupplierName,
+                   COALESCE(NULLIF(s.Company,''), NULLIF(LTRIM(RTRIM(CONCAT(ISNULL(c.FirstName,''), ' ', ISNULL(c.Surname,'')))), ''), '') AS SupplierName,
                    ISNULL(u.Name,'')                 AS OriginatorName,
                    ISNULL(u.Email,'')                AS OriginatorEmail
             FROM PurchaseOrders p
             LEFT JOIN Contacts c          ON c.ContactId = p.ContactId
+            LEFT JOIN Companies s         ON s.CompanyId = c.CompanyId
             LEFT JOIN PurchaseOrderStatus ps ON ps.POStatusId = p.POStatusId
             LEFT JOIN Users u             ON u.Code = p.Code
             WHERE p.POid = @Id",

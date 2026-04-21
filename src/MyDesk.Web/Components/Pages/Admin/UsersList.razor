@@ -47,11 +47,11 @@ else
                     <CellTemplate>
                         @if (IsCurrentUser(context.Item))
                         {
-                            <span style="color: var(--mud-palette-action-disabled);">@context.Item.Role</span>
+                            <span style="color: var(--mud-palette-action-disabled);">@GetRoleName(context.Item.UserTypeId)</span>
                         }
                         else
                         {
-                            @context.Item.Role
+                            @GetRoleName(context.Item.UserTypeId)
                         }
                     </CellTemplate>
                 </TemplateColumn>
@@ -125,6 +125,15 @@ else
     private static bool IsActive(User u) => u.Active;
 
     private bool IsCurrentUser(User u) => u.UserId == _currentUserId;
+
+    private static string GetRoleName(int userTypeId) => userTypeId switch
+    {
+        1 => "Director",
+        2 => "Administrator",
+        3 => "Manager",
+        4 => "Staff",
+        _ => "Unknown"
+    };
 
     private async Task ToggleActive(User u)
     {

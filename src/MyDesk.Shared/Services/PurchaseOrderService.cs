@@ -22,7 +22,7 @@ public class PurchaseOrderService
         ISNULL(u.Name,'')           AS OriginatorName,
         ISNULL(p.Project,'')        AS Project,
         ISNULL(p.ContactId,0)       AS ContactId,
-        ISNULL(c.Company,'')         AS SupplierName,
+        COALESCE(NULLIF(c.Company,''), NULLIF(LTRIM(RTRIM(CONCAT(ISNULL(cn.FirstName,''), ' ', ISNULL(cn.Surname,'')))),''), '') AS SupplierName,
         ISNULL(p.DivisionId,0)      AS DivisionId,
         ISNULL(d.Division,'')       AS DivisionName,
         p.PODate,
@@ -66,7 +66,7 @@ public class PurchaseOrderService
         else if (statusId > 0)      { sql += " AND p.POStatusId = @Sid"; p["Sid"] = statusId; }
         if (dateFrom.HasValue)      { sql += " AND p.PODate >= @F"; p["F"] = dateFrom.Value; }
         if (dateTo.HasValue)        { sql += " AND p.PODate <= @T"; p["T"] = dateTo.Value; }
-        if (!string.IsNullOrEmpty(supplier))       { sql += " AND c.Company LIKE @S"; p["S"] = $"%{supplier}%"; }
+        if (!string.IsNullOrEmpty(supplier))       { sql += " AND (c.Company LIKE @S OR cn.FirstName LIKE @S OR cn.Surname LIKE @S)"; p["S"] = $"%{supplier}%"; }
         if (!string.IsNullOrEmpty(originatorCode)) { sql += " AND p.Code = @OC"; p["OC"] = originatorCode; }
         if (divisionId.HasValue)    { sql += " AND p.DivisionId = @DivId"; p["DivId"] = divisionId.Value; }
 

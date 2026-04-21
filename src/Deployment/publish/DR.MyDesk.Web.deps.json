@@ -1,17 +1,17 @@
 {
   "runtimeTarget": {
-    "name": ".NETCoreApp,Version=v8.0/win-x64",
+    "name": ".NETCoreApp,Version=v8.0",
     "signature": ""
   },
   "compilationOptions": {},
   "targets": {
-    ".NETCoreApp,Version=v8.0": {},
-    ".NETCoreApp,Version=v8.0/win-x64": {
+    ".NETCoreApp,Version=v8.0": {
       "DR.MyDesk.Web/1.0.0": {
         "dependencies": {
           "DR.MyDesk.Shared": "1.0.0",
           "Microsoft.Data.SqlClient": "5.2.0",
           "MudBlazor": "7.15.0",
+          "MudBlazor.Markdown": "7.8.0",
           "Serilog.AspNetCore": "8.0.3",
           "Serilog.Enrichers.Environment": "3.0.1",
           "Serilog.Enrichers.Thread": "4.0.0",
@@ -46,6 +46,14 @@
           "lib/netstandard2.0/Azure.Identity.dll": {
             "assemblyVersion": "1.10.3.0",
             "fileVersion": "1.1000.323.51804"
+          }
+        }
+      },
+      "Markdig/0.37.0": {
+        "runtime": {
+          "lib/net8.0/Markdig.dll": {
+            "assemblyVersion": "0.37.0.0",
+            "fileVersion": "0.37.0.0"
           }
         }
       },
@@ -125,7 +133,7 @@
           "System.Runtime.Caching": "8.0.0"
         },
         "runtime": {
-          "runtimes/win/lib/net8.0/Microsoft.Data.SqlClient.dll": {
+          "lib/net8.0/Microsoft.Data.SqlClient.dll": {
             "assemblyVersion": "5.0.0.0",
             "fileVersion": "5.20.24059.2"
           }
@@ -161,11 +169,42 @@
           "lib/net8.0/zh-Hant/Microsoft.Data.SqlClient.resources.dll": {
             "locale": "zh-Hant"
           }
+        },
+        "runtimeTargets": {
+          "runtimes/unix/lib/net8.0/Microsoft.Data.SqlClient.dll": {
+            "rid": "unix",
+            "assetType": "runtime",
+            "assemblyVersion": "5.0.0.0",
+            "fileVersion": "5.20.24059.2"
+          },
+          "runtimes/win/lib/net8.0/Microsoft.Data.SqlClient.dll": {
+            "rid": "win",
+            "assetType": "runtime",
+            "assemblyVersion": "5.0.0.0",
+            "fileVersion": "5.20.24059.2"
+          }
         }
       },
       "Microsoft.Data.SqlClient.SNI.runtime/5.2.0": {
-        "native": {
+        "runtimeTargets": {
+          "runtimes/win-arm/native/Microsoft.Data.SqlClient.SNI.dll": {
+            "rid": "win-arm",
+            "assetType": "native",
+            "fileVersion": "5.2.0.0"
+          },
+          "runtimes/win-arm64/native/Microsoft.Data.SqlClient.SNI.dll": {
+            "rid": "win-arm64",
+            "assetType": "native",
+            "fileVersion": "5.2.0.0"
+          },
           "runtimes/win-x64/native/Microsoft.Data.SqlClient.SNI.dll": {
+            "rid": "win-x64",
+            "assetType": "native",
+            "fileVersion": "5.2.0.0"
+          },
+          "runtimes/win-x86/native/Microsoft.Data.SqlClient.SNI.dll": {
+            "rid": "win-x86",
+            "assetType": "native",
             "fileVersion": "5.2.0.0"
           }
         }
@@ -347,6 +386,18 @@
           }
         }
       },
+      "MudBlazor.Markdown/7.8.0": {
+        "dependencies": {
+          "Markdig": "0.37.0",
+          "MudBlazor": "7.15.0"
+        },
+        "runtime": {
+          "lib/net8.0/MudBlazor.Markdown.dll": {
+            "assemblyVersion": "7.8.0.0",
+            "fileVersion": "7.8.0.0"
+          }
+        }
+      },
       "QuestPDF/2024.3.4": {
         "runtime": {
           "lib/net8.0/QuestPDF.dll": {
@@ -354,8 +405,35 @@
             "fileVersion": "2024.3.4.0"
           }
         },
-        "native": {
+        "runtimeTargets": {
+          "runtimes/linux-arm64/native/libQuestPdfSkia.so": {
+            "rid": "linux-arm64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/linux-musl-x64/native/libQuestPdfSkia.so": {
+            "rid": "linux-musl-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/linux-x64/native/libQuestPdfSkia.so": {
+            "rid": "linux-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/osx-arm64/native/libQuestPdfSkia.dylib": {
+            "rid": "osx-arm64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/osx-x64/native/libQuestPdfSkia.dylib": {
+            "rid": "osx-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
           "runtimes/win-x64/native/QuestPdfSkia.dll": {
+            "rid": "win-x64",
+            "assetType": "native",
             "fileVersion": "0.0.0.0"
           }
         }
@@ -490,7 +568,8 @@
       },
       "SkiaSharp/2.88.8": {
         "dependencies": {
-          "SkiaSharp.NativeAssets.Win32": "2.88.8"
+          "SkiaSharp.NativeAssets.Win32": "2.88.8",
+          "SkiaSharp.NativeAssets.macOS": "2.88.8"
         },
         "runtime": {
           "lib/net6.0/SkiaSharp.dll": {
@@ -499,9 +578,30 @@
           }
         }
       },
+      "SkiaSharp.NativeAssets.macOS/2.88.8": {
+        "runtimeTargets": {
+          "runtimes/osx/native/libSkiaSharp.dylib": {
+            "rid": "osx",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          }
+        }
+      },
       "SkiaSharp.NativeAssets.Win32/2.88.8": {
-        "native": {
+        "runtimeTargets": {
+          "runtimes/win-arm64/native/libSkiaSharp.dll": {
+            "rid": "win-arm64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
           "runtimes/win-x64/native/libSkiaSharp.dll": {
+            "rid": "win-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/win-x86/native/libSkiaSharp.dll": {
+            "rid": "win-x86",
+            "assetType": "native",
             "fileVersion": "0.0.0.0"
           }
         }
@@ -542,7 +642,15 @@
           "System.Configuration.ConfigurationManager": "8.0.0"
         },
         "runtime": {
+          "lib/net8.0/System.Runtime.Caching.dll": {
+            "assemblyVersion": "8.0.0.0",
+            "fileVersion": "8.0.23.53103"
+          }
+        },
+        "runtimeTargets": {
           "runtimes/win/lib/net8.0/System.Runtime.Caching.dll": {
+            "rid": "win",
+            "assetType": "runtime",
             "assemblyVersion": "8.0.0.0",
             "fileVersion": "8.0.23.53103"
           }
@@ -591,6 +699,13 @@
       "sha512": "sha512-l1Xm2MWOF2Mzcwuarlw8kWQXLZk3UeB55aQXVyjj23aBfDwOZ3gu5GP2kJ6KlmZeZv2TCzw7x4L3V36iNr3gww==",
       "path": "azure.identity/1.10.3",
       "hashPath": "azure.identity.1.10.3.nupkg.sha512"
+    },
+    "Markdig/0.37.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-biiu4MTPFjW55qw6v5Aphtj0MjDLJ14x8ndZwkJUHIeqvaSGKeqhLY7S7Vu/S3k7/c9KwhhnaCDP9hdFNUhcNA==",
+      "path": "markdig/0.37.0",
+      "hashPath": "markdig.0.37.0.nupkg.sha512"
     },
     "Microsoft.AspNetCore.Authorization/8.0.8": {
       "type": "package",
@@ -767,6 +882,13 @@
       "path": "mudblazor/7.15.0",
       "hashPath": "mudblazor.7.15.0.nupkg.sha512"
     },
+    "MudBlazor.Markdown/7.8.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-XaspHsS5I9osnna46Q/tH7cy3OlgG7dnycZgn7KhkTBNqpFzelrBoMkf/YFjRWSWEHEeO2o8AKjrG6uo99OYsw==",
+      "path": "mudblazor.markdown/7.8.0",
+      "hashPath": "mudblazor.markdown.7.8.0.nupkg.sha512"
+    },
     "QuestPDF/2024.3.4": {
       "type": "package",
       "serviceable": true,
@@ -857,6 +979,13 @@
       "sha512": "sha512-bRkp3uKp5ZI8gXYQT57uKwil1uobb2p8c69n7v5evlB/2JNcMAXVcw9DZAP5Ig3WSvgzGm2YSn27UVeOi05NlA==",
       "path": "skiasharp/2.88.8",
       "hashPath": "skiasharp.2.88.8.nupkg.sha512"
+    },
+    "SkiaSharp.NativeAssets.macOS/2.88.8": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-6Kn5TSkKlfyS6azWHF3Jk2sW5C4jCE5uSshM/5AbfFrR+5n6qM5XEnz9h4VaVl7LTxBvHvMkuPb/3bpbq0vxTw==",
+      "path": "skiasharp.nativeassets.macos/2.88.8",
+      "hashPath": "skiasharp.nativeassets.macos.2.88.8.nupkg.sha512"
     },
     "SkiaSharp.NativeAssets.Win32/2.88.8": {
       "type": "package",

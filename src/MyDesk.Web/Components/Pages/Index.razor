@@ -62,6 +62,17 @@
 }
 else
 {
+    @* ── Dashboard Header with Time Period Selector ─────────────────────────── *@
+    <div class="tl-dashboard-period-selector">
+        <div class="tl-period-label">Time Period:</div>
+        <MudSelect T="ChartPeriod" Variant="Variant.Outlined" Dense="true" Class="tl-period-select" Value="_chartPeriod" ValueChanged="SelectPeriodAsync">
+            @foreach (var period in _periodOptions)
+            {
+                <MudSelectItem T="ChartPeriod" Value="@period.Key">@period.Value</MudSelectItem>
+            }
+        </MudSelect>
+    </div>
+
     @* ── Executive KPI Cards ──────────────────────────────────────────────────── *@
     <div class="tl-kpi-section">
         <div class="tl-kpi-grid">
@@ -134,7 +145,7 @@ else
             </div>
 
             @* Health Score Card *@
-            <div class="tl-kpi-card tl-kpi-health @GetHealthCardClass(_metrics.OverallHealthScore)">
+            <div class="tl-kpi-card tl-kpi-health @GetHealthCardClass(_metrics.OverallHealthScore)" @onclick="ShowHealthRecommendations" style="cursor: pointer;">
                 <div class="tl-kpi-header">
                     <div class="tl-kpi-icon-wrap @GetHealthIconClass(_metrics.OverallHealthScore)">
                         <MudIcon Icon="@Icons.Material.Rounded.HealthAndSafety" Size="Size.Medium" />
@@ -169,18 +180,45 @@ else
         <DashboardCarousel Metrics="_metrics" IsDirector="_isDirectorOrAdmin" UserCode="_userCode" />
     </MudItem>
 
+    @* ── Performance View Selector ─────────────────────────────────────────────── *@
+    <MudItem xs="12" Class="pa-0 mb-6">
+        <div class="tl-performance-selector">
+            <div class="tl-selector-label">View Performance:</div>
+            <MudSelect T="PerformanceView" Variant="Variant.Outlined" Dense="true" Class="tl-performance-select" Value="_performanceView" ValueChanged="OnPerformanceViewChanged">
+                <MudSelectItem T="PerformanceView" Value="PerformanceView.Personal">Your Performance</MudSelectItem>
+                <MudSelectItem T="PerformanceView" Value="PerformanceView.Company">Company Performance</MudSelectItem>
+                @if (_isDirectorOrAdmin)
+                {
+                    <MudSelectItem T="PerformanceView" Value="PerformanceView.CompareUsers">Compare to Users</MudSelectItem>
+                }
+            </MudSelect>
+            @if (_performanceView == PerformanceView.CompareUsers && _isDirectorOrAdmin)
+            {
+                <MudSelect T="string" Variant="Variant.Outlined" Dense="true" Placeholder="Select user" Class="tl-user-select" Value="_selectedUserCode" ValueChanged="OnUserChanged">
+                    @if (_metrics?.TeamMemberKPIs != null)
+                    {
+                        @foreach (var kpi in _metrics.TeamMemberKPIs.OrderBy(k => k.UserName))
+                        {
+                            <MudSelectItem T="string" Value="@kpi.UserCode">@kpi.UserName</MudSelectItem>
+                        }
+                    }
+                </MudSelect>
+            }
+        </div>
+    </MudItem>
+
     @* ── User KPI Card (Personal Performance) ───────────────────────────────── *@
-    @if (_userKpi != null)
+    @if (_userKpi != null || _performanceView == PerformanceView.Company)
     {
         <MudItem xs="12" Class="pa-0 mb-6">
             <div class="tl-user-kpi-section">
                 <div class="tl-section-header">
-                    <div class="tl-section-icon personal">
-                        <MudIcon Icon="@Icons.Material.Rounded.Person" Size="Size.Medium" />
+                    <div class="tl-section-icon @(_performanceView == PerformanceView.Company ? "company" : "personal")">
+                        <MudIcon Icon="@(_performanceView == PerformanceView.Company ? Icons.Material.Rounded.Business : Icons.Material.Rounded.Person)" Size="Size.Medium" />
                     </div>
                     <div>
-                        <MudText Typo="Typo.h6" Class="tl-section-title">Your Performance This Month</MudText>
-                        <MudText Typo="Typo.body2" Class="tl-section-subtitle">Personal KPIs and targets</MudText>
+                        <MudText Typo="Typo.h6" Class="tl-section-title">@GetPerformanceTitle()</MudText>
+                        <MudText Typo="Typo.body2" Class="tl-section-subtitle">@GetPerformanceSubtitle()</MudText>
                     </div>
                 </div>
                 
@@ -331,7 +369,7 @@ else
             </div>
         </MudButton>
         <MudButton Href="/contacts" 
-                   Variant="Variant.Text"
+                   Variant="Variant.Outlined"
                    StartIcon="@Icons.Material.Rounded.People"
                    Size="Size.Large"
                    Class="tl-quick-btn">
@@ -348,10 +386,19 @@ else
     private UserKPI? _userKpi;
     private bool _isDirectorOrAdmin;
     private string? _userCode;
+    private PerformanceView _performanceView = PerformanceView.Personal;
+    private string? _selectedUserCode;
     private List<ChartSeries> _chartSeries = new();
     private string[]          _xAxisLabels = Array.Empty<string>();
     private ChartPeriod       _chartPeriod = ChartPeriod.ThisYear;
     private string            _chartSubtitle = "Quotes \u00b7 invoices \u00b7 purchase orders \u2014 value by month (all, excluding lost quotes)";
+
+    private enum PerformanceView
+    {
+        Personal,
+        Company,
+        CompareUsers
+    }
 
     private static readonly IReadOnlyDictionary<ChartPeriod, string> _periodOptions =
         new Dictionary<ChartPeriod, string>
@@ -469,5 +516,103 @@ else
         >= 50 => "Needs Attention",
         _ => "Critical"
     };
+
+    private void OnPerformanceViewChanged(PerformanceView view)
+    {
+        _performanceView = view;
+        _selectedUserCode = null;
+        if (view == PerformanceView.Personal && _metrics?.TeamMemberKPIs != null)
+        {
+            _userKpi = _metrics.TeamMemberKPIs.FirstOrDefault(k => k.UserCode == _userCode);
+        }
+        else if (view == PerformanceView.CompareUsers)
+        {
+            _userKpi = null;
+        }
+        else
+        {
+            _userKpi = null;
+        }
+        StateHasChanged();
+    }
+
+    private void OnUserChanged(string? userCode)
+    {
+        _selectedUserCode = userCode;
+        if (!string.IsNullOrEmpty(userCode) && _metrics?.TeamMemberKPIs != null)
+        {
+            _userKpi = _metrics.TeamMemberKPIs.FirstOrDefault(k => k.UserCode == userCode);
+        }
+        StateHasChanged();
+    }
+
+    private string GetPerformanceTitle() => _performanceView switch
+    {
+        PerformanceView.Personal => "Your Performance This Month",
+        PerformanceView.Company => "Company Performance",
+        PerformanceView.CompareUsers => _selectedUserCode != null ? $"{_metrics?.TeamMemberKPIs?.FirstOrDefault(k => k.UserCode == _selectedUserCode)?.UserName}'s Performance" : "Compare to Users",
+        _ => "Performance"
+    };
+
+    private string GetPerformanceSubtitle() => _performanceView switch
+    {
+        PerformanceView.Personal => "Personal KPIs and targets",
+        PerformanceView.Company => "Company-wide metrics and trends",
+        PerformanceView.CompareUsers => _selectedUserCode != null ? "Individual performance details" : "Select a team member to compare",
+        _ => "Performance metrics"
+    };
+
+    private void ShowHealthRecommendations()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium };
+        DialogService.Show<HealthRecommendationsDialog>("", options);
+    }
 }
 
+<style>
+    .tl-dashboard-period-selector {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-bottom: 24px;
+        padding: 16px 24px;
+        background: linear-gradient(135deg, var(--gray-50) 0%, white 100%);
+        border-radius: 12px;
+        border: 1px solid var(--gray-200);
+    }
+
+    .tl-period-label {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--gray-700);
+    }
+
+    .tl-period-select {
+        min-width: 200px;
+    }
+
+    .tl-performance-selector {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 24px;
+        background: linear-gradient(135deg, var(--tl-primary-50) 0%, white 100%);
+        border-radius: 12px;
+        border: 1px solid var(--tl-primary-200);
+    }
+
+    .tl-selector-label {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--gray-700);
+    }
+
+    .tl-performance-select {
+        min-width: 200px;
+    }
+
+    .tl-user-select {
+        min-width: 180px;
+    }
+</style>
