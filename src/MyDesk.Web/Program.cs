@@ -62,6 +62,10 @@ try
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog();
 
+// Load custom platform settings if they exist
+var customSettingsPath = Path.Combine(builder.Environment.ContentRootPath, "Config", "platformsettings.json");
+builder.Configuration.AddJsonFile(customSettingsPath, optional: true, reloadOnChange: true);
+
 // Authentication
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -69,6 +73,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     {
         options.LoginPath = "/login";
         options.LogoutPath = "/logout";
+        options.AccessDeniedPath = "/access-denied";
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
     });
@@ -96,10 +101,20 @@ builder.Services.AddSingleton<PlatformSettingsService>();
 
 // Auth service (scoped to request)
 builder.Services.AddScoped<AuthService>();
+// One-time token store for Blazor Server login flow (singleton, in-memory)
+builder.Services.AddSingleton<LoginTokenStore>();
 
 // Domain services (all in MyDesk.Shared.Services)
 builder.Services.AddScoped<ActivityService>();
-builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<EmailService>(sp => 
+{
+    var db = sp.GetRequiredService<DatabaseService>();
+    var activity = sp.GetRequiredService<ActivityService>();
+    var config = sp.GetRequiredService<IConfiguration>();
+    var logger = sp.GetRequiredService<ILogger<EmailService>>();
+    var platformSettings = sp.GetRequiredService<PlatformSettingsService>().Current;
+    return new EmailService(db, activity, config, logger, platformSettings);
+});
 builder.Services.AddScoped<PdfService>();
 builder.Services.AddScoped<QuoteService>();
 builder.Services.AddScoped<InvoiceService>();
@@ -118,6 +133,7 @@ builder.Services.AddScoped<CampaignService>();
 builder.Services.AddScoped<LookupService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<SystemService>();
+builder.Services.AddScoped<BrandAssetService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<DespatchService>();
 builder.Services.AddScoped<JobOrderService>();
@@ -126,6 +142,8 @@ builder.Services.AddScoped<SearchService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<TransporterService>();
 builder.Services.AddScoped<LogService>();
+builder.Services.AddScoped<ExpenseService>();
+builder.Services.AddScoped<NotificationService>();
 
 builder.Services.AddHttpClient();
 builder.Services.Configure<AzureAIOptions>(builder.Configuration.GetSection(AzureAIOptions.Section));
@@ -161,6 +179,10 @@ using (var scope = app.Services.CreateScope())
         await aiAudit.EnsureTableAsync();
         var reportSvc = scope.ServiceProvider.GetRequiredService<ReportService>();
         await reportSvc.EnsureTableAsync();
+        var logSvc = scope.ServiceProvider.GetRequiredService<LogService>();
+        await logSvc.EnsureTableAsync();
+        var expenseSvc = scope.ServiceProvider.GetRequiredService<ExpenseService>();
+        await expenseSvc.EnsureTableAsync();
         Log.Information("Database tables verified successfully");
     }
     catch (Exception ex)
@@ -213,28 +235,64 @@ app.UseAntiforgery();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-// Login/logout endpoints
+// ── Blazor Server sign-in endpoint (one-time-token pattern) ─────────────────
+// Blazor components cannot set cookies (response already started over SignalR).
+// Login.razor validates credentials, stores a 30-second token, then navigates
+// here (forceLoad). This endpoint sets the auth cookie and redirects to the app.
+app.MapGet("/auth/signin", async (HttpContext ctx, LoginTokenStore tokenStore, UserService userSvc, AuthService auth) =>
+{
+    var token = ctx.Request.Query["token"].ToString();
+    var returnUrl = ctx.Request.Query["returnUrl"].ToString();
+    if (string.IsNullOrWhiteSpace(returnUrl) || !returnUrl.StartsWith("/")) returnUrl = "/";
+
+    if (string.IsNullOrEmpty(token))
+    {
+        Log.Warning("/auth/signin called with no token");
+        return Results.Redirect("/login?error=1");
+    }
+
+    var entry = tokenStore.ConsumeToken(token);
+    if (entry == null)
+    {
+        Log.Warning("/auth/signin: token not found or expired");
+        return Results.Redirect("/login?error=1");
+    }
+
+    var user = await userSvc.GetAsync(entry.Value.UserId);
+    if (user == null)
+    {
+        Log.Warning("/auth/signin: user {UserId} not found", entry.Value.UserId);
+        return Results.Redirect("/login?error=1");
+    }
+
+    Log.Information("Login SUCCESS via token: UserId={UserId} Code={Code} Name={Name} (RememberMe={RememberMe})",
+        user.UserId, user.Code, user.Name, entry.Value.RememberMe);
+    await auth.SignInAsync(ctx, user, entry.Value.RememberMe);
+    return Results.Redirect(returnUrl);
+});
+
+// Legacy POST endpoint (kept for compatibility)
 app.MapPost("/api/auth/login", async (HttpContext ctx, AuthService auth) =>
 {
     var form = await ctx.Request.ReadFormAsync();
     var login = form["login"].ToString();
     var password = form["password"].ToString();
+    var rememberMe = form["rememberMe"].ToString() == "on";
 
     var user = await auth.ValidateLoginAsync(login, password);
     if (user != null)
     {
-        Log.Information("Login SUCCESS: {Login} -> UserId={UserId} Code={Code} Name={Name}",
+        Log.Information("Login SUCCESS (POST): {Login} -> UserId={UserId} Code={Code} Name={Name}",
             login, user.UserId, user.Code, user.Name);
-        await auth.SignInAsync(ctx, user);
+        await auth.SignInAsync(ctx, user, rememberMe);
         return Results.Redirect("/");
     }
-    Log.Warning("Login FAILED for {Login} from {RemoteIP}",
-        login, ctx.Connection.RemoteIpAddress);
+    Log.Warning("Login FAILED for {Login} from {RemoteIP}", login, ctx.Connection.RemoteIpAddress);
     return Results.Redirect("/login?error=1");
 });
 
 // Forgot password endpoint
-app.MapPost("/api/auth/forgot-password", async (HttpContext ctx) =>
+app.MapPost("/api/auth/forgot-password", async (HttpContext ctx, EmailService emailSvc) =>
 {
     var form = await ctx.Request.ReadFormAsync();
     var email = form["email"].ToString();
@@ -242,9 +300,23 @@ app.MapPost("/api/auth/forgot-password", async (HttpContext ctx) =>
     Log.Information("Password reset requested for {Email} from {RemoteIP}",
         email, ctx.Connection.RemoteIpAddress);
 
-    // TODO: Implement actual password reset email sending
-    // For now, redirect to success state to avoid 404
-    return Results.Redirect("/forgot-password?success=1");
+    try
+    {
+        // Generate a reset token and send email
+        var resetToken = Guid.NewGuid().ToString("N");
+        var resetLink = $"{ctx.Request.Scheme}://{ctx.Request.Host}/reset-password?token={resetToken}";
+        
+        // Send password reset email
+        await emailSvc.SendPasswordResetEmailAsync(email, resetLink);
+        
+        Log.Information("Password reset email sent to {Email}", email);
+        return Results.Redirect("/forgot-password?success=1");
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Failed to send password reset email to {Email}", email);
+        return Results.Redirect("/forgot-password?error=1");
+    }
 });
 
 // ── PDF Download endpoints (authenticated — uses existing session cookie) ──────
@@ -336,6 +408,49 @@ static string GetMimeType(string path) => Path.GetExtension(path).ToLowerInvaria
     _        => "application/octet-stream"
 };
 
+// ── Brand Assets API endpoints ─────────────────────────────────────────────
+app.MapGet("/api/brand-assets/download/{id:guid}", (Guid id, BrandAssetService svc) =>
+{
+    var asset = svc.GetAsset(id);
+    if (asset == null) return Results.NotFound();
+    
+    var path = svc.GetFullPath(asset);
+    if (!File.Exists(path)) return Results.NotFound();
+    
+    var mime = BrandAssetService.GetMimeType(asset.FileName);
+    return Results.File(path, mime, asset.OriginalFileName);
+}).RequireAuthorization();
+
+app.MapPost("/api/brand-assets/upload", async (HttpContext ctx, BrandAssetService svc) =>
+{
+    if (!ctx.User.IsInRole("Admin") && !ctx.User.IsInRole("Director"))
+        return Results.Forbid();
+    
+    var form = await ctx.Request.ReadFormAsync();
+    var file = form.Files.FirstOrDefault();
+    if (file == null) return Results.BadRequest("No file uploaded");
+    
+    var category = form["category"].ToString();
+    var description = form["description"].ToString();
+    var uploadedBy = ctx.User.Identity?.Name ?? "Unknown";
+    
+    using var stream = file.OpenReadStream();
+    var browserFile = new BrowserFileWrapper(file.FileName, file.ContentType, file.Length, stream);
+    var asset = await svc.UploadAsync(browserFile, category, description, uploadedBy);
+    
+    return Results.Ok(new { asset.Id, asset.OriginalFileName, asset.FileSize });
+}).RequireAuthorization();
+
+app.MapDelete("/api/brand-assets/{id:guid}", async (Guid id, HttpContext ctx, BrandAssetService svc) =>
+{
+    if (!ctx.User.IsInRole("Admin") && !ctx.User.IsInRole("Director"))
+        return Results.Forbid();
+    
+    var deletedBy = ctx.User.Identity?.Name ?? "Unknown";
+    await svc.DeleteAsync(id, deletedBy);
+    return Results.Ok();
+}).RequireAuthorization();
+
 // ── Email endpoints ─────────────────────────────────────────────────────────
 app.MapPost("/api/email/quote/{id:int}",
     async (int id, HttpContext ctx, EmailRequest req, PdfService pdfSvc, EmailService emailSvc) =>
@@ -393,6 +508,64 @@ app.MapPost("/api/telegram/webhook", async (HttpRequest request, TelegramBotServ
         return Results.Ok(); // Always 200 to Telegram
     }
 });
+
+// ── Log Viewer API endpoints ─────────────────────────────────────────────────
+app.MapGet("/api/logs", (HttpContext ctx) =>
+{
+    if (!ctx.User.IsInRole("Admin") && !ctx.User.IsInRole("Director"))
+        return Results.Forbid();
+
+    var logsDir = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
+    if (!Directory.Exists(logsDir))
+        return Results.Ok("[]");
+
+    var logs = new List<object>();
+    foreach (var file in Directory.GetFiles(logsDir, "*.log").OrderByDescending(f => f))
+    {
+        try
+        {
+            var lines = File.ReadAllLines(file);
+            foreach (var line in lines)
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                var parts = line.Split(new[] { " [" }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length >= 3)
+                {
+                    var timestamp = parts[0].Trim();
+                    var levelPart = parts[1].Trim().TrimEnd(']');
+                    var level = levelPart switch
+                    {
+                        "INF" => "Information",
+                        "WRN" => "Warning",
+                        "ERR" => "Error",
+                        "DBG" => "Debug",
+                        _ => "Information"
+                    };
+                    var message = string.Join(" [", parts.Skip(2)).Trim();
+                    logs.Add(new { Timestamp = timestamp, Level = level, Source = "MyDesk.Web", Message = message, Exception = "" });
+                }
+            }
+        }
+        catch { }
+    }
+    return Results.Text(System.Text.Json.JsonSerializer.Serialize(logs), "application/json");
+}).RequireAuthorization();
+
+app.MapDelete("/api/logs", (HttpContext ctx) =>
+{
+    if (!ctx.User.IsInRole("Admin") && !ctx.User.IsInRole("Director"))
+        return Results.Forbid();
+
+    var logsDir = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
+    if (Directory.Exists(logsDir))
+    {
+        foreach (var file in Directory.GetFiles(logsDir, "*.log"))
+        {
+            try { File.Delete(file); } catch { }
+        }
+    }
+    return Results.Ok();
+}).RequireAuthorization();
 
 app.MapGet("/logout", async (HttpContext ctx) =>
 {

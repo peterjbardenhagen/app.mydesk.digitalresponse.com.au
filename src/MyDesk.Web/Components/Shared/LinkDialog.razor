@@ -1,0 +1,93 @@
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="_link.Title"
+                     Label="Title"
+                     Variant="Variant.Outlined"
+                     Required="true"
+                     RequiredError="Title is required"
+                     Class="mb-3" />
+
+        <MudTextField @bind-Value="_link.Url"
+                     Label="URL"
+                     Variant="Variant.Outlined"
+                     Required="true"
+                     RequiredError="URL is required"
+                     Validation="@(new Func<string, string?>(ValidateUrl))"
+                     Class="mb-3" />
+
+        <MudSelect @bind-Value="_link.Icon"
+                   Label="Icon"
+                   Variant="Variant.Outlined"
+                   Required="true"
+                   RequiredError="Icon is required"
+                   Class="mb-3">
+            <MudSelectItem Value="@("Analytics")">Analytics</MudSelectItem>
+            <MudSelectItem Value="@("Facebook")">Facebook</MudSelectItem>
+            <MudSelectItem Value="@("Language")">Language</MudSelectItem>
+            <MudSelectItem Value="@("Link")">Link</MudSelectItem>
+            <MudSelectItem Value="@("Description")">Description</MudSelectItem>
+            <MudSelectItem Value="@("Email")">Email</MudSelectItem>
+            <MudSelectItem Value="@("Phone")">Phone</MudSelectItem>
+        </MudSelect>
+
+        <MudTextField @bind-Value="_link.Category"
+                     Label="Category"
+                     Variant="Variant.Outlined"
+                     Class="mb-3" />
+
+        <MudNumericField @bind-Value="_link.DisplayOrder"
+                        Label="Display Order"
+                        Variant="Variant.Outlined"
+                        Min="1"
+                        Required="true"
+                        RequiredError="Display order is required" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public string Title { get; set; } = "Link";
+    [Parameter] public ImportantLink Link { get; set; } = new();
+    [Inject] ISnackbar SnackbarService { get; set; } = null!;
+
+    private ImportantLink _link = new();
+
+    protected override void OnInitialized()
+    {
+        _link = Link;
+    }
+
+    private string? ValidateUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return null;
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uriResult) || 
+            (uriResult.Scheme != Uri.UriSchemeHttp && uriResult.Scheme != Uri.UriSchemeHttps))
+        {
+            return "Please enter a valid URL (http:// or https://)";
+        }
+
+        return null;
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void Submit()
+    {
+        if (string.IsNullOrWhiteSpace(_link.Title) || string.IsNullOrWhiteSpace(_link.Url))
+        {
+            SnackbarService.Add("Title and URL are required", Severity.Error);
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok(_link));
+    }
+}

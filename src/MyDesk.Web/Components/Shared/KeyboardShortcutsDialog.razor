@@ -1,0 +1,97 @@
+@inject IDialogService DialogService
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Keyboard Shortcuts</MudText>
+        
+        <MudText Typo="Typo.subtitle2" Class="mb-2" Style="font-weight:600;">Navigation</MudText>
+        <MudTable Items="_navigationShortcuts" Dense="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>Action</MudTh>
+                <MudTh Style="text-align:center;">Shortcut</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.Action</MudTd>
+                <MudTd Style="text-align:center;">
+                    @foreach (var key in context.Keys)
+                    {
+                        <MudChip T="string" Size="Size.Small" Class="mr-1" Value="@key">@key</MudChip>
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+
+        <MudText Typo="Typo.subtitle2" Class="mb-2 mt-4" Style="font-weight:600;">Actions</MudText>
+        <MudTable Items="_actionShortcuts" Dense="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>Action</MudTh>
+                <MudTh Style="text-align:center;">Shortcut</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.Action</MudTd>
+                <MudTd Style="text-align:center;">
+                    @foreach (var key in context.Keys)
+                    {
+                        <MudChip T="string" Size="Size.Small" Class="mr-1" Value="@key">@key</MudChip>
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+
+        <MudText Typo="Typo.subtitle2" Class="mb-2 mt-4" Style="font-weight:600;">Forms</MudText>
+        <MudTable Items="_formShortcuts" Dense="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>Action</MudTh>
+                <MudTh Style="text-align:center;">Shortcut</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.Action</MudTd>
+                <MudTd Style="text-align:center;">
+                    @foreach (var key in context.Keys)
+                    {
+                        <MudChip T="string" Size="Size.Small" Class="mr-1" Value="@key">@key</MudChip>
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+
+    public class ShortcutItem
+    {
+        public string Action { get; set; } = "";
+        public List<string> Keys { get; set; } = new();
+    }
+
+    private List<ShortcutItem> _navigationShortcuts = new()
+    {
+        new ShortcutItem { Action = "Open search", Keys = new() { "Alt", "K" } },
+        new ShortcutItem { Action = "Go to Dashboard", Keys = new() { "Alt", "H" } },
+        new ShortcutItem { Action = "Go to Settings", Keys = new() { "Alt", "," } },
+        new ShortcutItem { Action = "Toggle sidebar", Keys = new() { "Alt", "B" } },
+    };
+
+    private List<ShortcutItem> _actionShortcuts = new()
+    {
+        new ShortcutItem { Action = "Create new item", Keys = new() { "Alt", "N" } },
+        new ShortcutItem { Action = "Save", Keys = new() { "Alt", "S" } },
+        new ShortcutItem { Action = "Delete selected", Keys = new() { "Delete" } },
+        new ShortcutItem { Action = "Show keyboard shortcuts", Keys = new() { "?" } },
+    };
+
+    private List<ShortcutItem> _formShortcuts = new()
+    {
+        new ShortcutItem { Action = "Submit form", Keys = new() { "Enter" } },
+        new ShortcutItem { Action = "Cancel form", Keys = new() { "Escape" } },
+        new ShortcutItem { Action = "Next field", Keys = new() { "Tab" } },
+        new ShortcutItem { Action = "Previous field", Keys = new() { "Shift", "Tab" } },
+    };
+
+    void Cancel() => MudDialog.Close();
+}

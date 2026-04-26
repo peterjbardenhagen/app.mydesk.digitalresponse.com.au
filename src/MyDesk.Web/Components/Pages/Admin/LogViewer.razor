@@ -95,24 +95,29 @@
 </MudPaper>
 
 @* Purge Dialog *@
-<MudDialog>
+<MudDialog @bind-Visible="_showPurgeDialog" Options="_dialogOptions">
     <TitleContent>
-        <MudText Typo="Typo.h6">Purge Logs</MudText>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Rounded.DeleteForever" Class="mr-2" />
+            Purge Logs
+        </MudText>
     </TitleContent>
     <DialogContent>
         <MudText Typo="Typo.body2" Class="mb-4">
             Select the type of logs you want to purge. This action cannot be undone.
         </MudText>
         <MudRadioGroup T="PurgeOption" @bind-Value="_purgeOption">
-            <MudRadioItem Value="@PurgeOption.OlderThan30Days" Label="Logs older than 30 days" />
-            <MudRadioItem Value="@PurgeOption.OlderThan7Days" Label="Logs older than 7 days" />
-            <MudRadioItem Value="@PurgeOption.ErrorLogsOnly" Label="Error logs only" />
-            <MudRadioItem Value="@PurgeOption.AllLogs" Label="All logs (use with caution)" />
+            <div class="d-flex flex-column gap-2">
+                <MudRadio Value="@PurgeOption.OlderThan30Days" Color="Color.Primary">Logs older than 30 days</MudRadio>
+                <MudRadio Value="@PurgeOption.OlderThan7Days" Color="Color.Primary">Logs older than 7 days</MudRadio>
+                <MudRadio Value="@PurgeOption.ErrorLogsOnly" Color="Color.Error">Error logs only</MudRadio>
+                <MudRadio Value="@PurgeOption.AllLogs" Color="Color.Error">All logs (use with caution)</MudRadio>
+            </div>
         </MudRadioGroup>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="@(() => _showPurgeDialog = false)" Variant="Variant.Text">Cancel</MudButton>
-        <MudButton OnClick="PurgeLogsAsync" Color="Color.Error" Variant="Variant.Filled">Purge</MudButton>
+        <MudButton OnClick="PurgeLogsAsync" Color="Color.Error" Variant="Variant.Filled">Purge Now</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -245,9 +250,11 @@
     private PurgeOption _purgeOption = PurgeOption.OlderThan30Days;
     private DateTime _lastUpdated;
     private System.Threading.Timer? _refreshTimer;
+    private DialogOptions _dialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
 
     protected override async Task OnInitializedAsync()
     {
+        await LogService.EnsureTableAsync();
         await LoadLogsAsync();
     }
 

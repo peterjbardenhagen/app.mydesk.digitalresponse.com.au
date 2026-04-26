@@ -115,7 +115,7 @@ public class LookupService
         var dt = await _db.QueryAsync(@"
             SELECT POProductTypeId,
                    ISNULL(POProductType,'') AS POProductTypeName,
-                   ISNULL(IsCapEx,0)        AS IsCapEx
+                   ISNULL(CapEx,0)          AS IsCapEx
             FROM PurchaseOrderProductTypes ORDER BY POProductTypeId");
         return dt.Map(r => new POProductType
         {

@@ -10,8 +10,8 @@
     <aside class="tl-login-hero">
         <div class="tl-login-hero-inner">
             <div class="tl-login-hero-brand">
-                <a href="https://www.techlight.com.au" target="_blank" rel="noreferrer">
-                    <img src="/images/techlight-logo.svg" alt="Techlight MyDesk" class="hero-logo" />
+                <a href="@PlatformSettings.Current.CompanyWebsite" target="_blank" rel="noreferrer">
+                    <img src="@PlatformSettings.Current.LoginLogoUrl" alt="@PlatformSettings.Current.PlatformName" class="hero-logo" />
                 </a>
             </div>
 
@@ -20,10 +20,10 @@
                     <MudIcon Icon="@Icons.Material.Rounded.FormatQuote" Size="Size.Large" Color="Color.Inherit" />
                 </div>
                 <h2 class="tl-login-quote-text">
-                    The intelligence layer for your entire lighting & electrical operation.
+                    @PlatformSettings.Current.LoginQuote
                 </h2>
                 <div class="tl-login-quote-author">
-                    <span>Techlight MyDesk &middot; <span class="accent-text">Enterprise Portal</span></span>
+                    <span>@PlatformSettings.Current.LoginQuoteAuthor &middot; <span class="accent-text">@PlatformSettings.Current.LoginQuoteLabel</span></span>
                 </div>
             </div>
 
@@ -51,10 +51,10 @@
             <div class="tl-form-card">
                 <div class="tl-form-header">
                     <div class="tl-mark-container">
-                        <img src="/images/techlight-mark.svg" alt="" class="tl-form-mark" />
+                        <img src="@PlatformSettings.Current.LoginMarkUrl" alt="" class="tl-form-mark" />
                     </div>
-                    <h1>Welcome back</h1>
-                    <p class="sub-text">Please enter your details to sign in.</p>
+                    <h1>@PlatformSettings.Current.LoginHeading</h1>
+                    <p class="sub-text">@PlatformSettings.Current.LoginSubheading</p>
                 </div>
 
                 @if (ShowError)
@@ -131,10 +131,10 @@
     .tl-login-hero {
         display: none;
         position: relative;
-        background-color: #08121a;
+        background-color: @PlatformSettings.Current.LoginBackgroundColor;
         background-image: 
-            radial-gradient(at 0% 0%, hsla(180,100%,39%,0.15) 0, transparent 50%), 
-            radial-gradient(at 100% 100%, hsla(37,53%,53%,0.1) 0, transparent 50%);
+            radial-gradient(at 0% 0%, @(PlatformSettings.Current.LoginPrimaryColor)22 0, transparent 50%), 
+            radial-gradient(at 100% 100%, @(PlatformSettings.Current.LoginAccentColor)1a 0, transparent 50%);
         color: white;
         padding: 64px;
         overflow: hidden;
@@ -168,7 +168,7 @@
         -webkit-text-fill-color: transparent;
     }
     .tl-login-quote-author { font-size: 16px; color: #94a3b8; font-weight: 500; }
-    .accent-text { color: var(--tl-primary); font-weight: 600; }
+    .accent-text { color: @PlatformSettings.Current.LoginPrimaryColor; font-weight: 600; }
 
     .legal-links-white .mud-link { color: #64748b !important; font-weight: 500; }
     .legal-links-white .mud-link:hover { color: white !important; }
@@ -182,8 +182,8 @@
         z-index: 1;
         opacity: 0.4;
     }
-    .blob-1 { top: -10%; left: -10%; width: 400px; height: 400px; background: var(--tl-primary); }
-    .blob-2 { bottom: -5%; right: -5%; width: 350px; height: 350px; background: var(--tl-accent); opacity: 0.2; }
+    .blob-1 { top: -10%; left: -10%; width: 400px; height: 400px; background: @PlatformSettings.Current.LoginPrimaryColor; }
+    .blob-2 { bottom: -5%; right: -5%; width: 350px; height: 350px; background: @PlatformSettings.Current.LoginAccentColor; opacity: 0.2; }
     .hero-grid-pattern {
         position: absolute;
         inset: 0;

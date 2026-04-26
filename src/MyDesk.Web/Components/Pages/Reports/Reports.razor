@@ -28,11 +28,12 @@
                     <MudText Typo="Typo.subtitle2" Class="mb-4" Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Report Configuration</MudText>
                     
                     <MudSelect T="ReportType" Label="Report Category" @bind-Value="_reportType" Variant="Variant.Outlined" Class="mb-4" AnchorOrigin="Origin.BottomCenter">
-                        <MudSelectItem Value="ReportType.Invoices">Invoices</MudSelectItem>
-                        <MudSelectItem Value="ReportType.Quotes">Quotes</MudSelectItem>
-                        <MudSelectItem Value="ReportType.PurchaseOrders">Purchase Orders</MudSelectItem>
-                        <MudSelectItem Value="ReportType.DeliveryNotes">Delivery Notes</MudSelectItem>
                         <MudSelectItem Value="ReportType.Contacts">Contacts Catalog</MudSelectItem>
+                        <MudSelectItem Value="ReportType.DeliveryNotes">Delivery Notes</MudSelectItem>
+                        <MudSelectItem Value="ReportType.Invoices">Invoices</MudSelectItem>
+                        <MudSelectItem Value="ReportType.Profitability">Profitability</MudSelectItem>
+                        <MudSelectItem Value="ReportType.PurchaseOrders">Purchase Orders</MudSelectItem>
+                        <MudSelectItem Value="ReportType.Quotes">Quotes</MudSelectItem>
                     </MudSelect>
 
                     <MudSelect T="DateFilter" Label="Period" @bind-Value="_dateFilter" Variant="Variant.Outlined" Class="mb-4" AnchorOrigin="Origin.BottomCenter">
@@ -279,6 +280,17 @@
         font-weight: 700;
     }
 
+    .tl-summary-card.success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border: none;
+    }
+    .tl-summary-card.info {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        border: none;
+    }
+    
     .report-container {
         overflow: auto;
         max-height: 600px;
@@ -440,6 +452,28 @@
         if (_customResult == null) return;
         var csv = string.Join(",", _customResult.Headers) + "\n" + string.Join("\n", _customResult.Rows.Select(row => string.Join(",", row.Select(c => $"\"{c?.Replace("\"", "\"\"")}\""))));
         await DownloadFile($"{_builderTable}_Custom_{DateTime.Now:yyyyMMdd}.csv", csv);
+    }
+
+    private decimal CalculateGPTotal()
+    {
+        if (_currentResult == null || _reportType != ReportType.Profitability) return 0;
+        // In Profitability report, GP Value is typically column 5 (index 5)
+        var gpIndex = _currentResult.Headers.ToList().FindIndex(h => h.Contains("GP Value", StringComparison.OrdinalIgnoreCase));
+        if (gpIndex == -1) return 0;
+        return _currentResult.Rows.Sum(row => decimal.TryParse(row[gpIndex].Replace("$", "").Replace(",", ""), out var v) ? v : 0m);
+    }
+
+    private decimal CalculateGPMargin()
+    {
+        if (_currentResult == null || _reportType != ReportType.Profitability) return 0;
+        var gpIndex = _currentResult.Headers.ToList().FindIndex(h => h.Contains("GP Value", StringComparison.OrdinalIgnoreCase));
+        var priceIndex = _currentResult.Headers.ToList().FindIndex(h => h.Contains("Price", StringComparison.OrdinalIgnoreCase));
+        if (gpIndex == -1 || priceIndex == -1) return 0;
+        
+        var totalGP = _currentResult.Rows.Sum(row => decimal.TryParse(row[gpIndex].Replace("$", "").Replace(",", ""), out var v) ? v : 0m);
+        var totalPrice = _currentResult.Rows.Sum(row => decimal.TryParse(row[priceIndex].Replace("$", "").Replace(",", ""), out var v) ? v : 0m);
+        
+        return totalPrice == 0 ? 0 : (totalGP / totalPrice) * 100;
     }
 
     private async Task DownloadFile(string fileName, string content)

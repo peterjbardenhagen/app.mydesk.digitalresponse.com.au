@@ -49,7 +49,7 @@ public class SystemService
     // ---------- Locations ----------
     public async Task<List<Location>> GetLocationsAsync()
     {
-        var dt = await _db.QueryAsync("SELECT LocationId, ISNULL(LocationName,'') AS LocationName FROM Locations ORDER BY LocationName");
+        var dt = await _db.QueryAsync("SELECT LocationId, ISNULL(Company,'') AS LocationName FROM Locations ORDER BY Company");
         return dt.Map(r => new Location
         {
             LocationId = (int)r["LocationId"],
@@ -62,11 +62,11 @@ public class SystemService
         if (l.LocationId == 0)
         {
             var nextId = await _db.ScalarAsync<int>("SELECT ISNULL(MAX(LocationId), 0) + 1 FROM Locations");
-            await _db.ExecuteAsync("INSERT INTO Locations (LocationId, LocationName) VALUES (@id, @n)",
+            await _db.ExecuteAsync("INSERT INTO Locations (LocationId, Company) VALUES (@id, @n)",
                 new() { ["id"] = nextId, ["n"] = l.LocationName });
             return nextId;
         }
-        await _db.ExecuteAsync("UPDATE Locations SET LocationName = @n WHERE LocationId = @id",
+        await _db.ExecuteAsync("UPDATE Locations SET Company = @n WHERE LocationId = @id",
             new() { ["n"] = l.LocationName, ["id"] = l.LocationId });
         return l.LocationId;
     }
@@ -108,8 +108,8 @@ public class SystemService
             var id = r.Table.Columns.Contains("CurrencyId") ? Convert.ToInt32(r["CurrencyId"]) : 0;
             var code = r.Table.Columns.Contains("Currency") ? r["Currency"]?.ToString() ?? "" : "";
             var name = r.Table.Columns.Contains("CurrencyName") ? r["CurrencyName"]?.ToString() ?? "" : code;
-            var rate = r.Table.Columns.Contains("ExchangeRate") && r["ExchangeRate"] != DBNull.Value
-                ? Convert.ToDecimal(r["ExchangeRate"]) : 1m;
+            var rate = r.Table.Columns.Contains("CurrencyRate") && r["CurrencyRate"] != DBNull.Value
+                ? Convert.ToDecimal(r["CurrencyRate"]) : 1m;
             list.Add((id, code, name, rate));
         }
         return list;
@@ -249,23 +249,22 @@ public class SystemService
     // ---------- Part Codes ----------
     public async Task<List<PartCode>> GetPartCodesAsync()
     {
-        var dt = await _db.QueryAsync("SELECT PartCodeId, ISNULL(PartCode,'') AS PartCodeName, ISNULL(Description,'') AS Description FROM PartCodes ORDER BY PartCode");
+        var dt = await _db.QueryAsync("SELECT PartCodeId, ISNULL(PartCode,'') AS PartCodeName FROM PartCodes ORDER BY PartCode");
         return dt.Map(r => new PartCode
         {
             PartCodeId   = Convert.ToInt32(r["PartCodeId"]),
-            PartCodeName = r["PartCodeName"]?.ToString() ?? "",
-            Description  = r["Description"]?.ToString()
+            PartCodeName = r["PartCodeName"]?.ToString() ?? ""
         }).ToList();
     }
 
     public async Task SavePartCodeAsync(PartCode p)
     {
         if (p.PartCodeId == 0)
-            await _db.InsertAsync("INSERT INTO PartCodes (PartCode, Description) VALUES (@n, @d)",
-                new() { ["n"] = p.PartCodeName, ["d"] = (object?)p.Description ?? DBNull.Value });
+            await _db.InsertAsync("INSERT INTO PartCodes (PartCode) VALUES (@n)",
+                new() { ["n"] = p.PartCodeName });
         else
-            await _db.ExecuteAsync("UPDATE PartCodes SET PartCode = @n, Description = @d WHERE PartCodeId = @id",
-                new() { ["n"] = p.PartCodeName, ["d"] = (object?)p.Description ?? DBNull.Value, ["id"] = p.PartCodeId });
+            await _db.ExecuteAsync("UPDATE PartCodes SET PartCode = @n WHERE PartCodeId = @id",
+                new() { ["n"] = p.PartCodeName, ["id"] = p.PartCodeId });
     }
 
     public async Task DeletePartCodeAsync(int id) =>
@@ -274,7 +273,7 @@ public class SystemService
     // ---------- Currency Rates ----------
     public async Task<List<CurrencyRate>> GetCurrencyRatesAsync()
     {
-        var dt = await _db.QueryAsync("SELECT CurrencyId, ISNULL(Currency,'') AS Code, ISNULL(CurrencyName,'') AS Name, ISNULL(ExchangeRate,1) AS Rate FROM Currency ORDER BY Currency");
+        var dt = await _db.QueryAsync("SELECT CurrencyId, ISNULL(Currency,'') AS Code, ISNULL(CurrencyName,'') AS Name, ISNULL(CurrencyRate,1) AS Rate FROM Currency ORDER BY Currency");
         return dt.Map(r => new CurrencyRate
         {
             CurrencyId = Convert.ToInt32(r["CurrencyId"]),
@@ -287,10 +286,10 @@ public class SystemService
     public async Task SaveCurrencyRateAsync(CurrencyRate c)
     {
         if (c.CurrencyId == 0)
-            await _db.InsertAsync("INSERT INTO Currency (Currency, CurrencyName, ExchangeRate) VALUES (@code, @name, @rate)",
+            await _db.InsertAsync("INSERT INTO Currency (Currency, CurrencyName, CurrencyRate) VALUES (@code, @name, @rate)",
                 new() { ["code"] = c.Code, ["name"] = c.Name, ["rate"] = c.Rate });
         else
-            await _db.ExecuteAsync("UPDATE Currency SET Currency = @code, CurrencyName = @name, ExchangeRate = @rate WHERE CurrencyId = @id",
+            await _db.ExecuteAsync("UPDATE Currency SET Currency = @code, CurrencyName = @name, CurrencyRate = @rate WHERE CurrencyId = @id",
                 new() { ["code"] = c.Code, ["name"] = c.Name, ["rate"] = c.Rate, ["id"] = c.CurrencyId });
     }
 

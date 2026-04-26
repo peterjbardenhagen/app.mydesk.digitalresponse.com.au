@@ -343,7 +343,6 @@
                 <MudTh Style="text-align: right;">Quotes</MudTh>
                 <MudTh Style="text-align: right;">Invoices</MudTh>
                 <MudTh Style="text-align: right;">Revenue (MTD)</MudTh>
-                <MudTh Style="text-align: right;">Win Rate</MudTh>
                 <MudTh>Status</MudTh>
             </HeaderContent>
             <RowTemplate>
@@ -370,7 +369,6 @@
                 <MudTd Style="text-align: right;">@context.QuotesRaisedThisMonth</MudTd>
                 <MudTd Style="text-align: right;">@context.InvoicesClosedThisMonth</MudTd>
                 <MudTd Style="text-align: right;">@Fmt(context.InvoiceValueThisMonth)</MudTd>
-                <MudTd Style="text-align: right;">@context.WinRate.ToString("N1")%</MudTd>
                 <MudTd>
                     <MudIcon Icon="@GetTrendIcon(context.PerformanceTrend)" 
                              Color="@GetTrendColor(context.PerformanceTrend)" 
@@ -385,62 +383,187 @@
     private RenderFragment HealthScoreView => __builder => {
         if (Metrics != null) {
     <div class="tl-view-content">
-        <MudGrid Spacing="3">
-            <MudItem xs="12" md="4">
-                <div class="tl-health-score-card @GetHealthScoreClass(Metrics.OverallHealthScore)">
-                    <div class="tl-health-score-value">@Metrics.OverallHealthScore</div>
-                    <div class="tl-health-score-label">Overall Health</div>
-                    <div class="tl-health-score-status">@GetHealthStatus(Metrics.OverallHealthScore)</div>
+        <MudGrid Spacing="4">
+            @* Health Score Gauge *@
+            <MudItem xs="12" md="5">
+                <div class="tl-health-hero @GetHealthScoreClass(Metrics.OverallHealthScore)">
+                    <div class="tl-health-gauge-container">
+                        <svg class="tl-health-gauge" viewBox="0 0 200 120">
+                            @* Background arc *@
+                            <path d="M 20 100 A 80 80 0 0 1 180 100" 
+                                  fill="none" 
+                                  stroke="rgba(255,255,255,0.2)" 
+                                  stroke-width="12" 
+                                  stroke-linecap="round"/>
+                            @* Progress arc *@
+                            <path d="M 20 100 A 80 80 0 0 1 180 100" 
+                                  fill="none" 
+                                  stroke="white" 
+                                  stroke-width="12" 
+                                  stroke-linecap="round"
+                                  stroke-dasharray="251.2"
+                                  stroke-dashoffset="@GetGaugeOffset(Metrics.OverallHealthScore)"
+                                  class="tl-gauge-progress"/>
+                        </svg>
+                        <div class="tl-health-gauge-value">
+                            <span class="tl-health-score-large">@Metrics.OverallHealthScore</span>
+                            <span class="tl-health-score-max">/100</span>
+                        </div>
+                    </div>
+                    <div class="tl-health-status-badge">
+                        <MudIcon Icon="@GetHealthIcon(Metrics.OverallHealthScore)" Size="Size.Small" />
+                        <span>@GetHealthStatus(Metrics.OverallHealthScore)</span>
+                    </div>
+                    <div class="tl-health-last-updated">Last updated: @DateTime.Now.ToString("MMM dd, h:mm tt")</div>
                 </div>
             </MudItem>
-            <MudItem xs="12" md="8">
-                @if (Metrics.Warnings?.Any() == true)
-                {
-                    <div class="tl-warnings-list">
-                        @foreach (var warning in Metrics.Warnings.Take(3))
-                        {
-                            <div class="tl-warning-item @warning.Severity">
-                                <div class="tl-warning-icon">
-                                    <MudIcon Icon="@(warning.Severity == "critical" ? Icons.Material.Rounded.Error : Icons.Material.Rounded.Warning)" 
-                                             Size="Size.Small" />
-                                </div>
-                                <div class="tl-warning-content">
-                                    <div class="tl-warning-title">@warning.Title</div>
-                                    <div class="tl-warning-desc">@warning.Description</div>
-                                </div>
-                                <MudButton Href="@warning.ActionLink" 
-                                           Size="Size.Small" 
-                                           Variant="Variant.Text"
-                                           Color="Color.Primary">View</MudButton>
+            
+            @* Health Breakdown *@
+            <MudItem xs="12" md="7">
+                <div class="tl-health-breakdown">
+                    <MudText Typo="Typo.subtitle2" Class="tl-breakdown-title">Health Breakdown</MudText>
+                    <div class="tl-health-metrics">
+                        <div class="tl-health-metric">
+                            <div class="tl-metric-icon @GetHealthMetricClass(Metrics.GrossProfitMargin, 20, 30)">
+                                <MudIcon Icon="@Icons.Material.Rounded.TrendingUp" Size="Size.Small" />
                             </div>
-                        }
+                            <div class="tl-metric-info">
+                                <div class="tl-metric-label">Profit Margin</div>
+                                <div class="tl-metric-bar-container">
+                                    <div class="tl-metric-bar" style="width: @Math.Min(Metrics.GrossProfitMargin, 100)%"></div>
+                                </div>
+                                <div class="tl-metric-value">@Metrics.GrossProfitMargin.ToString("N1")%</div>
+                            </div>
+                        </div>
+                        <div class="tl-health-metric">
+                            <div class="tl-metric-icon @GetHealthMetricClass(Metrics.QuoteToInvoiceConversionRate, 30, 40)">
+                                <MudIcon Icon="@Icons.Material.Rounded.SyncAlt" Size="Size.Small" />
+                            </div>
+                            <div class="tl-metric-info">
+                                <div class="tl-metric-label">Conversion Rate</div>
+                                <div class="tl-metric-bar-container">
+                                    <div class="tl-metric-bar" style="width: @Math.Min(Metrics.QuoteToInvoiceConversionRate, 100)%"></div>
+                                </div>
+                                <div class="tl-metric-value">@Metrics.QuoteToInvoiceConversionRate.ToString("N1")%</div>
+                            </div>
+                        </div>
+                        <div class="tl-health-metric">
+                            <div class="tl-metric-icon @GetHealthMetricClass(100 - (Metrics.InvoicesOverdue * 2), 70, 90)">
+                                <MudIcon Icon="@Icons.Material.Rounded.Schedule" Size="Size.Small" />
+                            </div>
+                            <div class="tl-metric-info">
+                                <div class="tl-metric-label">Cash Flow Health</div>
+                                <div class="tl-metric-bar-container">
+                                    <div class="tl-metric-bar @GetCashFlowBarClass(Metrics.InvoicesOverdue)" style="width: @Math.Min(Math.Max(100 - (Metrics.InvoicesOverdue * 2), 0), 100)%"></div>
+                                </div>
+                                <div class="tl-metric-value">@Metrics.InvoicesOverdue overdue</div>
+                            </div>
+                        </div>
                     </div>
-                }
-                else
-                {
-                    <div class="tl-no-warnings">
-                        <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Large" />
-                        <div>All systems healthy</div>
-                    </div>
-                }
+                </div>
             </MudItem>
         </MudGrid>
         
-        @if (Metrics.Recommendations?.Any() == true)
-        {
-            <div class="tl-recommendations mt-4">
-                <MudText Typo="Typo.subtitle2" Class="mb-3">Recommendations</MudText>
-                <MudChipSet T="string">
-                    @foreach (var rec in Metrics.Recommendations.Take(4))
+        @* Active Warnings & Recommendations *@
+        <MudGrid Spacing="3" Class="mt-2">
+            <MudItem xs="12" md="6">
+                <div class="tl-health-section">
+                    <div class="tl-section-header">
+                        <MudIcon Icon="@Icons.Material.Rounded.WarningAmber" Size="Size.Small" Color="Color.Warning" />
+                        <MudText Typo="Typo.subtitle2">Active Warnings</MudText>
+                        @if (Metrics.Warnings?.Any() == true)
+                        {
+                            <MudBadge Content="@Metrics.Warnings.Count" Color="Color.Warning" Class="ml-2" />
+                        }
+                    </div>
+                    @if (Metrics.Warnings?.Any() == true)
                     {
-                        <MudChip T="string" Color="Color.Info" Variant="Variant.Text">
-                            <MudIcon Icon="@Icons.Material.Rounded.Lightbulb" Size="Size.Small" Class="mr-1" />
-                            @rec.Title
-                        </MudChip>
+                        <div class="tl-warnings-modern">
+                            @foreach (var warning in Metrics.Warnings.Take(3))
+                            {
+                                <div class="tl-warning-card @warning.Severity">
+                                    <div class="tl-warning-severity-indicator @warning.Severity"></div>
+                                    <div class="tl-warning-content">
+                                        <div class="tl-warning-header">
+                                            <MudIcon Icon="@(warning.Severity == "critical" ? Icons.Material.Rounded.Error : Icons.Material.Rounded.Warning)" 
+                                                     Size="Size.Small" 
+                                                     Color="@(warning.Severity == "critical" ? Color.Error : Color.Warning)" />
+                                            <span class="tl-warning-title">@warning.Title</span>
+                                        </div>
+                                        <div class="tl-warning-desc">@warning.Description</div>
+                                        <div class="tl-warning-meta">
+                                            <span class="tl-warning-category">@warning.Category</span>
+                                            <MudButton Href="@warning.ActionLink" 
+                                                       Size="Size.Small" 
+                                                       Variant="Variant.Text"
+                                                       Color="Color.Primary"
+                                                       EndIcon="@Icons.Material.Rounded.ArrowForward">View</MudButton>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
                     }
-                </MudChipSet>
-            </div>
-        }
+                    else
+                    {
+                        <div class="tl-no-warnings-modern">
+                            <div class="tl-success-ring">
+                                <MudIcon Icon="@Icons.Material.Rounded.Check" Color="Color.Success" Size="Size.Medium" />
+                            </div>
+                            <MudText Typo="Typo.body2" Class="mt-2">No active warnings</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">All business metrics are within healthy ranges</MudText>
+                        </div>
+                    }
+                </div>
+            </MudItem>
+            
+            <MudItem xs="12" md="6">
+                <div class="tl-health-section">
+                    <div class="tl-section-header">
+                        <MudIcon Icon="@Icons.Material.Rounded.Lightbulb" Size="Size.Small" Color="Color.Info" />
+                        <MudText Typo="Typo.subtitle2">Smart Recommendations</MudText>
+                        @if (Metrics.Recommendations?.Any() == true)
+                        {
+                            <MudBadge Content="@Metrics.Recommendations.Count" Color="Color.Info" Class="ml-2" />
+                        }
+                    </div>
+                    @if (Metrics.Recommendations?.Any() == true)
+                    {
+                        <div class="tl-recommendations-modern">
+                            @foreach (var rec in Metrics.Recommendations.Take(4))
+                            {
+                                <div class="tl-recommendation-card">
+                                    <div class="tl-rec-priority-indicator @rec.Priority"></div>
+                                    <div class="tl-rec-content">
+                                        <div class="tl-rec-header">
+                                            <MudIcon Icon="@GetRecommendationIcon(rec.Category)" 
+                                                     Size="Size.Small" 
+                                                     Color="Color.Info" />
+                                            <span class="tl-rec-title">@rec.Title</span>
+                                        </div>
+                                        <div class="tl-rec-desc">@rec.Description</div>
+                                        <div class="tl-rec-impact">
+                                            <MudIcon Icon="@Icons.Material.Rounded.TrendingUp" Size="Size.Small" />
+                                            <span>@rec.ExpectedImpact</span>
+                                        </div>
+                                    </div>
+                                    <MudIconButton Icon="@Icons.Material.Rounded.ArrowForward" 
+                                                   Size="Size.Small"
+                                                   Color="Color.Primary"
+                                                   Href="@rec.ActionLink" />
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="tl-no-recommendations">
+                            <MudText Typo="Typo.body2">No recommendations at this time</MudText>
+                        </div>
+                    }
+                </div>
+            </MudItem>
+        </MudGrid>
     </div>
         }
     };
@@ -975,44 +1098,346 @@
         color: white;
     }
     
-    /* Health Score */
-    .tl-health-score-card {
-        padding: 30px;
-        border-radius: 16px;
+    /* Modern Health Score Design */
+    .tl-health-hero {
+        padding: 32px 24px;
+        border-radius: 20px;
         text-align: center;
+        position: relative;
+        overflow: hidden;
     }
     
-    .tl-health-score-card.excellent {
-        background: linear-gradient(135deg, var(--success-50) 0%, white 100%);
-        border: 2px solid var(--success-500);
+    .tl-health-hero.excellent {
+        background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
     }
     
-    .tl-health-score-card.good {
-        background: linear-gradient(135deg, var(--tl-primary-50) 0%, white 100%);
-        border: 2px solid var(--tl-primary-500);
+    .tl-health-hero.good {
+        background: linear-gradient(135deg, #00a8b0 0%, #008a8a 50%, #006b6b 100%);
     }
     
-    .tl-health-score-card.warning {
-        background: linear-gradient(135deg, var(--warning-50) 0%, white 100%);
-        border: 2px solid var(--warning-500);
+    .tl-health-hero.warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%);
     }
     
-    .tl-health-score-card.critical {
-        background: linear-gradient(135deg, var(--error-50) 0%, white 100%);
-        border: 2px solid var(--error-500);
+    .tl-health-hero.critical {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%);
     }
     
-    .tl-health-score-value {
-        font-size: 56px;
-        font-weight: 700;
+    .tl-health-hero::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle at 30% 70%, rgba(255,255,255,0.1) 0%, transparent 50%);
+        pointer-events: none;
+    }
+    
+    .tl-health-gauge-container {
+        position: relative;
+        width: 200px;
+        height: 120px;
+        margin: 0 auto 16px;
+    }
+    
+    .tl-health-gauge {
+        width: 100%;
+        height: 100%;
+    }
+    
+    .tl-gauge-progress {
+        transition: stroke-dashoffset 1.5s ease-out;
+    }
+    
+    .tl-health-gauge-value {
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        text-align: center;
+        color: white;
+    }
+    
+    .tl-health-score-large {
+        font-size: 48px;
+        font-weight: 800;
         line-height: 1;
+    }
+    
+    .tl-health-score-max {
+        font-size: 18px;
+        font-weight: 500;
+        opacity: 0.8;
+    }
+    
+    .tl-health-status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: rgba(255,255,255,0.2);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        color: white;
+        font-size: 14px;
+        font-weight: 600;
         margin-bottom: 8px;
     }
     
-    .tl-health-score-card.excellent .tl-health-score-value { color: var(--success-500); }
-    .tl-health-score-card.good .tl-health-score-value { color: var(--tl-primary-500); }
-    .tl-health-score-card.warning .tl-health-score-value { color: var(--warning-500); }
-    .tl-health-score-card.critical .tl-health-score-value { color: var(--error-500); }
+    .tl-health-last-updated {
+        font-size: 11px;
+        color: rgba(255,255,255,0.7);
+    }
+    
+    /* Health Breakdown */
+    .tl-health-breakdown {
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: 16px;
+        padding: 24px;
+        height: 100%;
+    }
+    
+    .tl-breakdown-title {
+        margin-bottom: 20px !important;
+        font-weight: 600 !important;
+    }
+    
+    .tl-health-metrics {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .tl-health-metric {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    
+    .tl-metric-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        flex-shrink: 0;
+    }
+    
+    .tl-metric-icon.success { background: linear-gradient(135deg, #10b981, #059669); }
+    .tl-metric-icon.primary { background: linear-gradient(135deg, #00a8b0, #008a8a); }
+    .tl-metric-icon.warning { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .tl-metric-icon.error { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    
+    .tl-metric-info {
+        flex: 1;
+    }
+    
+    .tl-metric-label {
+        font-size: 13px;
+        color: var(--gray-500);
+        margin-bottom: 6px;
+    }
+    
+    .tl-metric-bar-container {
+        height: 6px;
+        background: var(--gray-100);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: 4px;
+    }
+    
+    .tl-metric-bar {
+        height: 100%;
+        background: linear-gradient(90deg, var(--tl-primary-500), var(--tl-accent));
+        border-radius: 3px;
+        transition: width 1s ease;
+    }
+    
+    .tl-metric-bar.warning {
+        background: linear-gradient(90deg, #f59e0b, #d97706);
+    }
+    
+    .tl-metric-bar.error {
+        background: linear-gradient(90deg, #ef4444, #dc2626);
+    }
+    
+    .tl-metric-value {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--gray-900);
+    }
+    
+    /* Health Section */
+    .tl-health-section {
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: 16px;
+        padding: 20px;
+        height: 100%;
+    }
+    
+    .tl-section-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--gray-100);
+    }
+    
+    /* Modern Warnings */
+    .tl-warnings-modern {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .tl-warning-card {
+        display: flex;
+        gap: 12px;
+        padding: 16px;
+        background: var(--gray-50);
+        border-radius: 12px;
+        border-left: 4px solid transparent;
+    }
+    
+    .tl-warning-card.critical {
+        background: var(--error-50);
+        border-left-color: var(--error-500);
+    }
+    
+    .tl-warning-card.warning {
+        background: var(--warning-50);
+        border-left-color: var(--warning-500);
+    }
+    
+    .tl-warning-content {
+        flex: 1;
+    }
+    
+    .tl-warning-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+    }
+    
+    .tl-warning-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--gray-900);
+    }
+    
+    .tl-warning-desc {
+        font-size: 12px;
+        color: var(--gray-500);
+        margin-bottom: 8px;
+    }
+    
+    .tl-warning-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .tl-warning-category {
+        font-size: 11px;
+        padding: 4px 8px;
+        background: var(--gray-200);
+        border-radius: 4px;
+        color: var(--gray-600);
+    }
+    
+    .tl-no-warnings-modern {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 32px 20px;
+        text-align: center;
+    }
+    
+    .tl-success-ring {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #10b981, #059669);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+    }
+    
+    /* Modern Recommendations */
+    .tl-recommendations-modern {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .tl-recommendation-card {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 16px;
+        background: var(--tl-primary-50);
+        border-radius: 12px;
+        border-left: 4px solid var(--tl-primary-500);
+        transition: all 200ms ease;
+    }
+    
+    .tl-recommendation-card:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    
+    .tl-rec-priority-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-top: 6px;
+        flex-shrink: 0;
+    }
+    
+    .tl-rec-priority-indicator.high { background: var(--error-500); }
+    .tl-rec-priority-indicator.medium { background: var(--warning-500); }
+    .tl-rec-priority-indicator.low { background: var(--success-500); }
+    
+    .tl-rec-content {
+        flex: 1;
+    }
+    
+    .tl-rec-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+    }
+    
+    .tl-rec-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--gray-900);
+    }
+    
+    .tl-rec-desc {
+        font-size: 12px;
+        color: var(--gray-500);
+        margin-bottom: 8px;
+    }
+    
+    .tl-rec-impact {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        color: var(--success-600);
+        font-weight: 500;
+    }
     
     /* Target Comparison */
     .tl-target-row {
@@ -1175,5 +1600,45 @@
         >= 70 => "Good",
         >= 50 => "Needs Attention",
         _ => "Critical"
+    };
+
+    private string GetHealthIcon(int score) => score switch
+    {
+        >= 90 => Icons.Material.Rounded.CheckCircle,
+        >= 70 => Icons.Material.Rounded.ThumbUp,
+        >= 50 => Icons.Material.Rounded.NotificationImportant,
+        _ => Icons.Material.Rounded.Warning
+    };
+
+    private double GetGaugeOffset(int score)
+    {
+        // Arc circumference is ~251.2 (π * 80)
+        var maxOffset = 251.2;
+        return maxOffset * (1.0 - score / 100.0);
+    }
+
+    private string GetHealthMetricClass(decimal value, decimal warningThreshold, decimal successThreshold)
+    {
+        if (value >= successThreshold) return "success";
+        if (value >= warningThreshold) return "primary";
+        if (value >= warningThreshold * 0.5m) return "warning";
+        return "error";
+    }
+
+    private string GetCashFlowBarClass(int overdueCount)
+    {
+        if (overdueCount == 0) return "";
+        if (overdueCount <= 5) return "warning";
+        return "error";
+    }
+
+    private string GetRecommendationIcon(string category) => category.ToLower() switch
+    {
+        "sales" => Icons.Material.Rounded.TrendingUp,
+        "revenue" => Icons.Material.Rounded.AttachMoney,
+        "operations" => Icons.Material.Rounded.Settings,
+        "cash flow" => Icons.Material.Rounded.AccountBalance,
+        "profitability" => Icons.Material.Rounded.ShowChart,
+        _ => Icons.Material.Rounded.Lightbulb
     };
 }

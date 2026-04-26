@@ -34,6 +34,10 @@ public class CustomerScoreCard
     public string Segment { get; set; } = "";     // Champion, Loyal, Promising, At-Risk, Lost, etc.
     public string Rating  { get; set; } = "";     // Diamond / Gold / Silver / Bronze / Watch
     public string HealthStatus { get; set; } = ""; // healthy, neutral, at-risk, critical
+    public DateTime? LastInvoiceDate { get; set; }
+    public decimal RevenueYtd { get; set; }
+    public decimal QuoteWinRate { get; set; }
+    public int Score { get; set; }
     public int Rank { get; set; }
 
     public List<string> SignalsPositive { get; set; } = new();
@@ -69,6 +73,18 @@ public class SupplierScoreCard
     public int Rank { get; set; }
 
     public List<string> Signals { get; set; } = new();
+    public DateTime? LastOrderDate { get; set; }
+    public decimal SpendYtd { get; set; }
+    public int PurchaseOrderCount { get; set; }
+    public decimal AverageOrderValue { get; set; }
+    public int QualityScore { get; set; }
+    public decimal AverageLeadTime { get; set; }
+    public int SupplierId { get; set; }
+    public string ContactName { get; set; } = "";
+    public string Email { get; set; } = "";
+    public string Status { get; set; } = "";
+    public string Phone { get; set; } = "";
+    public decimal OnTimeDeliveryRate { get; set; }
 }
 
 public class CustomerDataPlatform
@@ -79,6 +95,13 @@ public class CustomerDataPlatform
     public decimal TotalYtdRevenue { get; set; }
     public int Top10PercentRevenueShare { get; set; }
     public CustomerScoreCard? Champion { get; set; }
+    public int TotalCustomers { get; set; }
+    public int ActiveCustomers { get; set; }
+    public decimal TotalRevenueYtd { get; set; }
+    public decimal AverageLifetimeValue { get; set; }
+    public List<CustomerScoreCard> TopCustomers { get; set; } = new();
+    public List<AtRiskCustomer> AtRiskCustomers { get; set; } = new();
+    public Dictionary<string, int> Segments { get; set; } = new();
 }
 
 public class SupplierDataPlatform
@@ -88,6 +111,13 @@ public class SupplierDataPlatform
     public decimal TotalLifetimeSpend { get; set; }
     public decimal TotalYtdSpend { get; set; }
     public int StrategicSupplierCount { get; set; }
+    public int TotalSuppliers { get; set; }
+    public int ActiveSuppliers { get; set; }
+    public decimal TotalSpendYtd { get; set; }
+    public int TotalPurchaseOrders { get; set; }
+    public List<SupplierScoreCard> TopSuppliers { get; set; } = new();
+    public List<SupplierScoreCard> AllSuppliers { get; set; } = new();
+    public Dictionary<string, decimal> SpendByCategory { get; set; } = new();
 }
 
 // ============================================================================
@@ -101,6 +131,13 @@ public class MarketingStrategy
     public DateTime CreatedAt { get; set; } = DateTime.Now;
     public DateTime UpdatedAt { get; set; } = DateTime.Now;
     public string Status { get; set; } = "Draft"; // Draft, Active, Archived
+    public string Name { get; set; } = "";
+    public string Description { get; set; } = "";
+    public string Timeframe { get; set; } = "";
+    public int ProgressPercent { get; set; }
+    public int TotalObjectives { get; set; }
+    public int CompletedObjectives { get; set; }
+    public List<KeyResult> KeyResults { get; set; } = new();
 
     public string Vision { get; set; } = "";
     public string IdealCustomerProfile { get; set; } = "";
@@ -113,7 +150,16 @@ public class MarketingStrategy
     public string KeyInitiatives { get; set; } = "";
     public string KpiTargets { get; set; } = "";
     public string Budget { get; set; } = "";
-    public string Notes { get; set; } = "";
+    public string Timeline { get; set; } = "";
+}
+
+public class KeyResult
+{
+    public string Name { get; set; } = "";
+    public decimal CurrentValue { get; set; }
+    public decimal TargetValue { get; set; }
+    public string Unit { get; set; } = "";
+    public int PercentComplete { get; set; }
 }
 
 // ============================================================================
@@ -140,6 +186,10 @@ public class EmailCampaign
     public int RecipientCount { get; set; }
     public int OpenRate { get; set; }
     public int ClickRate { get; set; }
+    public int OpenCount { get; set; }
+    public int ClickCount { get; set; }
+    public DateTime? SentDate { get; set; }
+    public DateTime? ScheduledDate { get; set; }
     public List<string> Log { get; set; } = new();
 }
 
@@ -160,6 +210,10 @@ public class CampaignStats
     public int TotalSent { get; set; }
     public int AvgOpenRate { get; set; }
     public int AvgClickRate { get; set; }
+    public int TotalCampaigns { get; set; }
+    public int EmailsSent { get; set; }
+    public decimal OpenRate { get; set; }
+    public decimal ClickRate { get; set; }
 }
 
 // ============================================================================
@@ -181,6 +235,96 @@ public class MarketingStrategyDoc
     public int KpiLeadTarget { get; set; }
     public decimal KpiConversionRate { get; set; }
     public decimal KpiCacTarget { get; set; }
-    public int KpiNpsTarget { get; set; }
+    public decimal KpiNpsTarget { get; set; }
     public string Notes { get; set; } = "";
+}
+
+// ============================================================================
+// Additional Marketing Model Classes
+// ============================================================================
+public class AtRiskCustomer
+{
+    public int CompanyId { get; set; }
+    public string CompanyName { get; set; } = "";
+    public string ContactName { get; set; } = "";
+    public string Segment { get; set; } = "";
+    public decimal PreviousRevenue { get; set; }
+    public decimal CurrentRevenue { get; set; }
+    public DateTime LastOrderDate { get; set; }
+    public int RiskScore { get; set; }
+    public int ContactId { get; set; }
+    public string Email { get; set; } = "";
+    public string Phone { get; set; } = "";
+    public int DaysSinceLastOrder { get; set; }
+}
+
+public class AiRecommendation
+{
+    public string Id { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Type { get; set; } = "";
+    public string Description { get; set; } = "";
+    public bool Applied { get; set; }
+}
+
+public class StrategicObjective
+{
+    public string Id { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Category { get; set; } = "";
+    public string Priority { get; set; } = "";
+    public string Status { get; set; } = "";
+    public string Description { get; set; } = "";
+    public int ProgressPercent { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public decimal Budget { get; set; }
+    public DateTime? DueDate { get; set; }
+    public string Owner { get; set; } = "";
+    public int Progress { get; set; }
+    public List<string> Assignees { get; set; } = new();
+    public string TargetValue { get; set; } = "";
+    public DateTime? TargetDate { get; set; }
+    public decimal CurrentProgress { get; set; }
+}
+
+public class MarketingTactic
+{
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string Status { get; set; } = "";
+    public string Description { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Category { get; set; } = "";
+    public string Priority { get; set; } = "";
+    public decimal Budget { get; set; }
+    public DateTime? DueDate { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+}
+
+public class StrategyStats
+{
+    public int TotalObjectives { get; set; }
+    public int CompletedObjectives { get; set; }
+    public int InProgressObjectives { get; set; }
+    public int OverdueObjectives { get; set; }
+    public int TotalTactics { get; set; }
+    public int CompletedTactics { get; set; }
+}
+
+public class GeneratedContent
+{
+    public string Id { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Type { get; set; } = "";
+    public string Content { get; set; } = "";
+    public DateTime CreatedAt { get; set; }
+}
+
+public class MarketingInsights
+{
+    public string TopRecommendation { get; set; } = "";
+    public List<string> Opportunities { get; set; } = new();
+    public List<string> RecommendedSegments { get; set; } = new();
 }

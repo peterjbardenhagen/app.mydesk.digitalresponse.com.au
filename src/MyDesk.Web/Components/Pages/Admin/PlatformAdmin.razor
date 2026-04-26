@@ -1,0 +1,423 @@
+@page "/admin/platform"
+@attribute [Authorize(Roles = "Admin,Director")]
+@inject PlatformSettingsService PlatformSettings
+@inject ISnackbar Snackbar
+@inject IWebHostEnvironment Env
+
+<PageTitle>Platform Admin - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <a href="/admin/setup">Admin</a><span class="sep">/</span>
+            <span>Platform Settings</span>
+        </div>
+        <h1>Platform Settings</h1>
+        <p class="tl-subtitle">Manage system branding, features, and login experience</p>
+    </div>
+    <MudButton Variant="Variant.Filled" 
+               Color="Color.Primary" 
+               StartIcon="@Icons.Material.Rounded.Save"
+               OnClick="SaveSettings"
+               Disabled="_saving"
+               Class="rounded-lg px-6">
+        @if (_saving)
+        {
+            <MudProgressCircular Size="Size.Small" Color="Color.Inherit" Class="mr-2" />
+            <span>Saving...</span>
+        }
+        else
+        {
+            <span>Save Settings</span>
+        }
+    </MudButton>
+</div>
+
+<MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6 mt-4" Color="Color.Primary" Outlined="true" Class="tl-settings-tabs">
+    <MudTabPanel Text="General Branding" Icon="@Icons.Material.Rounded.BrandingWatermark">
+        <MudGrid Spacing="4">
+            @* Branding Section *@
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-6" Elevation="0" Outlined="true">
+                    <div class="d-flex align-center gap-3 mb-6">
+                        <div class="tl-icon-box teal">
+                            <MudIcon Icon="@Icons.Material.Rounded.Style" />
+                        </div>
+                        <MudText Typo="Typo.h6">Platform Identity</MudText>
+                    </div>
+
+                    <MudTextField @bind-Value="_settings.PlatformName" 
+                                 Label="Platform Name" 
+                                 Variant="Variant.Outlined"
+                                 HelperText="The name shown in browser tabs and emails"
+                                 Class="mb-4" />
+
+                    <MudTextField @bind-Value="_settings.PlatformTagline" 
+                                 Label="Tagline" 
+                                 Variant="Variant.Outlined"
+                                 HelperText="Brief description of the platform"
+                                 Class="mb-4" />
+
+                    <MudTextField @bind-Value="_settings.CompanyName" 
+                                 Label="Company Name" 
+                                 Variant="Variant.Outlined"
+                                 HelperText="Your primary business name"
+                                 Class="mb-4" />
+
+                    <MudTextField @bind-Value="_settings.CompanyLegalName" 
+                                 Label="Legal Company Name" 
+                                 Variant="Variant.Outlined"
+                                 HelperText="Full legal name for footers and invoices"
+                                 Class="mb-4" />
+                </MudPaper>
+            </MudItem>
+
+            @* Assets Section *@
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-6" Elevation="0" Outlined="true">
+                    <div class="d-flex align-center gap-3 mb-6">
+                        <div class="tl-icon-box gold">
+                            <MudIcon Icon="@Icons.Material.Rounded.Image" />
+                        </div>
+                        <MudText Typo="Typo.h6">System Assets</MudText>
+                    </div>
+
+                    <MudTextField @bind-Value="_settings.LogoUrl" 
+                                 Label="Main Logo URL" 
+                                 Variant="Variant.Outlined"
+                                 HelperText="Path to your primary logo SVG/PNG"
+                                 Class="mb-4" />
+
+                    <MudTextField @bind-Value="_settings.FaviconUrl" 
+                                 Label="Favicon URL" 
+                                 Variant="Variant.Outlined"
+                                 HelperText="Path to your 32x32 favicon"
+                                 Class="mb-4" />
+
+                    @if (!string.IsNullOrEmpty(_settings.LogoUrl))
+                    {
+                        <div class="mt-4 pa-6 tl-preview-box">
+                            <MudText Typo="Typo.caption" Class="d-block mb-3 opacity-60">LOGO PREVIEW</MudText>
+                            <img src="@_settings.LogoUrl" alt="Logo" style="max-height: 48px;" />
+                        </div>
+                    }
+                </MudPaper>
+            </MudItem>
+
+            @* Contact Section *@
+            <MudItem xs="12">
+                <MudPaper Class="pa-6" Elevation="0" Outlined="true">
+                    <div class="d-flex align-center gap-3 mb-6">
+                        <div class="tl-icon-box blue">
+                            <MudIcon Icon="@Icons.Material.Rounded.ContactMail" />
+                        </div>
+                        <MudText Typo="Typo.h6">Contact & Legal</MudText>
+                    </div>
+
+                    <MudGrid Spacing="3">
+                        <MudItem xs="12" md="4">
+                            <MudTextField @bind-Value="_settings.CompanyWebsite" Label="Website URL" Variant="Variant.Outlined" Class="mb-3" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudTextField @bind-Value="_settings.SupportEmail" Label="Support Email" Variant="Variant.Outlined" Class="mb-3" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudTextField @bind-Value="_settings.SalesEmail" Label="Sales Email" Variant="Variant.Outlined" Class="mb-3" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="_settings.CopyrightText" Label="Copyright Text" Variant="Variant.Outlined" FullWidth="true" />
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </MudTabPanel>
+
+    <MudTabPanel Text="Login Screen" Icon="@Icons.Material.Rounded.Login">
+        <MudGrid Spacing="4">
+            @* Login Hero Configuration *@
+            <MudItem xs="12" md="7">
+                <MudPaper Class="pa-6" Elevation="0" Outlined="true">
+                    <div class="d-flex align-center gap-3 mb-6">
+                        <div class="tl-icon-box purple">
+                            <MudIcon Icon="@Icons.Material.Rounded.Brush" />
+                        </div>
+                        <MudText Typo="Typo.h6">Login Experience</MudText>
+                    </div>
+
+                    <MudGrid Spacing="3">
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="_settings.LoginHeading" Label="Welcome Heading" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="_settings.LoginSubheading" Label="Welcome Subheading" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="_settings.LoginQuote" Label="Inspirational Quote" Variant="Variant.Outlined" Lines="2" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="_settings.LoginQuoteAuthor" Label="Quote Author/Source" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="_settings.LoginQuoteLabel" Label="Source Label" Variant="Variant.Outlined" HelperText="e.g. Enterprise Portal" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="_settings.LoginLogoUrl" Label="Hero Logo URL" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="_settings.LoginMarkUrl" Label="Form Mark URL" Variant="Variant.Outlined" />
+                        </MudItem>
+                    </MudGrid>
+
+                    <div class="d-flex align-center gap-4 mt-6">
+                        <MudColorPicker Label="Primary Accent" @bind-Text="_settings.LoginPrimaryColor" Style="@($"color: {_settings.LoginPrimaryColor}")" Variant="Variant.Outlined" />
+                        <MudColorPicker Label="Accent Color" @bind-Text="_settings.LoginAccentColor" Style="@($"color: {_settings.LoginAccentColor}")" Variant="Variant.Outlined" />
+                        <MudColorPicker Label="Background" @bind-Text="_settings.LoginBackgroundColor" Style="@($"color: {_settings.LoginBackgroundColor}")" Variant="Variant.Outlined" />
+                    </div>
+                </MudPaper>
+            </MudItem>
+
+            @* Login Preview *@
+            <MudItem xs="12" md="5">
+                <MudPaper Class="pa-6" Elevation="0" Outlined="true" Style="height: 100%;">
+                    <MudText Typo="Typo.subtitle2" Class="mb-4 opacity-60 uppercase tracking-widest">LIVE PREVIEW</MudText>
+                    
+                    <div class="tl-login-hero-preview" style="background-color: @_settings.LoginBackgroundColor;">
+                        <div class="hero-preview-inner">
+                            <img src="@_settings.LoginLogoUrl" class="preview-logo" />
+                            <div class="preview-quote-wrap">
+                                <MudIcon Icon="@Icons.Material.Rounded.FormatQuote" Size="Size.Medium" Style="@($"color: {_settings.LoginPrimaryColor}; opacity: 0.8;")" />
+                                <div class="preview-quote-text">@_settings.LoginQuote</div>
+                                <div class="preview-quote-author">
+                                    @_settings.LoginQuoteAuthor &middot; <span style="@($"color: {_settings.LoginPrimaryColor}; font-weight: 600;")">@_settings.LoginQuoteLabel</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="preview-blob" style="background: @_settings.LoginPrimaryColor; top: -20%; left: -20%;"></div>
+                        <div class="preview-blob" style="background: @_settings.LoginAccentColor; bottom: -10%; right: -10%; opacity: 0.1;"></div>
+                    </div>
+
+                    <div class="mt-4 d-flex align-center justify-center gap-6">
+                        <div class="text-center">
+                            <div class="preview-mark-box">
+                                <img src="@_settings.LoginMarkUrl" style="height: 32px;" />
+                            </div>
+                            <MudText Typo="Typo.caption">Form Mark</MudText>
+                        </div>
+                    </div>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </MudTabPanel>
+
+    <MudTabPanel Text="Features & SaaS" Icon="@Icons.Material.Rounded.Extension">
+        <MudGrid Spacing="4">
+            @* Feature Flags *@
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-6" Elevation="0" Outlined="true">
+                    <div class="d-flex align-center gap-3 mb-6">
+                        <div class="tl-icon-box orange">
+                            <MudIcon Icon="@Icons.Material.Rounded.ToggleOn" />
+                        </div>
+                        <MudText Typo="Typo.h6">Feature Management</MudText>
+                    </div>
+
+                    <div class="d-flex flex-column gap-2">
+                        <MudSwitch @bind-Value="_settings.EnableAIAssistant" Label="Enable AI Assistant" Color="Color.Primary" />
+                        <MudSwitch @bind-Value="_settings.EnableAskAI" Label="Enable Ask AI" Color="Color.Primary" />
+                        <MudSwitch @bind-Value="_settings.EnableTelegramBot" Label="Enable Telegram Bot" Color="Color.Primary" />
+                        <MudSwitch @bind-Value="_settings.EnableMYOBIntegration" Label="Enable MYOB Integration" Color="Color.Primary" />
+                        <MudSwitch @bind-Value="_settings.EnablePDFGeneration" Label="Enable PDF Generation" Color="Color.Primary" />
+                        <MudSwitch @bind-Value="_settings.EnableEmailNotifications" Label="Enable Email Notifications" Color="Color.Primary" />
+                        <MudDivider Class="my-2" />
+                        <MudSwitch @bind-Value="_settings.DisableAllEmails" Label="DISABLE ALL EMAILS (System Kill-switch)" Color="Color.Error" />
+                    </div>
+                </MudPaper>
+            </MudItem>
+
+            @* SaaS Config *@
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-6" Elevation="0" Outlined="true">
+                    <div class="d-flex align-center gap-3 mb-6">
+                        <div class="tl-icon-box green">
+                            <MudIcon Icon="@Icons.Material.Rounded.CloudQueue" />
+                        </div>
+                        <MudText Typo="Typo.h6">SaaS Configuration</MudText>
+                    </div>
+
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12">
+                            <MudSwitch @bind-Value="_settings.IsMultiTenant" Label="Multi-Tenant Architecture" Color="Color.Primary" />
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudNumericField @bind-Value="_settings.MaxUsersPerTenant" Label="Max Users" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudNumericField @bind-Value="_settings.TrialDays" Label="Trial Days" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="_settings.SubscriptionPlan" Label="Active Subscription Tier" Variant="Variant.Outlined" />
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </MudTabPanel>
+</MudTabs>
+
+<style>
+    .tl-icon-box {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+    }
+    .tl-icon-box.teal { background: linear-gradient(135deg, #00c8c8 0%, #00e0e0 100%); }
+    .tl-icon-box.gold { background: linear-gradient(135deg, #cca05a 0%, #d4a86a 100%); }
+    .tl-icon-box.blue { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+    .tl-icon-box.purple { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
+    .tl-icon-box.orange { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
+    .tl-icon-box.green { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+
+    .tl-preview-box {
+        background: var(--gray-50);
+        border: 1px dashed var(--gray-300);
+        border-radius: 12px;
+        text-align: center;
+    }
+
+    .tl-login-hero-preview {
+        position: relative;
+        height: 280px;
+        border-radius: 16px;
+        overflow: hidden;
+        padding: 32px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        color: white;
+    }
+
+    .hero-preview-inner { position: relative; z-index: 5; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
+    .preview-logo { height: 24px; width: auto; align-self: flex-start; }
+    .preview-quote-text { font-size: 18px; font-weight: 700; margin: 8px 0; line-height: 1.3; }
+    .preview-quote-author { font-size: 11px; opacity: 0.7; }
+    
+    .preview-blob { position: absolute; width: 150px; height: 150px; border-radius: 50%; filter: blur(40px); opacity: 0.3; }
+    
+    .preview-mark-box {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        background: white;
+        border: 1px solid var(--gray-200);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 8px;
+    }
+
+    .uppercase { text-transform: uppercase; }
+    .tracking-widest { letter-spacing: 0.1em; }
+</style>rid>
+
+<style>
+    .tl-page-header { margin-bottom: 24px; }
+    .tl-breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--gray-500); margin-bottom: 8px; }
+    .tl-breadcrumb a { color: var(--gray-500); text-decoration: none; }
+    .tl-breadcrumb a:hover { color: var(--tl-primary-500); }
+    .tl-breadcrumb .sep { opacity: 0.5; }
+    .tl-subtitle { color: var(--gray-500); margin: 0; }
+</style>
+
+@code {
+    private PlatformSettings _settings = new();
+    private bool _saving = false;
+
+    protected override void OnInitialized()
+    {
+        // Load current settings
+        var current = PlatformSettings.Current;
+        _settings = new PlatformSettings
+        {
+            PlatformName = current.PlatformName,
+            PlatformTagline = current.PlatformTagline,
+            CompanyName = current.CompanyName,
+            CompanyLegalName = current.CompanyLegalName,
+            LogoUrl = current.LogoUrl,
+            FaviconUrl = current.FaviconUrl,
+            CompanyWebsite = current.CompanyWebsite,
+            SupportEmail = current.SupportEmail,
+            SalesEmail = current.SalesEmail,
+            CopyrightText = current.CopyrightText,
+            PrivacyPolicyUrl = current.PrivacyPolicyUrl,
+            TermsAndConditionsUrl = current.TermsAndConditionsUrl,
+            CookiePolicyUrl = current.CookiePolicyUrl,
+            EnableAIAssistant = current.EnableAIAssistant,
+            EnableAskAI = current.EnableAskAI,
+            EnableTelegramBot = current.EnableTelegramBot,
+            EnableMYOBIntegration = current.EnableMYOBIntegration,
+            EnablePDFGeneration = current.EnablePDFGeneration,
+            EnableEmailNotifications = current.EnableEmailNotifications,
+            DisableAllEmails = current.DisableAllEmails,
+            EnableTwoFactorAuth = current.EnableTwoFactorAuth,
+            EnableSSO = current.EnableSSO,
+            EnableCustomBranding = current.EnableCustomBranding,
+            IsMultiTenant = current.IsMultiTenant,
+            MaxUsersPerTenant = current.MaxUsersPerTenant,
+            MaxStoragePerTenantMB = current.MaxStoragePerTenantMB,
+            TrialDays = current.TrialDays,
+            SubscriptionPlan = current.SubscriptionPlan,
+            DefaultTimezone = current.DefaultTimezone,
+            DefaultCurrency = current.DefaultCurrency,
+            DefaultDateFormat = current.DefaultDateFormat,
+            DefaultCountry = current.DefaultCountry,
+            UseEnglishAustralianSpelling = current.UseEnglishAustralianSpelling,
+            LoginLogoUrl = current.LoginLogoUrl,
+            LoginMarkUrl = current.LoginMarkUrl,
+            LoginQuote = current.LoginQuote,
+            LoginQuoteAuthor = current.LoginQuoteAuthor,
+            LoginQuoteLabel = current.LoginQuoteLabel,
+            LoginHeading = current.LoginHeading,
+            LoginSubheading = current.LoginSubheading,
+            LoginPrimaryColor = current.LoginPrimaryColor,
+            LoginAccentColor = current.LoginAccentColor,
+            LoginBackgroundColor = current.LoginBackgroundColor
+        };
+    }
+
+    private async Task SaveSettings()
+    {
+        _saving = true;
+        try
+        {
+            // Save settings to configuration file
+            await SavePlatformSettingsAsync(_settings);
+            PlatformSettings.InvalidateCache();
+            Snackbar.Add("Platform settings saved successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving settings: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task SavePlatformSettingsAsync(PlatformSettings settings)
+    {
+        var configPath = Path.Combine(Env.ContentRootPath, "Config", "platformsettings.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
+        
+        var json = System.Text.Json.JsonSerializer.Serialize(new { PlatformSettings = settings }, 
+            new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(configPath, json);
+    }
+}

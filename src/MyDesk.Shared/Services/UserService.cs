@@ -5,8 +5,7 @@ namespace MyDesk.Shared.Services;
 
 /// <summary>
 /// User admin CRUD. Uses legacy Users table (Code/PW/Name/Active/Deleted).
-/// NOTE: passwords are still plain text in the legacy schema. Hashing is a
-/// scheduled follow-up, not a blocker for admin functionality.
+/// Passwords are now hashed using BCrypt for security.
 /// </summary>
 public class UserService
 {
@@ -17,6 +16,113 @@ public class UserService
     {
         _db = db;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Hash a password using BCrypt
+    /// </summary>
+    public string HashPassword(string password)
+    {
+        return BCrypt.Net.BCrypt.HashPassword(password, workFactor: 12);
+    }
+
+    /// <summary>
+    /// Verify a password against a hash
+    /// </summary>
+    public bool VerifyPassword(string password, string hash)
+    {
+        // Check if the password is plain text (legacy) or hashed
+        if (!hash.StartsWith("$2a$") && !hash.StartsWith("$2b$"))
+        {
+            // Legacy plain text password - compare directly
+            return string.Equals(password, hash, StringComparison.Ordinal);
+        }
+        // Hashed password - use BCrypt verification
+        return BCrypt.Net.BCrypt.Verify(password, hash);
+    }
+
+    /// <summary>
+    /// Verify login credentials (code or name + password).
+    /// Accepts Users.Code OR Users.Name (case-insensitive) with Users.PW.
+    /// </summary>
+    public async Task<User?> VerifyLoginAsync(string login, string password)
+    {
+        var loginTrimmed = login.Trim();
+
+        // Try to get user by Code first (case-insensitive via UPPER)
+        var dt1 = await _db.QueryAsync(
+            @"SELECT TOP 1 u.UserId, u.Code, u.Name, u.Email, u.UserTypeId, u.DivisionId,
+                     ISNULL(u.Active,0) AS Active, ISNULL(u.Deleted,0) AS Deleted, ISNULL(u.UserRoleId, 2) AS UserRoleId
+              FROM Users u
+              WHERE UPPER(u.Code) = UPPER(@Login) AND ISNULL(u.Deleted,0) = 0",
+            new() { ["Login"] = loginTrimmed });
+
+        User? user = null;
+        if (dt1.Rows.Count > 0)
+        {
+            var r = dt1.Rows[0];
+            user = new User
+            {
+                UserId     = (int)r["UserId"],
+                Code       = r["Code"]?.ToString() ?? "",
+                Name       = r["Name"]?.ToString() ?? "",
+                Email      = r["Email"]?.ToString(),
+                UserTypeId = r["UserTypeId"] == DBNull.Value ? 0 : Convert.ToInt32(r["UserTypeId"]),
+                DivisionId = r["DivisionId"] as int?,
+                Active     = Convert.ToInt32(r["Active"]) == 1,
+                Role       = (RoleType)(r["UserRoleId"] == DBNull.Value ? 2 : Convert.ToInt32(r["UserRoleId"])),
+            };
+        }
+
+        // If not found by code, try by Name (case-insensitive)
+        if (user == null)
+        {
+            var dt2 = await _db.QueryAsync(
+                @"SELECT TOP 1 u.UserId, u.Code, u.Name, u.Email, u.UserTypeId, u.DivisionId,
+                         ISNULL(u.Active,0) AS Active, ISNULL(u.Deleted,0) AS Deleted, ISNULL(u.UserRoleId, 2) AS UserRoleId
+                  FROM Users u
+                  WHERE UPPER(u.Name) = UPPER(@Login) AND ISNULL(u.Deleted,0) = 0",
+                new() { ["Login"] = loginTrimmed });
+
+            if (dt2.Rows.Count > 0)
+            {
+                var r = dt2.Rows[0];
+                user = new User
+                {
+                    UserId     = (int)r["UserId"],
+                    Code       = r["Code"]?.ToString() ?? "",
+                    Name       = r["Name"]?.ToString() ?? "",
+                    Email      = r["Email"]?.ToString(),
+                    UserTypeId = r["UserTypeId"] == DBNull.Value ? 0 : Convert.ToInt32(r["UserTypeId"]),
+                    DivisionId = r["DivisionId"] as int?,
+                    Active     = Convert.ToInt32(r["Active"]) == 1,
+                    Role       = (RoleType)(r["UserRoleId"] == DBNull.Value ? 2 : Convert.ToInt32(r["UserRoleId"])),
+                };
+            }
+        }
+
+        if (user == null) return null;
+
+        // Check account is active and not deleted
+        if (!user.Active) return null;
+
+        // Get stored password
+        var dtPw = await _db.QueryAsync(
+            "SELECT PW, ISNULL(Deleted, 0) AS Deleted FROM Users WHERE UserId = @UserId",
+            new() { ["UserId"] = user.UserId });
+
+        if (dtPw.Rows.Count == 0) return null;
+
+        var storedPassword = dtPw.Rows[0]["PW"]?.ToString() ?? "";
+        var deleted        = Convert.ToInt32(dtPw.Rows[0]["Deleted"]) == 1;
+
+        if (deleted) return null;
+
+        // Verify password (supports both legacy plain-text and BCrypt hashed)
+        if (!VerifyPassword(password, storedPassword))
+            return null;
+
+        return user;
     }
 
     public async Task<List<User>> GetAllAsync(bool includeInactive = false)
@@ -80,7 +186,7 @@ public class UserService
             ["Code"] = user.Code,
             ["Name"] = user.Name,
             ["Email"] = (object?)user.Email ?? DBNull.Value,
-            ["PW"] = password,
+            ["PW"] = HashPassword(password),
             ["UserTypeId"] = user.UserTypeId == 0 ? 3 : user.UserTypeId,
             ["DivisionId"] = (object?)user.DivisionId ?? DBNull.Value,
             ["UserRoleId"] = (int)user.Role,
@@ -110,7 +216,7 @@ public class UserService
             ["DivisionId"] = (object?)user.DivisionId ?? DBNull.Value,
             ["UserRoleId"] = (int)user.Role,
         };
-        if (!string.IsNullOrEmpty(newPassword)) p["PW"] = newPassword;
+        if (!string.IsNullOrEmpty(newPassword)) p["PW"] = HashPassword(newPassword);
         await _db.ExecuteAsync(sql, p);
         _logger.LogInformation("Updated user {Id} ({Code})", user.UserId, user.Code);
     }
@@ -156,6 +262,51 @@ public class UserService
         };
     }
 
+    public async Task<User?> GetByEmailAsync(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return null;
+        var dt = await _db.QueryAsync(
+            @"SELECT TOP 1 u.*, ISNULL(u.UserRoleId, 2) AS UserRoleId
+              FROM Users u
+              WHERE u.Email = @Email AND ISNULL(u.Deleted,0) = 0 AND ISNULL(u.Active,0) = 1",
+            new() { ["Email"] = email.Trim() });
+        if (dt.Rows.Count == 0) return null;
+        var r = dt.Rows[0];
+        return new User
+        {
+            UserId     = (int)r["UserId"],
+            Code       = r["Code"]?.ToString() ?? "",
+            Name       = r["Name"]?.ToString() ?? "",
+            Email      = r["Email"]?.ToString(),
+            UserTypeId = r["UserTypeId"] == DBNull.Value ? 0 : Convert.ToInt32(r["UserTypeId"]),
+            Role       = (RoleType)(r["UserRoleId"] == DBNull.Value ? 2 : Convert.ToInt32(r["UserRoleId"])),
+            Active     = true,
+        };
+    }
+
+    /// <summary>
+    /// Resets a user's password by their email address.
+    /// Returns the user's Code if found and reset, null otherwise.
+    /// </summary>
+    public async Task<(User? User, string NewPassword)?> ResetPasswordByEmailAsync(string email)
+    {
+        var user = await GetByEmailAsync(email);
+        if (user == null) return null;
+
+        // Generate a readable temporary password
+        var adjectives = new[] { "Quick", "Bright", "Swift", "Clear", "Sharp" };
+        var nouns      = new[] { "Desk", "Light", "Cloud", "Spark", "Wave" };
+        var rng        = new Random();
+        var newPassword = $"{adjectives[rng.Next(adjectives.Length)]}{nouns[rng.Next(nouns.Length)]}{rng.Next(100, 999)}!";
+
+        await _db.ExecuteAsync(
+            "UPDATE Users SET PW = @PW, DatePasswordChanged = GETDATE() WHERE UserId = @UserId",
+            new() { ["PW"] = HashPassword(newPassword), ["UserId"] = user.UserId });
+
+        _logger.LogInformation("Password reset via forgot-password for user {Code} ({Email})", user.Code, email);
+        return (user, newPassword);
+    }
+
     public async Task<bool> ChangePasswordAsync(string userCode, string currentPassword, string newPassword)
     {
         // Verify current password matches
@@ -165,12 +316,12 @@ public class UserService
         if (dt.Rows.Count == 0) return false;
 
         var storedPw = dt.Rows[0]["PW"]?.ToString() ?? "";
-        if (!string.Equals(storedPw, currentPassword, StringComparison.Ordinal))
+        if (!VerifyPassword(currentPassword, storedPw))
             return false;
 
         await _db.ExecuteAsync(
             "UPDATE Users SET PW = @PW, DatePasswordChanged = GETDATE() WHERE Code = @Code",
-            new() { ["PW"] = newPassword, ["Code"] = userCode });
+            new() { ["PW"] = HashPassword(newPassword), ["Code"] = userCode });
 
         _logger.LogInformation("Password changed for user {Code}", userCode);
         return true;
@@ -180,7 +331,7 @@ public class UserService
     {
         await _db.ExecuteAsync(
             "UPDATE Users SET PW = @PW, DatePasswordChanged = GETDATE() WHERE Code = @Code",
-            new() { ["PW"] = newPassword, ["Code"] = userCode });
+            new() { ["PW"] = HashPassword(newPassword), ["Code"] = userCode });
         _logger.LogInformation("Password reset for user {Code}", userCode);
     }
 

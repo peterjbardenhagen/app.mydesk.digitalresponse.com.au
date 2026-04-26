@@ -187,10 +187,7 @@ else
             <MudSelect T="PerformanceView" Variant="Variant.Outlined" Dense="true" Class="tl-performance-select" Value="_performanceView" ValueChanged="OnPerformanceViewChanged">
                 <MudSelectItem T="PerformanceView" Value="PerformanceView.Personal">Your Performance</MudSelectItem>
                 <MudSelectItem T="PerformanceView" Value="PerformanceView.Company">Company Performance</MudSelectItem>
-                @if (_isDirectorOrAdmin)
-                {
-                    <MudSelectItem T="PerformanceView" Value="PerformanceView.CompareUsers">Compare to Users</MudSelectItem>
-                }
+                <MudSelectItem T="PerformanceView" Value="PerformanceView.CompareUsers">Compare to Users</MudSelectItem>
             </MudSelect>
             @if (_performanceView == PerformanceView.CompareUsers && _isDirectorOrAdmin)
             {
@@ -396,7 +393,7 @@ else
     private string? _selectedUserCode;
     private List<ChartSeries> _chartSeries = new();
     private string[]          _xAxisLabels = Array.Empty<string>();
-    private ChartPeriod       _chartPeriod = ChartPeriod.ThisYear;
+    private ChartPeriod       _chartPeriod = ChartPeriod.ThisMonth;
     private string            _chartSubtitle = "Quotes \u00b7 invoices \u00b7 purchase orders \u2014 value by month (all, excluding lost quotes)";
 
     private enum PerformanceView
@@ -409,6 +406,7 @@ else
     private static readonly IReadOnlyDictionary<ChartPeriod, string> _periodOptions =
         new Dictionary<ChartPeriod, string>
         {
+            [ChartPeriod.ThisMonth]      = "This Month",
             [ChartPeriod.ThisYear]       = "This Year",
             [ChartPeriod.FyToDate]       = "FY to Date",
             [ChartPeriod.LastYear]       = "Last Year",
@@ -531,9 +529,21 @@ else
         {
             _userKpi = _metrics.TeamMemberKPIs.FirstOrDefault(k => k.UserCode == _userCode);
         }
-        else if (view == PerformanceView.CompareUsers)
+        else if (view == PerformanceView.Company && _metrics != null)
         {
-            _userKpi = null;
+            _userKpi = new UserKPI
+            {
+                UserName = "All Company",
+                QuotesRaisedThisMonth = _metrics.ThisMonthQuotes,
+                QuotesWonThisMonth = _metrics.ThisMonthQuotesWon,
+                InvoicesClosedThisMonth = _metrics.ThisMonthInvoices,
+                InvoiceValueThisMonth = _metrics.ThisMonthInvoiceValue,
+                YtdRevenue = _metrics.YtdInvoiceValue,
+                WinRate = _metrics.QuoteToInvoiceConversionRate,
+                Rank = 1,
+                PendingQuotes = (int)(_metrics.PipelineValue / 5000), // Approximate count
+                OverdueQuotes = _metrics.Warnings?.Count(w => w.Title.Contains("Overdue")) ?? 0
+            };
         }
         else
         {
@@ -555,7 +565,7 @@ else
     private string GetPerformanceTitle() => _performanceView switch
     {
         PerformanceView.Personal => "Your Performance This Month",
-        PerformanceView.Company => "Company Performance",
+        PerformanceView.Company => "Full Company Performance",
         PerformanceView.CompareUsers => _selectedUserCode != null ? $"{_metrics?.TeamMemberKPIs?.FirstOrDefault(k => k.UserCode == _selectedUserCode)?.UserName}'s Performance" : "Compare to Users",
         _ => "Performance"
     };
@@ -563,8 +573,8 @@ else
     private string GetPerformanceSubtitle() => _performanceView switch
     {
         PerformanceView.Personal => "Personal KPIs and targets",
-        PerformanceView.Company => "Company-wide metrics and trends",
-        PerformanceView.CompareUsers => _selectedUserCode != null ? "Individual performance details" : "Select a team member to compare",
+        PerformanceView.Company => "Company-wide metrics and trends aggregated across all users",
+        PerformanceView.CompareUsers => _selectedUserCode != null ? "Individual performance details" : "Select a team member to compare performance",
         _ => "Performance metrics"
     };
 

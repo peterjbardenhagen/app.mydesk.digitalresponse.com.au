@@ -1,0 +1,23 @@
+{
+  "tiles": [
+    { "key": "users", "label": "Users", "description": "Manage user accounts, roles and passwords", "route": "/admin/users", "icon": "People", "group": "User administration", "visible": true },
+    { "key": "userRoles", "label": "User Roles", "description": "Define permission levels (Admin, Manager, etc.)", "route": "/admin/user-roles", "icon": "VerifiedUser", "group": "User administration", "visible": true },
+    { "key": "divisions", "label": "Divisions", "description": "Business units / departments", "route": "/admin/divisions", "icon": "AccountTree", "group": "Organisation", "visible": true },
+    { "key": "locations", "label": "Locations", "description": "Office / warehouse locations", "route": "/admin/locations", "icon": "LocationOn", "group": "Organisation", "visible": true },
+    { "key": "products", "label": "Products", "description": "Product catalog & part codes", "route": "/products", "icon": "Category", "group": "Reference data", "visible": true },
+    { "key": "partCodes", "label": "Part Codes", "description": "SKU / part numbering", "route": "/admin/part-codes", "icon": "QrCode", "group": "Reference data", "visible": true },
+    { "key": "currencies", "label": "Currencies", "description": "Exchange rates", "route": "/admin/currency", "icon": "CurrencyExchange", "group": "Reference data", "visible": true },
+    { "key": "financialYear", "label": "Financial Year", "description": "Reporting year boundaries", "route": "/admin/financial-year", "icon": "CalendarMonth", "group": "Reference data", "visible": false },
+    { "key": "activityTypes", "label": "Activity Types", "description": "Sales activity categories", "route": "/admin/activity-types", "icon": "Bolt", "group": "Reference data", "visible": true },
+    { "key": "quoteStatus", "label": "Quote Status", "description": "Pipeline stages for quotes", "route": "/admin/quote-status", "icon": "RequestQuote", "group": "Workflow status", "visible": true },
+    { "key": "invoiceStatus", "label": "Invoice Status", "description": "Lifecycle states for invoices", "route": "/admin/invoice-status", "icon": "ReceiptLong", "group": "Workflow status", "visible": true },
+    { "key": "poStatus", "label": "Purchase Order Status", "description": "States for POs", "route": "/admin/po-status", "icon": "Inventory2", "group": "Workflow status", "visible": true },
+    { "key": "jobOrderStatus", "label": "Job Order Status", "description": "States for job orders", "route": "/admin/job-order-status", "icon": "Work", "group": "Workflow status", "visible": true },
+    { "key": "parameters", "label": "Parameters", "description": "Global system settings", "route": "/admin/parameters", "icon": "Tune", "group": "System", "visible": true },
+    { "key": "navMenu", "label": "Navigation Menu", "description": "Show / hide side menu items", "route": "/admin/nav-menu", "icon": "Menu", "group": "System", "visible": true },
+    { "key": "setupMenu", "label": "Setup Menu", "description": "Show / hide setup tiles", "route": "/admin/setup-menu", "icon": "Settings", "group": "System", "visible": true },
+    { "key": "aiAudit", "label": "AI Audit Log", "description": "Compliance log of all AI interactions", "route": "/admin/ai-audit", "icon": "Security", "group": "AI & Integration", "visible": true },
+    { "key": "reconciliation", "label": "Reconciliation Dashboard", "description": "MyDesk \u2194 MYOB cross-system checks", "route": "/reconciliation", "icon": "Compare", "group": "AI & Integration", "visible": true },
+    { "key": "myobSync", "label": "MYOB Sync Workflow", "description": "Push invoices from MyDesk to MYOB", "route": "/reconciliation/sync", "icon": "CloudSync", "group": "AI & Integration", "visible": true }
+  ]
+}

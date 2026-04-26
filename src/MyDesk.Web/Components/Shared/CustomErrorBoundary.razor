@@ -1,0 +1,75 @@
+@inject NavigationManager NavigationManager
+
+<CascadingValue Value="this">
+    <ErrorBoundary OnErrorAsync="HandleErrorAsync">
+    <ChildContent>
+        @ChildContent
+    </ChildContent>
+    <ErrorContent>
+        <MudPaper Class="pa-8" Elevation="0" Style="background: var(--gray-50);">
+            <div class="text-center">
+                <MudIcon Icon="@Icons.Material.Rounded.ErrorOutline"
+                        Size="Size.Large"
+                        Color="Color.Error"
+                        Class="mb-4" />
+                <MudText Typo="Typo.h4" Class="mb-2">Something went wrong</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4" Style="color: var(--gray-600);">
+                    An unexpected error occurred while loading this page.
+                </MudText>
+                <div class="d-flex justify-center gap-2">
+                    <MudButton Variant="Variant.Filled"
+                              Color="Color.Primary"
+                              StartIcon="@Icons.Material.Rounded.Refresh"
+                              OnClick="Reload">
+                        Reload Page
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined"
+                              OnClick="GoHome">
+                        Go to Dashboard
+                    </MudButton>
+                </div>
+                @if (_errorMessage != null)
+                {
+                    <MudCollapse Expanded="_showDetails">
+                        <MudPaper Class="mt-4 pa-4" Elevation="1">
+                            <MudText Typo="Typo.caption" Style="color: var(--gray-500);">
+                                Error: @_errorMessage
+                            </MudText>
+                        </MudPaper>
+                    </MudCollapse>
+                    <MudButton Variant="Variant.Text"
+                              Color="Color.Default"
+                              Class="mt-2"
+                              Size="Size.Small"
+                              OnClick="() => _showDetails = !_showDetails">
+                        @(_showDetails ? "Hide" : "Show") Details
+                    </MudButton>
+                }
+            </div>
+        </MudPaper>
+    </ErrorContent>
+    </ErrorBoundary>
+</CascadingValue>
+
+@code {
+    [Parameter] public RenderFragment ChildContent { get; set; } = default!;
+    private string? _errorMessage;
+    private bool _showDetails = false;
+
+    private async Task HandleErrorAsync(Exception exception)
+    {
+        _errorMessage = exception.Message;
+        // Log the error to your logging service
+        await Task.CompletedTask;
+    }
+
+    private void Reload()
+    {
+        NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
+    }
+
+    private void GoHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}

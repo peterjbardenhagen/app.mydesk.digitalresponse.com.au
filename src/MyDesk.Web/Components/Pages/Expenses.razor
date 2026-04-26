@@ -1,0 +1,225 @@
+@page "/expenses"
+@attribute [Authorize]
+@using MyDesk.Shared.Models
+@using MyDesk.Shared.Services
+@using MyDesk.Web.Services
+@inject ExpenseService ExpenseService
+@inject CompanyService CompanyService
+@inject AzureAIService AIService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Expenses - Techlight MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div class="d-flex justify-space-between align-end">
+        <div>
+            <div class="tl-breadcrumb"><a href="/">Techlight MyDesk</a><span class="sep">/</span><span>Expenses</span></div>
+            <h1>Expenses</h1>
+            <p class="tl-subtitle">Manage business expenses, upload receipts, and use AI to auto-process PDFs.</p>
+        </div>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add" OnClick="OnAddExpense">
+            New Expense
+        </MudButton>
+    </div>
+</div>
+
+<MudGrid Class="mb-6">
+    <MudItem xs="12" md="8">
+        <MudPaper Class="pa-6 d-flex flex-column align-center justify-center tl-upload-zone" 
+                  Elevation="0" Outlined="true" 
+                  Style="border: 2px dashed var(--gray-300); background: var(--gray-50); min-height: 200px;">
+            <MudFileUpload T="IReadOnlyList<IBrowserFile>" OnFilesChanged="UploadFiles" Hidden="false" Class="flex-1"
+                           InputClass="absolute min-h-full min-w-full z-20 opacity-0 cursor-pointer"
+                           @ondragenter="@(() => _dragClass = "tl-upload-zone-active")"
+                           @ondragleave="@(() => _dragClass = "")"
+                           @onfocusout="@(() => _dragClass = "")">
+                <ButtonTemplate>
+                    <div class="d-flex flex-column align-center">
+                        <MudIcon Icon="@Icons.Material.Rounded.CloudUpload" Size="Size.Large" Color="Color.Primary" />
+                        <MudText Typo="Typo.h6" Class="mt-2">Drag and drop PDFs here</MudText>
+                        <MudText Typo="Typo.body2">or click to browse files</MudText>
+                    </div>
+                </ButtonTemplate>
+            </MudFileUpload>
+            @if (_uploading)
+            {
+                <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mt-4" />
+                <MudText Typo="Typo.caption" Class="mt-2">AI is processing your documents...</MudText>
+            }
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-6" Elevation="1">
+            <MudText Typo="Typo.subtitle2" Class="mb-4">Expense Insights</MudText>
+            <div class="d-flex justify-space-between mb-2">
+                <MudText Typo="Typo.body2">Total This Month</MudText>
+                <MudText Typo="Typo.body2" Style="font-weight:600;">@_totalThisMonth.ToString("C")</MudText>
+            </div>
+            <div class="d-flex justify-space-between mb-2">
+                <MudText Typo="Typo.body2">Pending Approval</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Warning" Style="font-weight:600;">@_pendingCount</MudText>
+            </div>
+            <MudDivider Class="my-4" />
+            <MudButton Variant="Variant.Text" Color="Color.Primary" FullWidth="true" StartIcon="@Icons.Material.Rounded.BarChart">View Reports</MudButton>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudPaper Elevation="1">
+    <MudDataGrid T="Expense" Items="_expenses" Dense="true" Hover="true" Bordered="false" Striped="true" 
+                 Filterable="true" QuickFilter="@QuickFilter" Class="tl-data-grid">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">Expense Records</MudText>
+            <MudSpacer />
+            <MudTextField @bind-Value="_searchString" Placeholder="Search description, supplier, category..." 
+                          Adornment="Adornment.Start" Immediate="true"
+                          AdornmentIcon="@Icons.Material.Rounded.Search" IconSize="Size.Medium" Class="mt-0" />
+        </ToolBarContent>
+        <Columns>
+            <PropertyColumn Property="x => x.Date" Title="Date" Format="dd MMM yyyy" />
+            <PropertyColumn Property="x => x.SupplierName" Title="Supplier" />
+            <PropertyColumn Property="x => x.Description" Title="Description" />
+            <PropertyColumn Property="x => x.Category" Title="Category" />
+            <PropertyColumn Property="x => x.Total" Title="Total" Format="C" />
+            <TemplateColumn Title="Status" CellStyle="width:120px;">
+                <CellTemplate>
+                    <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Item.Status)" Variant="Variant.Text">
+                        @context.Item.Status
+                    </MudChip>
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Receipt" CellStyle="width:80px;">
+                <CellTemplate>
+                    @if (!string.IsNullOrEmpty(context.Item.FilePath))
+                    {
+                        <MudIconButton Icon="@Icons.Material.Rounded.PictureAsPdf" Color="Color.Error" Size="Size.Small" 
+                                       Href="@(context.Item.FilePath)" Target="_blank" />
+                    }
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn CellStyle="width:100px;" Sortable="false">
+                <CellTemplate>
+                    <div class="d-flex gap-1">
+                        <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" OnClick="@(() => OnEditExpense(context.Item))" />
+                        <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => OnDeleteExpense(context.Item))" />
+                    </div>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <PagerContent>
+            <MudDataGridPager T="Expense" />
+        </PagerContent>
+    </MudDataGrid>
+</MudPaper>
+
+@code {
+    private List<Expense> _expenses = new();
+    private string _searchString = "";
+    private bool _uploading = false;
+    private string _dragClass = "";
+    private decimal _totalThisMonth = 0;
+    private int _pendingCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadExpenses();
+    }
+
+    private async Task LoadExpenses()
+    {
+        _expenses = await ExpenseService.GetExpensesAsync();
+        _totalThisMonth = _expenses.Where(e => e.Date.Month == DateTime.Today.Month && e.Date.Year == DateTime.Today.Year).Sum(e => e.Total);
+        _pendingCount = _expenses.Count(e => e.Status == "Pending");
+    }
+
+    private Func<Expense, bool> QuickFilter => x =>
+    {
+        if (string.IsNullOrWhiteSpace(_searchString)) return true;
+        if (x.Description.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) return true;
+        if (x.SupplierName?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false) return true;
+        if (x.Category.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
+    };
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Approved" => Color.Success,
+        "Pending" => Color.Warning,
+        "Rejected" => Color.Error,
+        "Paid" => Color.Info,
+        _ => Color.Default
+    };
+
+    private async Task UploadFiles(InputFileChangeEventArgs e)
+    {
+        _uploading = true;
+        try
+        {
+            foreach (var file in e.GetMultipleFiles())
+            {
+                // 1. Save file
+                var uploadsPath = Path.Combine("wwwroot", "uploads", "expenses");
+                if (!Directory.Exists(uploadsPath)) Directory.CreateDirectory(uploadsPath);
+                
+                var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
+                var filePath = Path.Combine(uploadsPath, fileName);
+                
+                using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+                using var fs = new FileStream(filePath, FileMode.Create);
+                await stream.CopyToAsync(fs);
+
+                // 2. Process with AI (Placeholder for now)
+                // In a real app, we'd send the PDF to Document Intelligence or OpenAI Vision
+                var expense = new Expense
+                {
+                    Date = DateTime.Today,
+                    Description = $"AI Processed: {file.Name}",
+                    FileName = file.Name,
+                    FilePath = $"/uploads/expenses/{fileName}",
+                    Status = "Pending",
+                    Category = "General"
+                };
+
+                await ExpenseService.SaveExpenseAsync(expense);
+                Snackbar.Add($"Processed {file.Name}", Severity.Success);
+            }
+            await LoadExpenses();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Upload failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _uploading = false;
+        }
+    }
+
+    private async Task OnAddExpense()
+    {
+        // Show edit dialog
+        Snackbar.Add("Feature coming soon", Severity.Info);
+    }
+
+    private async Task OnEditExpense(Expense expense)
+    {
+        // Show edit dialog
+        Snackbar.Add("Feature coming soon", Severity.Info);
+    }
+
+    private async Task OnDeleteExpense(Expense expense)
+    {
+        var parameters = new DialogParameters<AttentionRow> { { "Content", "Are you sure you want to delete this expense record?" } };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<MudDialog>("Delete Expense", parameters, options);
+        var result = await dialog.Result;
+        
+        if (result != null && !result.Canceled)
+        {
+            await ExpenseService.DeleteExpenseAsync(expense.ExpenseId);
+            await LoadExpenses();
+            Snackbar.Add("Expense deleted", Severity.Success);
+        }
+    }
+}

@@ -1,0 +1,107 @@
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Import Data</MudText>
+        
+        <MudText Typo="Typo.subtitle2" Class="mb-3">Upload a CSV file to import data</MudText>
+        
+        <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                      @bind-Files="_files"
+                      Accept=".csv"
+                      Class="mb-4">
+            <ActivatorContent>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Rounded.CloudUpload">
+                    Select CSV file
+                </MudButton>
+            </ActivatorContent>
+        </MudFileUpload>
+        
+        @if (_files != null && _files.Count > 0)
+        {
+            <MudPaper Class="pa-3 mb-3" Elevation="0">
+                <div class="d-flex align-center gap-2">
+                    <MudIcon Icon="@Icons.Material.Rounded.Description" Color="Color.Primary" />
+                    <MudText Typo="Typo.body2">@_files[0].Name</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary ml-auto">
+                        @(_files[0].Size / 1024) KB
+                    </MudText>
+                </div>
+            </MudPaper>
+            
+            <MudDivider Class="mb-3" />
+            
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Import Options</MudText>
+            
+            <div class="d-flex flex-column gap-2">
+                <MudCheckBox T="bool" @bind-Value="_skipHeader" Label="Skip first row (header)" Color="Color.Primary" />
+                <MudCheckBox T="bool" @bind-Value="_validateData" Label="Validate data before import" Color="Color.Primary" />
+                <MudCheckBox T="bool" @bind-Value="_updateExisting" Label="Update existing records" Color="Color.Primary" />
+            </div>
+            
+            @if (_validateData)
+            {
+                <MudTextField T="string" 
+                              @bind-Value="_requiredFields"
+                              Label="Required fields (comma-separated)"
+                              Variant="Variant.Outlined"
+                              HelperText="e.g., name, email, phone"
+                              Class="mt-3" />
+            }
+        }
+        else
+        {
+            <div class="pa-6 text-center">
+                <MudIcon Icon="@Icons.Material.Rounded.CloudUpload" 
+                         Size="Size.Large" 
+                         Color="Color.Default" 
+                         Class="mb-2" />
+                <MudText Typo="Typo.body2" Style="color: var(--gray-500);">
+                    Select a CSV file to import
+                </MudText>
+                <MudText Typo="Typo.caption" Style="color: var(--gray-400);">
+                    Maximum file size: 10MB
+                </MudText>
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ImportData" Disabled="@(_files == null || _files.Count == 0)">
+            Import
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    private IReadOnlyList<IBrowserFile>? _files;
+    private bool _skipHeader = false;
+    private bool _validateData = false;
+    private bool _updateExisting = false;
+    private string _requiredFields = "";
+
+    void Cancel() => MudDialog.Close();
+
+    private async Task ImportData()
+    {
+        try
+        {
+            // In a real application, this would process the CSV file
+            // and import the data to the backend
+            
+            await Task.Delay(1000); // Simulate processing
+            
+            Snackbar.Add("Data imported successfully", Severity.Success);
+            MudDialog.Close();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error importing data: {ex.Message}", Severity.Error);
+        }
+    }
+}

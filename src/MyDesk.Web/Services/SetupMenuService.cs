@@ -101,6 +101,8 @@ public class SetupMenuService
         new("invoiceStatus", "Invoice Status", "Lifecycle states", "/admin/invoice-status", "ReceiptLong", "Workflow status", true),
         new("poStatus", "PO Status", "Purchase order states", "/admin/po-status", "Inventory2", "Workflow status", true),
         new("jobOrderStatus", "Job Order Status", "Job order states", "/admin/job-order-status", "Work", "Workflow status", true),
+        new("brandAssets", "Brand Assets", "Manage brand files and important links", "/admin/brand-assets", "Style", "Marketing", true),
+        new("platformAdmin", "Platform Admin", "Branding, platform name and global settings", "/admin/platform", "Settings", "Platform", true),
         new("parameters", "Parameters", "Global settings", "/admin/parameters", "Tune", "System", true),
         new("navMenu", "Navigation Menu", "Side menu visibility", "/admin/nav-menu", "Menu", "System", true),
         new("logs", "Log Viewer", "View application logs and errors", "/admin/logs", "Description", "System", true),
@@ -124,6 +126,8 @@ public class SetupMenuService
         "Tune" => Icons.Material.Rounded.Tune,
         "Menu" => Icons.Material.Rounded.Menu,
         "Settings" => Icons.Material.Rounded.Settings,
+        "Style" => Icons.Material.Rounded.Style,
+        "Description" => Icons.Material.Rounded.Description,
         _ => Icons.Material.Rounded.Circle
     };
 
@@ -134,6 +138,8 @@ public class SetupMenuService
         "Reference data" => "accent",
         "Workflow status" => "warning",
         "System" => "success",
+        "Marketing" => "secondary",
+        "Platform" => "tertiary",
         _ => "info"
     };
 }

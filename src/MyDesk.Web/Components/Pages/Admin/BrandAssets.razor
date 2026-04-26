@@ -1,0 +1,451 @@
+@page "/admin/brand-assets"
+@attribute [Authorize(Roles = "Admin,Director")]
+@inject BrandAssetService BrandAssetService
+@inject PlatformSettingsService PlatformSettings
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject HttpClient HttpClient
+@inject NavigationManager Nav
+
+<PageTitle>Brand Assets - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <a href="/admin/setup">Admin</a><span class="sep">/</span>
+            <span>Brand Assets</span>
+        </div>
+        <h1>Brand Assets Management</h1>
+        <p class="tl-subtitle">Upload and manage brand files for @PlatformSettings.GetBrandingName()</p>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <div class="d-flex justify-center align-center" style="height: 400px;">
+        <MudProgressCircular Size="Size.Large" Indeterminate="true" />
+    </div>
+}
+else
+{
+    <MudGrid Spacing="4">
+    @* Upload Section *@
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudText Typo="Typo.h6" Class="mb-4">Upload New Asset</MudText>
+
+            <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.svg,.zip">
+                <ActivatorContent>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Rounded.CloudUpload"
+                               FullWidth="true"
+                               Class="mb-4">
+                        Select File
+                    </MudButton>
+                </ActivatorContent>
+            </MudFileUpload>
+
+            @if (_selectedFile != null)
+            {
+                <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+                    <div class="d-flex align-center gap-2">
+                        <MudIcon Icon="@Icons.Material.Rounded.AttachFile" Size="Size.Small" />
+                        <span>@_selectedFile.Name (@FormatFileSize(_selectedFile.Size))</span>
+                    </div>
+                </MudAlert>
+
+                <MudSelect @bind-Value="_category" 
+                           Label="Category" 
+                           Variant="Variant.Outlined" 
+                           Dense="true"
+                           Class="mb-3"
+                           Required="true">
+                    <MudSelectItem Value="@("Logo")">Logo</MudSelectItem>
+                    <MudSelectItem Value="@("Guidelines")">Brand Guidelines</MudSelectItem>
+                    <MudSelectItem Value="@("Profile")">Company Profile</MudSelectItem>
+                    <MudSelectItem Value="@("Stationery")">Stationery</MudSelectItem>
+                    <MudSelectItem Value="@("Marketing")">Marketing Materials</MudSelectItem>
+                    <MudSelectItem Value="@("General")">General</MudSelectItem>
+                </MudSelect>
+
+                <MudTextField @bind-Value="_description" 
+                             Label="Description" 
+                             Variant="Variant.Outlined" 
+                             Lines="2"
+                             Class="mb-3"
+                             Placeholder="Brief description of this asset..." />
+
+                <MudButton Variant="Variant.Filled" 
+                          Color="Color.Success" 
+                          StartIcon="@Icons.Material.Rounded.Upload"
+                          FullWidth="true"
+                          OnClick="UploadFileAsync"
+                          Disabled="_isUploading">
+                    @if (_isUploading)
+                    {
+                        <MudProgressCircular Size="Size.Small" Color="Color.Inherit" Class="mr-2" />
+                        <span>Uploading...</span>
+                    }
+                    else
+                    {
+                        <span>Upload Asset</span>
+                    }
+                </MudButton>
+            }
+        </MudPaper>
+
+        @* Important Links Management *@
+        <MudPaper Class="pa-4 mt-4" Elevation="1">
+            <div class="d-flex align-center justify-space-between mb-4">
+                <MudText Typo="Typo.h6">Important Links</MudText>
+                <MudButton Variant="Variant.Text" 
+                          Color="Color.Primary" 
+                          Size="Size.Small"
+                          StartIcon="@Icons.Material.Rounded.Add"
+                          OnClick="AddNewLink">
+                    Add Link
+                </MudButton>
+            </div>
+
+            @foreach (var link in _importantLinks.Where(l => l.IsActive).OrderBy(l => l.DisplayOrder))
+            {
+                <div class="d-flex align-center gap-2 mb-2 pa-2" style="background: var(--gray-50); border-radius: 8px;">
+                    <MudIcon Icon="@GetIcon(link.Icon)" Size="Size.Small" />
+                    <div class="flex-1">
+                        <div style="font-weight: 500; font-size: 13px;">@link.Title</div>
+                        <div style="font-size: 11px; color: var(--gray-500);">@link.Category</div>
+                    </div>
+                    <MudIconButton Icon="@Icons.Material.Rounded.Edit" 
+                                  Size="Size.Small" 
+                                  Color="Color.Primary"
+                                  OnClick="() => EditLink(link)" />
+                    <MudIconButton Icon="@Icons.Material.Rounded.Delete" 
+                                  Size="Size.Small" 
+                                  Color="Color.Error"
+                                  OnClick="() => DeleteLink(link)" />
+                </div>
+            }
+        </MudPaper>
+    </MudItem>
+
+    @* Assets List *@
+    <MudItem xs="12" md="8">
+        <MudPaper Class="pa-4" Elevation="1">
+            <div class="d-flex align-center justify-space-between mb-4">
+                <MudText Typo="Typo.h6">Uploaded Assets</MudText>
+                <MudButton Variant="Variant.Text" 
+                          Color="Color.Primary" 
+                          StartIcon="@Icons.Material.Rounded.Refresh"
+                          OnClick="LoadAssets">
+                    Refresh
+                </MudButton>
+            </div>
+
+            @if (_assets.Any())
+            {
+                <MudTable Items="_assets" Dense="true" Hover="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>File</MudTh>
+                        <MudTh>Category</MudTh>
+                        <MudTh>Size</MudTh>
+                        <MudTh>Uploaded</MudTh>
+                        <MudTh Style="text-align: right;">Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd>
+                            <div class="d-flex align-center gap-2">
+                                <MudIcon Icon="@GetFileIcon(context.ContentType)" Color="Color.Primary" />
+                                <div>
+                                    <div style="font-weight: 500;">@context.OriginalFileName</div>
+                                    @if (!string.IsNullOrEmpty(context.Description))
+                                    {
+                                        <div style="font-size: 11px; color: var(--gray-500);">@context.Description</div>
+                                    }
+                                </div>
+                            </div>
+                        </MudTd>
+                        <MudTd>
+                            <MudChip Size="Size.Small" Color="Color.Info" T="string">@context.Category</MudChip>
+                        </MudTd>
+                        <MudTd>@context.FormattedSize</MudTd>
+                        <MudTd>
+                            <div style="font-size: 12px;">@context.UploadedAt.ToString("dd MMM yyyy")</div>
+                            <div style="font-size: 11px; color: var(--gray-500);">by @context.UploadedBy</div>
+                        </MudTd>
+                        <MudTd Style="text-align: right;">
+                            <MudIconButton Icon="@Icons.Material.Rounded.Download" 
+                                          Size="Size.Small" 
+                                          Color="Color.Primary"
+                                          Href="@($"/api/brand-assets/download/{context.Id}")"
+                                          Target="_blank" />
+                            <MudIconButton Icon="@Icons.Material.Rounded.Delete" 
+                                          Size="Size.Small" 
+                                          Color="Color.Error"
+                                          OnClick="() => DeleteAsset(context)" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info">
+                    <div class="d-flex align-center gap-2">
+                        <MudIcon Icon="@Icons.Material.Rounded.Info" Size="Size.Small" />
+                        <span>No brand assets uploaded yet. Use the upload panel to add files.</span>
+                    </div>
+                </MudAlert>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+}
+
+<style>
+    .tl-page-header {
+        margin-bottom: 24px;
+    }
+    .tl-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--gray-500);
+        margin-bottom: 8px;
+    }
+    .tl-breadcrumb a {
+        color: var(--gray-500);
+        text-decoration: none;
+    }
+    .tl-breadcrumb a:hover {
+        color: var(--tl-primary-500);
+    }
+    .tl-breadcrumb .sep {
+        opacity: 0.5;
+    }
+    .tl-subtitle {
+        color: var(--gray-500);
+        margin: 0;
+    }
+</style>
+
+@code {
+    private List<BrandAssetFile> _assets = new();
+    private List<ImportantLink> _importantLinks = new();
+    private IBrowserFile? _selectedFile;
+    private string _category = "General";
+    private string _description = "";
+    private bool _isUploading = false;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAssetsAsync();
+    }
+
+    private void LoadAssets()
+    {
+        _assets = BrandAssetService.GetAllAssets();
+        _importantLinks = BrandAssetService.GetImportantLinks();
+    }
+
+    private async Task LoadAssetsAsync()
+    {
+        _loading = true;
+        try
+        {
+            await Task.Run(() => LoadAssets());
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading assets: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OnFileSelected(IBrowserFile file)
+    {
+        _selectedFile = file;
+        StateHasChanged();
+    }
+
+    private async Task UploadFileAsync()
+    {
+        if (_selectedFile == null) return;
+
+        _isUploading = true;
+        try
+        {
+            var content = new MultipartFormDataContent();
+            var fileContent = new StreamContent(_selectedFile.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024));
+            content.Add(fileContent, "file", _selectedFile.Name);
+            content.Add(new StringContent(_category), "category");
+            content.Add(new StringContent(_description), "description");
+
+            var response = await HttpClient.PostAsync("/api/brand-assets/upload", content);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Asset uploaded successfully", Severity.Success);
+                _selectedFile = null;
+                _description = "";
+                await LoadAssetsAsync();
+            }
+            else
+            {
+                Snackbar.Add("Failed to upload asset", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Upload error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isUploading = false;
+        }
+    }
+
+    private async Task DeleteAsset(BrandAssetFile asset)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Delete Asset",
+            $"Are you sure you want to delete '{asset.OriginalFileName}'?",
+            yesText: "Delete", 
+            cancelText: "Cancel");
+
+        if (result == true)
+        {
+            try
+            {
+                var response = await HttpClient.DeleteAsync($"/api/brand-assets/{asset.Id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    Snackbar.Add("Asset deleted", Severity.Success);
+                    await LoadAssetsAsync();
+                }
+                else
+                {
+                    Snackbar.Add("Failed to delete asset", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Delete error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task AddNewLink()
+    {
+        var parameters = new DialogParameters
+        {
+            ["Title"] = "Add New Link",
+            ["Link"] = new ImportantLink { DisplayOrder = _importantLinks.Count + 1 }
+        };
+
+        var dialog = DialogService.Show<LinkDialog>("Add Link", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var newLink = result.Data as ImportantLink;
+            if (newLink != null)
+            {
+                newLink.IsActive = true;
+                _importantLinks.Add(newLink);
+                BrandAssetService.SaveImportantLinks(_importantLinks);
+                Snackbar.Add("Link added successfully", Severity.Success);
+                await LoadAssetsAsync();
+            }
+        }
+    }
+
+    private async Task EditLink(ImportantLink link)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Title"] = "Edit Link",
+            ["Link"] = new ImportantLink
+            {
+                Id = link.Id,
+                Title = link.Title,
+                Url = link.Url,
+                Icon = link.Icon,
+                Category = link.Category,
+                DisplayOrder = link.DisplayOrder,
+                IsActive = link.IsActive
+            }
+        };
+
+        var dialog = DialogService.Show<LinkDialog>("Edit Link", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var updatedLink = result.Data as ImportantLink;
+            if (updatedLink != null)
+            {
+                var existingIndex = _importantLinks.FindIndex(l => l.Id == link.Id);
+                if (existingIndex >= 0)
+                {
+                    _importantLinks[existingIndex] = updatedLink;
+                    BrandAssetService.SaveImportantLinks(_importantLinks);
+                    Snackbar.Add("Link updated successfully", Severity.Success);
+                    await LoadAssetsAsync();
+                }
+            }
+        }
+    }
+
+    private async Task DeleteLink(ImportantLink link)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Delete Link",
+            $"Are you sure you want to delete '{link.Title}'?",
+            yesText: "Delete", 
+            cancelText: "Cancel");
+
+        if (result == true)
+        {
+            link.IsActive = false;
+            BrandAssetService.SaveImportantLinks(_importantLinks);
+            Snackbar.Add("Link removed", Severity.Success);
+            LoadAssets();
+        }
+    }
+
+    private string GetFileIcon(string contentType)
+    {
+        if (contentType.Contains("pdf")) return Icons.Material.Rounded.PictureAsPdf;
+        if (contentType.Contains("image")) return Icons.Material.Rounded.Image;
+        if (contentType.Contains("word")) return Icons.Material.Rounded.Description;
+        if (contentType.Contains("zip")) return Icons.Material.Rounded.FolderZip;
+        return Icons.Material.Rounded.InsertDriveFile;
+    }
+
+    private string GetIcon(string iconName)
+    {
+        return iconName switch
+        {
+            "Analytics" => Icons.Material.Rounded.Analytics,
+            "Facebook" => Icons.Material.Rounded.Public,
+            "Language" => Icons.Material.Rounded.Language,
+            _ => Icons.Material.Rounded.Link
+        };
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        return bytes switch
+        {
+            >= 1_048_576 => $"{bytes / 1_048_576.0:N1} MB",
+            >= 1024 => $"{bytes / 1024.0:N0} KB",
+            _ => $"{bytes} B"
+        };
+    }
+}

@@ -1,21 +1,28 @@
 @inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
 
-<MudLayout>
-    <MudAppBar Elevation="0"  Dense="true" Style="position:relative; overflow:hidden;">
+<MudThemeProvider @bind-IsDarkMode="_isDarkMode" Theme="_theme" />
+<MudDialogProvider CloseButton="true" BackdropClick="true" CloseOnEscapeKey="true" FullWidth="true" MaxWidth="MaxWidth.Small" />
+<MudSnackbarProvider />
+
+@* Global keyboard shortcut listener *@
+<div @onkeydown="OnGlobalKeyDown" tabindex="-1" style="outline:none;">
+
+<MudLayout id="main-content" role="main">
+    <MudAppBar Elevation="0" Dense="true" Style="position:relative; overflow:visible;" role="banner" aria-label="Main navigation">
         <!-- Techlight Brand Swoosh -->
-        <div class="tl-brand-swoosh">
+        <div class="tl-brand-swoosh d-none d-sm-block">
             <div class="tl-swoosh-accent-line"></div>
             <div class="tl-swoosh-gold-dot tl-swoosh-gold-dot-1"></div>
             <div class="tl-swoosh-gold-dot tl-swoosh-gold-dot-2"></div>
             <div class="tl-swoosh-gold-dot tl-swoosh-gold-dot-3"></div>
         </div>
 
-        <MudIconButton Icon="@Icons.Material.Rounded.Menu" Color="Color.Default" Edge="Edge.Start" OnClick="DrawerToggle" />
+        <MudIconButton Icon="@Icons.Material.Rounded.Menu" Color="Color.Default" Edge="Edge.Start" OnClick="DrawerToggle" aria-label="Toggle navigation menu" />
 
-        <a href="/" class="tl-logo-wrap ml-2" style="text-decoration:none; position:relative; z-index:1;">
+        <a href="/" class="tl-logo-wrap ml-2" style="text-decoration:none; position:relative; z-index:1;" aria-label="Techlight MyDesk home">
             <img src="/images/techlight-mark.svg" alt="Techlight" class="tl-logo-mark" />
-            <span class="tl-logo-text-stack">
+            <span class="tl-logo-text-stack d-none d-sm-inline-flex">
                 <span class="tl-logo-brand">Techlight</span>
                 <span class="tl-logo-product">MyDesk</span>
             </span>
@@ -23,41 +30,121 @@
 
         <MudSpacer />
 
-        <div class="d-none d-md-flex align-center" style="flex:1; max-width:420px; margin:0 24px;">
+        <div class="d-none d-lg-flex align-center" style="flex:1; max-width:420px; margin:0 24px;" role="search">
             <MudTextField T="string" @bind-Value="_searchQuery"
-                          Placeholder="Search quotes, invoices, POs, contacts, delivery notes…"
+                          Placeholder="Search quotes, invoices, POs, contacts…"
                           Variant="Variant.Outlined" Margin="Margin.Dense" FullWidth="true"
                           Adornment="Adornment.Start"
                           AdornmentIcon="@Icons.Material.Rounded.Search"
-                          OnKeyDown="OnSearchKeyDown" Immediate="true"
+                          @onkeydown="OnSearchKeyDown" 
+                          @onfocus="@(async () => await OnSearchFocus())"
+                          Immediate="true"
+                          aria-label="Search"
                           Style="background: var(--gray-50); border-radius: 8px;" />
+            @if (_showSearchHistory && _searchHistory.Any())
+            {
+                <div class="search-history-dropdown">
+                    <MudText Typo="Typo.caption" Class="px-3 py-2 mud-text-secondary">Recent Searches</MudText>
+                    @foreach (var search in _searchHistory.Take(5))
+                    {
+                        <div class="search-history-item" @onclick="() => SelectSearchHistory(search)">
+                            <MudIcon Icon="@Icons.Material.Rounded.History" Size="Size.Small" Class="mr-2" />
+                            <MudText Typo="Typo.body2">@search</MudText>
+                        </div>
+                    }
+                </div>
+            }
         </div>
 
         <AuthorizeView>
             <Authorized>
                 <MudTooltip Text="Ask Techlight AI" Arrow="true" Placement="Placement.Bottom">
-                    <MudIconButton Icon="@Icons.Material.Rounded.AutoAwesome" Color="Color.Primary" Href="/ask-ai" />
+                    <MudIconButton Icon="@Icons.Material.Rounded.AutoAwesome" Color="Color.Primary" Href="/ask-ai" aria-label="Ask Techlight AI" />
                 </MudTooltip>
 
                 <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
-                         Dense="true" Class="ml-2">
+                         Dense="true" Class="ml-1" aria-label="Notifications">
                     <ActivatorContent>
-                        <MudButton Variant="Variant.Text" Class="pa-1" Style="min-width:auto; text-transform:none;">
-                            <div class="d-flex align-center tl-gap-sm">
-                                <MudAvatar Color="Color.Primary" Size="Size.Small" Style="font-weight:600;">
-                                    @Initials(context.User.Identity?.Name)
-                                </MudAvatar>
-                                <div class="d-none d-md-flex flex-column" style="line-height:1.1; text-align:left;">
-                                    <span style="font-size:13px; font-weight:600; color:var(--gray-900);">
-                                        @context.User.Identity?.Name
-                                    </span>
-                                    <span style="font-size:11px; color:var(--gray-500);">
-                                        Signed in
-                                    </span>
-                                </div>
-                                <MudIcon Icon="@Icons.Material.Rounded.KeyboardArrowDown" Size="Size.Small" Color="Color.Default" />
+                        <div style="position:relative; display:inline-flex; align-items:center; justify-content:center;">
+                            <MudTooltip Text="Notifications" Arrow="true" Placement="Placement.Bottom">
+                                <MudIconButton Icon="@Icons.Material.Rounded.Notifications" Color="Color.Default" aria-label="Notifications" />
+                            </MudTooltip>
+                            @if (_notificationCount > 0)
+                            {
+                                <span class="notification-badge">@_notificationCount</span>
+                            }
+                        </div>
+                    </ActivatorContent>
+                    <ChildContent>
+                        <div style="min-width: 350px; max-height: 400px; overflow-y: auto;">
+                            <div class="pa-3 d-flex align-center justify-space-between" style="border-bottom: 1px solid var(--mud-palette-divider);">
+                                <MudText Typo="Typo.subtitle1" Style="font-weight:600;">Notifications</MudText>
+                                @if (_notifications.Any())
+                                {
+                                    <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="ClearNotifications">Clear All</MudButton>
+                                }
                             </div>
-                        </MudButton>
+                            @if (_notifications.Any())
+                            {
+                                @foreach (var notification in _notifications)
+                                {
+                                    <div class="notification-item pa-3 cursor-pointer hover-bg-light" 
+                                         style="border-bottom: 1px solid var(--mud-palette-divider); position:relative;"
+                                         @onclick="() => NavigateToNotification(notification)">
+                                        <div class="d-flex gap-2 pr-6">
+                                            <MudIcon Icon="@GetNotificationIcon(notification.Type)" Color="@GetNotificationColor(notification.Type)" Size="Size.Small" />
+                                            <div style="flex:1;">
+                                                <MudText Typo="Typo.body2" Style="font-weight:600;">@notification.Title</MudText>
+                                                <MudText Typo="Typo.caption" Style="color: var(--gray-600); display:block;">@notification.Message</MudText>
+                                                <MudText Typo="Typo.caption" Style="color: var(--gray-400); font-size:10px;">@notification.Time</MudText>
+                                            </div>
+                                        </div>
+                                        <MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small" 
+                                                       Style="position:absolute; top:8px; right:8px;"
+                                                       OnClick:stopPropagation="true"
+                                                       OnClick="@(() => RemoveNotification(notification))" />
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="pa-10 text-center">
+                                    <MudIcon Icon="@Icons.Material.Rounded.NotificationsNone" Style="font-size:3rem; color: var(--gray-200);" />
+                                    <MudText Typo="Typo.body2" Class="mt-2" Style="color: var(--gray-500);">All caught up!</MudText>
+                                </div>
+                            }
+                        </div>
+                    </ChildContent>
+                </MudMenu>
+
+                <MudTooltip Text="Keyboard shortcuts" Arrow="true" Placement="Placement.Bottom" Class="ml-2">
+                    <MudIconButton Icon="@Icons.Material.Rounded.Keyboard" Color="Color.Default" OnClick="OpenKeyboardShortcuts" aria-label="Keyboard shortcuts" />
+                </MudTooltip>
+
+                <MudTooltip Text="Toggle dark mode" Arrow="true" Placement="Placement.Bottom" Class="ml-2">
+                    <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Rounded.LightMode : Icons.Material.Rounded.DarkMode)"
+                                  Color="Color.Default"
+                                  OnClick="ToggleDarkMode"
+                                  aria-label="Toggle dark mode" />
+                </MudTooltip>
+
+                <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+                         Dense="true" Class="ml-2" aria-label="User menu">
+                    <ActivatorContent>
+                        <div class="d-flex align-center tl-gap-sm cursor-pointer pa-1 rounded hover-bg-light" style="user-select:none;">
+                            <MudAvatar Color="Color.Primary" Size="Size.Small" Style="font-weight:600;" aria-hidden="true">
+                                @Initials(context.User.Identity?.Name)
+                            </MudAvatar>
+                            <div class="d-none d-md-flex flex-column" style="line-height:1.1; text-align:left;">
+                                <span style="font-size:13px; font-weight:600; color:var(--gray-900);">
+                                    @context.User.Identity?.Name
+                                </span>
+                                <span style="font-size:11px; color:var(--gray-500);">
+                                    Signed in
+                                </span>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Rounded.KeyboardArrowDown" Size="Size.Small" Color="Color.Default" aria-hidden="true" />
+                        </div>
                     </ActivatorContent>
                     <ChildContent>
                         <MudMenuItem Icon="@Icons.Material.Rounded.Person" Href="/profile">Profile</MudMenuItem>
@@ -73,28 +160,209 @@
         </AuthorizeView>
     </MudAppBar>
 
-    <MudDrawer @bind-Open="_drawerOpen" Elevation="0" ClipMode="DrawerClipMode.Docked" Variant="DrawerVariant.Mini" OpenMiniOnHover="true">
+    <MudDrawer @bind-Open="_drawerOpen" Elevation="0" ClipMode="DrawerClipMode.Docked" Variant="DrawerVariant.Mini" OpenMiniOnHover="true" role="navigation" aria-label="Main navigation">
         <NavMenu />
     </MudDrawer>
 
-    <MudMainContent>
+    <MudMainContent role="main" aria-live="polite">
         <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-8 px-6">
             @Body
         </MudContainer>
     </MudMainContent>
 </MudLayout>
+</div>
 
 @code {
+    private MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#1e40af",
+            AppbarBackground = "#ffffff",
+            Background = "#f8fafc",
+            Surface = "#ffffff",
+            DrawerBackground = "#ffffff",
+            ActionDefault = "#64748b",
+        },
+        PaletteDark = new PaletteDark()
+        {
+            Primary = "#60a5fa",
+            AppbarBackground = "#0f172a",
+            Background = "#020617",
+            Surface = "#0f172a",
+            DrawerBackground = "#0f172a",
+            TextPrimary = "#f8fafc",
+            TextSecondary = "#94a3b8",
+            ActionDefault = "#94a3b8",
+            Divider = "rgba(255, 255, 255, 0.08)",
+            TableLines = "rgba(255, 255, 255, 0.08)",
+            LinesDefault = "rgba(255, 255, 255, 0.08)",
+        }
+    };
+
     bool _drawerOpen = true;
     private string _searchQuery = "";
+    private bool _isDarkMode = false;
+    private bool _showSearchHistory = false;
+    private List<string> _searchHistory = new();
+    private int _notificationCount = 3;
+    private List<NotificationItem> _notifications = new();
+
+    [Inject] IJSRuntime JS { get; set; } = null!;
+    [Inject] IDialogService DialogService { get; set; } = null!;
+    [Inject] NotificationService NotiSvc { get; set; } = null!;
+
+    public class NotificationItem
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string Title { get; set; } = "";
+        public string Message { get; set; } = "";
+        public string Type { get; set; } = "";
+        public string Time { get; set; } = "";
+        public string? Url { get; set; }
+    }
 
     void DrawerToggle() => _drawerOpen = !_drawerOpen;
 
-    private void OnSearchKeyDown(KeyboardEventArgs e)
+    private async Task ToggleDarkMode()
     {
-        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_searchQuery))
+        _isDarkMode = !_isDarkMode;
+        await JS.InvokeVoidAsync("localStorage.setItem", "darkMode", _isDarkMode);
+        ApplyDarkMode();
+    }
+
+    private void ApplyDarkMode()
+    {
+        // MudThemeProvider handles the primary dark mode switching for MudBlazor components
+        // We also toggle the class on body for our custom CSS variables
+        JS.InvokeVoidAsync("eval", _isDarkMode 
+            ? "document.body.classList.add('mud-dark-mode')" 
+            : "document.body.classList.remove('mud-dark-mode')");
+    }
+
+    private void OnGlobalKeyDown(KeyboardEventArgs e)
+    {
+        // Support ALT key shortcuts as requested
+        if (e.AltKey)
         {
-            NavigationManager.NavigateTo($"/search?q={Uri.EscapeDataString(_searchQuery)}");
+            switch (e.Key.ToLower())
+            {
+                case "k": 
+                    // Open search
+                    NavigationManager.NavigateTo("/search");
+                    break;
+                case "h": 
+                    NavigationManager.NavigateTo("/");
+                    break;
+                case "b": 
+                    DrawerToggle();
+                    break;
+            }
+        }
+        else if (e.Key == "?")
+        {
+            OpenKeyboardShortcuts();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRealNotifications();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Load dark mode preference from localStorage
+            var darkMode = await JS.InvokeAsync<string>("localStorage.getItem", "darkMode");
+            _isDarkMode = !string.IsNullOrEmpty(darkMode) && darkMode == "true";
+            if (_isDarkMode)
+            {
+                ApplyDarkMode();
+            }
+            StateHasChanged();
+
+            await LoadSearchHistory();
+
+            // Setup JavaScript utility functions
+            await JS.InvokeVoidAsync("eval", @"
+                window.downloadFile = function(fileName, byteArray) {
+                    const blob = new Blob([byteArray], { type: 'application/pdf' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                };
+            ");
+        }
+    }
+
+    private async Task LoadRealNotifications()
+    {
+        var real = await NotiSvc.GetNotificationsAsync();
+        _notifications = real.Select(n => new NotificationItem 
+        {
+            Id = n.Id,
+            Title = n.Title,
+            Message = n.Message,
+            Type = n.Type,
+            Time = n.Time,
+            Url = n.Url
+        }).ToList();
+        _notificationCount = _notifications.Count;
+    }
+
+    private async Task LoadSearchHistory()
+    {
+        var historyJson = await JS.InvokeAsync<string>("localStorage.getItem", "searchHistory");
+        if (!string.IsNullOrWhiteSpace(historyJson))
+        {
+            _searchHistory = System.Text.Json.JsonSerializer.Deserialize<List<string>>(historyJson) ?? new();
+        }
+    }
+
+    private async Task SaveSearchHistory()
+    {
+        var historyJson = System.Text.Json.JsonSerializer.Serialize(_searchHistory);
+        await JS.InvokeVoidAsync("localStorage.setItem", "searchHistory", historyJson);
+    }
+
+    private async Task OnSearchFocus()
+    {
+        _showSearchHistory = _searchHistory.Any();
+    }
+
+    private void SelectSearchHistory(string search)
+    {
+        _searchQuery = search;
+        _showSearchHistory = false;
+        NavigationManager.NavigateTo($"/search?q={Uri.EscapeDataString(search)}");
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            _showSearchHistory = false;
+            if (!string.IsNullOrWhiteSpace(_searchQuery))
+            {
+                // Save to search history
+                _searchHistory.Remove(_searchQuery);
+                _searchHistory.Insert(0, _searchQuery);
+                if (_searchHistory.Count > 10) _searchHistory.RemoveAt(_searchHistory.Count - 1);
+                await SaveSearchHistory();
+                
+                NavigationManager.NavigateTo($"/search?q={Uri.EscapeDataString(_searchQuery)}");
+            }
+        }
+        else if (e.Key == "Escape")
+        {
+            _showSearchHistory = false;
         }
     }
 
@@ -109,6 +377,164 @@
             _ => (parts[0][..1] + parts[^1][..1]).ToUpper()
         };
     }
+
+    private void LoadSampleNotifications()
+    {
+        _notifications = new List<NotificationItem>
+        {
+            new NotificationItem
+            {
+                Title = "New quote created",
+                Message = "Quote #4132 has been created for Techlight Industries",
+                Type = "info",
+                Time = "2 minutes ago",
+                Url = "/quotes/4132"
+            },
+            new NotificationItem
+            {
+                Title = "Invoice approved",
+                Message = "Invoice #3221 has been approved for payment",
+                Type = "success",
+                Time = "1 hour ago",
+                Url = "/invoices/3221"
+            },
+            new NotificationItem
+            {
+                Title = "Low stock alert",
+                Message = "Product ABC-123 is running low on stock",
+                Type = "warning",
+                Time = "3 hours ago",
+                Url = "/products"
+            }
+        };
+    }
+
+    private void ClearNotifications()
+    {
+        _notifications.Clear();
+        _notificationCount = 0;
+    }
+
+    private void RemoveNotification(NotificationItem item)
+    {
+        _notifications.Remove(item);
+        _notificationCount = _notifications.Count;
+    }
+
+    private void NavigateToNotification(NotificationItem item)
+    {
+        if (!string.IsNullOrEmpty(item.Url))
+        {
+            NavigationManager.NavigateTo(item.Url);
+        }
+    }
+
+    private string GetNotificationIcon(string type) => type.ToLower() switch
+    {
+        "info" => Icons.Material.Rounded.Info,
+        "success" => Icons.Material.Rounded.CheckCircle,
+        "warning" => Icons.Material.Rounded.Warning,
+        "error" => Icons.Material.Rounded.Error,
+        _ => Icons.Material.Rounded.Notifications
+    };
+
+    private Color GetNotificationColor(string type) => type.ToLower() switch
+    {
+        "info" => Color.Info,
+        "success" => Color.Success,
+        "warning" => Color.Warning,
+        "error" => Color.Error,
+        _ => Color.Default
+    };
+
+    private void OpenKeyboardShortcuts()
+    {
+        DialogService.Show<KeyboardShortcutsDialog>("Keyboard Shortcuts");
+    }
 }
+
+<style>
+    :root {
+        --blue-600: #1e40af;
+        --gray-50: #f8fafc;
+        --gray-100: #f1f5f9;
+        --gray-200: #e2e8f0;
+        --gray-300: #cbd5e1;
+        --gray-400: #94a3b8;
+        --gray-500: #64748b;
+        --gray-600: #475569;
+        --gray-700: #334155;
+        --gray-800: #1e293b;
+        --gray-900: #0f172a;
+    }
+
+    .notification-badge {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        background: #ef4444;
+        color: white;
+        font-size: 10px;
+        font-weight: 700;
+        min-width: 16px;
+        height: 16px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 4px;
+        border: 2px solid var(--mud-palette-appbar-background);
+        pointer-events: none;
+        z-index: 10;
+        transform: translate(25%, -25%);
+    }
+
+    /* Fix Sidebar Mini clipping */
+    .mud-drawer-mini .mud-nav-link {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        justify-content: center !important;
+    }
+    .mud-drawer-mini .mud-nav-link-icon {
+        margin-right: 0 !important;
+    }
+    .mud-drawer-mini .mud-nav-menu {
+        overflow-x: hidden;
+    }
+
+    /* Mobile Header Adjustments */
+    @media (max-width: 600px) {
+        .mud-appbar-dense .mud-toolbar-appbar {
+            padding-left: 8px !important;
+            padding-right: 8px !important;
+        }
+        .tl-logo-mark { height: 26px !important; }
+        .mud-main-content { padding-top: 56px !important; }
+    }
+
+    /* Global Dark Mode fixes */
+    .mud-dark-mode {
+        --gray-50: #020617;
+        --gray-100: #0f172a;
+        --gray-200: #1e293b;
+        --gray-900: #f8fafc;
+    }
+    .mud-dark-mode .mud-table { background-color: var(--gray-50) !important; }
+    .mud-dark-mode .mud-drawer { background-color: var(--gray-100) !important; }
+    .mud-dark-mode .mud-appbar { 
+        background-color: var(--gray-100) !important;
+        border-bottom: 1px solid rgba(255,255,255,0.05) !important; 
+    }
+    .mud-dark-mode .tl-logo-brand { color: #fff !important; }
+    .mud-dark-mode .tl-logo-product { color: #94a3b8 !important; }
+    
+    /* Ensure MudDialogs are clickable-out */
+    .mud-dialog-container {
+        cursor: pointer;
+    }
+    .mud-dialog {
+        cursor: default;
+    }
+</style>
 
 

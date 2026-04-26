@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>MyDesk.Web</RootNamespace>
@@ -30,7 +30,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+    <PackageReference Include="Azure.Identity" Version="1.11.4" />
     <PackageReference Include="MudBlazor" Version="7.15.0" />
     <PackageReference Include="MudBlazor.Markdown" Version="7.8.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="8.0.3" />

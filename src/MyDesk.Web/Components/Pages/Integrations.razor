@@ -1,0 +1,202 @@
+@page "/integrations"
+@attribute [Authorize]
+@inject PlatformSettingsService SettingsSvc
+@inject ISnackbar Snackbar
+
+<PageTitle>Integrations - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <span>Integrations</span>
+        </div>
+        <h1>Integrations</h1>
+        <p class="tl-subtitle">Connect and manage external services</p>
+    </div>
+</div>
+
+<MudGrid Spacing="4" Class="mt-4">
+    <MudItem xs="12" md="8">
+        <MudText Typo="Typo.h6" Class="mb-4">Available Integrations</MudText>
+        
+        @foreach (var integration in _integrations)
+        {
+            <MudPaper Elevation="1" Class="pa-4 mb-3" Style="@(integration.Connected ? "border-left: 4px solid var(--mud-palette-success);" : "")">
+                <div class="d-flex align-center justify-space-between">
+                    <div class="d-flex align-center gap-4">
+                        <div class="tl-integration-icon" style="background: @(integration.Color + "15"); color: @integration.Color;">
+                            <MudIcon Icon="@integration.Icon" />
+                        </div>
+                        <div>
+                            <MudText Typo="Typo.subtitle1" Style="font-weight:600;">@integration.Name</MudText>
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">@integration.Description</MudText>
+                        </div>
+                    </div>
+                    <div class="d-flex align-center gap-3">
+                        @if (integration.Connected)
+                        {
+                            <div class="d-flex flex-column align-end">
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">Connected</MudChip>
+                                <MudButton Variant="Variant.Text" Color="Color.Error" Size="Size.Small" OnClick="() => DisconnectIntegration(integration)">
+                                    Disconnect
+                                </MudButton>
+                            </div>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="() => ConnectIntegration(integration)">
+                                Connect @integration.Name
+                            </MudButton>
+                        }
+                    </div>
+                </div>
+            </MudPaper>
+        }
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        <MudPaper Elevation="0" Class="pa-6 tl-status-card">
+            <MudText Typo="Typo.h6" Class="mb-4">System Integration</MudText>
+            
+            <div class="d-flex flex-column gap-4">
+                <div class="tl-status-item">
+                    <div class="tl-status-dot connected"></div>
+                    <div class="flex-1">
+                        <MudText Typo="Typo.body2" Style="font-weight:600;">SQL Database</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Direct Connection Active</MudText>
+                    </div>
+                    <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                </div>
+
+                <div class="tl-status-item">
+                    <div class="tl-status-dot @(SettingsSvc.Current.EnableAIAssistant ? "connected" : "")"></div>
+                    <div class="flex-1">
+                        <MudText Typo="Typo.body2" Style="font-weight:600;">Azure OpenAI</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@(SettingsSvc.Current.EnableAIAssistant ? "Model: GPT-4o" : "Disabled")</MudText>
+                    </div>
+                    <MudIcon Icon="@(SettingsSvc.Current.EnableAIAssistant ? Icons.Material.Rounded.CheckCircle : Icons.Material.Rounded.Cancel)" 
+                             Color="@(SettingsSvc.Current.EnableAIAssistant ? Color.Success : Color.Default)" Size="Size.Small" />
+                </div>
+            </div>
+
+            <MudDivider Class="my-6" />
+
+            <MudText Typo="Typo.subtitle2" Class="mb-3" Style="font-weight:700;">Integration Benefits</MudText>
+            <div class="d-flex flex-column gap-2">
+                <div class="d-flex align-center gap-2">
+                    <MudIcon Icon="@Icons.Material.Rounded.Sync" Size="Size.Small" Color="Color.Primary" />
+                    <MudText Typo="Typo.body2">Real-time data synchronization</MudText>
+                </div>
+                <div class="d-flex align-center gap-2">
+                    <MudIcon Icon="@Icons.Material.Rounded.AutoFixHigh" Size="Size.Small" Color="Color.Primary" />
+                    <MudText Typo="Typo.body2">Automated business workflows</MudText>
+                </div>
+                <div class="d-flex align-center gap-2">
+                    <MudIcon Icon="@Icons.Material.Rounded.Security" Size="Size.Small" Color="Color.Primary" />
+                    <MudText Typo="Typo.body2">Secure OAuth2 authentication</MudText>
+                </div>
+            </div>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<style>
+    .tl-page-header { margin-bottom: 24px; }
+    .tl-breadcrumb { font-size: 13px; color: var(--gray-500); margin-bottom: 4px; }
+    .tl-breadcrumb a { color: var(--gray-500); text-decoration: none; }
+    .tl-breadcrumb .sep { margin: 0 8px; color: var(--gray-300); }
+    .tl-subtitle { color: var(--gray-500); }
+
+    .tl-integration-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .tl-status-card {
+        background: var(--gray-50) !important;
+        border-radius: 16px !important;
+    }
+
+    .tl-status-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: white;
+        border-radius: 12px;
+        border: 1px solid var(--gray-200);
+    }
+
+    .tl-status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--gray-300);
+    }
+    .tl-status-dot.connected {
+        background: var(--mud-palette-success);
+        box-shadow: 0 0 0 4px var(--mud-palette-success-hover);
+    }
+</style>
+
+@code {
+    private List<IntegrationItem> _integrations = new();
+    private int _connectedCount => _integrations.Count(i => i.Connected);
+
+    protected override void OnInitialized()
+    {
+        LoadIntegrations();
+    }
+
+    private void LoadIntegrations()
+    {
+        var s = SettingsSvc.Current;
+        _integrations = new List<IntegrationItem>
+        {
+            new ("Xero", "Accounting & invoicing", Icons.Material.Rounded.AccountBalance, "#00B5D2", s.EnableXeroIntegration, "Xero"),
+            new ("QuickBooks", "Financial management", Icons.Material.Rounded.Payments, "#2CA01C", s.EnableQuickBooksIntegration, "QuickBooks"),
+            new ("MYOB", "Business management", Icons.Material.Rounded.Business, "#FF6600", s.EnableMYOBIntegration, "MYOB"),
+            new ("Outlook", "Email & Calendar sync", Icons.Material.Rounded.Email, "#0078D4", s.EnableOutlookIntegration, "Outlook"),
+            new ("Google Cloud", "Cloud storage & Docs", Icons.Material.Rounded.Cloud, "#4285F4", s.EnableGoogleIntegration, "Google"),
+        };
+    }
+
+    public record IntegrationItem(string Name, string Description, string Icon, string Color, bool Connected, string Key);
+
+    private async Task ConnectIntegration(IntegrationItem integration)
+    {
+        switch (integration.Key)
+        {
+            case "Xero": SettingsSvc.Current.EnableXeroIntegration = true; break;
+            case "QuickBooks": SettingsSvc.Current.EnableQuickBooksIntegration = true; break;
+            case "MYOB": SettingsSvc.Current.EnableMYOBIntegration = true; break;
+            case "Outlook": SettingsSvc.Current.EnableOutlookIntegration = true; break;
+            case "Google": SettingsSvc.Current.EnableGoogleIntegration = true; break;
+        }
+        
+        await SettingsSvc.SaveAsync();
+        LoadIntegrations();
+        Snackbar.Add($"{integration.Name} connected successfully.", Severity.Success);
+    }
+
+    private async Task DisconnectIntegration(IntegrationItem integration)
+    {
+        switch (integration.Key)
+        {
+            case "Xero": SettingsSvc.Current.EnableXeroIntegration = false; break;
+            case "QuickBooks": SettingsSvc.Current.EnableQuickBooksIntegration = false; break;
+            case "MYOB": SettingsSvc.Current.EnableMYOBIntegration = false; break;
+            case "Outlook": SettingsSvc.Current.EnableOutlookIntegration = false; break;
+            case "Google": SettingsSvc.Current.EnableGoogleIntegration = false; break;
+        }
+        
+        await SettingsSvc.SaveAsync();
+        LoadIntegrations();
+        Snackbar.Add($"{integration.Name} disconnected.", Severity.Info);
+    }
+}

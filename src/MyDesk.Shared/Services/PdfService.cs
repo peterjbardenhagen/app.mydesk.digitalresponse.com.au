@@ -70,7 +70,7 @@ public class PdfService
                    ISNULL(u.Email,'')                                AS OriginatorEmail
             FROM Quotes q
             LEFT JOIN Contacts c ON c.ContactId = q.ContactId
-            LEFT JOIN Companies co ON co.CompanyId = q.CompanyId
+            LEFT JOIN Companies co ON co.CompanyId = c.CompanyId
             LEFT JOIN Users u    ON u.Code = q.Code
             WHERE q.Qid = @Id",
             new() { ["Id"] = quoteId });

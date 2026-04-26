@@ -236,7 +236,7 @@ if /i not "%reply%"=="Y" goto MENU
 
 echo.
 pushd "%TESTS%"
-dotnet test --logger "console;verbosity=normal"
+dotnet test --logger "console;verbosity=normal" --logger "trx;LogFileName=test-results.trx" --logger "html;LogFileName=test-results.html"
 set "TEST_RESULT=%errorlevel%"
 popd
 
@@ -246,6 +246,8 @@ if "%TEST_RESULT%"=="0" (
 ) else (
     echo    Some tests failed. Check output above.
     echo    Screenshots: %TESTS%\screenshots
+    echo    Test Results: %TESTS%\TestResults\test-results.trx
+    echo    HTML Report: %TESTS%\TestResults\test-results.html
 )
 call :PAUSE_RETURN
 goto MENU

@@ -66,6 +66,82 @@ public class CampaignService
         }
     }
 
+    public Task DeleteCampaignAsync(string id)
+    {
+        Delete(id);
+        return Task.CompletedTask;
+    }
+
+    public Task<List<EmailCampaign>> GetCampaignsAsync()
+    {
+        return Task.FromResult(GetAll());
+    }
+
+    public Task<CampaignStats> GetStatsAsync()
+    {
+        var campaigns = GetAll();
+        var stats = new CampaignStats
+        {
+            TotalCampaigns = campaigns.Count,
+            EmailsSent = campaigns.Sum(c => c.SentCount),
+            OpenRate = campaigns.Count > 0 ? (decimal)campaigns.Average(c => c.OpenRate) : 0,
+            ClickRate = campaigns.Count > 0 ? (decimal)campaigns.Average(c => c.ClickRate) : 0
+        };
+        return Task.FromResult(stats);
+    }
+
+    public Task<EmailCampaign> SendCampaignAsync(string id, string userCode)
+    {
+        return SendAsync(id, userCode);
+    }
+
+    public Task<EmailCampaign> ScheduleCampaignAsync(string id, DateTime scheduledDate)
+    {
+        var c = Get(id);
+        if (c != null)
+        {
+            c.ScheduledDate = scheduledDate;
+            c.Status = "Scheduled";
+            Save(c);
+        }
+        return Task.FromResult(c);
+    }
+
+    public Task CancelCampaignAsync(string id)
+    {
+        var c = Get(id);
+        if (c != null)
+        {
+            c.Status = "Cancelled";
+            Save(c);
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task<EmailCampaign?> DuplicateCampaignAsync(string id)
+    {
+        var c = Get(id);
+        if (c != null)
+        {
+            var duplicate = new EmailCampaign
+            {
+                Id = Guid.NewGuid().ToString(),
+                Name = $"{c.Name} (Copy)",
+                Subject = c.Subject,
+                BodyHtml = c.BodyHtml,
+                Audience = c.Audience,
+                CustomEmails = c.CustomEmails,
+                FromAddress = c.FromAddress,
+                FromName = c.FromName,
+                Status = "Draft",
+                CreatedAt = DateTime.Now
+            };
+            Save(duplicate);
+            return Task.FromResult<EmailCampaign?>(duplicate);
+        }
+        return Task.FromResult<EmailCampaign?>(null);
+    }
+
     // ── Audiences ─────────────────────────────────────────────────────────────
     public async Task<List<CampaignRecipient>> ResolveAudienceAsync(string audience, List<string>? customEmails = null)
     {

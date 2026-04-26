@@ -1,4 +1,6 @@
-@* Techlight Important Files & Links Component *@
+@* Generic Important Files & Links Component - Uses Platform Settings *@
+@inject BrandAssetService BrandAssetService
+@inject PlatformSettingsService PlatformSettings
 
 <MudPaper Class="pa-5 mb-4" Elevation="1" Style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); border: 1px solid var(--gray-200);">
     <div class="d-flex align-center gap-3 mb-5">
@@ -10,167 +12,125 @@
             <MudText Typo="Typo.body2" Style="color: var(--gray-500);">Brand assets and company resources</MudText>
         </div>
         <MudSpacer />
-        <a href="https://www.techlight.com.au" target="_blank" class="tl-brand-website-link">
+        <a href="@PlatformSettings.Current.CompanyWebsite" target="_blank" class="tl-brand-website-link">
             <MudIcon Icon="@Icons.Material.Rounded.Language" Size="Size.Small" Class="gold-accent" />
-            <span>Techlight Website</span>
+            <span>@PlatformSettings.GetBrandingName() Website</span>
             <MudIcon Icon="@Icons.Material.Rounded.OpenInNew" Size="Size.Small" Style="opacity: 0.7;" />
         </a>
     </div>
 
     <div class="tl-brand-assets-grid">
-        @* Brand Guidelines *@
-        <div class="tl-brand-asset-card">
-            <div class="tl-brand-asset-thumbnail">
-                <div class="tl-brand-asset-icon gold">
-                    <MudIcon Icon="@Icons.Material.Rounded.Style" Size="Size.Large" />
+        @* Dynamic Important Links from Platform Settings *@
+        @foreach (var link in _importantLinks)
+        {
+            <div class="tl-brand-asset-card">
+                <div class="tl-brand-asset-thumbnail">
+                    <div class="tl-brand-asset-icon @GetCategoryColor(link.Category)">
+                        <MudIcon Icon="@GetIcon(link.Icon)" Size="Size.Large" />
+                    </div>
+                </div>
+                <div class="tl-brand-asset-content">
+                    <div class="tl-brand-asset-title">@link.Title</div>
+                    <div class="tl-brand-asset-desc">@link.Description</div>
+                    <div class="tl-brand-asset-actions">
+                        <a href="@link.Url" target="@(link.IsExternal ? "_blank" : "_self")" class="tl-brand-asset-btn primary">
+                            <MudIcon Icon="@Icons.Material.Rounded.OpenInNew" Size="Size.Small" />
+                            Open
+                        </a>
+                    </div>
                 </div>
             </div>
-            <div class="tl-brand-asset-content">
-                <div class="tl-brand-asset-title">Techlight Brand Guidelines</div>
-                <div class="tl-brand-asset-desc">Complete brand standards including logo usage, color palette, typography, and design principles.</div>
-                <div class="tl-brand-asset-actions">
-                    <a href="https://techlight.com.au/techlight-branding.html" target="_blank" class="tl-brand-asset-btn primary">
-                        <MudIcon Icon="@Icons.Material.Rounded.Visibility" Size="Size.Small" />
-                        View Online
-                    </a>
-                    <a href="file:///C:/Development/Techlight/public/techlight-branding.html" class="tl-brand-asset-btn secondary">
-                        <MudIcon Icon="@Icons.Material.Rounded.FolderOpen" Size="Size.Small" />
-                        Local
-                    </a>
-                </div>
-            </div>
-        </div>
+        }
 
-        @* Company Profile *@
-        <div class="tl-brand-asset-card">
-            <div class="tl-brand-asset-thumbnail">
-                <div class="tl-brand-asset-icon dark">
-                    <MudIcon Icon="@Icons.Material.Rounded.Business" Size="Size.Large" />
+        @* Dynamic Brand Assets from Platform Settings *@
+        @foreach (var asset in _brandAssets)
+        {
+            <div class="tl-brand-asset-card">
+                <div class="tl-brand-asset-thumbnail">
+                    <div class="tl-brand-asset-icon @GetCategoryColor(asset.Category)">
+                        <MudIcon Icon="@GetFileIcon(asset.ContentType)" Size="Size.Large" />
+                    </div>
+                </div>
+                <div class="tl-brand-asset-content">
+                    <div class="tl-brand-asset-title">@asset.OriginalFileName</div>
+                    <div class="tl-brand-asset-desc">@(asset.Description ?? $"{asset.Category} - {asset.FormattedSize}")</div>
+                    <div class="tl-brand-asset-actions">
+                        <a href="/api/brand-assets/download/@asset.Id" class="tl-brand-asset-btn primary">
+                            <MudIcon Icon="@Icons.Material.Rounded.Download" Size="Size.Small" />
+                            Download
+                        </a>
+                    </div>
                 </div>
             </div>
-            <div class="tl-brand-asset-content">
-                <div class="tl-brand-asset-title">Techlight Company Profile</div>
-                <div class="tl-brand-asset-desc">Professional company overview with services, projects, and contact information.</div>
-                <div class="tl-brand-asset-actions">
-                    <a href="https://techlight.com.au/techlight-company-profile.html" target="_blank" class="tl-brand-asset-btn primary">
-                        <MudIcon Icon="@Icons.Material.Rounded.Visibility" Size="Size.Small" />
-                        View Online
-                    </a>
-                    <a href="file:///C:/Development/Techlight/company-profiles/Company%20Profile%20_%20Techlight%20_%20PDF.pdf" class="tl-brand-asset-btn secondary">
-                        <MudIcon Icon="@Icons.Material.Rounded.PictureAsPdf" Size="Size.Small" />
-                        PDF
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        @* Logo Files *@
-        <div class="tl-brand-asset-card">
-            <div class="tl-brand-asset-thumbnail">
-                <div class="tl-brand-asset-icon">
-                    <MudIcon Icon="@Icons.Material.Rounded.Image" Size="Size.Large" />
-                </div>
-            </div>
-            <div class="tl-brand-asset-content">
-                <div class="tl-brand-asset-title">Techlight Logo Files</div>
-                <div class="tl-brand-asset-desc">Official logo files in various formats (SVG, PNG) for digital and print use.</div>
-                <div class="tl-brand-asset-actions">
-                    <a href="file:///C:/Development/Techlight/public/images/brand" class="tl-brand-asset-btn primary">
-                        <MudIcon Icon="@Icons.Material.Rounded.FolderOpen" Size="Size.Small" />
-                        Browse Files
-                    </a>
-                    <a href="https://techlight.com.au/techlight-logo.svg" target="_blank" class="tl-brand-asset-btn secondary">
-                        <MudIcon Icon="@Icons.Material.Rounded.Download" Size="Size.Small" />
-                        SVG
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        @* Stationery *@
-        <div class="tl-brand-asset-card">
-            <div class="tl-brand-asset-thumbnail">
-                <div class="tl-brand-asset-icon gold">
-                    <MudIcon Icon="@Icons.Material.Rounded.Description" Size="Size.Large" />
-                </div>
-            </div>
-            <div class="tl-brand-asset-content">
-                <div class="tl-brand-asset-title">Techlight Stationery</div>
-                <div class="tl-brand-asset-desc">Letterheads, envelopes, and other branded stationery templates.</div>
-                <div class="tl-brand-asset-actions">
-                    <a href="file:///C:/Development/Techlight/public/techlight-report.html" target="_blank" class="tl-brand-asset-btn primary">
-                        <MudIcon Icon="@Icons.Material.Rounded.Visibility" Size="Size.Small" />
-                        Report Template
-                    </a>
-                    <a href="file:///C:/Development/Techlight/public/ute-design-rfq.html" target="_blank" class="tl-brand-asset-btn secondary">
-                        <MudIcon Icon="@Icons.Material.Rounded.LocalShipping" Size="Size.Small" />
-                        Ute RFQ
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        @* Business Cards *@
-        <div class="tl-brand-asset-card">
-            <div class="tl-brand-asset-thumbnail">
-                <div class="tl-brand-asset-icon dark">
-                    <MudIcon Icon="@Icons.Material.Rounded.Badge" Size="Size.Large" />
-                </div>
-            </div>
-            <div class="tl-brand-asset-content">
-                <div class="tl-brand-asset-title">Techlight Business Cards</div>
-                <div class="tl-brand-asset-desc">Business card templates and email signature resources.</div>
-                <div class="tl-brand-asset-actions">
-                    <a href="https://techlight.com.au/techlight-branding.html" target="_blank" class="tl-brand-asset-btn primary">
-                        <MudIcon Icon="@Icons.Material.Rounded.Visibility" Size="Size.Small" />
-                        View Specs
-                    </a>
-                    <a href="file:///C:/Development/Techlight/public/email-signature-01.html" target="_blank" class="tl-brand-asset-btn secondary">
-                        <MudIcon Icon="@Icons.Material.Rounded.Email" Size="Size.Small" />
-                        Email Sig
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        @* Project References *@
-        <div class="tl-brand-asset-card">
-            <div class="tl-brand-asset-thumbnail">
-                <div class="tl-brand-asset-icon">
-                    <MudIcon Icon="@Icons.Material.Rounded.Work" Size="Size.Large" />
-                </div>
-            </div>
-            <div class="tl-brand-asset-content">
-                <div class="tl-brand-asset-title">Project References</div>
-                <div class="tl-brand-asset-desc">Completed project portfolio and reference documentation.</div>
-                <div class="tl-brand-asset-actions">
-                    <a href="file:///C:/Development/Techlight/company-profiles/Techlight%20Company%20Profile%20Project%20References.pdf" class="tl-brand-asset-btn primary">
-                        <MudIcon Icon="@Icons.Material.Rounded.PictureAsPdf" Size="Size.Small" />
-                        References PDF
-                    </a>
-                    <a href="file:///C:/Development/Techlight/company-profiles" class="tl-brand-asset-btn secondary">
-                        <MudIcon Icon="@Icons.Material.Rounded.FolderOpen" Size="Size.Small" />
-                        All Files
-                    </a>
-                </div>
-            </div>
-        </div>
+        }
     </div>
 
-    @* Local Asset Path Info *@
-    <MudDivider Class="my-5" />
-    <div class="d-flex align-center gap-2" style="background: var(--gray-50); padding: 16px; border-radius: 12px; border: 1px solid var(--gray-200);">
-        <MudIcon Icon="@Icons.Material.Rounded.Folder" Color="Color.Default" Size="Size.Small" />
-        <MudText Typo="Typo.body2" Style="color: var(--gray-600); font-family: monospace; font-size: 12px;">
-            Local Assets: C:\Development\Techlight
-        </MudText>
-        <MudSpacer />
-        <MudButton Variant="Variant.Text" Size="Size.Small" 
-                   Href="file:///C:/Development/Techlight"
-                   StartIcon="@Icons.Material.Rounded.OpenInNew"
-                   Style="text-transform: none;">
-            Open Folder
-        </MudButton>
-    </div>
+    @if (!_brandAssets.Any() && !_importantLinks.Any())
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-4">
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Rounded.Info" Size="Size.Small" />
+                <span>No brand assets or links configured. Contact your administrator to add content.</span>
+            </div>
+        </MudAlert>
+    }
 </MudPaper>
+
+@code {
+    private List<BrandAssetFile> _brandAssets = new();
+    private List<ImportantLink> _importantLinks = new();
+
+    protected override void OnInitialized()
+    {
+        // Load from Platform Settings via BrandAssetService
+        _brandAssets = BrandAssetService.GetAllAssets();
+        _importantLinks = BrandAssetService.GetImportantLinks();
+    }
+
+    private string GetIcon(string iconName)
+    {
+        return iconName switch
+        {
+            "Analytics" => Icons.Material.Rounded.Analytics,
+            "Facebook" => Icons.Material.Rounded.Public,
+            "Language" => Icons.Material.Rounded.Language,
+            "MoreHoriz" => Icons.Material.Rounded.MoreHoriz,
+            "Style" => Icons.Material.Rounded.Style,
+            "Business" => Icons.Material.Rounded.Business,
+            "Image" => Icons.Material.Rounded.Image,
+            "Description" => Icons.Material.Rounded.Description,
+            "Badge" => Icons.Material.Rounded.Badge,
+            "Work" => Icons.Material.Rounded.Work,
+            "Email" => Icons.Material.Rounded.Email,
+            "MenuBook" => Icons.Material.Rounded.MenuBook,
+            _ => Icons.Material.Rounded.Link
+        };
+    }
+
+    private string GetFileIcon(string contentType)
+    {
+        if (contentType.Contains("pdf")) return Icons.Material.Rounded.PictureAsPdf;
+        if (contentType.Contains("image")) return Icons.Material.Rounded.Image;
+        if (contentType.Contains("word") || contentType.Contains("document")) return Icons.Material.Rounded.Description;
+        if (contentType.Contains("excel") || contentType.Contains("sheet")) return Icons.Material.Rounded.TableChart;
+        if (contentType.Contains("html")) return Icons.Material.Rounded.Language;
+        if (contentType.Contains("zip")) return Icons.Material.Rounded.FolderZip;
+        return Icons.Material.Rounded.InsertDriveFile;
+    }
+
+    private string GetCategoryColor(string category)
+    {
+        return category.ToLower() switch
+        {
+            "analytics" => "gold",
+            "social" => "primary",
+            "website" => "teal",
+            "logo" => "dark",
+            "guidelines" => "gold",
+            "profile" => "teal",
+            "stationery" => "primary",
+            _ => ""
+        };
+    }
+}
 

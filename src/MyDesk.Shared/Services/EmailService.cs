@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Mail;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using MyDesk.Shared.Models;
 
 namespace MyDesk.Shared.Services;
 
@@ -14,9 +15,10 @@ namespace MyDesk.Shared.Services;
 public class EmailService
 {
     private readonly DatabaseService _db;
-    private readonly ActivityService _activity;
+    private readonly ActivityService? _activity;
     private readonly IConfiguration _config;
     private readonly ILogger<EmailService> _logger;
+    private readonly PlatformSettings? _platformSettings;
 
     public EmailService(DatabaseService db, ActivityService activity,
         IConfiguration config, ILogger<EmailService> logger)
@@ -25,6 +27,17 @@ public class EmailService
         _activity = activity;
         _config   = config;
         _logger   = logger;
+    }
+
+    // Constructor for when PlatformSettingsService is available
+    public EmailService(DatabaseService db, ActivityService activity,
+        IConfiguration config, ILogger<EmailService> logger, PlatformSettings platformSettings)
+    {
+        _db                = db;
+        _activity          = activity;
+        _config            = config;
+        _logger            = logger;
+        _platformSettings  = platformSettings;
     }
 
     public async Task EnsureTablesAsync()
@@ -214,10 +227,47 @@ public class EmailService
 
     /// <summary>
     /// Returns true if outbound email sending is enabled for this environment.
-    /// Set Email:DisableOutbound=true in production appsettings to block all sends.
+    /// Checks in order:
+    /// 1. Hidden developer-only override (EMAIL_DEV_OVERRIDE_DISABLE=true) - highest priority
+    /// 2. Platform Settings kill switch (DisableAllEmails)
+    /// 3. Configuration setting (Email:DisableOutbound)
     /// </summary>
-    public bool IsOutboundEnabled =>
-        !string.Equals(_config["Email:DisableOutbound"], "true", StringComparison.OrdinalIgnoreCase);
+    public bool IsOutboundEnabled
+    {
+        get
+        {
+            // Hidden developer-only kill switch - only developers know about this
+            // This takes precedence over everything for absolute safety during testing
+            if (string.Equals(_config["EMAIL_DEV_OVERRIDE_DISABLE"], "true", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning("Emails disabled via hidden developer override (EMAIL_DEV_OVERRIDE_DISABLE=true)");
+                return false;
+            }
+
+            // Platform Settings kill switch - accessible to admins via UI
+            if (_platformSettings?.DisableAllEmails == true)
+            {
+                _logger.LogWarning("Emails disabled via Platform Settings (DisableAllEmails=true)");
+                return false;
+            }
+
+            // Fallback to config check for platform settings if not injected
+            if (string.Equals(_config["Platform:DisableAllEmails"], "true", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning("Emails disabled via Platform Settings config (Platform:DisableAllEmails=true)");
+                return false;
+            }
+
+            // Configuration-based disable (legacy)
+            if (string.Equals(_config["Email:DisableOutbound"], "true", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning("Emails disabled via configuration (Email:DisableOutbound=true)");
+                return false;
+            }
+
+            return true;
+        }
+    }
 
     public async Task SendAsync(
         string to, string subject, string htmlBody,
@@ -307,4 +357,22 @@ public class EmailService
         <p>Kind regards,<br/>{originator}</p>
         <p style="color:#999;font-size:12px;">Sent via Techlight MyDesk.</p>
         """;
+
+    public async Task SendPasswordResetEmailAsync(string email, string resetLink)
+    {
+        var subject = "Password Reset - Techlight MyDesk";
+        var body = $"""
+            <p>Dear User,</p>
+            <p>You have requested a password reset for your Techlight MyDesk account.</p>
+            <p>Please click the link below to reset your password:</p>
+            <p><a href="{resetLink}">Reset Password</a></p>
+            <p>If you did not request this password reset, please ignore this email.</p>
+            <p>This link will expire in 24 hours.</p>
+            <p>Kind regards,<br/>Techlight MyDesk Team</p>
+            <p style="color:#999;font-size:12px;">Sent via Techlight MyDesk.</p>
+            """;
+
+        await SendAsync(email, subject, body);
+        _logger.LogInformation("Password reset email sent to {Email}", email);
+    }
 }

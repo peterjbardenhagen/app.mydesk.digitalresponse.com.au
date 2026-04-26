@@ -3,7 +3,7 @@ using MyDesk.Shared.Models;
 
 namespace MyDesk.Shared.Services;
 
-public enum ChartPeriod { ThisYear, FyToDate, LastYear, SinceInception }
+public enum ChartPeriod { ThisMonth, ThisYear, FyToDate, LastYear, SinceInception }
 
 public record DashboardChartData(
     decimal[] QuotesWon,
@@ -26,15 +26,32 @@ public class DashboardService
 
     public async Task<DashboardMetrics> GetMetricsAsync(string? originatorCode = null)
     {
+        return await GetMetricsAsync(ChartPeriod.ThisYear, originatorCode);
+    }
+
+    public async Task<DashboardMetrics> GetMetricsAsync(ChartPeriod period, string? originatorCode = null)
+    {
         var m = new DashboardMetrics();
         try
         {
             var now            = DateTime.Now;
             var thisMonth      = new DateTime(now.Year, now.Month, 1);
             var lastMonth      = thisMonth.AddMonths(-1);
-            var ytdStart       = new DateTime(now.Year, 1, 1);
-            var lastYtdStart   = new DateTime(now.Year - 1, 1, 1);
-            var lastYtdEnd     = new DateTime(now.Year - 1, now.Month, 1).AddMonths(1).AddDays(-1);
+            
+            // Calculate period date range based on selected period
+            var (periodStart, periodEnd, comparisonStart, comparisonEnd) = period switch
+            {
+                ChartPeriod.ThisMonth      => (thisMonth, now, lastMonth, new DateTime(lastMonth.Year, lastMonth.Month, DateTime.DaysInMonth(lastMonth.Year, lastMonth.Month))),
+                ChartPeriod.ThisYear       => (new DateTime(now.Year, 1, 1), now, new DateTime(now.Year - 1, 1, 1), new DateTime(now.Year - 1, now.Month, DateTime.DaysInMonth(now.Year - 1, now.Month))),
+                ChartPeriod.FyToDate       => (new DateTime(now.Month >= 7 ? now.Year : now.Year - 1, 7, 1), now, new DateTime(now.Month >= 7 ? now.Year - 1 : now.Year - 2, 7, 1), new DateTime(now.Month >= 7 ? now.Year - 1 : now.Year - 2, now.Month, DateTime.DaysInMonth(now.Month >= 7 ? now.Year - 1 : now.Year - 2, now.Month))),
+                ChartPeriod.LastYear       => (new DateTime(now.Year - 1, 1, 1), new DateTime(now.Year - 1, 12, 31), new DateTime(now.Year - 2, 1, 1), new DateTime(now.Year - 2, 12, 31)),
+                ChartPeriod.SinceInception => (new DateTime(2000, 1, 1), now, new DateTime(2000, 1, 1), now.AddYears(-1)),
+                _                          => (thisMonth, now, lastMonth, new DateTime(lastMonth.Year, lastMonth.Month, DateTime.DaysInMonth(lastMonth.Year, lastMonth.Month)))
+            };
+            
+            var ytdStart       = periodStart;
+            var lastYtdStart   = comparisonStart;
+            var lastYtdEnd     = comparisonEnd;
             var thirtyDaysAgo  = now.AddDays(-30);
 
             // ── Quotes this month ────────────────────────────────────────────
@@ -331,7 +348,7 @@ public class DashboardService
         try
         {
             // Get all divisions first
-            var dt = await _db.QueryAsync("SELECT DivisionId, Division as DivisionName FROM Divisions WHERE Active = 1 ORDER BY Division");
+            var dt = await _db.QueryAsync("SELECT DivisionId, Division as DivisionName FROM Divisions WHERE Visible = 1 ORDER BY Division");
 
             foreach (System.Data.DataRow r in dt.Rows)
             {
@@ -573,11 +590,12 @@ public class DashboardService
         {
             return period switch
             {
+                ChartPeriod.ThisMonth      => await GetThisMonthChartAsync(now),
                 ChartPeriod.ThisYear       => await GetCalendarYearChartAsync(now.Year),
                 ChartPeriod.FyToDate       => await GetFyToDateChartAsync(now),
                 ChartPeriod.LastYear       => await GetCalendarYearChartAsync(now.Year - 1),
                 ChartPeriod.SinceInception => await GetSinceInceptionChartAsync(),
-                _                          => await GetCalendarYearChartAsync(now.Year),
+                _                          => await GetThisMonthChartAsync(now),
             };
         }
         catch (Exception ex)
@@ -586,6 +604,43 @@ public class DashboardService
             return new(new decimal[12], new decimal[12], new decimal[12],
                 new[]{"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"});
         }
+    }
+
+    private async Task<DashboardChartData> GetThisMonthChartAsync(DateTime now)
+    {
+        var start = new DateTime(now.Year, now.Month, 1);
+        var end = start.AddMonths(1);
+        var daysInMonth = DateTime.DaysInMonth(now.Year, now.Month);
+        
+        var labels = Enumerable.Range(1, daysInMonth).Select(d => d.ToString()).ToArray();
+        
+        var qMap = await GetDailyTotalsInRange("Quotes", "QuoteDate", "t.NettPriceTotal", start, end);
+        var iMap = await GetDailyTotalsInRange("Invoices", "InvoiceDate", "t.NettPriceTotal", start, end);
+        var pMap = await GetDailyTotalsInRange("PurchaseOrders", "PODate", "t.PriceExTotal", start, end);
+        
+        return new(
+            Enumerable.Range(1, daysInMonth).Select(d => qMap.GetValueOrDefault(d)).ToArray(),
+            Enumerable.Range(1, daysInMonth).Select(d => iMap.GetValueOrDefault(d)).ToArray(),
+            Enumerable.Range(1, daysInMonth).Select(d => pMap.GetValueOrDefault(d)).ToArray(),
+            labels);
+    }
+
+    private async Task<Dictionary<int, decimal>> GetDailyTotalsInRange(string table, string dateCol, string valueExpr, DateTime start, DateTime end)
+    {
+        var sql = $@"
+            SELECT DAY(t.{dateCol}) AS Dy, ISNULL(SUM({valueExpr}), 0) AS Total
+            FROM {table} t
+            WHERE t.{dateCol} >= @S AND t.{dateCol} < @E
+            GROUP BY DAY(t.{dateCol})";
+        var dict = new Dictionary<int, decimal>();
+        try
+        {
+            var dt = await _db.QueryAsync(sql, new() { ["S"] = start, ["E"] = end });
+            foreach (System.Data.DataRow r in dt.Rows)
+                dict[Convert.ToInt32(r["Dy"])] = Convert.ToDecimal(r["Total"]);
+        }
+        catch { }
+        return dict;
     }
 
     private async Task<DashboardChartData> GetCalendarYearChartAsync(int year)

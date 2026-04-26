@@ -8,12 +8,12 @@ namespace MyDesk.Web.Services;
 
 public class AuthService
 {
-    private readonly DatabaseService _db;
+    private readonly UserService _userService;
     private readonly ILogger<AuthService> _logger;
 
-    public AuthService(DatabaseService db, ILogger<AuthService> logger)
+    public AuthService(UserService userService, ILogger<AuthService> logger)
     {
-        _db = db;
+        _userService = userService;
         _logger = logger;
     }
 
@@ -21,38 +21,8 @@ public class AuthService
     {
         try
         {
-            // Match against Name OR Code (case-insensitive via SQL default collation).
-            // PW is the plaintext password column in the legacy schema.
-            // Only allow Active, non-deleted users.
-            // Name/Code: case-INsensitive (CI). Password: case-SENSITIVE (CS).
-            var dt = await _db.QueryAsync(
-                @"SELECT TOP 1 * FROM Users
-                  WHERE (Name COLLATE Latin1_General_CI_AS = @Login
-                         OR Code COLLATE Latin1_General_CI_AS = @Login)
-                    AND PW COLLATE Latin1_General_CS_AS = @Password
-                    AND ISNULL(Active, 0) = 1
-                    AND ISNULL(Deleted, 0) = 0",
-                new() { ["Login"] = login, ["Password"] = password });
-
-            if (dt.Rows.Count == 0) return null;
-
-            var row = dt.Rows[0];
-            var userTypeId = row.Table.Columns.Contains("UserTypeId") && row["UserTypeId"] != DBNull.Value
-                ? Convert.ToInt32(row["UserTypeId"]) : 0;
-
-            return new User
-            {
-                UserId = Convert.ToInt32(row["UserId"]),
-                Code = row["Code"]?.ToString() ?? "",
-                Name = row["Name"]?.ToString() ?? "",
-                Email = row.Table.Columns.Contains("Email") ? row["Email"]?.ToString() : null,
-                UserTypeId = userTypeId,
-                // UserTypeId == 1 is Director/Admin in legacy schema
-                IsAdmin = userTypeId == 1,
-                IsManager = userTypeId == 2,
-                DivisionId = row.Table.Columns.Contains("DivisionId") && row["DivisionId"] != DBNull.Value
-                    ? Convert.ToInt32(row["DivisionId"]) : null
-            };
+            // Use UserService's VerifyLoginAsync which handles password hashing and legacy support
+            return await _userService.VerifyLoginAsync(login, password);
         }
         catch (Exception ex)
         {
@@ -61,7 +31,7 @@ public class AuthService
         }
     }
 
-    public async Task SignInAsync(HttpContext context, User user)
+    public async Task SignInAsync(HttpContext context, User user, bool rememberMe = false)
     {
         var claims = new List<Claim>
         {
@@ -69,16 +39,30 @@ public class AuthService
             new(ClaimTypes.NameIdentifier, user.Code),
             new("UserId", user.UserId.ToString()),
             new("UserTypeId", user.UserTypeId.ToString()),
-            new(ClaimTypes.Role, user.IsAdmin ? "Admin" : user.IsManager ? "Manager" : "User"),
         };
 
-        if (user.IsAdmin) claims.Add(new Claim(ClaimTypes.Role, "Director"));
+        // Standardize Roles: 1=Director, 2=Administrator
         if (user.UserTypeId == 1) claims.Add(new Claim(ClaimTypes.Role, "Director"));
+        if (user.UserTypeId == 2) claims.Add(new Claim(ClaimTypes.Role, "Administrator"));
+
+        // Legacy compatibility
+        if (user.IsAdmin)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, "Admin"));
+            claims.Add(new Claim(ClaimTypes.Role, "Administrator"));
+            claims.Add(new Claim(ClaimTypes.Role, "Director"));
+        }
+        if (user.IsManager) claims.Add(new Claim(ClaimTypes.Role, "Manager"));
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);
 
+        // Set session expiration based on rememberMe flag
+        var expiration = rememberMe 
+            ? DateTimeOffset.UtcNow.AddDays(30)  // 30 days if remember me is checked
+            : DateTimeOffset.UtcNow.AddHours(8); // 8 hours for regular session
+
         await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal,
-            new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8) });
+            new AuthenticationProperties { IsPersistent = true, ExpiresUtc = expiration });
     }
 }

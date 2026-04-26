@@ -17,6 +17,18 @@ public class PlatformSettings
     public string LogoUrl { get; set; } = "/images/mydesk-logo.svg";
     public string FaviconUrl { get; set; } = "/images/mydesk-favicon.svg";
     
+    // Login Page Customization
+    public string LoginLogoUrl { get; set; } = "/images/techlight-logo.svg";
+    public string LoginMarkUrl { get; set; } = "/images/techlight-mark.svg";
+    public string LoginQuote { get; set; } = "The intelligence layer for your entire lighting & electrical operation.";
+    public string LoginQuoteAuthor { get; set; } = "Techlight MyDesk";
+    public string LoginQuoteLabel { get; set; } = "Enterprise Portal";
+    public string LoginHeading { get; set; } = "Welcome back";
+    public string LoginSubheading { get; set; } = "Please enter your details to sign in.";
+    public string LoginPrimaryColor { get; set; } = "#00C8C8"; // Tealy cyan
+    public string LoginAccentColor { get; set; } = "#F59E0B"; // Amber/Orange
+    public string LoginBackgroundColor { get; set; } = "#08121a"; // Dark background
+    
     // Copyright & Legal
     public string CopyrightText { get; set; } = "Copyright 2026 Digital Response. All rights reserved.";
     public string PrivacyPolicyUrl { get; set; } = "/privacy-policy";
@@ -27,9 +39,14 @@ public class PlatformSettings
     public bool EnableAIAssistant { get; set; } = true;
     public bool EnableAskAI { get; set; } = true;
     public bool EnableTelegramBot { get; set; } = false;
+    public bool EnableXeroIntegration { get; set; } = false;
+    public bool EnableQuickBooksIntegration { get; set; } = false;
     public bool EnableMYOBIntegration { get; set; } = true;
+    public bool EnableOutlookIntegration { get; set; } = false;
+    public bool EnableGoogleIntegration { get; set; } = false;
     public bool EnablePDFGeneration { get; set; } = true;
     public bool EnableEmailNotifications { get; set; } = true;
+    public bool DisableAllEmails { get; set; } = false; // Kill switch for email sending (human-accessible)
     public bool EnableTwoFactorAuth { get; set; } = false;
     public bool EnableSSO { get; set; } = false;
     public bool EnableCustomBranding { get; set; } = false; // Premium feature
@@ -62,6 +79,53 @@ public class PlatformSettings
     public string Version { get; set; } = "3.0.0";
     public string ReleaseDate { get; set; } = "2026-04-21";
     public string Environment { get; set; } = "Production";
+    
+    // Brand Assets - Dynamic file uploads for brand materials
+    public List<BrandAssetFile> BrandAssets { get; set; } = new();
+    
+    // Important Links - Configurable links for marketing/resources
+    public List<ImportantLink> ImportantLinks { get; set; } = new();
+}
+
+/// <summary>
+/// Represents an uploaded brand asset file
+/// </summary>
+public class BrandAssetFile
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string FileName { get; set; } = "";
+    public string OriginalFileName { get; set; } = "";
+    public string FilePath { get; set; } = "";
+    public string ContentType { get; set; } = "";
+    public long FileSize { get; set; }
+    public string Category { get; set; } = "General"; // Logo, Guidelines, Profile, Stationery, etc.
+    public string Description { get; set; } = "";
+    public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
+    public string UploadedBy { get; set; } = "";
+    public bool IsPublic { get; set; } = true;
+    
+    public string FormattedSize => FileSize switch
+    {
+        >= 1_048_576 => $"{FileSize / 1_048_576.0:N1} MB",
+        >= 1024 => $"{FileSize / 1024.0:N0} KB",
+        _ => $"{FileSize} B"
+    };
+}
+
+/// <summary>
+/// Represents an important link for the Important Files & Links section
+/// </summary>
+public class ImportantLink
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Title { get; set; } = "";
+    public string Description { get; set; } = "";
+    public string Url { get; set; } = "";
+    public string Icon { get; set; } = "Link"; // MudBlazor icon name
+    public string Category { get; set; } = "General";
+    public int DisplayOrder { get; set; } = 0;
+    public bool IsExternal { get; set; } = true;
+    public bool IsActive { get; set; } = true;
 }
 
 public class SmtpSettings

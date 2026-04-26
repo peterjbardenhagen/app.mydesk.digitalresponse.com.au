@@ -8,6 +8,7 @@ public enum ReportType
     Contacts,
     DeliveryNotes,
     Invoices,
+    Profitability,
     Quotes,
     PurchaseOrders
 }
@@ -75,6 +76,7 @@ public class ReportService
             ReportType.Invoices => await GenerateInvoicesReportAsync(start, end),
             ReportType.Quotes => await GenerateQuotesReportAsync(start, end),
             ReportType.PurchaseOrders => await GeneratePurchaseOrdersReportAsync(start, end),
+            ReportType.Profitability => await GenerateProfitabilityReportAsync(start, end),
             _ => throw new ArgumentException($"Unknown report type: {type}")
         };
     }
@@ -120,10 +122,7 @@ public class ReportService
             LEFT JOIN Companies co ON c.CompanyId = co.CompanyId
             WHERE ISNULL(c.Deleted,0) = 0";
         
-        if (start.HasValue && end.HasValue)
-        {
-            sql += " AND c.CreatedDate BETWEEN @Start AND @End";
-        }
+        // Removed CreatedDate filter as column is missing in Contacts table
         sql += " ORDER BY co.Company, c.Surname, c.FirstName";
 
         var dt = await _db.QueryAsync(sql, new() { ["Start"] = start, ["End"] = end });
@@ -148,13 +147,13 @@ public class ReportService
     private async Task<ReportResult> GenerateDeliveryNotesReportAsync(DateTime? start, DateTime? end)
     {
         var sql = @"
-            SELECT d.DespatchId, d.DespatchNumber, d.DespatchDate,
-                   co.Company AS Customer, d.DeliveryAddress,
-                   ISNULL(d.NettPriceTotal,0) AS Amount
+            SELECT d.DespatchId, d.DespatchDate,
+                   co.Company AS Customer, d.InternalNotes,
+                   0 AS Amount
             FROM Despatch d
-            LEFT JOIN Contacts c ON c.ContactId = d.ContactId
-            LEFT JOIN Companies co ON c.CompanyId = co.CompanyId
-            WHERE ISNULL(d.Deleted,0) = 0";
+            LEFT JOIN Invoices i ON d.InvoiceId = i.InvoiceId
+            LEFT JOIN Companies co ON i.CompanyId = co.CompanyId
+            WHERE 1=1";
         
         if (start.HasValue && end.HasValue)
         {
@@ -167,17 +166,16 @@ public class ReportService
         return new ReportResult
         {
             Title = "Delivery Notes Report",
-            Headers = new() { "ID", "Number", "Date", "Customer", "Delivery Address", "Amount" },
+            Headers = new() { "ID", "Date", "Customer", "Notes", "Amount" },
             Rows = dt.Map(r => new List<string>
             {
                 r["DespatchId"]?.ToString() ?? "",
-                r["DespatchNumber"]?.ToString() ?? "",
                 r["DespatchDate"] == DBNull.Value ? "" : Convert.ToDateTime(r["DespatchDate"]).ToString("dd/MM/yyyy"),
                 r["Customer"]?.ToString() ?? "",
-                r["DeliveryAddress"]?.ToString() ?? "",
-                r["Amount"] == DBNull.Value ? "$0.00" : Convert.ToDecimal(r["Amount"]).ToString("C")
+                r["InternalNotes"]?.ToString() ?? "",
+                "$0.00"
             }).ToList(),
-            TotalAmount = dt.Rows.Count > 0 ? dt.Map(r => Convert.ToDecimal(r["Amount"])).Sum() : 0,
+            TotalAmount = 0,
             GeneratedAt = DateTime.Now
         };
     }
@@ -185,14 +183,13 @@ public class ReportService
     private async Task<ReportResult> GenerateInvoicesReportAsync(DateTime? start, DateTime? end)
     {
         var sql = @"
-            SELECT i.InvoiceId, i.InvoiceNumber, i.InvoiceDate,
+            SELECT i.InvoiceId, i.InvoiceDate,
                    co.Company AS Customer, ISNULL(i.NettPriceTotal,0) AS Amount,
                    ISNULL(s.InvoiceStatus,'') AS Status
             FROM Invoices i
-            LEFT JOIN Contacts c ON c.ContactId = i.ContactId
-            LEFT JOIN Companies co ON c.CompanyId = co.CompanyId
+            LEFT JOIN Companies co ON i.CompanyId = co.CompanyId
             LEFT JOIN InvoiceStatus s ON s.InvoiceStatusId = i.InvoiceStatusId
-            WHERE ISNULL(i.Deleted,0) = 0";
+            WHERE 1=1";
         
         if (start.HasValue && end.HasValue)
         {
@@ -205,11 +202,10 @@ public class ReportService
         return new ReportResult
         {
             Title = "Invoices Report",
-            Headers = new() { "ID", "Number", "Date", "Customer", "Amount", "Status" },
+            Headers = new() { "ID", "Date", "Customer", "Amount", "Status" },
             Rows = dt.Map(r => new List<string>
             {
                 r["InvoiceId"]?.ToString() ?? "",
-                r["InvoiceNumber"]?.ToString() ?? "",
                 r["InvoiceDate"] == DBNull.Value ? "" : Convert.ToDateTime(r["InvoiceDate"]).ToString("dd/MM/yyyy"),
                 r["Customer"]?.ToString() ?? "",
                 r["Amount"] == DBNull.Value ? "$0.00" : Convert.ToDecimal(r["Amount"]).ToString("C"),
@@ -230,7 +226,7 @@ public class ReportService
             LEFT JOIN Contacts c ON c.ContactId = q.ContactId
             LEFT JOIN Companies co ON c.CompanyId = co.CompanyId
             LEFT JOIN QuoteStatus s ON s.QuoteStatusId = q.QuoteStatusId
-            WHERE ISNULL(q.Deleted,0) = 0";
+            WHERE 1=1";
         
         if (start.HasValue && end.HasValue)
         {
@@ -261,14 +257,14 @@ public class ReportService
     private async Task<ReportResult> GeneratePurchaseOrdersReportAsync(DateTime? start, DateTime? end)
     {
         var sql = @"
-            SELECT po.PurchaseOrderId, po.PONumber, po.PODate,
+            SELECT po.POid, po.Code, po.PODate,
                    co.Company AS Supplier, ISNULL(po.PriceExTotal,0) AS Amount,
                    ISNULL(s.POStatus,'') AS Status
             FROM PurchaseOrders po
             LEFT JOIN Contacts c ON c.ContactId = po.ContactId
             LEFT JOIN Companies co ON c.CompanyId = co.CompanyId
-            LEFT JOIN POStatus s ON s.POStatusId = po.POStatusId
-            WHERE ISNULL(po.Deleted,0) = 0";
+            LEFT JOIN PurchaseOrderStatus s ON s.POStatusId = po.POStatusId
+            WHERE 1=1";
         
         if (start.HasValue && end.HasValue)
         {
@@ -284,8 +280,8 @@ public class ReportService
             Headers = new() { "ID", "Number", "Date", "Supplier", "Amount", "Status" },
             Rows = dt.Map(r => new List<string>
             {
-                r["PurchaseOrderId"]?.ToString() ?? "",
-                r["PONumber"]?.ToString() ?? "",
+                r["POid"]?.ToString() ?? "",
+                r["Code"]?.ToString() ?? "",
                 r["PODate"] == DBNull.Value ? "" : Convert.ToDateTime(r["PODate"]).ToString("dd/MM/yyyy"),
                 r["Supplier"]?.ToString() ?? "",
                 r["Amount"] == DBNull.Value ? "$0.00" : Convert.ToDecimal(r["Amount"]).ToString("C"),
@@ -367,6 +363,63 @@ public class ReportService
             Title = $"Custom Report: {tableName}",
             Headers = columns,
             Rows = dt.Map(r => columns.Select(c => r[c]?.ToString() ?? "").ToList()).ToList(),
+            GeneratedAt = DateTime.Now
+        };
+    }
+
+    private async Task<ReportResult> GenerateProfitabilityReportAsync(DateTime? start, DateTime? end)
+    {
+        // Combined Profitability report for both Quotes and Invoices
+        // We join Invoices to Quotes via qid to get the cost basis if possible
+        var sql = @"
+            SELECT 'Invoice' AS Type, i.InvoiceId AS ID, i.InvoiceDate AS Date,
+                   co.Company AS Customer, 
+                   ISNULL(q.UnitCostTotal, 0) AS Cost,
+                   ISNULL(i.NettPriceTotal, 0) AS Price,
+                   (ISNULL(i.NettPriceTotal, 0) - ISNULL(q.UnitCostTotal, 0)) AS GPValue,
+                   CASE WHEN ISNULL(i.NettPriceTotal, 0) = 0 THEN 0 
+                        ELSE ((ISNULL(i.NettPriceTotal, 0) - ISNULL(q.UnitCostTotal, 0)) / i.NettPriceTotal) * 100 
+                   END AS GPMargin
+            FROM Invoices i
+            LEFT JOIN Companies co ON i.CompanyId = co.CompanyId
+            LEFT JOIN Quotes q ON i.qid = q.Qid
+            WHERE 1=1 " + (start.HasValue && end.HasValue ? " AND i.InvoiceDate BETWEEN @Start AND @End " : "") + @"
+            
+            UNION ALL
+            
+            SELECT 'Quote' AS Type, q.Qid AS ID, q.QuoteDate AS Date,
+                   co.Company AS Customer,
+                   ISNULL(q.UnitCostTotal, 0) AS Cost,
+                   ISNULL(q.NettPriceTotal, 0) AS Price,
+                   (ISNULL(q.NettPriceTotal, 0) - ISNULL(q.UnitCostTotal, 0)) AS GPValue,
+                   CASE WHEN ISNULL(q.NettPriceTotal, 0) = 0 THEN 0 
+                        ELSE ((ISNULL(q.NettPriceTotal, 0) - ISNULL(q.UnitCostTotal, 0)) / q.NettPriceTotal) * 100 
+                   END AS GPMargin
+            FROM Quotes q
+            LEFT JOIN Contacts c ON q.ContactId = c.ContactId
+            LEFT JOIN Companies co ON c.CompanyId = co.CompanyId
+            WHERE 1=1 " + (start.HasValue && end.HasValue ? " AND q.QuoteDate BETWEEN @Start AND @End " : "") + @"
+            
+            ORDER BY Date DESC";
+
+        var dt = await _db.QueryAsync(sql, new() { ["Start"] = start, ["End"] = end });
+        
+        return new ReportResult
+        {
+            Title = "Profitability Analysis",
+            Headers = new() { "Type", "ID", "Date", "Customer", "Cost", "Price", "GP Value", "Margin %" },
+            Rows = dt.Map(r => new List<string>
+            {
+                r["Type"]?.ToString() ?? "",
+                r["ID"]?.ToString() ?? "",
+                r["Date"] == DBNull.Value ? "" : Convert.ToDateTime(r["Date"]).ToString("dd/MM/yyyy"),
+                r["Customer"]?.ToString() ?? "",
+                Convert.ToDecimal(r["Cost"]).ToString("C"),
+                Convert.ToDecimal(r["Price"]).ToString("C"),
+                Convert.ToDecimal(r["GPValue"]).ToString("C"),
+                Convert.ToDecimal(r["GPMargin"]).ToString("N2") + "%"
+            }).ToList(),
+            TotalAmount = dt.Rows.Count > 0 ? dt.Map(r => Convert.ToDecimal(r["GPValue"])).Sum() : 0,
             GeneratedAt = DateTime.Now
         };
     }

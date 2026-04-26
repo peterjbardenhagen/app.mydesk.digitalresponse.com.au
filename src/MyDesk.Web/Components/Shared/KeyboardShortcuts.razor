@@ -1,0 +1,26 @@
+@inject NavigationManager NavigationManager
+@inject IDialogService DialogService
+
+@* Global keyboard shortcuts *@
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await SetupKeyboardShortcuts();
+        }
+    }
+
+    private async Task SetupKeyboardShortcuts()
+    {
+        // Add keyboard shortcuts using JS interop
+        // This is a placeholder for future keyboard shortcut implementation
+        await Task.CompletedTask;
+    }
+
+    public async Task ShowShortcutsDialog()
+    {
+        var parameters = new DialogParameters();
+        DialogService.Show<ShortcutsDialog>("Keyboard Shortcuts", parameters);
+    }
+}

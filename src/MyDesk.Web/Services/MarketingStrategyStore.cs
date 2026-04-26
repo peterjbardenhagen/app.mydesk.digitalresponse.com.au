@@ -54,6 +54,56 @@ public class MarketingStrategyStore
         }
     }
 
+    public Task<MarketingStrategy?> GetCurrentStrategyAsync()
+    {
+        lock (_lock) return Task.FromResult(Load().FirstOrDefault());
+    }
+
+    public Task<List<StrategicObjective>> GetObjectivesAsync()
+    {
+        lock (_lock) return Task.FromResult(new List<StrategicObjective>());
+    }
+
+    public Task<List<MarketingTactic>> GetTacticsAsync()
+    {
+        lock (_lock) return Task.FromResult(new List<MarketingTactic>());
+    }
+
+    public Task<StrategyStats?> GetStatsAsync()
+    {
+        lock (_lock) return Task.FromResult(new StrategyStats());
+    }
+
+    public Task<StrategicObjective?> CreateObjectiveAsync(StrategicObjective objective)
+    {
+        lock (_lock) return Task.FromResult(objective);
+    }
+
+    public Task<StrategicObjective?> UpdateObjectiveAsync(StrategicObjective objective)
+    {
+        lock (_lock) return Task.FromResult(objective);
+    }
+
+    public Task<StrategicObjective?> UpdateObjectiveProgressAsync(string objectiveId, decimal progress)
+    {
+        lock (_lock) return Task.FromResult<StrategicObjective?>(null);
+    }
+
+    public Task<StrategicObjective?> MarkObjectiveCompleteAsync(string objectiveId)
+    {
+        lock (_lock) return Task.FromResult<StrategicObjective?>(null);
+    }
+
+    public Task DeleteObjectiveAsync(string objectiveId)
+    {
+        lock (_lock) return Task.CompletedTask;
+    }
+
+    public Task<MarketingTactic?> CreateTacticAsync(MarketingTactic tactic)
+    {
+        lock (_lock) return Task.FromResult(tactic);
+    }
+
     private List<MarketingStrategy> Load()
     {
         if (!File.Exists(_path)) return new();

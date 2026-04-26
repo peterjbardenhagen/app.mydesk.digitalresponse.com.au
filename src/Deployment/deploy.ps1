@@ -17,8 +17,8 @@ Write-Host "`nTechlight MyDesk - Deploy`n" -ForegroundColor Cyan
 # ── Paths ───────────────────────────────────────────────────────────────────
 $src    = Join-Path $PSScriptRoot "..\MyDesk.Web"
 $pub    = Join-Path $PSScriptRoot "publish"
-$site   = "Techlight.MyDesk"
-$path   = "C:\inetpub\wwwroot\Techlight.MyDesk"
+$site   = "DR.MyDesk"
+$path   = "C:\inetpub\wwwroot\DR.MyDesk"
 $appcmd = "$env:SystemRoot\System32\inetsrv\appcmd.exe"
 
 # ── Build ───────────────────────────────────────────────────────────────────
@@ -43,7 +43,7 @@ if ($LASTEXITCODE -ne 0) {
 # Site
 & $appcmd list site /name:$site | Out-Null
 if ($LASTEXITCODE -ne 0) {
-    & $appcmd add site /name:$site /physicalPath:$path /bindings:http/*:80: | Out-Null
+    & $appcmd add site /name:$site /physicalPath:$path /bindings:"http/*:80:,http/*:8080:,https/*:443:" | Out-Null
     & $appcmd set site /site.name:$site /[path='/'].applicationPool:$site | Out-Null
 } else {
     # Ensure path and pool updated
@@ -72,5 +72,5 @@ if (!(Test-Path $path)) {
 
 Write-Host " OK" -ForegroundColor Green
 
-Write-Host "`nReady: http://localhost`n" -ForegroundColor Cyan
+Write-Host "`nReady: http://localhost, http://localhost:8080, https://localhost`n" -ForegroundColor Cyan
 exit 0

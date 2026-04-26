@@ -94,7 +94,7 @@ public class PurchaseOrderService
                    ISNULL(pc.PriceExSubTotal,0) AS PriceExSubTotal,
                    pc.POProductTypeId,
                    ISNULL(pt.POProductType,'') AS ProductTypeName,
-                   ISNULL(pt.IsCapEx,0)        AS IsCapEx
+                   ISNULL(pt.CapEx,0)          AS IsCapEx
             FROM PurchaseOrderContents pc
             LEFT JOIN PurchaseOrderProductTypes pt ON pc.POProductTypeId = pt.POProductTypeId
             WHERE pc.POid = @Id
