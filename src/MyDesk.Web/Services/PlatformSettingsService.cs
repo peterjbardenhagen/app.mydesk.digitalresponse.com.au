@@ -133,4 +133,11 @@ public class PlatformSettingsService
         _cachedSettings = null;
         _cachedTenantSettings = null;
     }
+
+    public Task SaveAsync()
+    {
+        // In a real application, this would save the settings to the database
+        // For now, we rely on the in-memory changes applied to the Current object.
+        return Task.CompletedTask;
+    }
 }
