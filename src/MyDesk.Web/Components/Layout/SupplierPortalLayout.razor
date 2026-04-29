@@ -1,0 +1,39 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider @bind-IsDarkMode="_isDark" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="0" Color="Color.Primary">
+        <MudLink Href="/supplier-login" Underline="Underline.None">
+            <MudText Typo="Typo.h6" Class="align-center d-flex gap-2">
+                <MudIcon Icon="@Icons.Material.Rounded.LocalShipping" />
+                Techlight Supplier Portal
+            </MudText>
+        </MudLink>
+        <MudSpacer />
+        <MudIconButton Icon="@(_isDark ? Icons.Material.Rounded.LightMode : Icons.Material.Rounded.DarkMode)" 
+                      OnClick="ToggleDarkMode" Color="Color.Inherit" />
+    </MudAppBar>
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-6">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+    <MudFooter Fixed="true" Style="background: transparent;">
+        <MudText Typo="Typo.caption" Align="Align.Center" Color="Color.Default">
+            &copy; @DateTime.Now.Year Techlight. All rights reserved.
+        </MudText>
+    </MudFooter>
+</MudLayout>
+
+@code {
+    private bool _isDark;
+
+    private void ToggleDarkMode()
+    {
+        _isDark = !_isDark;
+    }
+}

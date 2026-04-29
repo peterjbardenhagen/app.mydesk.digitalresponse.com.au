@@ -93,9 +93,10 @@ public class WorkflowSchedulerService : BackgroundService
                            string.Join("\n", unsynced.Select(i => $"• {i.InvoiceNum} — {i.CustomerName} — {i.TotalIncGST:C}"));
 
                 var recipient = _config["Workflows:NotificationEmail"];
+                var platformName = _config["PlatformSettings:PlatformName"] ?? "MyDesk";
                 if (!string.IsNullOrEmpty(recipient))
                 {
-                    await email.SendAsync(recipient, "[Techlight] End-of-Day: Unsynced Invoices", body);
+                    await email.SendAsync(recipient, $"[{platformName}] End-of-Day: Unsynced Invoices", body);
                 }
             }
         }
@@ -112,7 +113,7 @@ public class WorkflowSchedulerService : BackgroundService
         try
         {
             var summary = await recon.GetSummaryAsync();
-            var aged = await recon.GetAgedReceivablesAsync();
+            var aged = await recon.GetAggAgedReceivablesAsync();
             var issues = await recon.RunDataQualityChecksAsync();
 
             var body = $@"Weekly Reconciliation Report — {DateTime.Now:dd MMM yyyy}
@@ -140,9 +141,10 @@ DATA QUALITY ISSUES: {issues.Count}
 {(issues.Count == 0 ? "No issues detected." : string.Join("\n", issues.Take(10).Select(i => $"[{i.Severity}] {i.Category}: {i.Description}")))}
 ";
             var recipient = _config["Workflows:NotificationEmail"];
+            var platformName = _config["PlatformSettings:PlatformName"] ?? "MyDesk";
             if (!string.IsNullOrEmpty(recipient))
             {
-                await email.SendAsync(recipient, "[Techlight] Weekly Reconciliation Report", body);
+                await email.SendAsync(recipient, $"[{platformName}] Weekly Reconciliation Report", body);
             }
         }
         catch (Exception ex) { _logger.LogError(ex, "End-of-week failed"); }
@@ -160,13 +162,13 @@ DATA QUALITY ISSUES: {issues.Count}
             var unsynced = await recon.GetUnsyncedInvoicesAsync(
                 new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1), DateTime.Now);
 
+            var platformName = _config["PlatformSettings:PlatformName"] ?? "MyDesk";
             var body = $@"Month-End Reconciliation Reminder — {DateTime.Now:MMMM yyyy}
 
 There are {unsynced.Count} invoice(s) from this month totalling {unsynced.Sum(i => i.TotalIncGST):C}
 that have not yet been pushed to MYOB.
 
-Please complete the month-end sync via:
-https://techlight.digitalresponse.com.au/reconciliation/sync
+Please complete the month-end sync via the platform reconciliation page.
 
 Top invoices pending sync:
 {string.Join("\n", unsynced.Take(20).Select(i => $"• {i.InvoiceNum} — {i.CustomerName} — {i.TotalIncGST:C}"))}
@@ -174,7 +176,7 @@ Top invoices pending sync:
             var recipient = _config["Workflows:NotificationEmail"];
             if (!string.IsNullOrEmpty(recipient))
             {
-                await email.SendAsync(recipient, "[Techlight] Month-End MYOB Sync Required", body);
+                await email.SendAsync(recipient, $"[{platformName}] Month-End MYOB Sync Required", body);
             }
         }
         catch (Exception ex) { _logger.LogError(ex, "End-of-month failed"); }

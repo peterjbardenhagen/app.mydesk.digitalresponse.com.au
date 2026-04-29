@@ -6,9 +6,10 @@
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthStateProvider
+@inject PlatformSettingsService PlatformSettings
 @using System.Security.Claims
 
-<PageTitle>Email Invoice @Id - Techlight MyDesk</PageTitle>
+<PageTitle>Email Invoice @Id - MyDesk</PageTitle>
 
 @if (_inv == null)
 {
@@ -19,7 +20,7 @@ else
     <div class="tl-page-header">
         <div>
             <div class="tl-breadcrumb">
-                <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+                <a href="/">MyDesk</a><span class="sep">/</span>
                 <a href="/invoices">Invoices</a><span class="sep">/</span>
                 <a href="@($"/invoices/{Id}")">Invoice @_inv.InvoiceNum</a><span class="sep">/</span>
                 <span>Email</span>
@@ -94,7 +95,8 @@ else
         if (_inv != null)
         {
             _attention = _inv.Attention ?? "";
-            _subject = $"Invoice {_inv.InvoiceNum} from Techlight";
+            var companyName = PlatformSettings.Current.CompanyName;
+            _subject = $"Invoice {_inv.InvoiceNum} from {companyName}";
             _notes = $"Please find attached invoice {_inv.InvoiceNum}.\n\nThank you for your business.";
         }
     }
@@ -122,13 +124,15 @@ else
 
             if (!sent) throw new Exception("Email send returned false");
 
-            // Promote status from Draft → Issued
-            if (_inv.InvoiceStatusId == 1)
-            {
-                await InvoiceService.UpdateStatusAsync(Id, 2, _userCode, "Issued");
-            }
+            // Log email action - will change Draft→Issued and write audit
+            var newStatus = await InvoiceService.LogEmailActionAsync(Id, _userCode);
+            _inv.InvoiceStatusId = newStatus;
+            _inv.StatusName = newStatus == 2 ? "Issued" : _inv.StatusName;
 
-            Snackbar.Add($"Email sent to {_toEmail}.", Severity.Success);
+            var msg = _inv.InvoiceStatusId == 2 
+                ? $"Email sent to {_toEmail}. Status changed to Issued." 
+                : $"Email sent to {_toEmail}.";
+            Snackbar.Add(msg, Severity.Success);
             Nav.NavigateTo($"/invoices/{Id}");
         }
         catch (Exception ex)

@@ -1,12 +1,13 @@
 using System.Text;
 using System.Text.Json;
+using System.IO;
 using MyDesk.Shared.Services;
 
 namespace MyDesk.Web.Services;
 
 /// <summary>
 /// Telegram bot integration per Proposal #272.
-/// Enables mobile/voice access: "Hey Techlight, what's our cash position?"
+/// Enables mobile/voice access: "Hey MyDesk, what's our cash position?"
 /// 
 /// Configure webhook: POST https://api.telegram.org/bot{TOKEN}/setWebhook?url={YOUR_URL}/api/telegram/webhook
 /// </summary>
@@ -51,13 +52,33 @@ public class TelegramBotService
         {
             if (!update.TryGetProperty("message", out var message)) return;
             if (!message.TryGetProperty("chat", out var chat)) return;
-            if (!message.TryGetProperty("text", out var textEl)) return;
-
+            
             var chatId = chat.GetProperty("id").GetInt64();
-            var text = textEl.GetString() ?? "";
             var from = message.TryGetProperty("from", out var fromEl) ? fromEl : default;
             var username = from.ValueKind == JsonValueKind.Object && from.TryGetProperty("username", out var u)
                 ? u.GetString() ?? "anonymous" : "anonymous";
+
+            string text = "";
+            if (message.TryGetProperty("voice", out var voice))
+            {
+                await SendChatActionAsync(chatId, "record_voice");
+                var fileId = voice.GetProperty("file_id").GetString();
+                text = await TranscribeVoiceAsync(fileId) ?? "";
+                if (string.IsNullOrEmpty(text))
+                {
+                    await SendMessageAsync(chatId, "🔇 Sorry, I couldn't understand that voice message.");
+                    return;
+                }
+                await SendMessageAsync(chatId, $"🎤 _\"{text}\"_");
+            }
+            else if (message.TryGetProperty("text", out var textEl))
+            {
+                text = textEl.GetString() ?? "";
+            }
+            else
+            {
+                return;
+            }
 
             // Check allowlist
             var allowedUsers = _config["Telegram:AllowedUsers"]?.Split(',', StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
@@ -71,13 +92,13 @@ public class TelegramBotService
             if (text.StartsWith("/start"))
             {
                 await SendMessageAsync(chatId,
-                    "👋 *Welcome to Techlight AI*\n\n" +
+                    "👋 *Welcome to MyDesk AI*\n\n" +
                     "I can help you with:\n" +
                     "• Business data queries\n" +
                     "• MYOB reconciliation\n" +
                     "• Invoice & quote lookups\n" +
                     "• Cash flow & reporting\n\n" +
-                    "Just ask me anything in plain English!\n\n" +
+                    "Just ask me anything in plain English or send a voice message!\n\n" +
                     "Example: _\"What's our cash position?\"_");
                 return;
             }
@@ -91,7 +112,7 @@ public class TelegramBotService
                     "/briefing — Morning business briefing\n" +
                     "/reconcile — Run MYOB reconciliation\n" +
                     "/debtors — Who owes us money\n\n" +
-                    "Or ask any question in plain English.");
+                    "Or ask any question in plain English / Voice.");
                 return;
             }
 
@@ -103,7 +124,7 @@ public class TelegramBotService
             var userCode = $"tg:{username}";
 
             var context = await _mcp.GetCombinedContextAsync(userCode);
-            var systemPrompt = "You are Techlight AI via Telegram. Be concise and practical. " +
+            var systemPrompt = "You are a helpful business AI assistant via Telegram. Be concise and practical. " +
                                "Use Markdown formatting. Respond in under 400 words.\n\n" +
                                "Current business context:\n" + context;
 
@@ -124,6 +145,29 @@ public class TelegramBotService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Telegram update handling failed");
+        }
+    }
+
+    private async Task<string?> TranscribeVoiceAsync(string fileId)
+    {
+        try
+        {
+            var fileResponse = await _http.GetAsync($"{ApiBase}/getFile?file_id={fileId}");
+            if (!fileResponse.IsSuccessStatusCode) return null;
+            
+            using var fileDoc = JsonDocument.Parse(await fileResponse.Content.ReadAsStringAsync());
+            var filePath = fileDoc.RootElement.GetProperty("result").GetProperty("file_path").GetString();
+            if (string.IsNullOrEmpty(filePath)) return null;
+
+            var downloadUrl = $"https://api.telegram.org/file/bot{Token}/{filePath}";
+            using var audioStream = await _http.GetStreamAsync(downloadUrl);
+            
+            return await _ai.TranscribeAsync(audioStream, Path.GetFileName(filePath));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to transcribe Telegram voice message");
+            return null;
         }
     }
 

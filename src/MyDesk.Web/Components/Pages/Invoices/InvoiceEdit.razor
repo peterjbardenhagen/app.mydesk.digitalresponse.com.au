@@ -4,17 +4,19 @@
 @inject InvoiceService InvoiceService
 @inject LookupService LookupService
 @inject QuoteService QuoteService
+@inject CompanyService CompanyService
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthStateProvider
 @using System.Security.Claims
+@using System.Text.Json;
 
-<PageTitle>@(IsNew ? "New Invoice" : $"Edit Invoice #{Id}") - Techlight MyDesk</PageTitle>
+<PageTitle>@(IsNew ? "New Invoice" : $"Edit Invoice #{Id}") - MyDesk</PageTitle>
 
 <div class="tl-page-header">
     <div>
         <div class="tl-breadcrumb">
-            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/">MyDesk</a><span class="sep">/</span>
             <a href="/invoices">Invoices</a><span class="sep">/</span>
             <span>@(IsNew ? "New Invoice" : $"Edit #{Id}")</span>
         </div>
@@ -44,13 +46,22 @@
             </MudSelect>
         </MudItem>
         <MudItem xs="12" sm="4">
-            <MudTextField @bind-Value="_inv.CCompany" Label="Customer Company *" Variant="Variant.Outlined" />
+            <MudAutocomplete T="Company" @bind-Value="_selectedCompany" Label="Company *" 
+                             SearchFunc="SearchCompanies" Variant="Variant.Outlined"
+                             ToStringFunc="@(c => c == null ? "" : c.CompanyName)"
+                             ResetValueOnEmptyText="false" ShowProgressIndicator="true"
+                             AdornmentIcon="@Icons.Material.Rounded.Business"
+                             OnSelectionChanged="OnCompanySelected" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudAutocomplete T="Contact" @bind-Value="_selectedContact" Label="Contact / Attention"
+                             SearchFunc="SearchContacts" Variant="Variant.Outlined"
+                             ToStringFunc="@(c => c == null ? "" : c.FullName)"
+                             ResetValueOnEmptyText="false" ShowProgressIndicator="true"
+                             AdornmentIcon="@Icons.Material.Rounded.Person" />
         </MudItem>
         <MudItem xs="12" sm="4">
             <MudTextField @bind-Value="_inv.CustomerPO" Label="Customer PO / Reference" Variant="Variant.Outlined" />
-        </MudItem>
-        <MudItem xs="12" sm="4">
-            <MudTextField @bind-Value="_inv.Attention" Label="Attention" Variant="Variant.Outlined" />
         </MudItem>
         <MudItem xs="12" sm="6">
             <MudTextField @bind-Value="_inv.InvCompany" Label="Invoice To — Company" Variant="Variant.Outlined" />
@@ -65,7 +76,15 @@
             <MudTextField @bind-Value="_inv.DelAddress" Label="Delivery Address" Variant="Variant.Outlined" Lines="3" />
         </MudItem>
         <MudItem xs="12" sm="6">
-            <MudTextField @bind-Value="_inv.Terms" Label="Terms" Variant="Variant.Outlined" Lines="2" />
+            <MudSelect T="string" @bind-Value="_inv.Terms" Label="Payment Terms" Variant="Variant.Outlined">
+                <MudSelectItem T="string" Value="@("")">— None —</MudSelectItem>
+                <MudSelectItem T="string" Value="@("COD")">COD - Cash on Delivery</MudSelectItem>
+                <MudSelectItem T="string" Value="@("7 Days")">7 Days</MudSelectItem>
+                <MudSelectItem T="string" Value="@("14 Days")">14 Days</MudSelectItem>
+                <MudSelectItem T="string" Value="@("30 Days")">30 Days</MudSelectItem>
+                <MudSelectItem T="string" Value="@("60 Days")">60 Days</MudSelectItem>
+                <MudSelectItem T="string" Value="@("EOM")">EOM - End of Month</MudSelectItem>
+            </MudSelect>
         </MudItem>
         <MudItem xs="12" sm="6">
             <MudTextField @bind-Value="_inv.Account" Label="Account" Variant="Variant.Outlined" />
@@ -171,6 +190,10 @@
     private bool IsNew => !Id.HasValue || Id == 0;
 
     private Invoice _inv  = new() { InvoiceDate = DateTime.Today };
+    private Company? _selectedCompany;
+    private Contact? _selectedContact;
+    private List<Contact> _contacts = new();
+    private List<Company> _companies = new();
     private DateTime? _invoiceDate = DateTime.Today;
     private List<LineRow>     _lines     = new();
     private List<Division>    _divisions = new();
@@ -179,14 +202,17 @@
     private string _userCode = "";
 
     private decimal NettTotal  => _lines.Sum(l => l.ExtPrice);
-    private decimal GSTAmount  => NettTotal * 0.10m;
+    private decimal GSTAmount  => _hasGST ? NettTotal * 0.10m : 0m;
     private decimal TotalIncGST=> NettTotal + GSTAmount;
+    private bool _hasGST = true;
 
     protected override async Task OnInitializedAsync()
     {
         var auth = await AuthStateProvider.GetAuthenticationStateAsync();
         _userCode  = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
         _divisions = await LookupService.GetDivisionsAsync();
+        _contacts = await LookupService.GetContactLookupsAsync();
+        _companies = await CompanyService.GetCompaniesForDropdownAsync();
 
         if (!IsNew)
         {
@@ -195,6 +221,15 @@
             {
                 _inv         = existing;
                 _invoiceDate = existing.InvoiceDate;
+                _selectedContact = _contacts.FirstOrDefault(c => c.ContactId == existing.ContactId);
+                _selectedCompany = _companies.FirstOrDefault(c => c.CompanyId == existing.CompanyId);
+                
+                if (_selectedCompany != null)
+                {
+                    var fullCompany = await CompanyService.GetCompanyAsync(_selectedCompany.CompanyId);
+                    _hasGST = fullCompany?.HasGST ?? true;
+                }
+
                 var items    = await InvoiceService.GetLineItemsAsync(Id!.Value);
                 _lines       = items.Select(i => new LineRow
                 {
@@ -211,11 +246,21 @@
             if (q != null)
             {
                 _inv.Qid        = q.Qid;
+                _inv.ContactId = q.ContactId;
+                _inv.CompanyId = q.CompanyId;
                 _inv.CCompany   = q.CompanyName;
                 _inv.InvCompany = q.CompanyName;
-                _inv.Attention  = q.Attention;
                 _inv.Terms      = q.Terms;
                 _inv.CustomerNotes = q.CustomerNotes;
+                _selectedContact = _contacts.FirstOrDefault(c => c.ContactId == q.ContactId);
+                _selectedCompany = _companies.FirstOrDefault(c => c.CompanyId == q.CompanyId);
+                
+                if (_selectedCompany != null)
+                {
+                    var fullCompany = await CompanyService.GetCompanyAsync(_selectedCompany.CompanyId);
+                    _hasGST = fullCompany?.HasGST ?? true;
+                }
+
                 if (_divisions.Any(d => d.DivisionId == q.DivisionId))
                     _inv.DivisionId = q.DivisionId;
 
@@ -231,6 +276,54 @@
         }
     }
 
+    private Task<IEnumerable<Contact>> SearchContacts(string value, CancellationToken _)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return Task.FromResult(_contacts.Take(25).AsEnumerable());
+        var lower = value.ToLowerInvariant();
+        return Task.FromResult(_contacts
+            .Where(c => c.CompanyName.ToLowerInvariant().Contains(lower)
+                     || c.FullName.ToLowerInvariant().Contains(lower))
+            .Take(30).AsEnumerable());
+    }
+
+    private Task<IEnumerable<Company>> SearchCompanies(string value, CancellationToken _)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return Task.FromResult(_companies.Take(25).AsEnumerable());
+        var lower = value.ToLowerInvariant();
+        return Task.FromResult(_companies
+            .Where(c => c.CompanyName.ToLowerInvariant().Contains(lower))
+            .Take(30).AsEnumerable());
+    }
+
+    private async Task OnCompanySelected(Company? company)
+    {
+        _selectedCompany = company;
+        if (company != null)
+        {
+            _inv.CompanyId = company.CompanyId;
+            _inv.CCompany = company.CompanyName;
+            _inv.InvCompany = company.CompanyName;
+            
+            // Auto-populate addresses from company
+            var fullCompany = await CompanyService.GetCompanyAsync(company.CompanyId);
+            if (fullCompany != null)
+            {
+                _hasGST = fullCompany.HasGST;
+                if (!string.IsNullOrEmpty(fullCompany.DefaultTerms))
+                    _inv.Terms = fullCompany.DefaultTerms;
+                
+                if (!string.IsNullOrEmpty(fullCompany.InvAddress1))
+                    _inv.InvAddress = $"{fullCompany.InvAddress1} {fullCompany.InvAddress2}, {fullCompany.InvSuburb} {fullCompany.InvState} {fullCompany.InvPostCode}".Trim();
+                if (!string.IsNullOrEmpty(fullCompany.DelAddress1))
+                    _inv.DelAddress = $"{fullCompany.DelAddress1} {fullCompany.DelAddress2}, {fullCompany.DelSuburb} {fullCompany.DelState} {fullCompany.DelPostCode}".Trim();
+            }
+            
+            StateHasChanged();
+        }
+    }
+
     private void AddLine()             { _lines.Add(new LineRow()); StateHasChanged(); }
     private void RemoveLine(LineRow r) { _lines.Remove(r); StateHasChanged(); }
 
@@ -238,6 +331,14 @@
     {
         _error = null;
         if (string.IsNullOrWhiteSpace(_inv.CCompany)) { _error = "Customer Company is required."; return; }
+        if (!_lines.Any(l => l.Qty > 0 && !string.IsNullOrWhiteSpace(l.Description))) 
+        { _error = "Add at least one line item."; return; }
+
+        if (_selectedContact != null)
+        {
+            _inv.ContactId = _selectedContact.ContactId;
+            _inv.Attention = _selectedContact.FullName;
+        }
 
         _inv.InvoiceDate    = _invoiceDate ?? DateTime.Today;
         _inv.NettPriceTotal = NettTotal;

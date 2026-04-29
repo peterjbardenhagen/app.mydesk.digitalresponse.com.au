@@ -9,17 +9,21 @@ public class InvoiceService
 {
     private readonly DatabaseService _db;
     private readonly ILogger<InvoiceService> _logger;
+    private readonly QuoteService _quoteService;
+    private readonly ActivityService _activityService;
 
-    public InvoiceService(DatabaseService db, ILogger<InvoiceService> logger)
+    public InvoiceService(DatabaseService db, ILogger<InvoiceService> logger, QuoteService quoteService, ActivityService activityService)
     {
         _db       = db;
         _logger   = logger;
+        _quoteService = quoteService;
+        _activityService = activityService;
     }
 
     // ── Shared SELECT fragment ──────────────────────────────────────────────
     private const string SelectCols = @"
         i.InvoiceId,
-        CAST(i.InvoiceId AS NVARCHAR(20)) AS InvoiceNum,
+        ISNULL(d.InvoicePrefix, 'INV-') + CAST(i.InvoiceId AS NVARCHAR(20)) AS InvoiceNum,
         i.InvoiceDate,
         ISNULL(i.Code, '')         AS Code,
         ISNULL(u.Name, '')         AS InvoicedBy,
@@ -158,6 +162,135 @@ public class InvoiceService
             "UPDATE Invoices SET InvoiceStatusId = @S WHERE InvoiceId = @Id",
             new() { ["S"] = statusId, ["Id"] = invoiceId });
         await WriteAuditAsync(invoiceId, userCode, $"Status changed to {statusName}");
+    }
+
+    // ── Print/Email Actions ─────────────────────────────────────────────────
+
+    public async Task<int> LogPrintActionAsync(int invoiceId, string userCode)
+    {
+        var inv = await GetInvoiceAsync(invoiceId);
+        if (inv == null) return 0;
+
+        var action = inv.InvoiceStatusId == 1 ? "Invoice Printed - Status changed to Issued" : "Invoice Reprinted";
+        
+        if (inv.InvoiceStatusId == 1)
+        {
+            await UpdateStatusAsync(invoiceId, 2, userCode, "Issued");
+        }
+        
+        await WriteAuditAsync(invoiceId, userCode, action);
+        return inv.InvoiceStatusId == 1 ? 2 : inv.InvoiceStatusId;
+    }
+
+    public async Task<int> LogEmailActionAsync(int invoiceId, string userCode)
+    {
+        var inv = await GetInvoiceAsync(invoiceId);
+        if (inv == null) return 0;
+
+        var action = inv.InvoiceStatusId == 1 ? "Invoice Emailed - Status changed to Issued" : "Invoice Emailed";
+        
+        if (inv.InvoiceStatusId == 1)
+        {
+            await UpdateStatusAsync(invoiceId, 2, userCode, "Issued");
+        }
+        
+        await WriteAuditAsync(invoiceId, userCode, action);
+        return inv.InvoiceStatusId == 1 ? 2 : inv.InvoiceStatusId;
+    }
+
+    // ── Create Invoice from Quote ────────────────────────────────────────
+
+    public async Task<(int InvoiceId, string? Error)> CreateInvoiceFromQuoteAsync(int quoteId, string userCode)
+    {
+        // Get quote and line items
+        var quote = await _quoteService.GetQuoteAsync(quoteId);
+        if (quote == null) return (0, "Quote not found");
+        
+        var lineItems = await _quoteService.GetLineItemsAsync(quoteId);
+        var thirdPartyItems = await _quoteService.GetThirdPartyItemsAsync(quoteId);
+        
+        // Get company addresses if CompanyId exists
+        string invAddress = quote.Delivery ?? "";
+        string delAddress = quote.Delivery ?? "";
+        bool hasGST = true;
+        
+        if (quote.CompanyId > 0)
+        {
+            var company = await GetCompanyAsync(quote.CompanyId);
+            if (company != null)
+            {
+                hasGST = company.HasGST;
+                if (!string.IsNullOrEmpty(company.InvAddress1))
+                    invAddress = $"{company.InvAddress1}\n{company.InvAddress2}\n{company.InvSuburb} {company.InvState} {company.InvPostCode}".Trim();
+                if (!string.IsNullOrEmpty(company.DelAddress1))
+                    delAddress = $"{company.DelAddress1}\n{company.DelAddress2}\n{company.DelSuburb} {company.DelState} {company.DelPostCode}".Trim();
+            }
+        }
+        
+        // Create invoice
+        var subtotal = lineItems.Sum(i => i.ExtNettPrice) + thirdPartyItems.Sum(t => t.NettPrice * t.Quantity);
+        var invoice = new Invoice
+        {
+            InvoiceDate = DateTime.Now,
+            Code = userCode,
+            InvoiceStatusId = 1,
+            DivisionId = quote.DivisionId,
+            Qid = quoteId,
+            CompanyId = quote.CompanyId,
+            InvCompany = quote.CompanyName ?? "",
+            DelCompany = quote.CompanyName ?? "",
+            InvAddress = invAddress,
+            DelAddress = delAddress,
+            CustomerPO = quote.Reference ?? "",
+            Attention = quote.Attention ?? "",
+            Account = "",
+            Terms = quote.Terms ?? "",
+            CustomerNotes = quote.CustomerNotes ?? "",
+            InternalNotes = quote.InternalNotes ?? "",
+            NettPriceTotal = subtotal,
+            GSTTotal = hasGST ? subtotal * 0.1m : 0m
+        };
+        
+        var invoiceId = await CreateInvoiceAsync(invoice, 
+            lineItems.Select(i => new InvoiceLineItem 
+            { 
+                Quantity = i.Quantity, 
+                ProductCode = i.ProductCode, 
+                Description = i.Description, 
+                NettPrice = i.NettPrice, 
+                ExtNettPrice = i.ExtNettPrice 
+            }).ToList(), 
+            userCode);
+        
+        // Update quote status to Converted (assuming status 5 = Converted)
+        await _quoteService.UpdateStatusAsync(quoteId, 5, userCode, "Converted to Invoice");
+        
+        return (invoiceId, null);
+    }
+    
+    private async Task<Company?> GetCompanyAsync(int companyId)
+    {
+        var dt = await _db.QueryAsync(
+            "SELECT * FROM Companies WHERE CompanyId = @Id", 
+            new() { ["Id"] = companyId });
+        if (dt.Rows.Count == 0) return null;
+        var r = dt.Rows[0];
+        return new Company
+        {
+            CompanyId = Convert.ToInt32(r["CompanyId"]),
+            CompanyName = r["Company"]?.ToString() ?? "",
+            ABN = r["ABN"]?.ToString(),
+            InvAddress1 = r["InvAddress1"]?.ToString(),
+            InvAddress2 = r["InvAddress2"]?.ToString(),
+            InvSuburb = r["InvSuburb"]?.ToString(),
+            InvState = r["InvState"]?.ToString(),
+            InvPostCode = r["InvPostCode"]?.ToString(),
+            DelAddress1 = r["DelAddress1"]?.ToString(),
+            DelAddress2 = r["DelAddress2"]?.ToString(),
+            DelSuburb = r["DelSuburb"]?.ToString(),
+            DelState = r["DelState"]?.ToString(),
+            DelPostCode = r["DelPostCode"]?.ToString()
+        };
     }
 
     // ── Delete ─────────────────────────────────────────────────────────────
@@ -300,10 +433,14 @@ public class InvoiceService
                 ["ExtNettPrice"]= l.ExtNettPrice,
             });
 
-    private Task WriteAuditAsync(int invoiceId, string code, string action) =>
-        _db.InsertAsync(
+    private async Task WriteAuditAsync(int invoiceId, string code, string action)
+    {
+        await _db.InsertAsync(
             "INSERT INTO InvoiceAudit (InvoiceId, Code, Action, DateEntered) VALUES (@Id, @C, @A, @D)",
             new() { ["Id"] = invoiceId, ["C"] = code, ["A"] = action, ["D"] = DateTime.Now });
+
+        await _activityService.LogAsync(code, "Invoice", invoiceId, action);
+    }
 
     private static Dictionary<string, object?> BuildParams(Invoice inv, string userCode) => new()
     {

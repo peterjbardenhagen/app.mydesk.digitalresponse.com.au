@@ -8,12 +8,12 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @using System.Security.Claims
 
-<PageTitle>@(IsNew ? "New PO" : $"Edit PO #{Id}") - Techlight MyDesk</PageTitle>
+<PageTitle>@(IsNew ? "New PO" : $"Edit PO #{Id}") - MyDesk</PageTitle>
 
 <div class="tl-page-header">
     <div>
         <div class="tl-breadcrumb">
-            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/">MyDesk</a><span class="sep">/</span>
             <a href="/purchase-orders">Purchase Orders</a><span class="sep">/</span>
             <span>@(IsNew ? "New PO" : $"Edit #{Id}")</span>
         </div>
@@ -67,6 +67,17 @@
         </MudItem>
         <MudItem xs="12" sm="6">
             <MudTextField @bind-Value="_po.Terms" Label="Payment Terms" Variant="Variant.Outlined" Lines="2" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudSelect T="int?" Value="_po.DeliverToLocationId" 
+                       ValueChanged="OnLocationChanged"
+                       Label="Deliver To Location" Variant="Variant.Outlined" Clearable="true">
+                <MudSelectItem T="int?" Value="@((int?)null)">— Custom Address —</MudSelectItem>
+                @foreach (var loc in _locations)
+                {
+                    <MudSelectItem T="int?" Value="@loc.LocationId">@loc.LocationName</MudSelectItem>
+                }
+            </MudSelect>
         </MudItem>
         <MudItem xs="12" sm="6">
             <MudTextField @bind-Value="_po.DeliverToLocation" Label="Deliver To Address" Variant="Variant.Outlined" Lines="2" />
@@ -194,6 +205,7 @@
     private List<Division>      _divisions    = new();
     private List<POStatus>      _paymentTypes = new();
     private List<POProductType> _productTypes = new();
+    private List<Location>      _locations    = new();
     private bool    _saving;
     private string? _error;
     private string  _userCode = "";
@@ -207,10 +219,11 @@
         var auth  = await AuthStateProvider.GetAuthenticationStateAsync();
         _userCode = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
 
-        (_contacts, _divisions, _productTypes) = (
+        (_contacts, _divisions, _productTypes, _locations) = (
             await LookupService.GetContactLookupsAsync(),
             await LookupService.GetDivisionsAsync(),
-            await LookupService.GetPOProductTypesAsync());
+            await LookupService.GetPOProductTypesAsync(),
+            await LookupService.GetLocationsAsync());
 
         if (!IsNew)
         {
@@ -232,6 +245,20 @@
         }
     }
 
+    private void OnLocationChanged(int? locationId)
+    {
+        _po.DeliverToLocationId = locationId;
+        if (locationId.HasValue)
+        {
+            var loc = _locations.FirstOrDefault(l => l.LocationId == locationId.Value);
+            if (loc != null)
+            {
+                _po.DeliverToLocation = loc.FullAddress;
+            }
+        }
+        StateHasChanged();
+    }
+
     private void AddLine()               { _lines.Add(new POLineRow()); StateHasChanged(); }
     private void RemoveLine(POLineRow r) { _lines.Remove(r); StateHasChanged(); }
 
@@ -240,6 +267,8 @@
         _error = null;
         if (_po.ContactId == 0)       { _error = "Please select a supplier."; return; }
         if (string.IsNullOrWhiteSpace(_po.Project)) { _error = "Project/Reason is required."; return; }
+        if (!_lines.Any(l => l.Qty > 0 && !string.IsNullOrWhiteSpace(l.Description))) 
+        { _error = "Add at least one line item."; return; }
 
         _po.PODate        = _poDate ?? DateTime.Today;
         _po.DateRequired  = _dateRequired ?? DateTime.MinValue;

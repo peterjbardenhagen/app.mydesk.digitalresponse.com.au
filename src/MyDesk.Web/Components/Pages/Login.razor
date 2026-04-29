@@ -2,6 +2,7 @@
 @layout EmptyLayout
 @attribute [AllowAnonymous]
 @inject PlatformSettingsService PlatformSettings
+@inject IJSRuntime JS
 
 <PageTitle>Login - @PlatformSettings.GetBrandingName()</PageTitle>
 
@@ -69,7 +70,7 @@
 
                     <div class="field-wrap">
                         <label>Username</label>
-                        <MudTextField T="string" name="login" 
+                        <MudTextField @bind-Value="Username" name="login" 
                                       Placeholder="e.g. john.doe"
                                       Variant="Variant.Outlined" 
                                       Margin="Margin.Normal"
@@ -84,7 +85,7 @@
                             <label>Password</label>
                             <MudLink Href="/forgot-password" Typo="Typo.caption" Color="Color.Primary" Class="fw-600">Forgot password?</MudLink>
                         </div>
-                        <MudTextField T="string" name="password" 
+                        <MudTextField @bind-Value="Password" name="password" 
                                       InputType="InputType.Password"
                                       Placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
                                       Variant="Variant.Outlined" 
@@ -95,10 +96,12 @@
                                       AdornmentColor="Color.Primary" />
                     </div>
 
-                    <MudCheckBox T="bool" Label="Remember for 30 days" Color="Color.Primary" Dense="true" Class="mt-2 mb-6" Value="true" />
+                    <MudCheckBox @bind-Value="RememberMe" Label="Remember for 30 days" Color="Color.Primary" Dense="true" Class="mt-2 mb-6" />
+                    <input type="hidden" name="rememberMe" value="@(RememberMe ? "on" : "off")" />
 
                     <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary"
-                               Size="Size.Large" FullWidth="true" Class="py-3 rounded-xl submit-btn">
+                               Size="Size.Large" FullWidth="true" Class="py-3 rounded-xl submit-btn"
+                               id="submit-btn">
                         Sign in to MyDesk
                     </MudButton>
                 </form>
@@ -106,14 +109,60 @@
                 <div class="tl-form-footer">
                     <p>Having trouble? <MudLink Href="mailto:support@digitalresponse.com.au" Color="Color.Primary" Underline="Underline.Hover">Contact Support</MudLink></p>
                 </div>
+
+                <div class="portal-links-section mt-6">
+                    <MudDivider Class="mb-4" />
+                    <MudText Typo="Typo.caption" Color="Color.Default" Align="Align.Center">
+                        Are you a customer or supplier?
+                    </MudText>
+                    <div class="d-flex justify-center gap-3 mt-2">
+                        <MudLink Href="/customer-login" Color="Color.Primary" Underline="Underline.Hover">
+                            Customer Portal
+                        </MudLink>
+                        <MudText Typo="Typo.caption" Color="Color.Default">|</MudText>
+                        <MudLink Href="/supplier-login" Color="Color.Primary" Underline="Underline.Hover">
+                            Supplier Portal
+                        </MudLink>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
 </div>
 
+<script>
+    window.saveLoginDetails = function() {
+        const username = document.querySelector('input[name="login"]')?.value;
+        const remember = document.querySelector('input[name="rememberMe"]')?.checked;
+        if (remember && username) {
+            localStorage.setItem('mydesk_username', username);
+            localStorage.setItem('mydesk_remember', 'true');
+        } else {
+            localStorage.removeItem('mydesk_username');
+            localStorage.removeItem('mydesk_remember');
+        }
+    };
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('.login-auth-form');
+        if (form) {
+            form.addEventListener('submit', function() {
+                window.saveLoginDetails();
+            });
+        }
+    });
+</script>
+
 <style>
     /* Google Fonts Import */
     @@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
+
+    /* Theme Variables */
+    :root {
+        --tl-primary: @PlatformSettings.Current.LoginPrimaryColor;
+        --tl-accent: @PlatformSettings.Current.LoginAccentColor;
+        --tl-login-bg: @PlatformSettings.Current.LoginBackgroundColor;
+    }
 
     .tl-login-root {
         display: grid;
@@ -131,10 +180,10 @@
     .tl-login-hero {
         display: none;
         position: relative;
-        background-color: @PlatformSettings.Current.LoginBackgroundColor;
+        background-color: var(--tl-login-bg);
         background-image: 
-            radial-gradient(at 0% 0%, @(PlatformSettings.Current.LoginPrimaryColor)22 0, transparent 50%), 
-            radial-gradient(at 100% 100%, @(PlatformSettings.Current.LoginAccentColor)1a 0, transparent 50%);
+            radial-gradient(at 0% 0%, var(--tl-primary)22 0, transparent 50%), 
+            radial-gradient(at 100% 100%, var(--tl-accent)1a 0, transparent 50%);
         color: white;
         padding: 64px;
         overflow: hidden;
@@ -168,7 +217,7 @@
         -webkit-text-fill-color: transparent;
     }
     .tl-login-quote-author { font-size: 16px; color: #94a3b8; font-weight: 500; }
-    .accent-text { color: @PlatformSettings.Current.LoginPrimaryColor; font-weight: 600; }
+    .accent-text { color: var(--tl-primary); font-weight: 600; }
 
     .legal-links-white .mud-link { color: #64748b !important; font-weight: 500; }
     .legal-links-white .mud-link:hover { color: white !important; }
@@ -182,8 +231,8 @@
         z-index: 1;
         opacity: 0.4;
     }
-    .blob-1 { top: -10%; left: -10%; width: 400px; height: 400px; background: @PlatformSettings.Current.LoginPrimaryColor; }
-    .blob-2 { bottom: -5%; right: -5%; width: 350px; height: 350px; background: @PlatformSettings.Current.LoginAccentColor; opacity: 0.2; }
+    .blob-1 { top: -10%; left: -10%; width: 400px; height: 400px; background: var(--tl-primary); }
+    .blob-2 { bottom: -5%; right: -5%; width: 350px; height: 350px; background: var(--tl-accent); opacity: 0.2; }
     .hero-grid-pattern {
         position: absolute;
         inset: 0;
@@ -250,6 +299,33 @@
     [SupplyParameterFromQuery]
     public string? Error { get; set; }
 
-    private bool ShowError => Error == "1";
-}
+    public string? Username { get; set; }
+    public string? Password { get; set; }
+    public bool RememberMe { get; set; } = true;
 
+    private bool ShowError => Error == "1";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSavedCredentialsAsync();
+    }
+
+    private async Task LoadSavedCredentialsAsync()
+    {
+        try
+        {
+            var savedUsername = await JS.InvokeAsync<string>("localStorage.getItem", "mydesk_username");
+            var savedRemember = await JS.InvokeAsync<string>("localStorage.getItem", "mydesk_remember");
+            
+            if (!string.IsNullOrEmpty(savedUsername) && savedRemember == "true")
+            {
+                Username = savedUsername;
+                RememberMe = true;
+            }
+        }
+        catch
+        {
+            // Ignore errors - localStorage may not be available
+        }
+    }
+}

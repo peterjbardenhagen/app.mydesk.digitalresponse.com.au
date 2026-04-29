@@ -101,12 +101,20 @@ public class LookupService
 
     public async Task<List<Location>> GetLocationsAsync()
     {
-        var dt = await _db.QueryAsync(
-            "SELECT LocationId, ISNULL(LocationName,'') AS LocationName FROM Locations ORDER BY LocationName");
+        var dt = await _db.QueryAsync(@"
+            SELECT LocationId, 
+                   ISNULL(Company,'') AS LocationName,
+                   Address1, Address2, Suburb, State, PostCode
+            FROM Locations ORDER BY Company");
         return dt.Map(r => new Location
         {
             LocationId   = Convert.ToInt32(r["LocationId"]),
             LocationName = r["LocationName"]?.ToString() ?? "",
+            Address1     = r["Address1"]?.ToString(),
+            Address2     = r["Address2"]?.ToString(),
+            Suburb       = r["Suburb"]?.ToString(),
+            State        = r["State"]?.ToString(),
+            PostCode     = r["PostCode"]?.ToString(),
         });
     }
 
@@ -135,4 +143,23 @@ public class LookupService
             StatusName = r["StatusName"]?.ToString() ?? ""
         });
     }
+
+    public async Task<List<Product>> GetProductsAsync()
+    {
+        var dt = await _db.QueryAsync("SELECT ProductId, ProductCode, ProductName, ProductDesc, UnitCost, NettPrice FROM Products ORDER BY ProductName");
+        return dt.Map(r => new Product
+        {
+            ProductId = Convert.ToInt32(r["ProductId"]),
+            ProductName = r["ProductName"]?.ToString() ?? "",
+            Description = r["ProductDesc"]?.ToString(),
+            UnitCost = r["UnitCost"] == DBNull.Value ? 0m : Convert.ToDecimal(r["UnitCost"]),
+            UnitPrice = r["NettPrice"] == DBNull.Value ? 0m : Convert.ToDecimal(r["NettPrice"])
+        });
+    }
+
+    public List<string> GetCarriers() => new() 
+    { 
+        "General Road Freight", "Express Overnight", "Customer Pickup", "Local Delivery", 
+        "Toll", "TNT / FedEx", "StarTrack", "Australia Post", "Courier" 
+    };
 }

@@ -1,17 +1,18 @@
 @page "/invoices/{Id:int}/despatch"
 @attribute [Authorize]
 @inject InvoiceService InvoiceService
+@inject LookupService LookupService
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthStateProvider
 @using System.Security.Claims
 
-<PageTitle>Despatch Invoice @Id - Techlight MyDesk</PageTitle>
+<PageTitle>Despatch Invoice @Id - MyDesk</PageTitle>
 
 <div class="tl-page-header">
     <div>
         <div class="tl-breadcrumb">
-            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/">MyDesk</a><span class="sep">/</span>
             <a href="/invoices">Invoices</a><span class="sep">/</span>
             <a href="@($"/invoices/{Id}")">Invoice @Id</a><span class="sep">/</span>
             <span>Despatch</span>
@@ -35,7 +36,12 @@ else
                     <MudDatePicker @bind-Date="_date" Label="Despatch Date *" Variant="Variant.Outlined" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudTextField @bind-Value="_d.Carrier" Label="Carrier / Method" Variant="Variant.Outlined" />
+                    <MudSelect @bind-Value="_d.Carrier" Label="Carrier / Method" Variant="Variant.Outlined">
+                        @foreach (var c in _carriers)
+                        {
+                            <MudSelectItem Value="@c">@c</MudSelectItem>
+                        }
+                    </MudSelect>
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <MudTextField @bind-Value="_d.CarrierRef" Label="Tracking / Carrier Ref" Variant="Variant.Outlined" />
@@ -68,21 +74,27 @@ else
     private bool           _loading = true;
     private bool           _saving;
     private string         _userCode = "";
+    private List<string>   _carriers = new();
 
     protected override async Task OnInitializedAsync()
     {
         var auth  = await AuthStateProvider.GetAuthenticationStateAsync();
         _userCode = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+        _carriers = LookupService.GetCarriers();
 
         var existing = await InvoiceService.GetDespatchAsync(Id);
         if (existing != null)
         {
             _d    = existing;
             _date = existing.DespatchDate;
+            
+            if (!string.IsNullOrEmpty(_d.Carrier) && !_carriers.Contains(_d.Carrier))
+                _carriers.Add(_d.Carrier);
         }
         else
         {
             _d.InvoiceId = Id;
+            _d.Carrier = _carriers.FirstOrDefault() ?? "";
         }
         _loading = false;
     }

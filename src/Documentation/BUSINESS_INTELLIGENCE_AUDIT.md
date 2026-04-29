@@ -80,7 +80,7 @@ Shows for every individual:
 | Revenue Trends chart had no tooltips                  | Enabled `ShowTooltips = true`             |
 | Alert cards looked plain                              | New card component with warning/critical/rec variants |
 | White/invisible dashboard icons                       | CSS `fill: currentColor` for SVG KPI icons |
-| `Techlight.MyDesk.*` namespace drift                  | Standardised to `MyDesk.*` with `DR.MyDesk.*` assembly names |
+| `Techlight.MyDesk.*` namespace drift                  | Standardised to `MyDesk.*` with `MyDesk.*` assembly names |
 
 ---
 

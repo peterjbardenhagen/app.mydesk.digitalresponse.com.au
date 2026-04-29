@@ -1,0 +1,196 @@
+@page "/customer-portal"
+@layout CustomerPortalLayout
+@attribute [Authorize]
+@inject ContactService ContactService
+@inject QuoteService QuoteService
+@inject InvoiceService InvoiceService
+@inject PurchaseOrderService POService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Dashboard - Techlight Customer Portal</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Welcome back, @_contact?.FirstName!</MudText>
+<MudText Typo="Typo.body1" Color="Color.Default" Class="mb-6">Here's an overview of your account</MudText>
+
+<MudGrid>
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Class="pa-4 cursor-pointer" Elevation="2" onclick="@(() => Nav.NavigateTo("/customer-portal/quotes"))">
+            <div class="d-flex align-center gap-3">
+                <MudIcon Icon="@Icons.Material.Rounded.Description" Size="Size.Large" Color="Color.Primary" />
+                <div>
+                    <MudText Typo="Typo.h4">@_quoteCount</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Default">Active Quotes</MudText>
+                </div>
+            </div>
+        </MudPaper>
+    </MudItem>
+    
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Class="pa-4 cursor-pointer" Elevation="2" onclick="@(() => Nav.NavigateTo("/customer-portal/invoices"))">
+            <div class="d-flex align-center gap-3">
+                <MudIcon Icon="@Icons.Material.Rounded.Receipt" Size="Size.Large" Color="Color.Success" />
+                <div>
+                    <MudText Typo="Typo.h4">@_invoiceCount</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Default">Invoices</MudText>
+                </div>
+            </div>
+        </MudPaper>
+    </MudItem>
+    
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Class="pa-4 cursor-pointer" Elevation="2" onclick="@(() => Nav.NavigateTo("/customer-portal/orders"))">
+            <div class="d-flex align-center gap-3">
+                <MudIcon Icon="@Icons.Material.Rounded.ShoppingCart" Size="Size.Large" Color="Color.Warning" />
+                <div>
+                    <MudText Typo="Typo.h4">@_poCount</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Default">Purchase Orders</MudText>
+                </div>
+            </div>
+        </MudPaper>
+    </MudItem>
+    
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Class="pa-4 cursor-pointer" Elevation="2" onclick="@(() => Nav.NavigateTo("/customer-portal/files"))">
+            <div class="d-flex align-center gap-3">
+                <MudIcon Icon="@Icons.Material.Rounded.Folder" Size="Size.Large" Color="Color.Info" />
+                <div>
+                    <MudText Typo="Typo.h4">@_fileCount</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Default">Files</MudText>
+                </div>
+            </div>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudGrid Class="mt-6">
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-4">Recent Quotes</MudText>
+            @if (_recentQuotes.Any())
+            {
+                <div class="d-flex flex-column gap-2">
+                    @foreach (var q in _recentQuotes.Take(5))
+                    {
+                        <div class="d-flex justify-space-between align-center pa-2 mud-elevation-1 rounded">
+                            <div>
+                                <MudText Typo="Typo.body2">Quote #@q.Qid</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Default">@q.Reference</MudText>
+                            </div>
+                            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(q.QuoteStatusId)">@q.QuoteStatus</MudChip>
+                        </div>
+                    }
+                </div>
+                <MudButton Variant="Variant.Text" FullWidth="true" OnClick="@(() => Nav.NavigateTo("/customer-portal/quotes"))">
+                    View All Quotes
+                </MudButton>
+            }
+            else
+            {
+                <MudText Color="Color.Default">No quotes found</MudText>
+            }
+        </MudPaper>
+    </MudItem>
+    
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-4">Recent Invoices</MudText>
+            @if (_recentInvoices.Any())
+            {
+                <div class="d-flex flex-column gap-2">
+                    @foreach (var inv in _recentInvoices.Take(5))
+                    {
+                        <div class="d-flex justify-space-between align-center pa-2 mud-elevation-1 rounded">
+                            <div>
+                                <MudText Typo="Typo.body2">Invoice #@inv.InvoiceNum</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Default">$@inv.TotalIncGST.ToString("N2")</MudText>
+                            </div>
+                            <MudChip T="string" Size="Size.Small" Color="@GetInvoiceStatusColor(inv.StatusName)">@inv.StatusName</MudChip>
+                        </div>
+                    }
+                </div>
+                <MudButton Variant="Variant.Text" FullWidth="true" OnClick="@(() => Nav.NavigateTo("/customer-portal/invoices"))">
+                    View All Invoices
+                </MudButton>
+            }
+            else
+            {
+                <MudText Color="Color.Default">No invoices found</MudText>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudGrid Class="mt-2">
+    <MudItem xs="12">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-4">Quick Actions</MudText>
+            <div class="d-flex gap-2 flex-wrap">
+                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Description"
+                         OnClick="@(() => Nav.NavigateTo("/customer-portal/quotes"))">My Quotes</MudButton>
+                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Receipt"
+                         OnClick="@(() => Nav.NavigateTo("/customer-portal/invoices"))">My Invoices</MudButton>
+                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ShoppingCart"
+                         OnClick="@(() => Nav.NavigateTo("/customer-portal/orders"))">My Orders</MudButton>
+                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Folder"
+                         OnClick="@(() => Nav.NavigateTo("/customer-portal/files"))">My Files</MudButton>
+            </div>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private Contact? _contact;
+    private List<Quote> _recentQuotes = new();
+    private List<Invoice> _recentInvoices = new();
+    private int _quoteCount;
+    private int _invoiceCount;
+    private int _poCount;
+    private int _fileCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _contact = await ContactService.GetCurrentPortalContactAsync();
+        if (_contact == null)
+        {
+            Nav.NavigateTo("/customer-login");
+            return;
+        }
+
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        if (_contact == null) return;
+
+        var companyId = _contact.CompanyId;
+        
+        _recentQuotes = await QuoteService.GetQuotesAsync(null, null, null, 0, null);
+        _recentQuotes = _recentQuotes.Where(q => q.CompanyName == _contact.CompanyName && q.QuoteStatusId != 1).Take(5).ToList();
+        _quoteCount = _recentQuotes.Count;
+
+        var invoices = await InvoiceService.GetInvoicesAsync(null, null, null, 0, null);
+        _recentInvoices = invoices.Where(i => i.CCompany == _contact.CompanyName).Take(5).ToList();
+        _invoiceCount = _recentInvoices.Count;
+        _poCount = 0;
+        _fileCount = 0;
+    }
+
+    private Color GetStatusColor(int statusId) => statusId switch
+    {
+        4 or 10 => Color.Success,
+        2 => Color.Primary,
+        9 => Color.Warning,
+        5 or 11 => Color.Error,
+        _ => Color.Default
+    };
+
+    private Color GetInvoiceStatusColor(string? status) => status switch
+    {
+        "Issued" => Color.Success,
+        "Paid" => Color.Info,
+        "Overdue" => Color.Error,
+        _ => Color.Default
+    };
+}

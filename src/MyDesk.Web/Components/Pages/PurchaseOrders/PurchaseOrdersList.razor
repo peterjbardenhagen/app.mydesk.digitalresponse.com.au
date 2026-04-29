@@ -6,14 +6,16 @@
 @inject ISnackbar Snackbar
 @inject IDialogService Dialog
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JsRuntime
 @using System.Security.Claims
+@using Microsoft.JSInterop
 
-<PageTitle>Purchase Orders - Techlight MyDesk</PageTitle>
+<PageTitle>Purchase Orders - MyDesk</PageTitle>
 
 <div class="tl-page-header">
     <div>
         <div class="tl-breadcrumb">
-            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/">MyDesk</a><span class="sep">/</span>
             <span>Purchase Orders</span>
         </div>
         <h1>Purchase Orders</h1>
@@ -64,6 +66,8 @@
                    OnClick="TogglePendingApproval">
             Pending Approval
         </MudButton>
+        <MudButton OnClick="ExportCsv" Variant="Variant.Outlined" Color="Color.Default"
+                   StartIcon="@Icons.Material.Rounded.Download">Export CSV</MudButton>
     </div>
 </MudPaper>
 
@@ -199,5 +203,36 @@
         "Cancelled"          => Color.Dark,
         _                    => Color.Default,
     };
+
+    private async Task ExportCsv()
+    {
+        if (!_pos.Any())
+        {
+            Snackbar.Add("No data to export", Severity.Warning);
+            return;
+        }
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("PO #,Supplier,Project,Division,Date,Required,Inc GST,Status,By");
+
+        foreach (var po in _pos)
+        {
+            sb.AppendLine($"\"{po.POid}\",\"{po.SupplierName}\",\"{po.Project}\",\"{po.DivisionName}\",\"{po.PODate:yyyy-MM-dd}\",\"{po.DateRequired:yyyy-MM-dd}\",{po.PriceIncTotal.ToString("N2")},\"{po.StatusName}\",\"{po.OriginatorName}\"");
+        }
+
+        var csv = sb.ToString();
+        var fileName = $"PurchaseOrders_Export_{DateTime.Now:yyyyMMdd}.csv";
+
+        await DownloadFile(fileName, csv);
+        Snackbar.Add($"Exported {_pos.Count} purchase orders", Severity.Success);
+    }
+
+    private async Task DownloadFile(string fileName, string content)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+        var base64 = Convert.ToBase64String(bytes);
+        var url = $"data:text/csv;base64,{base64}";
+        await JsRuntime.InvokeVoidAsync("window.open", url, "_blank");
+    }
 }
 

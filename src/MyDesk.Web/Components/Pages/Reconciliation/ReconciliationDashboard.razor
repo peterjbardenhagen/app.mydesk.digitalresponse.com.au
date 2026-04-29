@@ -8,13 +8,14 @@
 @using MyDesk.Shared.Services
 @using MyDesk.Web.Services
 @using System.Security.Claims
+@using MyDesk.Shared.Models
 
-<PageTitle>Reconciliation Dashboard - Techlight MyDesk</PageTitle>
+<PageTitle>Reconciliation Dashboard - MyDesk</PageTitle>
 
 <div class="tl-page-header">
     <div>
         <div class="tl-breadcrumb">
-            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/">MyDesk</a><span class="sep">/</span>
             <span>Reconciliation</span>
         </div>
         <h1 style="display:flex; align-items:center; gap:10px;">
@@ -201,7 +202,7 @@ else
         try
         {
             Summary = await ReconSvc.GetSummaryAsync();
-            Aged    = await ReconSvc.GetAgedReceivablesAsync();
+            Aged    = await ReconSvc.GetAggAgedReceivablesAsync();
         }
         catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
         finally { _loading = false; }

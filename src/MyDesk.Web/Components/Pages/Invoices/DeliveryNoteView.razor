@@ -2,8 +2,9 @@
 @attribute [Authorize]
 @inject InvoiceService InvoiceService
 @inject NavigationManager Nav
+@inject PlatformSettingsService PlatformSettings
 
-<PageTitle>Delivery Note @Id - Techlight MyDesk</PageTitle>
+<PageTitle>Delivery Note @Id - MyDesk</PageTitle>
 
 @if (_inv == null)
 {
@@ -14,7 +15,7 @@ else
     <div class="tl-page-header">
         <div>
             <div class="tl-breadcrumb">
-                <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+                <a href="/">MyDesk</a><span class="sep">/</span>
                 <a href="/invoices">Invoices</a><span class="sep">/</span>
                 <a href="@($"/invoices/{Id}")">Invoice @_inv.InvoiceNum</a><span class="sep">/</span>
                 <span>Delivery Note</span>
@@ -39,7 +40,7 @@ else
                     <MudText Typo="Typo.body2" Style="color:var(--gray-500);">Date: @_inv.InvoiceDate.ToString("dd MMM yyyy")</MudText>
                 </div>
                 <div style="text-align:right;">
-                    <MudText Typo="Typo.body1" Class="font-weight-bold">Techlight Pty Ltd</MudText>
+                    <MudText Typo="Typo.body1" Class="font-weight-bold">@PlatformSettings.Current.CompanyName</MudText>
                 </div>
             </div>
 

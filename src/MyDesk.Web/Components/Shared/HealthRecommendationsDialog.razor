@@ -1,7 +1,7 @@
 @inject DashboardService DashboardService
 @inject IDialogService DialogService
 
-<MudDialog Class="tl-health-dialog" Options="new DialogOptions { CloseButton = false, MaxWidth = MaxWidth.Medium }">
+<MudDialog Class="tl-health-dialog" Options="new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium }">
     <DialogContent>
         @if (_recommendations == null)
         {

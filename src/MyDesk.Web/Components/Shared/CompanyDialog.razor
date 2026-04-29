@@ -1,0 +1,83 @@
+@inject CompanyService CompanyService
+@inject ISnackbar Snackbar
+@using MudBlazor
+@using MudBlazor.Services
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid Spacing="2">
+            <MudItem xs="12">
+                <MudTextField @bind-Value="Company.CompanyName" Label="Company Name" Variant="Variant.Outlined" Required="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="Company.Phone" Label="Phone" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="Company.Email" Label="Email" Variant="Variant.Outlined" InputType="InputType.Email" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="Company.Address1" Label="Address Line 1" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="Company.Address2" Label="Address Line 2" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="5">
+                <MudTextField @bind-Value="Company.Suburb" Label="Suburb" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudTextField @bind-Value="Company.State" Label="State" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="6" sm="4">
+                <MudTextField @bind-Value="Company.PostCode" Label="Post Code" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="Company.ABN" Label="ABN" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="Company.CustomerCode" Label="Customer Code" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="Company.SupplierCode" Label="Supplier Code" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudCheckBox @bind-Value="Company.IsCustomer" Label="Is Customer" Color="Color.Primary" />
+                <MudCheckBox @bind-Value="Company.IsSupplier" Label="Is Supplier" Color="Color.Secondary" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@string.IsNullOrWhiteSpace(Company.CompanyName)">
+            Create Company
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter]
+    public Company Company { get; set; } = new();
+
+    [CascadingParameter]
+    private MudDialogInstance? MudDialog { get; set; }
+
+    private async Task Submit()
+    {
+        if (string.IsNullOrWhiteSpace(Company.CompanyName))
+        {
+            Snackbar.Add("Company name is required", Severity.Warning);
+            return;
+        }
+        
+        try
+        {
+            await CompanyService.SaveCompanyAsync(Company);
+            MudDialog?.Close(Company);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog?.Cancel();
+}

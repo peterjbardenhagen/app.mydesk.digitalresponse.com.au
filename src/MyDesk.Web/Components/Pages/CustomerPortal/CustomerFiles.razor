@@ -1,0 +1,124 @@
+@page "/customer-portal/files"
+@layout CustomerPortalLayout
+@attribute [Authorize]
+@inject DocumentService DocumentService
+@inject ContactService ContactService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Files - Techlight Customer Portal</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Your Files</MudText>
+<MudText Typo="Typo.body1" Color="Color.Default" Class="mb-6">Download documents and files shared with you</MudText>
+
+@if (_files.Any())
+{
+    <MudGrid>
+        @foreach (var file in _files)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudPaper Class="pa-4" Elevation="2">
+                    <div class="d-flex align-center gap-2">
+                        <MudIcon Icon="@GetFileIcon(file.FileName)" Color="Color.Primary" />
+                        <div style="flex:1;min-width:0;">
+                            <MudText Typo="Typo.body2" Class="truncate">@file.FileName</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Default">
+                                @file.UploadedDate:dd/MM/yyyy - @file.FileSize
+                            </MudText>
+                        </div>
+                    </div>
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" FullWidth="true" 
+                            StartIcon="@Icons.Material.Rounded.Download" Class="mt-2"
+                            OnClick="@(() => DownloadFile(file))">
+                        Download
+                    </MudButton>
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+}
+else
+{
+    <MudPaper Class="pa-8 text-center" Elevation="1">
+        <MudIcon Icon="@Icons.Material.Rounded.FolderOpen" Size="Size.Large" Color="Color.Default" />
+        <MudText Typo="Typo.body1" Class="mt-2">No files have been shared with you yet.</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Default">
+            Contact your account manager to request files.
+        </MudText>
+    </MudPaper>
+}
+
+@code {
+    private Contact? _contact;
+    private List<CustomerFile> _files = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _contact = await ContactService.GetCurrentPortalContactAsync();
+        if (_contact == null)
+        {
+            Nav.NavigateTo("/customer-login");
+            return;
+        }
+
+        await LoadFilesAsync();
+    }
+
+    private async Task LoadFilesAsync()
+    {
+        if (_contact == null) return;
+        _files = await DocumentService.GetCustomerFilesAsync(_contact.CompanyId);
+    }
+
+    private static string GetFileIcon(string fileName)
+    {
+        var ext = Path.GetExtension(fileName).ToLower();
+        return ext switch
+        {
+            ".pdf" => Icons.Material.Rounded.PictureAsPdf,
+            ".doc" or ".docx" => Icons.Material.Rounded.Description,
+            ".xls" or ".xlsx" => Icons.Material.Rounded.TableChart,
+            ".jpg" or ".png" or ".gif" => Icons.Material.Rounded.Image,
+            _ => Icons.Material.Rounded.InsertDriveFile
+        };
+    }
+
+    private async Task DownloadFile(CustomerFile file)
+    {
+        var bytes = await DocumentService.DownloadFileAsync(file.DocumentId);
+        if (bytes.Length > 0)
+        {
+            var base64 = Convert.ToBase64String(bytes);
+            var mimeType = GetMimeType(file.FileName);
+            var url = $"data:{mimeType};base64,{base64}";
+            await Task.Run(() => { });
+            Snackbar.Add($"Downloading {file.FileName}", Severity.Info);
+        }
+    }
+
+    private static string GetMimeType(string fileName)
+    {
+        var ext = Path.GetExtension(fileName).ToLower();
+        return ext switch
+        {
+            ".pdf" => "application/pdf",
+            ".doc" => "application/msword",
+            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".xls" => "application/vnd.ms-excel",
+            ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ".jpg" => "image/jpeg",
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            _ => "application/octet-stream"
+        };
+    }
+}
+
+public class CustomerFile
+{
+    public int DocumentId { get; set; }
+    public string FileName { get; set; } = "";
+    public string FileSize { get; set; } = "";
+    public DateTime UploadedDate { get; set; }
+    public int CompanyId { get; set; }
+}

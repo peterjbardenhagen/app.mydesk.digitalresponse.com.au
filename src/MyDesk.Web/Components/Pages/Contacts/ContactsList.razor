@@ -2,19 +2,28 @@
 @attribute [Authorize]
 @inject ContactService ContactService
 @inject NavigationManager Nav
+@inject PlatformSettingsService PlatformSettings
+@inject ISnackbar Snackbar
+@inject IJSRuntime JsRuntime
+@inject IDialogService DialogService
+@using Microsoft.JSInterop
 
-<PageTitle>Contacts - Techlight MyDesk</PageTitle>
+<PageTitle>Contacts - @PlatformSettings.GetBrandingName()</PageTitle>
 
 <div class="tl-page-header">
     <div>
         <div class="tl-breadcrumb">
-            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/">MyDesk</a><span class="sep">/</span>
             <span>Contacts</span>
         </div>
         <h1>Contacts</h1>
     </div>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
-               OnClick="@(() => Nav.NavigateTo("/contacts/create"))">New Contact</MudButton>
+    <div class="d-flex gap-2">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
+                   OnClick="@(() => Nav.NavigateTo("/contacts/create"))">New Contact</MudButton>
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Upload"
+                   OnClick="ImportFromInvoices">Import from Invoices</MudButton>
+    </div>
 </div>
 
 <MudPaper Elevation="2" Class="pa-4 mb-4">
@@ -24,6 +33,10 @@
     <div class="d-flex gap-2 mt-3">
         <MudButton OnClick="LoadAsync" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.FilterList">Search</MudButton>
         <MudButton OnClick="Reset" Variant="Variant.Outlined">Reset</MudButton>
+        <MudButton OnClick="ExportCsv" Variant="Variant.Outlined" Color="Color.Default"
+                   StartIcon="@Icons.Material.Rounded.Download">Export CSV</MudButton>
+        <MudButton OnClick="ExportVcf" Variant="Variant.Outlined" Color="Color.Default"
+                   StartIcon="@Icons.Material.Rounded.ContactPage">Export VCF</MudButton>
     </div>
 </MudPaper>
 
@@ -66,11 +79,92 @@
         finally { _loading = false; }
     }
 
+    private async Task ImportFromInvoices()
+    {
+        var parameters = new DialogParameters();
+        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        
+        var dialog = await DialogService.ShowAsync<ImportContactsDialog>("Import Contacts & Companies", parameters, options);
+        var result = await dialog.Result;
+        
+        if (result != null && !result.Canceled)
+        {
+            await LoadAsync();
+            Snackbar.Add("Import completed successfully", Severity.Success);
+        }
+    }
+
     private async Task Reset() { _search = null; await LoadAsync(); }
 
     private async Task OnKey(KeyboardEventArgs e)
     {
         if (e.Key == "Enter") await LoadAsync();
+    }
+
+    private async Task ExportCsv()
+    {
+        if (!_contacts.Any())
+        {
+            Snackbar.Add("No data to export", Severity.Warning);
+            return;
+        }
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("ID,Company,Name,Position,Email,Phone,Mobile");
+
+        foreach (var c in _contacts)
+        {
+            sb.AppendLine($"{c.ContactId},\"{c.CompanyName}\",\"{c.FullName}\",\"{c.Position}\",\"{c.Email}\",\"{c.Phone}\",\"{c.Mobile}\"");
+        }
+
+        var csv = sb.ToString();
+        var fileName = $"Contacts_Export_{DateTime.Now:yyyyMMdd}.csv";
+
+        var bytes = System.Text.Encoding.UTF8.GetBytes(csv);
+        var base64 = Convert.ToBase64String(bytes);
+        var url = $"data:text/csv;base64,{base64}";
+        await JsRuntime.InvokeVoidAsync("window.open", url, "_blank");
+        
+        Snackbar.Add($"Exported {_contacts.Count} contacts", Severity.Success);
+    }
+
+    private async Task ExportVcf()
+    {
+        if (!_contacts.Any())
+        {
+            Snackbar.Add("No data to export", Severity.Warning);
+            return;
+        }
+
+        var sb = new System.Text.StringBuilder();
+        foreach (var c in _contacts)
+        {
+            sb.AppendLine("BEGIN:VCARD");
+            sb.AppendLine("VERSION:3.0");
+            sb.AppendLine($"FN:{c.FullName}");
+            sb.AppendLine($"N:{c.Surname};{c.FirstName};;;");
+            sb.AppendLine($"ORG:{c.CompanyName}");
+            if (!string.IsNullOrEmpty(c.Email)) sb.AppendLine($"EMAIL;TYPE=INTERNET:{c.Email}");
+            if (!string.IsNullOrEmpty(c.Phone)) sb.AppendLine($"TEL;TYPE=WORK,VOICE:{c.Phone}");
+            if (!string.IsNullOrEmpty(c.Mobile)) sb.AppendLine($"TEL;TYPE=CELL,VOICE:{c.Mobile}");
+            if (!string.IsNullOrEmpty(c.Position)) sb.AppendLine($"TITLE:{c.Position}");
+            if (!string.IsNullOrEmpty(c.Address1)) 
+            {
+                var adr = $"{c.Address1} {c.Address2};{c.Suburb};;{c.PostCode};Australia";
+                sb.AppendLine($"ADR;TYPE=WORK:;;{adr.Replace("\n", " ")}");
+            }
+            sb.AppendLine("END:VCARD");
+        }
+
+        var vcf = sb.ToString();
+        var fileName = $"Contacts_Export_{DateTime.Now:yyyyMMdd}.vcf";
+
+        var bytes = System.Text.Encoding.UTF8.GetBytes(vcf);
+        var base64 = Convert.ToBase64String(bytes);
+        var url = $"data:text/vcard;base64,{base64}";
+        await JsRuntime.InvokeVoidAsync("window.open", url, "_blank");
+        
+        Snackbar.Add($"Exported {_contacts.Count} vCards", Severity.Success);
     }
 }
 

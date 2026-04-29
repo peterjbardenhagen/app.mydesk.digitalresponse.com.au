@@ -124,6 +124,44 @@ public class AzureAIService
             return null;
         }
     }
+
+    /// <summary>
+    /// Transcribes an audio stream using Azure OpenAI Whisper.
+    /// </summary>
+    public async Task<string?> TranscribeAsync(Stream audioStream, string fileName)
+    {
+        if (!IsConfigured || string.IsNullOrEmpty(_opts.OpenAIWhisperDeployment))
+            return null;
+
+        try
+        {
+            var client = _httpFactory.CreateClient("AzureAI");
+            client.DefaultRequestHeaders.Remove("api-key");
+            client.DefaultRequestHeaders.Add("api-key", _opts.OpenAIApiKey);
+
+            using var content = new MultipartFormDataContent();
+            using var audioContent = new StreamContent(audioStream);
+            content.Add(audioContent, "file", fileName);
+            // Azure OpenAI Whisper still expects 'file' and some headers might be needed
+
+            var response = await client.PostAsync(_opts.TranscriptionsUrl, content);
+            var responseText = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Azure AI transcription failed: {Status} {Error}", response.StatusCode, responseText);
+                return null;
+            }
+
+            using var doc = JsonDocument.Parse(responseText);
+            return doc.RootElement.GetProperty("text").GetString();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Azure AI transcription request failed");
+            return null;
+        }
+    }
 }
 
 public record AzureChatMessage(string Role, string Content)

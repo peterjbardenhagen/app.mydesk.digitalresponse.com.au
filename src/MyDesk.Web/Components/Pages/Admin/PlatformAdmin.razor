@@ -131,6 +131,45 @@
                     </MudGrid>
                 </MudPaper>
             </MudItem>
+
+            @* PDF Branding *@
+            <MudItem xs="12">
+                <MudPaper Class="pa-6" Elevation="0" Outlined="true">
+                    <div class="d-flex align-center gap-3 mb-6">
+                        <div class="tl-icon-box orange">
+                            <MudIcon Icon="@Icons.Material.Rounded.PictureAsPdf" />
+                        </div>
+                        <MudText Typo="Typo.h6">PDF & Invoice Branding</MudText>
+                    </div>
+
+                    <MudGrid Spacing="3">
+                        <MudItem xs="12" md="4">
+                            <MudTextField @bind-Value="_settings.PdfContactPhone" Label="Contact Phone" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudTextField @bind-Value="_settings.PdfContactEmail" Label="Contact Email" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudTextField @bind-Value="_settings.PdfAddress1" Label="Address Line 1" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudTextField @bind-Value="_settings.PdfSuburb" Label="Suburb" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudTextField @bind-Value="_settings.PdfState" Label="State" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudTextField @bind-Value="_settings.PdfPostCode" Label="Postcode" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudColorPicker Label="PDF Primary Color" @bind-Text="_settings.PdfPrimaryColor" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudColorPicker Label="PDF Accent Color" @bind-Text="_settings.PdfAccentColor" Variant="Variant.Outlined" />
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+            </MudItem>
         </MudGrid>
     </MudTabPanel>
 
@@ -387,7 +426,15 @@
             LoginSubheading = current.LoginSubheading,
             LoginPrimaryColor = current.LoginPrimaryColor,
             LoginAccentColor = current.LoginAccentColor,
-            LoginBackgroundColor = current.LoginBackgroundColor
+            LoginBackgroundColor = current.LoginBackgroundColor,
+            PdfPrimaryColor = current.PdfPrimaryColor,
+            PdfAccentColor = current.PdfAccentColor,
+            PdfContactPhone = current.PdfContactPhone,
+            PdfContactEmail = current.PdfContactEmail,
+            PdfAddress1 = current.PdfAddress1,
+            PdfSuburb = current.PdfSuburb,
+            PdfState = current.PdfState,
+            PdfPostCode = current.PdfPostCode
         };
     }
 

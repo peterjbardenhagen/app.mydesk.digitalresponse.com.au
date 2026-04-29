@@ -86,7 +86,7 @@ C:\Development\Techlight.digitalresponse.com.au\
 │   │
 │   ├── Documentation\                # Technical docs
 │   ├── Run.bat                       # Interactive menu launcher
-│   └── DR.MyDesk.slnx                # Solution file
+│   └── MyDesk.slnx                # Solution file
 │
 ├── tests\                            # Playwright E2E tests
 │   └── MyDesk.PlaywrightTests\

@@ -40,6 +40,14 @@ public class EmailService
         _platformSettings  = platformSettings;
     }
 
+    private string GetPlatformName() => _platformSettings?.CompanyName ?? _config["PlatformSettings:CompanyName"] ?? "MyDesk";
+    
+    private string GetFromDomain()
+    {
+        var website = _platformSettings?.CompanyWebsite ?? _config["PlatformSettings:CompanyWebsite"] ?? "mydesk.com.au";
+        return website.Replace("https://", "").Replace("http://", "").TrimEnd('/');
+    }
+
     public async Task EnsureTablesAsync()
     {
         try
@@ -94,8 +102,9 @@ public class EmailService
             var originator   = r["OriginatorName"].ToString()!;
             var originEmail  = r["OriginatorEmail"].ToString()!;
 
+            var platformName = GetPlatformName();
             var emailSubject = subject ?? $"Quote — {reference}";
-            var emailBody    = message ?? BuildQuoteBody(reference, company, firstName, originator);
+            var emailBody    = message ?? BuildQuoteBody(reference, company, firstName, originator, platformName);
 
             await SendAsync(toEmail, emailSubject, emailBody,
                 fromEmail: string.IsNullOrEmpty(originEmail) ? null : originEmail,
@@ -144,13 +153,14 @@ public class EmailService
             var originator  = r["OriginatorName"].ToString()!;
             var originEmail = r["OriginatorEmail"].ToString()!;
 
+            var platformName = GetPlatformName();
             var emailSubject = subject ?? $"Invoice — {invNum}";
             var emailBody    = message ?? $"""
                 <p>Dear {(string.IsNullOrEmpty(firstName) ? "Sir/Madam" : firstName)},</p>
-                <p>Please find attached Invoice <strong>{invNum}</strong> from Techlight.</p>
+                <p>Please find attached Invoice <strong>{invNum}</strong> from {platformName}.</p>
                 <p>If you have any questions, please don't hesitate to contact us.</p>
                 <p>Kind regards,<br/>{originator}</p>
-                <p style="color:#999;font-size:12px;">Sent via Techlight MyDesk.</p>
+                <p style="color:#999;font-size:12px;">Sent via {platformName} MyDesk.</p>
                 """;
 
             await SendAsync(toEmail, emailSubject, emailBody,
@@ -198,12 +208,13 @@ public class EmailService
             var originator  = r["OriginatorName"].ToString()!;
             var originEmail = r["OriginatorEmail"].ToString()!;
 
+            var platformName = GetPlatformName();
             var emailSubject = subject ?? $"Purchase Order — {poNum}";
             var emailBody    = message ?? $"""
                 <p>Dear {supplier},</p>
-                <p>Please find attached Purchase Order <strong>{poNum}</strong> from Techlight.</p>
+                <p>Please find attached Purchase Order <strong>{poNum}</strong> from {platformName}.</p>
                 <p>Kind regards,<br/>{originator}</p>
-                <p style="color:#999;font-size:12px;">Sent via Techlight MyDesk.</p>
+                <p style="color:#999;font-size:12px;">Sent via {platformName} MyDesk.</p>
                 """;
 
             await SendAsync(toEmail, emailSubject, emailBody,
@@ -282,12 +293,13 @@ public class EmailService
             return;
         }
 
+        var platformName = GetPlatformName();
         var smtpHost    = _config["Email:SmtpHost"] ?? "localhost";
         var smtpPort    = int.Parse(_config["Email:SmtpPort"] ?? "25");
         var smtpUser    = _config["Email:SmtpUser"];
         var smtpPass    = _config["Email:SmtpPass"];
-        var defaultFrom = _config["Email:FromAddress"] ?? "noreply@techlight.com.au";
-        var displayName = fromName ?? _config["Email:FromName"] ?? "Techlight MyDesk";
+        var defaultFrom = _config["Email:FromAddress"] ?? $"noreply@{GetFromDomain()}";
+        var displayName = fromName ?? _config["Email:FromName"] ?? $"{platformName} MyDesk";
         var from        = !string.IsNullOrWhiteSpace(fromEmail) ? fromEmail : defaultFrom;
 
         using var client = new SmtpClient(smtpHost, smtpPort);
@@ -348,28 +360,29 @@ public class EmailService
     }
 
     private static string BuildQuoteBody(string reference, string company,
-        string firstName, string originator) =>
+        string firstName, string originator, string platformName) =>
         $"""
         <p>Dear {(string.IsNullOrEmpty(firstName) ? "Sir/Madam" : firstName)},</p>
-        <p>Please find attached your quote from <strong>Techlight</strong>.</p>
+        <p>Please find attached your quote from <strong>{platformName}</strong>.</p>
         <p><strong>Quote Reference:</strong> {reference}</p>
         <p>If you have any questions, please don't hesitate to contact us.</p>
         <p>Kind regards,<br/>{originator}</p>
-        <p style="color:#999;font-size:12px;">Sent via Techlight MyDesk.</p>
+        <p style="color:#999;font-size:12px;">Sent via {platformName} MyDesk.</p>
         """;
 
     public async Task SendPasswordResetEmailAsync(string email, string resetLink)
     {
-        var subject = "Password Reset - Techlight MyDesk";
+        var platformName = GetPlatformName();
+        var subject = $"Password Reset - {platformName} MyDesk";
         var body = $"""
             <p>Dear User,</p>
-            <p>You have requested a password reset for your Techlight MyDesk account.</p>
+            <p>You have requested a password reset for your {platformName} MyDesk account.</p>
             <p>Please click the link below to reset your password:</p>
             <p><a href="{resetLink}">Reset Password</a></p>
             <p>If you did not request this password reset, please ignore this email.</p>
             <p>This link will expire in 24 hours.</p>
-            <p>Kind regards,<br/>Techlight MyDesk Team</p>
-            <p style="color:#999;font-size:12px;">Sent via Techlight MyDesk.</p>
+            <p>Kind regards,<br/>{platformName} MyDesk Team</p>
+            <p style="color:#999;font-size:12px;">Sent via {platformName} MyDesk.</p>
             """;
 
         await SendAsync(email, subject, body);

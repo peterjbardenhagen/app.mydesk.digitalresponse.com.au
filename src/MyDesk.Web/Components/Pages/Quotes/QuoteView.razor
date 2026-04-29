@@ -9,10 +9,12 @@
 @inject PdfService PdfSvc
 @inject EmailService EmailSvc
 @inject TransporterService TransporterSvc
+@inject PurchaseOrderService PoSvc
+@inject InvoiceService InvoiceSvc
 @inject IJSRuntime JS
 @using System.Security.Claims
 
-<PageTitle>Quote #@Id - Techlight MyDesk</PageTitle>
+<PageTitle>Quote #@Id - MyDesk</PageTitle>
 
 @if (_q == null)
 {
@@ -23,13 +25,21 @@ else
     <div class="tl-page-header">
         <div>
             <div class="tl-breadcrumb">
-                <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+                <a href="/">MyDesk</a><span class="sep">/</span>
                 <a href="/quotes">Quotes</a><span class="sep">/</span>
                 <span style="color:var(--gray-700);font-weight:500;">Quote #@_q.Qid</span>
             </div>
             <h1 style="display:flex;align-items:center;gap:12px;">
                 Quote #@_q.Qid
                 <span class="tl-badge @StatusTone(_q.QuoteStatusId)">@_q.QuoteStatus</span>
+                @if (_q.IsExpired)
+                {
+                    <span class="tl-badge error">EXPIRED</span>
+                }
+                else if (_q.IsExpiringSoon)
+                {
+                    <span class="tl-badge warning">EXPIRING SOON</span>
+                }
             </h1>
             <p class="tl-subtitle">@(_q.Reference is { Length: > 0 } r ? r : _q.CompanyName)</p>
         </div>
@@ -58,7 +68,9 @@ else
                            Href="@($"/invoices/create?fromQuote={Id}")" Size="Size.Small">Invoice</MudButton>
                 <MudButton Variant="Variant.Outlined" Color="Color.Primary"
                            StartIcon="@Icons.Material.Rounded.ShoppingCart"
-                           Href="@($"/purchase-orders/create?fromQuote={Id}")" Size="Size.Small">Create PO</MudButton>
+                           OnClick="CreatePOAsync" Size="Size.Small" Disabled="@_converting">
+                    @(_converting ? "Creating..." : "Create PO")
+                </MudButton>
             }
             <MudButton Variant="Variant.Outlined" Color="Color.Info"
                        StartIcon="@Icons.Material.Rounded.Work"
@@ -327,6 +339,8 @@ else
 
     private async Task DownloadPdfAsync()
     {
+        await ActivitySvc.LogAsync(_userCode, "Quote", Id, "PDF Downloaded", _q.Reference);
+        Snackbar.Add("PDF downloaded", Severity.Info);
         await JS.InvokeVoidAsync("window.open", $"/api/pdf/quote/{Id}", "_blank");
     }
 
@@ -349,6 +363,7 @@ else
             var ok = await EmailSvc.EmailQuoteAsync(Id, _emailTo, _emailSubject, _emailMessage, _userCode, pdf);
             if (ok)
             {
+                await ActivitySvc.LogAsync(_userCode, "Quote", Id, "Quote Emailed", _emailTo);
                 Snackbar.Add($"Quote emailed to {_emailTo}.", Severity.Success);
                 _showEmailPanel = false;
                 _emailMessage   = "";
@@ -452,19 +467,40 @@ else
         _converting = true;
         try
         {
-            var invoiceId = await TransporterSvc.QuoteToInvoiceAsync(Id, _userCode);
-            if (invoiceId.HasValue)
+            var result = await InvoiceSvc.CreateInvoiceFromQuoteAsync(Id, _userCode);
+            if (result.InvoiceId > 0)
             {
                 await ActivitySvc.LogAsync(_userCode, "Quote", Id, "Converted to Invoice", _q?.Reference);
                 Snackbar.Add("Quote converted to Invoice successfully", Severity.Success);
-                Nav.NavigateTo($"/invoices/{invoiceId}");
+                Nav.NavigateTo($"/invoices/{result.InvoiceId}");
             }
             else
             {
-                Snackbar.Add("Failed to convert Quote to Invoice", Severity.Error);
+                Snackbar.Add(result.Error ?? "Failed to convert Quote to Invoice", Severity.Error);
             }
         }
         catch (Exception ex) { Snackbar.Add($"Conversion failed: {ex.Message}", Severity.Error); }
+        finally { _converting = false; }
+    }
+
+    private async Task CreatePOAsync()
+    {
+        _converting = true;
+        try
+        {
+            var poId = await PoSvc.CreatePOFromQuoteAsync(Id, _userCode, Svc);
+            if (poId > 0)
+            {
+                await ActivitySvc.LogAsync(_userCode, "Quote", Id, "PO Created from Quote", _q?.Reference);
+                Snackbar.Add("Purchase Order created successfully", Severity.Success);
+                Nav.NavigateTo($"/purchase-orders/{poId}/edit");
+            }
+            else
+            {
+                Snackbar.Add("Failed to create Purchase Order", Severity.Error);
+            }
+        }
+        catch (Exception ex) { Snackbar.Add($"Creation failed: {ex.Message}", Severity.Error); }
         finally { _converting = false; }
     }
 

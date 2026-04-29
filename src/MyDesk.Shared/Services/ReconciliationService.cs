@@ -1,17 +1,9 @@
+using System.Data;
 using Microsoft.Extensions.Logging;
 using MyDesk.Shared.Models;
 
 namespace MyDesk.Shared.Services;
 
-/// <summary>
-/// Cross-system reconciliation between MyDesk and MYOB.
-/// Implements Proposal #272 dual-system intelligence workflows:
-/// - Customer records reconciliation
-/// - Invoice totals comparison
-/// - Payment allocation matching
-/// - Project costing cross-reference
-/// - GST validation
-/// </summary>
 public class ReconciliationService
 {
     private readonly DatabaseService _db;
@@ -23,244 +15,329 @@ public class ReconciliationService
         _logger = logger;
     }
 
-    /// <summary>
-    /// Find MyDesk invoices that are approved but not yet synced to MYOB.
-    /// </summary>
-    public async Task<List<UnsyncedInvoice>> GetUnsyncedInvoicesAsync(DateTime? from = null, DateTime? to = null)
+    public async Task<List<AgedReceivable>> GetAgedReceivablesAsync()
     {
-        var where = "WHERE ISNULL(i.ExportedToMYOB, 0) = 0 AND i.InvoiceStatusId >= 2";
-        var p = new Dictionary<string, object?>();
-
-        if (from.HasValue) { where += " AND i.InvoiceDate >= @From"; p["From"] = from.Value; }
-        if (to.HasValue)   { where += " AND i.InvoiceDate <= @To";   p["To"]   = to.Value;   }
-
-        var dt = await _db.QueryAsync($@"
-            SELECT i.InvoiceId, CAST(i.InvoiceId AS NVARCHAR(20)) AS InvoiceNum, i.InvoiceDate,
-                   COALESCE(NULLIF(co.Company, ''), NULLIF(i.InvCompany, ''), NULLIF(i.DelCompany, ''), '') AS CustomerName,
-                   i.NettPriceTotal, i.GSTTotal,
-                   (i.NettPriceTotal + i.GSTTotal) AS TotalIncGST,
-                   i.InvoiceStatusId
+        var sql = @"
+            SELECT c.Company AS CustomerName,
+                   c.CustomerCode,
+                   SUM(CASE WHEN DATEDIFF(day, i.InvoiceDate, GETDATE()) <= 30 THEN (ISNULL(i.NettPriceTotal, 0) + ISNULL(i.GSTTotal, 0)) ELSE 0 END) AS CurrentAmount,
+                   SUM(CASE WHEN DATEDIFF(day, i.InvoiceDate, GETDATE()) BETWEEN 31 AND 60 THEN (ISNULL(i.NettPriceTotal, 0) + ISNULL(i.GSTTotal, 0)) ELSE 0 END) AS Days30Amount,
+                   SUM(CASE WHEN DATEDIFF(day, i.InvoiceDate, GETDATE()) BETWEEN 61 AND 90 THEN (ISNULL(i.NettPriceTotal, 0) + ISNULL(i.GSTTotal, 0)) ELSE 0 END) AS Days60Amount,
+                   SUM(CASE WHEN DATEDIFF(day, i.InvoiceDate, GETDATE()) > 90 THEN (ISNULL(i.NettPriceTotal, 0) + ISNULL(i.GSTTotal, 0)) ELSE 0 END) AS Days90PlusAmount,
+                   SUM(ISNULL(i.NettPriceTotal, 0) + ISNULL(i.GSTTotal, 0)) AS TotalOutstanding
             FROM Invoices i
-            LEFT JOIN Companies co ON co.CompanyId = i.CompanyId
-            {where}
-            ORDER BY i.InvoiceDate DESC", p);
+            LEFT JOIN Companies c ON c.CompanyId = i.CompanyId
+            WHERE i.InvoiceStatusId IN (2, 6)
+              AND (ISNULL(i.NettPriceTotal, 0) + ISNULL(i.GSTTotal, 0)) > 0
+            GROUP BY c.Company, c.CustomerCode
+            ORDER BY TotalOutstanding DESC";
 
-        return dt.Map(r => new UnsyncedInvoice
-        {
-            InvoiceId    = Convert.ToInt32(r["InvoiceId"]),
-            InvoiceNum   = r["InvoiceNum"]?.ToString() ?? "",
-            InvoiceDate  = r["InvoiceDate"] == DBNull.Value ? DateTime.MinValue : Convert.ToDateTime(r["InvoiceDate"]),
-            CustomerName = r["CustomerName"]?.ToString() ?? "",
-            NettTotal    = Convert.ToDecimal(r["NettPriceTotal"]),
-            GstTotal     = Convert.ToDecimal(r["GSTTotal"]),
-            TotalIncGST  = Convert.ToDecimal(r["TotalIncGST"]),
-            StatusId     = Convert.ToInt32(r["InvoiceStatusId"]),
-        });
+        var dt = await _db.QueryAsync(sql);
+        return dt.Map(MapAgedReceivable);
     }
 
-    /// <summary>
-    /// Get cross-system summary for the dashboard.
-    /// </summary>
-    public async Task<ReconciliationSummary> GetSummaryAsync()
+    public async Task<AgedReceivables> GetAggAgedReceivablesAsync()
     {
-        var unsynced = await GetUnsyncedInvoicesAsync();
-        
-        // Total outstanding receivables from MyDesk
-        var receivablesDt = await _db.QueryAsync(@"
-            SELECT ISNULL(SUM(NettPriceTotal + GSTTotal), 0) AS Total,
-                   COUNT(*) AS Cnt
-            FROM Invoices
-            WHERE InvoiceStatusId IN (2, 5)"); // Issued or Overdue
-
-        var receivables = receivablesDt.Rows[0];
-
-        // This month's sales
-        var monthDt = await _db.QueryAsync(@"
-            SELECT ISNULL(SUM(NettPriceTotal + GSTTotal), 0) AS Total,
-                   COUNT(*) AS Cnt
-            FROM Invoices
-            WHERE YEAR(InvoiceDate) = YEAR(GETDATE())
-              AND MONTH(InvoiceDate) = MONTH(GETDATE())");
-
-        var month = monthDt.Rows[0];
-
-        // GST collected this quarter
-        var gstDt = await _db.QueryAsync(@"
-            SELECT ISNULL(SUM(GSTTotal), 0) AS Total
-            FROM Invoices
-            WHERE InvoiceDate >= DATEADD(MONTH, -3, GETDATE())
-              AND InvoiceStatusId >= 2");
-
-        return new ReconciliationSummary
+        var receivables = await GetAgedReceivablesAsync();
+        return new AgedReceivables
         {
-            UnsyncedCount      = unsynced.Count,
-            UnsyncedTotal      = unsynced.Sum(i => i.TotalIncGST),
-            OutstandingCount   = Convert.ToInt32(receivables["Cnt"]),
-            OutstandingTotal   = Convert.ToDecimal(receivables["Total"]),
-            MonthlySalesCount  = Convert.ToInt32(month["Cnt"]),
-            MonthlySalesTotal  = Convert.ToDecimal(month["Total"]),
-            QuarterlyGstTotal  = Convert.ToDecimal(gstDt.Rows[0]["Total"]),
-            GeneratedAt        = DateTime.Now,
+            Current = receivables.Sum(r => r.CurrentAmount),
+            Days31_60 = receivables.Sum(r => r.Days30Amount),
+            Days61_90 = receivables.Sum(r => r.Days60Amount),
+            Over90 = receivables.Sum(r => r.Days90PlusAmount),
+            Total = receivables.Sum(r => r.TotalOutstanding)
         };
     }
 
-    /// <summary>
-    /// Mark invoices as exported (after successful MYOB push).
-    /// </summary>
-    public async Task MarkInvoicesExportedAsync(List<int> invoiceIds, string userCode)
+    public async Task<List<AgedPayable>> GetAgedPayablesAsync()
     {
-        if (invoiceIds.Count == 0) return;
+        var sql = @"
+            SELECT c.Company AS SupplierName,
+                   c.SupplierCode,
+                   SUM(CASE WHEN DATEDIFF(day, po.PODate, GETDATE()) <= 30 THEN (ISNULL(po.PriceExTotal, 0) + ISNULL(po.GstTotal, 0)) ELSE 0 END) AS CurrentAmount,
+                   SUM(CASE WHEN DATEDIFF(day, po.PODate, GETDATE()) BETWEEN 31 AND 60 THEN (ISNULL(po.PriceExTotal, 0) + ISNULL(po.GstTotal, 0)) ELSE 0 END) AS Days30Amount,
+                   SUM(CASE WHEN DATEDIFF(day, po.PODate, GETDATE()) BETWEEN 61 AND 90 THEN (ISNULL(po.PriceExTotal, 0) + ISNULL(po.GstTotal, 0)) ELSE 0 END) AS Days60Amount,
+                   SUM(CASE WHEN DATEDIFF(day, po.PODate, GETDATE()) > 90 THEN (ISNULL(po.PriceExTotal, 0) + ISNULL(po.GstTotal, 0)) ELSE 0 END) AS Days90PlusAmount,
+                   SUM(ISNULL(po.PriceExTotal, 0) + ISNULL(po.GstTotal, 0)) AS TotalOutstanding
+            FROM PurchaseOrders po
+            LEFT JOIN Companies c ON c.CompanyId = po.SupplierId
+            WHERE po.POStatusId IN (2, 3)
+              AND (ISNULL(po.PriceExTotal, 0) + ISNULL(po.GstTotal, 0)) > 0
+            GROUP BY c.Company, c.SupplierCode
+            ORDER BY TotalOutstanding DESC";
 
-        var ids = string.Join(",", invoiceIds);
-        await _db.ExecuteAsync($@"
-            UPDATE Invoices
-            SET ExportedToMYOB = 1,
-                ExportedDate = GETDATE()
-            WHERE InvoiceId IN ({ids})");
-
-        // Log to audit
-        foreach (var id in invoiceIds)
-        {
-            await _db.InsertAsync(@"
-                INSERT INTO InvoiceAudit (InvoiceId, Code, Action, DateEntered)
-                VALUES (@Id, @Code, 'Synced to MYOB', GETDATE())",
-                new() { ["Id"] = id, ["Code"] = userCode });
-        }
+        var dt = await _db.QueryAsync(sql);
+        return dt.Map(MapAgedPayable);
     }
 
-    /// <summary>
-    /// Run data quality checks - find potential issues.
-    /// </summary>
+    private static AgedReceivable MapAgedReceivable(DataRow r) => new()
+    {
+        CustomerName = r["CustomerName"]?.ToString() ?? "",
+        CustomerCode = r["CustomerCode"]?.ToString() ?? "",
+        CurrentAmount = r["CurrentAmount"] != DBNull.Value ? Convert.ToDecimal(r["CurrentAmount"]) : 0,
+        Days30Amount = r["Days30Amount"] != DBNull.Value ? Convert.ToDecimal(r["Days30Amount"]) : 0,
+        Days60Amount = r["Days60Amount"] != DBNull.Value ? Convert.ToDecimal(r["Days60Amount"]) : 0,
+        Days90PlusAmount = r["Days90PlusAmount"] != DBNull.Value ? Convert.ToDecimal(r["Days90PlusAmount"]) : 0,
+        TotalOutstanding = r["TotalOutstanding"] != DBNull.Value ? Convert.ToDecimal(r["TotalOutstanding"]) : 0,
+    };
+
+    private static AgedPayable MapAgedPayable(DataRow r) => new()
+    {
+        SupplierName = r["SupplierName"]?.ToString() ?? "",
+        SupplierCode = r["SupplierCode"]?.ToString() ?? "",
+        CurrentAmount = r["CurrentAmount"] != DBNull.Value ? Convert.ToDecimal(r["CurrentAmount"]) : 0,
+        Days30Amount = r["Days30Amount"] != DBNull.Value ? Convert.ToDecimal(r["Days30Amount"]) : 0,
+        Days60Amount = r["Days60Amount"] != DBNull.Value ? Convert.ToDecimal(r["Days60Amount"]) : 0,
+        Days90PlusAmount = r["Days90PlusAmount"] != DBNull.Value ? Convert.ToDecimal(r["Days90PlusAmount"]) : 0,
+        TotalOutstanding = r["TotalOutstanding"] != DBNull.Value ? Convert.ToDecimal(r["TotalOutstanding"]) : 0,
+    };
+
+    public async Task<ReconciliationSummary> GetSummaryAsync()
+    {
+        var receivables = await GetAgedReceivablesAsync();
+        var agedRec = new AgedReceivables
+        {
+            Current = receivables.Sum(r => r.CurrentAmount),
+            Days31_60 = receivables.Sum(r => r.Days30Amount),
+            Days61_90 = receivables.Sum(r => r.Days60Amount),
+            Over90 = receivables.Sum(r => r.Days90PlusAmount),
+            Total = receivables.Sum(r => r.TotalOutstanding)
+        };
+        
+        var summary = new ReconciliationSummary
+        {
+            TotalReceivables = agedRec.Total,
+            CurrentReceivables = agedRec.Current,
+            OverdueReceivables = agedRec.Days31_60 + agedRec.Days61_90 + agedRec.Over90,
+            ReceivablesCount = receivables.Count,
+            OutstandingTotal = agedRec.Total,
+            OutstandingCount = receivables.Count,
+            LastUpdated = DateTime.Now
+        };
+
+        var recentSql = @"
+            SELECT COUNT(*) AS InvoiceCount,
+                   SUM(ISNULL(NettPriceTotal, 0)) AS MonthlyTotal
+            FROM Invoices
+            WHERE InvoiceDate >= DATEADD(month, -1, GETDATE())
+              AND InvoiceStatusId IN (2, 3)";
+        var recentDt = await _db.QueryAsync(recentSql);
+        if (recentDt.Rows.Count > 0)
+        {
+            summary.MonthlySalesCount = recentDt.Rows[0]["InvoiceCount"] != DBNull.Value 
+                ? Convert.ToInt32(recentDt.Rows[0]["InvoiceCount"]) : 0;
+            summary.MonthlySalesTotal = recentDt.Rows[0]["MonthlyTotal"] != DBNull.Value 
+                ? Convert.ToDecimal(recentDt.Rows[0]["MonthlyTotal"]) : 0;
+        }
+
+        var unsyncedSql = @"
+            SELECT COUNT(*) AS UnsyncedCount,
+                   SUM(ISNULL(NettPriceTotal, 0) + ISNULL(GSTTotal, 0)) AS UnsyncedTotal
+            FROM Invoices
+            WHERE ExportedDate IS NULL
+              AND InvoiceStatusId IN (2, 3)";
+        var unsyncedDt = await _db.QueryAsync(unsyncedSql);
+        if (unsyncedDt.Rows.Count > 0)
+        {
+            summary.UnsyncedCount = unsyncedDt.Rows[0]["UnsyncedCount"] != DBNull.Value 
+                ? Convert.ToInt32(unsyncedDt.Rows[0]["UnsyncedCount"]) : 0;
+            summary.UnsyncedTotal = unsyncedDt.Rows[0]["UnsyncedTotal"] != DBNull.Value 
+                ? Convert.ToDecimal(unsyncedDt.Rows[0]["UnsyncedTotal"]) : 0;
+        }
+
+        var gstSql = @"
+            SELECT SUM(ISNULL(GSTTotal, 0)) AS QuarterlyGst
+            FROM Invoices
+            WHERE InvoiceDate >= DATEADD(quarter, -1, GETDATE())
+              AND InvoiceStatusId IN (2, 3)";
+        var gstDt = await _db.QueryAsync(gstSql);
+        if (gstDt.Rows.Count > 0)
+        {
+            summary.QuarterlyGstTotal = gstDt.Rows[0]["QuarterlyGst"] != DBNull.Value 
+                ? Convert.ToDecimal(gstDt.Rows[0]["QuarterlyGst"]) : 0;
+        }
+
+        return summary;
+    }
+
     public async Task<List<DataQualityIssue>> RunDataQualityChecksAsync()
     {
         var issues = new List<DataQualityIssue>();
 
-        // Check 1: Invoices with unusual amounts (e.g., decimal anomalies)
-        try
+        var sql = @"
+            SELECT InvoiceId, InvoiceNum, CompanyId, (ISNULL(NettPriceTotal, 0) + ISNULL(GSTTotal, 0)) AS Total
+            FROM Invoices
+            WHERE (CompanyId IS NULL OR CompanyId = 0)
+              AND InvoiceStatusId IN (2, 3, 4)
+              AND (ISNULL(NettPriceTotal, 0) + ISNULL(GSTTotal, 0)) > 0";
+        var dt = await _db.QueryAsync(sql);
+        foreach (DataRow r in dt.Rows)
         {
-            var unusualDt = await _db.QueryAsync(@"
-                SELECT InvoiceId, CAST(InvoiceId AS NVARCHAR(20)) AS InvoiceNum, NettPriceTotal
-                FROM Invoices
-                WHERE NettPriceTotal > 0 AND (
-                    NettPriceTotal * 100 - FLOOR(NettPriceTotal * 100) > 0.001
-                    OR NettPriceTotal > 1000000
-                )");
-            foreach (System.Data.DataRow r in unusualDt.Rows)
+            issues.Add(new DataQualityIssue
             {
-                issues.Add(new DataQualityIssue
-                {
-                    Category    = "Invoice Amount Anomaly",
-                    EntityType  = "Invoice",
-                    EntityId    = Convert.ToInt32(r["InvoiceId"]),
-                    EntityLabel = r["InvoiceNum"]?.ToString() ?? "",
-                    Description = $"Unusual amount: {Convert.ToDecimal(r["NettPriceTotal"]):C}",
-                    Severity    = "Medium",
-                });
-            }
+                Severity = "High",
+                Category = "Missing Data",
+                EntityType = "Invoice",
+                EntityLabel = r["InvoiceNum"]?.ToString() ?? "",
+                Description = "Invoice has no customer assigned"
+            });
         }
-        catch (Exception ex) { _logger.LogWarning(ex, "Amount check failed"); }
 
-        // Check 2: Duplicate invoice numbers
-        try
+        var sql2 = @"
+            SELECT InvoiceId, InvoiceNum
+            FROM Invoices
+            WHERE ISNULL(NettPriceTotal, 0) <= 0 AND InvoiceStatusId IN (2, 3)";
+        var dt2 = await _db.QueryAsync(sql2);
+        foreach (DataRow r in dt2.Rows)
         {
-            // Invoice numbers are the InvoiceId so duplicates aren't possible—skip
-            var dupDt = new System.Data.DataTable();
-            foreach (System.Data.DataRow r in dupDt.Rows)
+            issues.Add(new DataQualityIssue
             {
-                issues.Add(new DataQualityIssue
-                {
-                    Category    = "Duplicate Invoice Number",
-                    EntityType  = "Invoice",
-                    EntityLabel = r["InvoiceNum"]?.ToString() ?? "",
-                    Description = $"Found {r["Cnt"]} invoices with same number",
-                    Severity    = "High",
-                });
-            }
+                Severity = "Medium",
+                Category = "Invalid Data",
+                EntityType = "Invoice",
+                EntityLabel = r["InvoiceNum"]?.ToString() ?? "",
+                Description = "Invoice has zero or negative amount"
+            });
         }
-        catch (Exception ex) { _logger.LogWarning(ex, "Duplicate check failed"); }
 
-        // Check 3: Invoices with no line items
-        try
+        var sql3 = @"
+            SELECT c.Company, c.CompanyId, COUNT(*) AS InvoiceCount
+            FROM Invoices i
+            JOIN Companies c ON c.CompanyId = i.CompanyId
+            WHERE i.InvoiceStatusId = 2
+              AND i.InvoiceDate < DATEADD(day, -90, GETDATE())
+            GROUP BY c.Company, c.CompanyId
+            HAVING SUM(ISNULL(i.NettPriceTotal, 0) + ISNULL(i.GSTTotal, 0)) > 0";
+        var dt3 = await _db.QueryAsync(sql3);
+        foreach (DataRow r in dt3.Rows)
         {
-            var noLinesDt = await _db.QueryAsync(@"
-                SELECT i.InvoiceId, CAST(i.InvoiceId AS NVARCHAR(20)) AS InvoiceNum
-                FROM Invoices i
-                LEFT JOIN InvoiceContents c ON i.InvoiceId = c.InvoiceId
-                WHERE i.InvoiceStatusId >= 2
-                GROUP BY i.InvoiceId
-                HAVING COUNT(c.InvoiceItemId) = 0");
-            foreach (System.Data.DataRow r in noLinesDt.Rows)
+            issues.Add(new DataQualityIssue
             {
-                issues.Add(new DataQualityIssue
-                {
-                    Category    = "Empty Invoice",
-                    EntityType  = "Invoice",
-                    EntityId    = Convert.ToInt32(r["InvoiceId"]),
-                    EntityLabel = r["InvoiceNum"]?.ToString() ?? "",
-                    Description = "Issued invoice has no line items",
-                    Severity    = "High",
-                });
-            }
+                Severity = "Low",
+                Category = "Overdue",
+                EntityType = "Customer",
+                EntityLabel = r["Company"]?.ToString() ?? "",
+                Description = $"Customer has overdue invoices over 90 days"
+            });
         }
-        catch (Exception ex) { _logger.LogWarning(ex, "Empty invoice check failed"); }
-
-        // Check 4: GST calculation mismatches (should be ~10% of nett)
-        try
-        {
-            var gstDt = await _db.QueryAsync(@"
-                SELECT InvoiceId, CAST(InvoiceId AS NVARCHAR(20)) AS InvoiceNum, NettPriceTotal, GSTTotal
-                FROM Invoices
-                WHERE NettPriceTotal > 0
-                  AND ABS((NettPriceTotal * 0.1) - GSTTotal) > 0.50
-                  AND GSTTotal > 0");
-            foreach (System.Data.DataRow r in gstDt.Rows)
-            {
-                var nett = Convert.ToDecimal(r["NettPriceTotal"]);
-                var gst  = Convert.ToDecimal(r["GSTTotal"]);
-                issues.Add(new DataQualityIssue
-                {
-                    Category    = "GST Calculation Mismatch",
-                    EntityType  = "Invoice",
-                    EntityId    = Convert.ToInt32(r["InvoiceId"]),
-                    EntityLabel = r["InvoiceNum"]?.ToString() ?? "",
-                    Description = $"Nett: {nett:C}, GST: {gst:C} (expected ~{nett*0.1m:C})",
-                    Severity    = "Medium",
-                });
-            }
-        }
-        catch (Exception ex) { _logger.LogWarning(ex, "GST check failed"); }
 
         return issues;
     }
 
-    /// <summary>
-    /// Get overdue receivables grouped by age bucket.
-    /// </summary>
-    public async Task<AgedReceivables> GetAgedReceivablesAsync()
+    public async Task<List<UnsyncedInvoice>> GetUnsyncedInvoicesAsync(DateTime? fromDate, DateTime? toDate)
     {
-        var dt = await _db.QueryAsync(@"
-            SELECT
-                SUM(CASE WHEN DATEDIFF(day, InvoiceDate, GETDATE()) <= 30 THEN (NettPriceTotal + GSTTotal) ELSE 0 END) AS Current,
-                SUM(CASE WHEN DATEDIFF(day, InvoiceDate, GETDATE()) BETWEEN 31 AND 60 THEN (NettPriceTotal + GSTTotal) ELSE 0 END) AS Days31_60,
-                SUM(CASE WHEN DATEDIFF(day, InvoiceDate, GETDATE()) BETWEEN 61 AND 90 THEN (NettPriceTotal + GSTTotal) ELSE 0 END) AS Days61_90,
-                SUM(CASE WHEN DATEDIFF(day, InvoiceDate, GETDATE()) > 90 THEN (NettPriceTotal + GSTTotal) ELSE 0 END) AS Over90
-            FROM Invoices
-            WHERE InvoiceStatusId IN (2, 5)");
+        var sql = @"
+            SELECT i.InvoiceId, i.InvoiceNum, i.InvoiceDate, c.Company AS CustomerName,
+                   i.TotalExGst, i.GstTotal, i.TotalIncGST,
+                   CASE WHEN i.MyobExportDate IS NOT NULL THEN 'Synced' ELSE 'Pending' END AS MyobStatus
+            FROM Invoices i
+            LEFT JOIN Companies c ON c.CompanyId = i.CompanyId
+            WHERE i.MyobExportDate IS NULL
+              AND i.StatusName IN ('Issued', 'Approved')";
+        
+        if (fromDate.HasValue)
+            sql += $" AND i.InvoiceDate >= '{fromDate.Value:yyyyMMdd}'";
+        if (toDate.HasValue)
+            sql += $" AND i.InvoiceDate <= '{toDate.Value:yyyyMMdd}'";
+        
+        sql += " ORDER BY i.InvoiceDate DESC";
 
-        var r = dt.Rows[0];
-        return new AgedReceivables
+        var dt = await _db.QueryAsync(sql);
+        var result = new List<UnsyncedInvoice>();
+        foreach (DataRow r in dt.Rows)
         {
-            Current    = r["Current"]    == DBNull.Value ? 0m : Convert.ToDecimal(r["Current"]),
-            Days31_60  = r["Days31_60"]  == DBNull.Value ? 0m : Convert.ToDecimal(r["Days31_60"]),
-            Days61_90  = r["Days61_90"]  == DBNull.Value ? 0m : Convert.ToDecimal(r["Days61_90"]),
-            Over90     = r["Over90"]     == DBNull.Value ? 0m : Convert.ToDecimal(r["Over90"]),
-        };
+            result.Add(new UnsyncedInvoice
+            {
+                InvoiceId = Convert.ToInt32(r["InvoiceId"]),
+                InvoiceNum = r["InvoiceNum"]?.ToString() ?? "",
+                InvoiceDate = r["InvoiceDate"] != DBNull.Value ? Convert.ToDateTime(r["InvoiceDate"]) : DateTime.MinValue,
+                CustomerName = r["CustomerName"]?.ToString() ?? "",
+                NettTotal = r["TotalExGst"] != DBNull.Value ? Convert.ToDecimal(r["TotalExGst"]) : 0,
+                GstTotal = r["GstTotal"] != DBNull.Value ? Convert.ToDecimal(r["GstTotal"]) : 0,
+                TotalIncGST = r["TotalIncGST"] != DBNull.Value ? Convert.ToDecimal(r["TotalIncGST"]) : 0,
+                MyobStatus = r["MyobStatus"]?.ToString() ?? ""
+            });
+        }
+        return result;
+    }
+
+    public async Task MarkInvoicesExportedAsync(List<int> invoiceIds, string userCode)
+    {
+        if (invoiceIds == null || invoiceIds.Count == 0) return;
+        
+        var ids = string.Join(",", invoiceIds);
+        var sql = $@"
+            UPDATE Invoices 
+            SET MyobExportDate = GETDATE(),
+                MyobExportUser = '{userCode}'
+            WHERE InvoiceId IN ({ids})";
+        
+        await _db.ExecuteAsync(sql);
+        _logger.LogInformation("Marked {Count} invoices as exported by {User}", invoiceIds.Count, userCode);
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Models
-// ═══════════════════════════════════════════════════════════════════════════
+public class AgedReceivable
+{
+    public string CustomerName { get; set; } = "";
+    public string CustomerCode { get; set; } = "";
+    public decimal CurrentAmount { get; set; }
+    public decimal Days30Amount { get; set; }
+    public decimal Days60Amount { get; set; }
+    public decimal Days90PlusAmount { get; set; }
+    public decimal TotalOutstanding { get; set; }
+}
+
+public class AgedPayable
+{
+    public string SupplierName { get; set; } = "";
+    public string SupplierCode { get; set; } = "";
+    public decimal CurrentAmount { get; set; }
+    public decimal Days30Amount { get; set; }
+    public decimal Days60Amount { get; set; }
+    public decimal Days90PlusAmount { get; set; }
+    public decimal TotalOutstanding { get; set; }
+}
+
+public class ReconciliationSummary
+{
+    public decimal TotalReceivables { get; set; }
+    public decimal TotalPayables { get; set; }
+    public decimal NetPosition { get; set; }
+    public decimal CurrentReceivables { get; set; }
+    public decimal OverdueReceivables { get; set; }
+    public decimal CurrentPayables { get; set; }
+    public decimal OverduePayables { get; set; }
+    public int ReceivablesCount { get; set; }
+    public int PayablesCount { get; set; }
+    public DateTime LastUpdated { get; set; }
+    public int UnsyncedCount { get; set; }
+    public decimal UnsyncedTotal { get; set; }
+    public decimal OutstandingTotal { get; set; }
+    public int OutstandingCount { get; set; }
+    public decimal MonthlySalesTotal { get; set; }
+    public int MonthlySalesCount { get; set; }
+    public decimal QuarterlyGstTotal { get; set; }
+}
+
+public class AgedReceivables
+{
+    public decimal Current { get; set; }
+    public decimal Days31_60 { get; set; }
+    public decimal Days61_90 { get; set; }
+    public decimal Over90 { get; set; }
+    public decimal Total { get; set; }
+}
+
+public class DataQualityIssue
+{
+    public string Issue { get; set; } = "";
+    public string Description { get; set; } = "";
+    public string Severity { get; set; } = "";
+    public string Category { get; set; } = "";
+    public string EntityType { get; set; } = "";
+    public string EntityLabel { get; set; } = "";
+}
 
 public class UnsyncedInvoice
 {
@@ -271,38 +348,6 @@ public class UnsyncedInvoice
     public decimal NettTotal { get; set; }
     public decimal GstTotal { get; set; }
     public decimal TotalIncGST { get; set; }
-    public int StatusId { get; set; }
-    public bool Selected { get; set; } = true;
-    public string MyobStatus { get; set; } = "Ready";
-}
-
-public class ReconciliationSummary
-{
-    public int UnsyncedCount { get; set; }
-    public decimal UnsyncedTotal { get; set; }
-    public int OutstandingCount { get; set; }
-    public decimal OutstandingTotal { get; set; }
-    public int MonthlySalesCount { get; set; }
-    public decimal MonthlySalesTotal { get; set; }
-    public decimal QuarterlyGstTotal { get; set; }
-    public DateTime GeneratedAt { get; set; }
-}
-
-public class DataQualityIssue
-{
-    public string Category { get; set; } = "";
-    public string EntityType { get; set; } = "";
-    public int EntityId { get; set; }
-    public string EntityLabel { get; set; } = "";
-    public string Description { get; set; } = "";
-    public string Severity { get; set; } = "Low";
-}
-
-public class AgedReceivables
-{
-    public decimal Current { get; set; }
-    public decimal Days31_60 { get; set; }
-    public decimal Days61_90 { get; set; }
-    public decimal Over90 { get; set; }
-    public decimal Total => Current + Days31_60 + Days61_90 + Over90;
+    public string MyobStatus { get; set; } = "";
+    public bool Selected { get; set; }
 }

@@ -104,7 +104,7 @@ public class McpIntegrationService
                 ["status"] = "Pending"
             }, userCode);
 
-            return $@"Techlight MyDesk Current Context:
+            return $@"MyDesk Current Context:
 User: {userCode}
 
 Recent Quotes (last 30 days): {SerializeForPrompt(quotes)}
@@ -116,7 +116,7 @@ Pending Purchase Orders: {SerializeForPrompt(pos)}";
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get MyDesk context");
-            return "Techlight context unavailable.";
+            return "Platform context unavailable.";
         }
     }
 

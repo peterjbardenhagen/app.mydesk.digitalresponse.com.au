@@ -53,6 +53,20 @@ public class ActivityService
         if (string.IsNullOrWhiteSpace(userCode)) return;
         try
         {
+            // Log to new EntityAudit table (Unified Audit)
+            await _db.ExecuteAsync(
+                @"INSERT INTO EntityAudit (EntityType, EntityId, Code, Action, Details, Timestamp)
+                  VALUES (@Type, @EId, @Code, @Action, @Ref, GETDATE())",
+                new()
+                {
+                    ["Code"]   = userCode,
+                    ["Type"]   = entityType,
+                    ["EId"]    = (object?)entityId ?? 0,
+                    ["Ref"]    = (object?)entityRef ?? DBNull.Value,
+                    ["Action"] = action,
+                });
+
+            // Keep legacy UserActivity for now to avoid breaking existing queries
             await _db.ExecuteAsync(
                 @"INSERT INTO UserActivity (UserCode, EntityType, EntityId, EntityRef, Action, ActivityDate)
                   VALUES (@Code, @Type, @EId, @Ref, @Action, GETDATE())",

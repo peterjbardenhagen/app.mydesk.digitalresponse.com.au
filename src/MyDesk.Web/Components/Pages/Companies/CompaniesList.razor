@@ -2,13 +2,15 @@
 @attribute [Authorize]
 @inject CompanyService CompanyService
 @inject ISnackbar Snackbar
+@inject IJSRuntime JsRuntime
+@using Microsoft.JSInterop
 
-<PageTitle>Companies - Techlight MyDesk</PageTitle>
+<PageTitle>Companies - MyDesk</PageTitle>
 
 <div class="tl-page-header">
     <div>
         <div class="tl-breadcrumb">
-            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/">MyDesk</a><span class="sep">/</span>
             <span style="color:var(--gray-700);font-weight:500;">Companies</span>
         </div>
         <h1>Companies</h1>
@@ -27,6 +29,10 @@
                       Clearable="true" Margin="Margin.Dense" Style="flex:1;" />
         <MudButton OnClick="LoadAsync" Color="Color.Primary" Variant="Variant.Filled"
                    Size="Size.Small">Search</MudButton>
+    </div>
+    <div class="d-flex gap-2 mt-2">
+        <MudButton OnClick="ExportCsv" Variant="Variant.Outlined" Color="Color.Default"
+                   Size="Size.Small" StartIcon="@Icons.Material.Rounded.Download">Export CSV</MudButton>
     </div>
 </MudPaper>
 
@@ -84,6 +90,33 @@
             await LoadAsync();
         }
         catch (Exception ex) { Snackbar.Add($"Delete failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task ExportCsv()
+    {
+        if (!_companies.Any())
+        {
+            Snackbar.Add("No data to export", Severity.Warning);
+            return;
+        }
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("ID,Company,Phone,Email,Suburb,State,ABN,Terms");
+
+        foreach (var c in _companies)
+        {
+            sb.AppendLine($"{c.CompanyId},\"{c.CompanyName}\",\"{c.Phone}\",\"{c.Email}\",\"{c.Suburb}\",\"{c.State}\",\"{c.ABN}\",\"{c.PaymentTerms}\"");
+        }
+
+        var csv = sb.ToString();
+        var fileName = $"Companies_Export_{DateTime.Now:yyyyMMdd}.csv";
+
+        var bytes = System.Text.Encoding.UTF8.GetBytes(csv);
+        var base64 = Convert.ToBase64String(bytes);
+        var url = $"data:text/csv;base64,{base64}";
+        await JsRuntime.InvokeVoidAsync("window.open", url, "_blank");
+        
+        Snackbar.Add($"Exported {_companies.Count} companies", Severity.Success);
     }
 }
 

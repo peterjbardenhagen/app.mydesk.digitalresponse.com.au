@@ -316,7 +316,8 @@ else
             "Delete Asset",
             $"Are you sure you want to delete '{asset.OriginalFileName}'?",
             yesText: "Delete", 
-            cancelText: "Cancel");
+            cancelText: "Cancel",
+            options: new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true });
 
         if (result == true)
         {
@@ -345,10 +346,10 @@ else
         var parameters = new DialogParameters
         {
             ["Title"] = "Add New Link",
-            ["Link"] = new ImportantLink { DisplayOrder = _importantLinks.Count + 1 }
+            ["Link"] = new ImportantLink { DisplayOrder = _importantLinks.Count +1 }
         };
-
-        var dialog = DialogService.Show<LinkDialog>("Add Link", parameters);
+        
+        var dialog = DialogService.Show<LinkDialog>("Add Link", parameters, new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true });
         var result = await dialog.Result;
 
         if (!result.Canceled)
@@ -381,8 +382,8 @@ else
                 IsActive = link.IsActive
             }
         };
-
-        var dialog = DialogService.Show<LinkDialog>("Edit Link", parameters);
+        
+        var dialog = DialogService.Show<LinkDialog>("Edit Link", parameters, new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true });
         var result = await dialog.Result;
 
         if (!result.Canceled)
@@ -408,7 +409,8 @@ else
             "Delete Link",
             $"Are you sure you want to delete '{link.Title}'?",
             yesText: "Delete", 
-            cancelText: "Cancel");
+            cancelText: "Cancel",
+            options: new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true });
 
         if (result == true)
         {

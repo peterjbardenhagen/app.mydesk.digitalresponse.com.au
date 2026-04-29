@@ -97,7 +97,13 @@ builder.Services.AddSingleton<EntityColorService>();
 builder.Services.AddSingleton<UserPreferencesService>();
 
 // Platform settings service (tenant-aware)
-builder.Services.AddSingleton<PlatformSettingsService>();
+builder.Services.AddSingleton<PlatformSettingsService>(sp => 
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var http = sp.GetRequiredService<IHttpContextAccessor>();
+    var db = sp.GetRequiredService<DatabaseService>();
+    return new PlatformSettingsService(config, http, db);
+});
 
 // Auth service (scoped to request)
 builder.Services.AddScoped<AuthService>();
@@ -115,7 +121,15 @@ builder.Services.AddScoped<EmailService>(sp =>
     var platformSettings = sp.GetRequiredService<PlatformSettingsService>().Current;
     return new EmailService(db, activity, config, logger, platformSettings);
 });
-builder.Services.AddScoped<PdfService>();
+builder.Services.AddScoped<PdfService>(sp => 
+{
+    var db = sp.GetRequiredService<DatabaseService>();
+    var logger = sp.GetRequiredService<ILogger<PdfService>>();
+    var platformSettings = sp.GetRequiredService<PlatformSettingsService>().Current;
+    var svc = new PdfService(db, logger);
+    svc.SetSettings(platformSettings);
+    return svc;
+});
 builder.Services.AddScoped<QuoteService>();
 builder.Services.AddScoped<InvoiceService>();
 builder.Services.AddScoped<PurchaseOrderService>();
@@ -144,10 +158,13 @@ builder.Services.AddScoped<TransporterService>();
 builder.Services.AddScoped<LogService>();
 builder.Services.AddScoped<ExpenseService>();
 builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<AuditService>();
+builder.Services.AddScoped<AIFunctionExecutor>();
 
 builder.Services.AddHttpClient();
 builder.Services.Configure<AzureAIOptions>(builder.Configuration.GetSection(AzureAIOptions.Section));
 builder.Services.AddScoped<AzureAIService>();
+builder.Services.AddScoped<SupplierQuoteParseService>();
 builder.Services.AddScoped<McpIntegrationService>();
 
 // Proposal #272: AI Enhancement services

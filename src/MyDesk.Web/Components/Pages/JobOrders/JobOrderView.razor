@@ -7,7 +7,7 @@
 @inject TransporterService TransporterSvc
 @inject AuthenticationStateProvider AuthStateProvider
 
-<PageTitle>Job Order #@Id - Techlight MyDesk</PageTitle>
+<PageTitle>Job Order #@Id - MyDesk</PageTitle>
 
 @if (_jo == null)
 {
@@ -18,7 +18,7 @@ else
     <div class="tl-page-header">
         <div>
             <div class="tl-breadcrumb">
-                <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+                <a href="/">MyDesk</a><span class="sep">/</span>
                 <a href="/job-orders">Job Orders</a><span class="sep">/</span>
                 <span style="color:var(--gray-700);font-weight:500;">Job #@_jo.JobOrderNumber</span>
             </div>

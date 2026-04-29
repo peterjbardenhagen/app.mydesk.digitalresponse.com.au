@@ -2,11 +2,13 @@
 @page "/contacts/{Id:int}/edit"
 @attribute [Authorize]
 @inject ContactService ContactService
+@inject CompanyService CompanyService
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IDialogService Dialog
 
-<PageTitle>@(IsNew ? "New" : "Edit") Contact - Techlight MyDesk</PageTitle>
+<PageTitle>@(IsNew ? "New" : "Edit") Contact - MyDesk</PageTitle>
 
 <div class="d-flex justify-space-between align-center mb-4">
     <MudText Typo="Typo.h4" Class="font-weight-bold">@(IsNew ? "New Contact" : $"Edit {_contact.FullName}")</MudText>
@@ -27,8 +29,20 @@
             <MudItem xs="12" sm="4">
                 <MudTextField @bind-Value="_contact.Position" Label="Position" Variant="Variant.Outlined" />
             </MudItem>
+            
             <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_contact.CompanyName" Label="Company Name" Variant="Variant.Outlined" Required="true" />
+                <MudSelect @bind-Value="_selectedCompanyId" Label="Company" Variant="Variant.Outlined"
+                           Clearable="true" Placeholder="Select company...">
+                    @foreach (var c in _companies)
+                    {
+                        <MudSelectItem T="int?" Value="c.CompanyId">@c.CompanyName</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudButton Variant="Variant.Text" Size="Size.Small" Class="mt-1" 
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="CreateNewCompany">
+                    Create New Company
+                </MudButton>
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudTextField @bind-Value="_contact.Email" Label="Email" Variant="Variant.Outlined" InputType="InputType.Email" />
@@ -66,6 +80,23 @@
             <MudItem xs="12" sm="6">
                 <MudTextField @bind-Value="_contact.SupplierCode" Label="Supplier Code" Variant="Variant.Outlined" />
             </MudItem>
+
+            <MudItem xs="12"><MudDivider Class="my-2" /><MudText Typo="Typo.subtitle1">Customer Portal Access</MudText></MudItem>
+            <MudItem xs="12" sm="4">
+                <MudSwitch @bind-Value="_portalEnabled" Label="Enable Portal Access" Color="Color.Primary" />
+            </MudItem>
+            @if (_portalEnabled)
+            {
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="_portalUsername" Label="Portal Username" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="_portalPassword" Label="Portal Password" Variant="Variant.Outlined" InputType="InputType.Password" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudDatePicker @bind-Date="_portalExpiry" Label="Expiry Date" Variant="Variant.Outlined" Clearable="true" />
+                </MudItem>
+            }
         </MudGrid>
 
         <div class="d-flex justify-end gap-2 mt-4">
@@ -85,20 +116,67 @@
     private bool _isValid;
     private bool _saving;
     private Contact _contact = new();
+    private List<Company> _companies = new();
+    private int? _selectedCompanyId;
+    private bool _portalEnabled;
+    private string _portalUsername = "";
+    private string _portalPassword = "";
+    private DateTime? _portalExpiry;
 
     protected override async Task OnInitializedAsync()
     {
+        _companies = await CompanyService.GetCompaniesForDropdownAsync();
+        
         if (!IsNew)
         {
             var existing = await ContactService.GetContactAsync(Id!.Value);
-            if (existing != null) _contact = existing;
+            if (existing != null) 
+            {
+                _contact = existing;
+                _selectedCompanyId = existing.CompanyId > 0 ? existing.CompanyId : null;
+                _portalEnabled = existing.IsPortalEnabled;
+                _portalUsername = existing.PortalUsername ?? "";
+                _portalExpiry = existing.PortalAccessExpires;
+            }
+        }
+    }
+
+    private async Task CreateNewCompany()
+    {
+        var parameters = new DialogParameters<CompanyDialog>();
+        parameters.Add("Company", new Company());
+        
+        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await Dialog.ShowAsync<CompanyDialog>("Create New Company", parameters, options);
+        var result = await dialog.Result;
+        
+        if (result is { Canceled: false } && result.Data is Company newCompany)
+        {
+            var companyId = await CompanyService.SaveCompanyAsync(newCompany);
+            newCompany.CompanyId = companyId;
+            _companies.Add(newCompany);
+            _selectedCompanyId = companyId;
+            StateHasChanged();
+            Snackbar.Add($"Company '{newCompany.CompanyName}' created", Severity.Success);
         }
     }
 
     private async Task SaveAsync()
     {
-        await _form.Validate();
-        if (!_isValid) return;
+        if (string.IsNullOrWhiteSpace(_contact.FirstName) || string.IsNullOrWhiteSpace(_contact.Surname))
+        {
+            Snackbar.Add("First name and surname are required", Severity.Warning);
+            return;
+        }
+        
+        _contact.CompanyId = _selectedCompanyId ?? 0;
+        
+        if (_portalEnabled && (string.IsNullOrWhiteSpace(_portalUsername) || string.IsNullOrWhiteSpace(_portalPassword)))
+        {
+            Snackbar.Add("Portal username and password are required when portal access is enabled", Severity.Warning);
+            return;
+        }
+        
         _saving = true;
         try
         {
@@ -114,6 +192,16 @@
             else
             {
                 await ContactService.UpdateContactAsync(_contact);
+                
+                if (_portalEnabled && !string.IsNullOrWhiteSpace(_portalUsername))
+                {
+                    await ContactService.SetPortalCredentialsAsync(_contact.ContactId, _portalUsername, _portalPassword, _portalExpiry);
+                }
+                else if (!_portalEnabled)
+                {
+                    await ContactService.DisablePortalAsync(_contact.ContactId);
+                }
+                
                 Snackbar.Add("Contact updated", Severity.Success);
                 Nav.NavigateTo($"/contacts/{_contact.ContactId}");
             }
@@ -122,4 +210,3 @@
         finally { _saving = false; }
     }
 }
-

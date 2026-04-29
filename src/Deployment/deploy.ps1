@@ -1,76 +1,78 @@
-# Techlight MyDesk - Blazor Server Deployment Script
-# ===================================================
-param([string]$Environment = "Production")
+param(
+    [string]$SiteName = "MyDeskV3",
+    [string]$AppPoolName = "MyDeskV3",
+    [string]$PublishPath = "",
+    [switch]$WhatIf
+)
 
-# ── Check elevation ─────────────────────────────────────────────────────────
-$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-if (!$isAdmin) {
-    Write-Host "ERROR: This script must run as Administrator to manage IIS." -ForegroundColor Red
-    Write-Host "Right-click PowerShell → 'Run as Administrator', then re-run:" -ForegroundColor Yellow
-    Write-Host "  cd '$PSScriptRoot'" -ForegroundColor Gray
-    Write-Host "  .\deploy.ps1" -ForegroundColor Gray
-    exit 1
+$ErrorActionPreference = "Stop"
+
+$ROOT = Split-Path -Parent $PSScriptRoot
+$SRC = Join-Path $ROOT "src"
+$WEB = Join-Path $SRC "MyDesk.Web"
+$DEPLOY = Join-Path $ROOT "Deployment\publish"
+
+$APPCMD = "$env:SystemRoot\System32\inetsrv\appcmd.exe"
+
+function Write-Step($msg) { Write-Host "[DEPLOY] $msg" -ForegroundColor Cyan }
+function Write-Success($msg) { Write-Host "[OK] $msg" -ForegroundColor Green }
+function Write-Error($msg) { Write-Host "[ERROR] $msg" -ForegroundColor Red }
+
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "  MyDeskV3 IIS Deployment" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host ""
+
+if (-not $PublishPath) { $PublishPath = $DEPLOY }
+
+# Step 1: Build
+Write-Step "Building application..."
+Push-Location $WEB
+try {
+    dotnet publish -c Release -r win-x64 --self-contained -o $DEPLOY -p:PublishSingleFile=false
+    if ($LASTEXITCODE -ne 0) { throw "Build failed" }
+    Write-Success "Build complete"
+}
+finally { Pop-Location }
+
+# Step 2: Stop AppPool
+Write-Step "Stopping Application Pool..."
+& $APPCMD stop apppool $AppPoolName 2>$null
+
+# Step 3: Create AppPool if needed
+Write-Step "Checking Application Pool..."
+$pool = & $APPCMD list apppool $AppPoolName 2>$null
+if (-not $pool) {
+    Write-Step "Creating Application Pool..."
+    & $APPCMD add apppool /name:$AppPoolName /managedRuntimeVersion:v4.0 /managedPipelineMode:Integrated
+    & $APPCMD set apppool /name:$AppPoolName /processModel.identityType:ApplicationPoolIdentity
 }
 
-Write-Host "`nTechlight MyDesk - Deploy`n" -ForegroundColor Cyan
-
-# ── Paths ───────────────────────────────────────────────────────────────────
-$src    = Join-Path $PSScriptRoot "..\MyDesk.Web"
-$pub    = Join-Path $PSScriptRoot "publish"
-$site   = "DR.MyDesk"
-$path   = "C:\inetpub\wwwroot\DR.MyDesk"
-$appcmd = "$env:SystemRoot\System32\inetsrv\appcmd.exe"
-
-# ── Build ───────────────────────────────────────────────────────────────────
-Write-Host "  Building $Environment..." -NoNewline
-$build = dotnet publish $src -c $Environment -o $pub --nologo 2>&1
-if ($LASTEXITCODE -ne 0) {
-    Write-Host " FAILED" -ForegroundColor Red
-    $build | Write-Host
-    exit 1
-}
-Write-Host " OK" -ForegroundColor Green
-
-# ── IIS (using appcmd - works in all PowerShell versions) ──────────────────
-Write-Host "  IIS..." -NoNewline
-
-# App Pool
-& $appcmd list apppool /name:$site | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    & $appcmd add apppool /name:$site /managedRuntimeVersion:"" | Out-Null
+# Step 4: Create Site if needed
+Write-Step "Checking Site..."
+$site = & $APPCMD list site $SiteName 2>$null
+if (-not $site) {
+    Write-Step "Creating Site..."
+    $port = 8080
+    & $APPCMD add site /name:$SiteName /id:3 /physicalPath:$DEPLOY /bindings:"http/*:$port"
+    & $APPCMD set apppool /name:$AppPoolName
+    Write-Host "      Site created on port $port" -ForegroundColor Yellow
 }
 
-# Site
-& $appcmd list site /name:$site | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    & $appcmd add site /name:$site /physicalPath:$path /bindings:"http/*:80:,http/*:8080:,https/*:443:" | Out-Null
-    & $appcmd set site /site.name:$site /[path='/'].applicationPool:$site | Out-Null
-} else {
-    # Ensure path and pool updated
-    & $appcmd set site /site.name:$site /[path='/'].physicalPath:$path | Out-Null
-    & $appcmd set site /site.name:$site /[path='/'].applicationPool:$site | Out-Null
-}
+# Step 5: Set physical path
+Write-Step "Updating physical path..."
+& $APPCMD set vdir "$SiteName/" /physicalPath:$DEPLOY
 
-Write-Host " OK" -ForegroundColor Green
+# Step 6: Start AppPool
+Write-Step "Starting Application Pool..."
+& $APPCMD start apppool $AppPoolName
 
-# ── Deploy ─────────────────────────────────────────────────────────────────
-Write-Host "  Deploy..." -NoNewline
+# Step 7: Start Site
+Write-Step "Starting Site..."
+& $APPCMD start site $SiteName
 
-# Stop pool
-& $appcmd stop apppool /apppool.name:$site | Out-Null
-
-# Ensure directory exists
-if (!(Test-Path $path)) {
-    New-Item -ItemType Directory -Path $path -Force | Out-Null
-}
-
-# Robocopy mirror (exclude Logs to preserve them)
-& robocopy $pub $path /MIR /XD Logs /NJH /NJS /NP | Out-Null
-
-# Start pool
-& $appcmd start apppool /apppool.name:$site | Out-Null
-
-Write-Host " OK" -ForegroundColor Green
-
-Write-Host "`nReady: http://localhost, http://localhost:8080, https://localhost`n" -ForegroundColor Cyan
-exit 0
+Write-Host ""
+Write-Success "Deployment complete!"
+Write-Host "      URL: http://localhost:8080" -ForegroundColor Yellow
+Write-Host ""

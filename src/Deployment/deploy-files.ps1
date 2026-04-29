@@ -1,8 +1,8 @@
 param([string]$NeedsAdmin = "check")
 
 $pub  = 'C:\Development\Techlight-Projects\Techlight.digitalresponse.com.au\src\Deployment\publish'
-$path = 'C:\inetpub\wwwroot\DR.MyDesk'
-$site = 'DR.MyDesk'
+$path = 'C:\inetpub\wwwroot\MyDesk'
+$site = 'MyDesk'
 
 Write-Host "Stopping app pool '$site'..." -ForegroundColor Yellow
 & C:\Windows\System32\inetsrv\appcmd.exe stop apppool "/apppool.name:$site" 2>&1 | Out-Null

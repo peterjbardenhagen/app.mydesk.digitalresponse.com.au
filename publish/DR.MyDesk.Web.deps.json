@@ -7,9 +7,9 @@
   "targets": {
     ".NETCoreApp,Version=v8.0": {},
     ".NETCoreApp,Version=v8.0/win-x64": {
-      "DR.MyDesk.Web/1.0.0": {
+      "MyDesk.Web/1.0.0": {
         "dependencies": {
-          "DR.MyDesk.Shared": "1.0.0",
+          "MyDesk.Shared": "1.0.0",
           "Microsoft.Data.SqlClient": "5.2.0",
           "MudBlazor": "7.15.0",
           "MudBlazor.Markdown": "7.8.0",
@@ -21,7 +21,7 @@
           "Serilog.Sinks.File": "6.0.0"
         },
         "runtime": {
-          "DR.MyDesk.Web.dll": {}
+          "MyDesk.Web.dll": {}
         }
       },
       "Azure.Core/1.35.0": {
@@ -577,7 +577,7 @@
           }
         }
       },
-      "DR.MyDesk.Shared/1.0.0": {
+      "MyDesk.Shared/1.0.0": {
         "dependencies": {
           "Microsoft.Data.SqlClient": "5.2.0",
           "Microsoft.Extensions.Logging.Abstractions": "8.0.1",
@@ -585,7 +585,7 @@
           "SkiaSharp": "2.88.8"
         },
         "runtime": {
-          "DR.MyDesk.Shared.dll": {
+          "MyDesk.Shared.dll": {
             "assemblyVersion": "1.0.0.0",
             "fileVersion": "1.0.0.0"
           }
@@ -594,7 +594,7 @@
     }
   },
   "libraries": {
-    "DR.MyDesk.Web/1.0.0": {
+    "MyDesk.Web/1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
@@ -935,7 +935,7 @@
       "path": "system.security.cryptography.protecteddata/8.0.0",
       "hashPath": "system.security.cryptography.protecteddata.8.0.0.nupkg.sha512"
     },
-    "DR.MyDesk.Shared/1.0.0": {
+    "MyDesk.Shared/1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

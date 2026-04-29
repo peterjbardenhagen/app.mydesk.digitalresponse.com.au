@@ -3,8 +3,9 @@
 @inject DashboardService DashboardService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IDialogService DialogService
+@inject PlatformSettingsService PlatformSettings
 
-<PageTitle>Dashboard - Techlight MyDesk</PageTitle>
+<PageTitle>Dashboard - @PlatformSettings.GetBrandingName()</PageTitle>
 
 <AuthorizeView Context="authContext">
     @* ── Enterprise Dashboard Header ──────────────────────────────────────────── *@
@@ -21,7 +22,7 @@
                 </div>
                 <h1 class="tl-welcome-title">Welcome back, @FirstName(authContext.User.Identity?.Name)</h1>
                 <p class="tl-welcome-subtitle">
-                    Real-time business intelligence for Techlight. 
+                    Real-time business intelligence for @PlatformSettings.GetBrandingName(). 
                     @if (_isDirectorOrAdmin)
                     {
                         <span>Accessing full company analytics and team performance metrics.</span>
@@ -62,17 +63,6 @@
 }
 else
 {
-    @* ── Dashboard Header with Time Period Selector ─────────────────────────── *@
-    <div class="tl-dashboard-period-selector">
-        <div class="tl-period-label">Time Period:</div>
-        <MudSelect T="ChartPeriod" Variant="Variant.Outlined" Dense="true" Class="tl-period-select" Value="_chartPeriod" ValueChanged="SelectPeriodAsync">
-            @foreach (var period in _periodOptions)
-            {
-                <MudSelectItem T="ChartPeriod" Value="@period.Key">@period.Value</MudSelectItem>
-            }
-        </MudSelect>
-    </div>
-
     @* ── Executive KPI Cards ──────────────────────────────────────────────────── *@
     <div class="tl-kpi-section">
         <div class="tl-kpi-grid">
@@ -175,9 +165,20 @@ else
         </div>
     </div>
 
+    @* ── Dashboard Header with Time Period Selector ─────────────────────────── *@
+    <div class="tl-dashboard-period-selector">
+        <div class="tl-period-label">Time Period:</div>
+        <MudSelect T="ChartPeriod" Variant="Variant.Outlined" Dense="true" Class="tl-period-select" Value="_chartPeriod" ValueChanged="SelectPeriodAsync">
+            @foreach (var period in _periodOptions)
+            {
+                <MudSelectItem T="ChartPeriod" Value="@period.Key">@period.Value</MudSelectItem>
+            }
+        </MudSelect>
+    </div>
+
     @* ── Dashboard Carousel (Business Intelligence) ─────────────────────────── *@
     <MudItem xs="12" Class="pa-0 mb-6">
-        <DashboardCarousel Metrics="_metrics" IsDirector="_isDirectorOrAdmin" UserCode="_userCode" />
+        <DashboardCarousel Metrics="_metrics" IsDirector="_isDirectorOrAdmin" UserCode="_userCode" ChartSeries="_chartSeries" XAxisLabels="_xAxisLabels" />
     </MudItem>
 
     @* ── Performance View Selector ─────────────────────────────────────────────── *@
@@ -205,7 +206,7 @@ else
     </MudItem>
 
     @* ── User KPI Card (Personal Performance) ───────────────────────────────── *@
-    @if (_userKpi != null || _performanceView == PerformanceView.Company)
+    @if ((_userKpi != null || _myKpi != null) || _performanceView == PerformanceView.Company)
     {
         <MudItem xs="12" Class="pa-0 mb-6">
             <div class="tl-user-kpi-section">
@@ -219,46 +220,34 @@ else
                     </div>
                 </div>
                 
-                <div class="tl-user-kpi-grid">
-                    @if (_userKpi != null)
+                <MudGrid Spacing="4">
+                    @if (_performanceView == PerformanceView.CompareUsers && _myKpi != null)
                     {
-                        <div class="tl-user-kpi-card">
-                            <div class="tl-user-kpi-icon teal">
-                                <MudIcon Icon="@Icons.Material.Rounded.RequestQuote" Size="Size.Small" />
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.subtitle2" Class="mb-3">Your Performance</MudText>
+                            <div class="tl-user-kpi-grid">
+                                @RenderUserKpiCards(_myKpi)
                             </div>
-                            <div class="tl-user-kpi-value">@_userKpi.QuotesRaisedThisMonth</div>
-                            <div class="tl-user-kpi-label">Quotes Raised</div>
-                            <div class="tl-user-kpi-sub">@_userKpi.QuotesWonThisMonth won (@_userKpi.WinRate.ToString("N0")%)</div>
-                        </div>
-                        <div class="tl-user-kpi-card">
-                            <div class="tl-user-kpi-icon gold">
-                                <MudIcon Icon="@Icons.Material.Rounded.ReceiptLong" Size="Size.Small" />
-                            </div>
-                            <div class="tl-user-kpi-value">@_userKpi.InvoicesClosedThisMonth</div>
-                            <div class="tl-user-kpi-label">Invoices Closed</div>
-                            <div class="tl-user-kpi-sub">@Fmt(_userKpi.InvoiceValueThisMonth)</div>
-                        </div>
-                        <div class="tl-user-kpi-card">
-                            <div class="tl-user-kpi-icon success">
-                                <MudIcon Icon="@Icons.Material.Rounded.TrendingUp" Size="Size.Small" />
-                            </div>
-                            <div class="tl-user-kpi-value">@Fmt(_userKpi.YtdRevenue)</div>
-                            <div class="tl-user-kpi-label">YTD Revenue</div>
-                            <div class="tl-user-kpi-sub">Rank #@_userKpi.Rank in team</div>
-                        </div>
+                        </MudItem>
+                        @if (_userKpi != null)
+                        {
+                            <MudItem xs="12" md="6">
+                                <MudText Typo="Typo.subtitle2" Class="mb-3">@_userKpi.UserName's Performance</MudText>
+                                <div class="tl-user-kpi-grid">
+                                    @RenderUserKpiCards(_userKpi)
+                                </div>
+                            </MudItem>
+                        }
                     }
-                    @if (_userKpi != null)
+                    else if (_userKpi != null)
                     {
-                        <div class="tl-user-kpi-card">
-                            <div class="tl-user-kpi-icon info">
-                                <MudIcon Icon="@Icons.Material.Rounded.AccessTime" Size="Size.Small" />
+                        <MudItem xs="12">
+                            <div class="tl-user-kpi-grid">
+                                @RenderUserKpiCards(_userKpi)
                             </div>
-                            <div class="tl-user-kpi-value">@_userKpi.PendingQuotes</div>
-                            <div class="tl-user-kpi-label">Pending Quotes</div>
-                            <div class="tl-user-kpi-sub @_userKpi.OverdueQuotes > 5 ? "warning" : "">@_userKpi.OverdueQuotes overdue</div>
-                        </div>
+                        </MudItem>
                     }
-                </div>
+                </MudGrid>
             </div>
         </MudItem>
     }
@@ -385,8 +374,47 @@ else
 }
 
 @code {
+    private RenderFragment RenderUserKpiCards(UserKPI kpi) => __builder =>
+    {
+        <div class="tl-user-kpi-card">
+            <div class="tl-user-kpi-icon teal">
+                <MudIcon Icon="@Icons.Material.Rounded.RequestQuote" Size="Size.Small" />
+            </div>
+            <div class="tl-user-kpi-value">@kpi.QuotesRaisedThisMonth</div>
+            <div class="tl-user-kpi-label">Quotes Raised</div>
+            <div class="tl-user-kpi-sub">@kpi.QuotesWonThisMonth won (@kpi.WinRate.ToString("N0")%)</div>
+        </div>
+        <div class="tl-user-kpi-card">
+            <div class="tl-user-kpi-icon gold">
+                <MudIcon Icon="@Icons.Material.Rounded.ReceiptLong" Size="Size.Small" />
+            </div>
+            <div class="tl-user-kpi-value">@kpi.InvoicesClosedThisMonth</div>
+            <div class="tl-user-kpi-label">Invoices Closed</div>
+            <div class="tl-user-kpi-sub">@Fmt(kpi.InvoiceValueThisMonth)</div>
+        </div>
+        <div class="tl-user-kpi-card">
+            <div class="tl-user-kpi-icon success">
+                <MudIcon Icon="@Icons.Material.Rounded.TrendingUp" Size="Size.Small" />
+            </div>
+            <div class="tl-user-kpi-value">@Fmt(kpi.YtdRevenue)</div>
+            <div class="tl-user-kpi-label">YTD Revenue</div>
+            <div class="tl-user-kpi-sub">Rank #@kpi.Rank in team</div>
+        </div>
+        <div class="tl-user-kpi-card">
+            <div class="tl-user-kpi-icon info">
+                <MudIcon Icon="@Icons.Material.Rounded.AccessTime" Size="Size.Small" />
+            </div>
+            <div class="tl-user-kpi-value">@kpi.PendingQuotes</div>
+            <div class="tl-user-kpi-label">Pending Quotes</div>
+            <div class="tl-user-kpi-sub @(kpi.OverdueQuotes > 5 ? "warning" : "")">@kpi.OverdueQuotes overdue</div>
+        </div>
+    };
+}
+
+@code {
     private DashboardMetrics? _metrics;
     private UserKPI? _userKpi;
+    private UserKPI? _myKpi;
     private bool _isDirectorOrAdmin;
     private string? _userCode;
     private PerformanceView _performanceView = PerformanceView.Personal;
@@ -438,6 +466,7 @@ else
         
         // Find current user's KPI
         _userKpi = _metrics?.TeamMemberKPIs?.FirstOrDefault(k => k.UserCode == _userCode);
+        _myKpi = _userKpi;
 
         // Seed chart from already-loaded metrics data
         _xAxisLabels = new[]{"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
@@ -580,7 +609,7 @@ else
 
     private void ShowHealthRecommendations()
     {
-        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium };
+        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Medium };
         DialogService.Show<HealthRecommendationsDialog>("", options);
     }
 }

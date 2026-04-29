@@ -5,7 +5,7 @@
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
 
-<PageTitle>Reports - Techlight MyDesk</PageTitle>
+<PageTitle>Reports - MyDesk</PageTitle>
 
 <div class="tl-page-header">
     <div>
@@ -335,7 +335,7 @@
     private ReportResult? _currentResult;
     private List<ReportDefinition>? _savedReports;
     private bool _showSaveDialog = false;
-    private DialogOptions _dialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
+    private DialogOptions _dialogOptions = new() { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
 
     private IEnumerable<List<string>> _itemsToDisplay => _currentResult?.Rows.Take(100) ?? Enumerable.Empty<List<string>>();
 

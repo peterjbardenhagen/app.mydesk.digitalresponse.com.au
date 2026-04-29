@@ -14,22 +14,41 @@ public class NavMenuService
 
     public static readonly IReadOnlyList<NavMenuItem> AllItems = new List<NavMenuItem>
     {
-        new("dashboard",       "Dashboard",       "/",                "Overview"),
-        new("ask-ai",          "Ask AI",           "/ask-ai",          "Overview"),
-        new("quotes",          "Quotes",           "/quotes",          "Sales"),
-        new("invoices",        "Invoices",         "/invoices",        "Sales"),
-        new("despatch",        "Despatch",         "/despatch",        "Sales"),
-        new("purchase-orders", "Purchase Orders",  "/purchase-orders", "Purchasing"),
-        new("rfq",             "RFQ",              "/rfq",             "Purchasing"),
+        // Quick Access
+        new("dashboard",       "Dashboard",       "/",                "QuickAccess"),
+        new("activity",        "Latest Activity", "/activity",        "QuickAccess"),
+        new("favourites",      "Favourites",      "/favourites",      "QuickAccess"),
+        
+        // CRM
         new("contacts",        "Contacts",         "/contacts",        "CRM"),
         new("companies",       "Companies",        "/companies",       "CRM"),
         new("call-reports",    "Call Reports",     "/call-reports",    "CRM"),
         new("sales-projects",  "Sales Projects",   "/sales-projects",  "CRM"),
+        
+        // Sales
+        new("quotes",          "Quotes",           "/quotes",          "Sales"),
+        new("invoices",        "Invoices",         "/invoices",        "Sales"),
+        new("despatch",        "Despatch",         "/despatch",        "Sales"),
+        
+        // Purchasing
+        new("purchase-orders", "Purchase Orders",  "/purchase-orders", "Purchasing"),
+        new("expenses",        "Expenses",         "/expenses",        "Purchasing"),
+        new("rfq",             "RFQ",              "/rfq",             "Purchasing"),
+        
+        // Operations
         new("job-orders",      "Job Orders",       "/job-orders",      "Operations"),
         new("products",        "Products",         "/products",        "Operations"),
+        
+        // Insights
         new("reports",         "Reports",          "/reports",         "Insights"),
         new("noticeboard",     "Noticeboard",      "/noticeboard",     "Insights"),
-        new("help",            "Help",             "/help",            "Support"),
+        
+        // Marketing
+        new("marketing",       "Marketing Hub",    "/marketing",       "Marketing"),
+        
+        // Support
+        new("ask-ai",          "Ask AI",           "/ask-ai",          "Support"),
+        new("help",            "Help Centre",      "/help",            "Support"),
         new("release-notes",   "Release Notes",    "/release-notes",   "Support"),
     };
 

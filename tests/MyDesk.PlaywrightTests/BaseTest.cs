@@ -79,8 +79,8 @@ public abstract class BaseTest
         await Page.FillAsync("input[name='login']", Settings.TestUser.Username);
         await Page.FillAsync("input[name='password']", Settings.TestUser.Password);
         
-        // Click login button (MudBlazor renders as button.mud-button-filled)
-        await Page.ClickAsync("button.mud-button-filled:has-text('Sign In')");
+        // Click login button (MudBlazor renders as button.mud-button-filled, we also have id="submit-btn")
+        await Page.ClickAsync("#submit-btn");
         
         // Wait for navigation away from login (successful or error state)
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle, new PageWaitForLoadStateOptions { Timeout = 10000 });

@@ -22,6 +22,9 @@ public class AzureAIOptions
     /// <summary>Embedding deployment name, e.g. text-embedding-3-large</summary>
     public string OpenAIEmbeddingDeployment { get; set; } = string.Empty;
 
+    /// <summary>Whisper deployment name, e.g. whisper-1</summary>
+    public string OpenAIWhisperDeployment { get; set; } = string.Empty;
+
     public int OpenAIEmbeddingDimensions { get; set; } = 1536;
 
     /// <summary>
@@ -36,6 +39,12 @@ public class AzureAIOptions
     /// </summary>
     public string EmbeddingsUrl =>
         $"{OpenAIEndpoint.TrimEnd('/')}/openai/deployments/{OpenAIEmbeddingDeployment}/embeddings?api-version={OpenAIApiVersion}";
+
+    /// <summary>
+    /// Builds the full transcriptions URL for Whisper.
+    /// </summary>
+    public string TranscriptionsUrl =>
+        $"{OpenAIEndpoint.TrimEnd('/')}/openai/deployments/{OpenAIWhisperDeployment}/audio/transcriptions?api-version={OpenAIApiVersion}";
 
     public bool IsConfigured =>
         !string.IsNullOrEmpty(OpenAIApiKey) &&

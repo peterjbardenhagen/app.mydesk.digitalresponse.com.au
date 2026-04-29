@@ -30,6 +30,10 @@ public class Quote
     public string? SenderCode { get; set; }
     public string? ContactName { get; set; }
     public string? DivisionName { get; set; }
+
+    public DateTime ExpiryDate => QuoteDate.AddDays(Validity);
+    public bool IsExpired => DateTime.Today > ExpiryDate;
+    public bool IsExpiringSoon => !IsExpired && DateTime.Today.AddDays(7) >= ExpiryDate;
 }
 
 // ============================================================================
@@ -296,12 +300,20 @@ public class Contact
     public string? Address1 { get; set; }
     public string? Address2 { get; set; }
     public string? Suburb { get; set; }
+    public string? State { get; set; }
     public string? PostCode { get; set; }
     public string? CustomerCode { get; set; }
     public string? SupplierCode { get; set; }
     public string Originator { get; set; } = string.Empty;
     public int CompanyId { get; set; }
     public string FullName => $"{FirstName} {Surname}".Trim();
+    
+    // Customer Portal Credentials
+    public string? PortalUsername { get; set; }
+    public string? PortalPasswordHash { get; set; }
+    public bool IsPortalEnabled { get; set; }
+    public DateTime? PortalLastLogin { get; set; }
+    public DateTime? PortalAccessExpires { get; set; }
 }
 
 public class Company
@@ -318,6 +330,55 @@ public class Company
     public string? Email { get; set; }
     public string? Website { get; set; }
     public string? ABN { get; set; }
+    public string? CustomerCode { get; set; }
+    public string? SupplierCode { get; set; }
+    public bool IsCustomer { get; set; } = true;
+    public bool IsSupplier { get; set; }
+    public string? Notes { get; set; }
+    public string? Country { get; set; } = "Australia";
+    public bool HasGST => !string.IsNullOrWhiteSpace(ABN) && ABN.Length >= 11 && (string.IsNullOrWhiteSpace(Country) || Country.Equals("Australia", StringComparison.OrdinalIgnoreCase));
+    public string? DefaultTerms { get; set; }
+    public string? PaymentTerms { get; set; }
+    public decimal? CreditLimit { get; set; }
+    public string? InvAddress1 { get; set; }
+    public string? InvAddress2 { get; set; }
+    public string? InvSuburb { get; set; }
+    public string? InvState { get; set; }
+    public string? InvPostCode { get; set; }
+    public string? DelAddress1 { get; set; }
+    public string? DelAddress2 { get; set; }
+    public string? DelSuburb { get; set; }
+    public string? DelState { get; set; }
+    public string? DelPostCode { get; set; }
+    public string FullAddress => FormatAddress(Address1, Address2, Suburb, State, PostCode);
+    public string InvoiceAddress => FormatAddress(InvAddress1, InvAddress2, InvSuburb, InvState, InvPostCode);
+    public string DeliveryAddress => FormatAddress(DelAddress1, DelAddress2, DelSuburb, DelState, DelPostCode);
+
+    private static string FormatAddress(string? a1, string? a2, string? sub, string? st, string? pc)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(a1)) parts.Add(a1);
+        if (!string.IsNullOrWhiteSpace(a2)) parts.Add(a2);
+        if (!string.IsNullOrWhiteSpace(sub)) parts.Add(sub);
+        if (!string.IsNullOrWhiteSpace(st)) parts.Add(st);
+        if (!string.IsNullOrWhiteSpace(pc)) parts.Add(pc);
+        return string.Join(", ", parts);
+    }
+}
+
+public class CompanyImportItem
+{
+    public string CompanyName { get; set; } = string.Empty;
+    public string? InvAddress { get; set; }
+    public string? DelAddress { get; set; }
+    public string? Phone { get; set; }
+    public string? Email { get; set; }
+    public int InvoiceCount { get; set; }
+    public decimal TotalValue { get; set; }
+    public bool Selected { get; set; } = true;
+    public int? ExistingCompanyId { get; set; }
+    public string? ExistingCompanyName { get; set; }
+    public bool IsDuplicate => ExistingCompanyId.HasValue;
 }
 
 // ============================================================================
@@ -371,12 +432,28 @@ public class Division
 {
     public int DivisionId { get; set; }
     public string DivisionName { get; set; } = string.Empty;
+    public string? Logo { get; set; }
+    public decimal GSTRate { get; set; } = 10.0m;
+    public string InvoicePrefix { get; set; } = "INV-";
+    public string QuotePrefix { get; set; } = "QT-";
+    public string POPrefix { get; set; } = "PO-";
+    public string? Phone { get; set; }
+    public string? Email { get; set; }
+    public string? Address { get; set; }
+    public bool IsActive { get; set; } = true;
 }
 
 public class Location
 {
     public int LocationId { get; set; }
     public string LocationName { get; set; } = string.Empty;
+    public string? Address1 { get; set; }
+    public string? Address2 { get; set; }
+    public string? Suburb { get; set; }
+    public string? State { get; set; }
+    public string? PostCode { get; set; }
+    
+    public string FullAddress => string.Join(", ", new[] { Address1, Address2, Suburb, State, PostCode }.Where(s => !string.IsNullOrWhiteSpace(s)));
 }
 
 public class UserLookup
@@ -401,6 +478,7 @@ public class PartCode
 public class Product
 {
     public int ProductId { get; set; }
+    public string ProductCode { get; set; } = string.Empty;
     public string ProductName { get; set; } = string.Empty;
     public string? Description { get; set; }
     public decimal? UnitCost { get; set; }
@@ -739,5 +817,109 @@ public class JobOrderLineItemEdit
     public string? CategoryName { get; set; }
     public decimal Price { get; set; }
     public decimal LineTotal { get; set; }
+}
+
+public class BrandAssetFile
+{
+    public Guid Id { get; set; }
+    public string OriginalFileName { get; set; } = "";
+    public string FileName { get; set; } = "";
+    public string FilePath { get; set; } = "";
+    public string ContentType { get; set; } = "";
+    public long FileSize { get; set; }
+    public string Category { get; set; } = "";
+    public string Description { get; set; } = "";
+    public bool IsPublic { get; set; } = true;
+    public string UploadedBy { get; set; } = "";
+    public DateTime UploadedAt { get; set; }
+    
+    public string FormattedSize => FormatFileSize(FileSize);
+    
+    private static string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        int order = 0;
+        double size = bytes;
+        while (size >= 1024 && order < sizes.Length - 1) { order++; size /= 1024; }
+        return $"{size:0.##} {sizes[order]}";
+    }
+}
+
+public class ImportantLink
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = "";
+    public string Description { get; set; } = "";
+    public string Url { get; set; } = "";
+    public string Icon { get; set; } = "";
+    public string Category { get; set; } = "";
+    public int DisplayOrder { get; set; }
+    public bool IsExternal { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
+public class IntegrationStatus
+{
+    public string ServiceName { get; set; } = "";
+    public bool IsConnected { get; set; }
+    public string? LastSync { get; set; }
+    public string? ErrorMessage { get; set; }
+    public DateTime? LastTested { get; set; }
+    public bool LastTestSuccess { get; set; }
+    public string? LastTestMessage { get; set; }
+}
+
+// ============================================================================
+// Supplier Portal Model
+// ============================================================================
+public class Supplier
+{
+    public int SupplierId { get; set; }
+    public string SupplierName { get; set; } = string.Empty;
+    public string? ContactName { get; set; }
+    public string? Email { get; set; }
+    public string? Phone { get; set; }
+    public string? Address { get; set; }
+    public string? ABN { get; set; }
+    public string? Category { get; set; }
+    public string? Region { get; set; } = "NSW";
+    
+    // Portal Credentials
+    public string? PortalUsername { get; set; }
+    public string? PortalPasswordHash { get; set; }
+    public bool IsPortalEnabled { get; set; }
+    public DateTime? PortalLastLogin { get; set; }
+    public DateTime? PortalAccessExpires { get; set; }
+    
+    // Scoring & Tiering
+    public int Score { get; set; } = 50;
+    public string Tier { get; set; } = "Bronze";
+    public decimal TotalSpend { get; set; }
+    public int OrderCount { get; set; }
+    public double OnTimePercent { get; set; }
+    public double QualityPercent { get; set; }
+    public DateTime? LastOrderDate { get; set; }
+}
+
+public class SupplierScore
+{
+    public int SupplierId { get; set; }
+    public string SupplierName { get; set; } = "";
+    public int Score { get; set; }
+    public string Tier { get; set; } = "";
+    public decimal TotalSpend { get; set; }
+    public int OrdersThisYear { get; set; }
+    public double OnTimeDelivery { get; set; }
+    public double QualityRating { get; set; }
+    public DateTime LastOrderDate { get; set; }
+}
+
+public class CustomerFile
+{
+    public int DocumentId { get; set; }
+    public string FileName { get; set; } = "";
+    public string FileSize { get; set; } = "";
+    public DateTime UploadedDate { get; set; }
+    public int CompanyId { get; set; }
 }
 

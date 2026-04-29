@@ -47,6 +47,27 @@ public class DatabaseService
         }
     }
 
+    public DataTable Query(string sql, Dictionary<string, object?>? parameters = null)
+    {
+        try
+        {
+            using var conn = new SqlConnection(_connectionString);
+            conn.Open();
+            using var cmd = new SqlCommand(sql, conn);
+            AddParameters(cmd, parameters);
+
+            var adapter = new SqlDataAdapter(cmd);
+            var dt = new DataTable();
+            adapter.Fill(dt);
+            return dt;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "SQL Sync Error: {Sql}", sql);
+            throw;
+        }
+    }
+
     public async Task<T?> ScalarAsync<T>(string sql, Dictionary<string, object?>? parameters = null)
     {
         try

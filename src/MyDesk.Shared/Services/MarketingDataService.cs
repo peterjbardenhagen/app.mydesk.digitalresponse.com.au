@@ -461,7 +461,7 @@ public class MarketingDataService
             IcpBuyingTriggers = "New construction projects, refurbishment cycles, sustainability mandates",
             ValueProposition = "Australian-designed project lighting with guaranteed compliance, 5-day local delivery, and dedicated technical support",
             Differentiators = "Local stock holding, NATA-certified testing, custom design capability, 10-year warranty",
-            PositioningStatement = "For Australian commercial developers who can't afford delays, Techlight is the project lighting partner that combines global manufacturing scale with local delivery speed and compliance certainty.",
+            PositioningStatement = "For target customers who can't afford delays, we are the project partner that combines global scale with local delivery speed and compliance certainty.",
             Q1Initiatives = "Launch Champion customer program\nImplement automated quote follow-up\nAttend DesignBUILD expo",
             Q2Initiatives = "Roll out email nurture sequences\nLaunch referral incentive program\nPublish sustainability report",
             Q3Initiatives = "Expand supplier network in SE Asia\nLaunch trade portal for electricians\nImplement NPS tracking",

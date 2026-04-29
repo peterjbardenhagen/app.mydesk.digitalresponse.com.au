@@ -5,20 +5,26 @@
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthState
+@inject IJSRuntime JsRuntime
+@using Microsoft.JSInterop
 
-<PageTitle>Quotes - Techlight MyDesk</PageTitle>
+<PageTitle>Quotes - MyDesk</PageTitle>
 
 <div class="tl-page-header">
     <div>
         <div class="tl-breadcrumb">
-            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/">MyDesk</a><span class="sep">/</span>
             <span>Quotes</span>
         </div>
         <h1>Quotes</h1>
         <p class="tl-subtitle">Sales quotations — raise, approve, issue and convert.</p>
     </div>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
-               Href="/quotes/create">New Quote</MudButton>
+    <div class="d-flex gap-2">
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Rounded.ContentCopy"
+                 Href="/quotes/copy-supplier">Copy Supplier Quote</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
+                 Href="/quotes/create">New Quote</MudButton>
+    </div>
 </div>
 
 <MudPaper Class="pa-4 mb-4" Elevation="1">
@@ -54,6 +60,8 @@
         <MudButton OnClick="LoadAsync" Color="Color.Primary" Variant="Variant.Filled"
                    StartIcon="@Icons.Material.Rounded.FilterList" Size="Size.Small">Apply</MudButton>
         <MudButton OnClick="ResetFilter" Variant="Variant.Outlined" Size="Size.Small">Reset</MudButton>
+        <MudButton OnClick="ExportCsv" Variant="Variant.Outlined" Color="Color.Secondary"
+                   StartIcon="@Icons.Material.Rounded.Download" Size="Size.Small">Export CSV</MudButton>
     </div>
 </MudPaper>
 
@@ -70,6 +78,22 @@
             <PropertyColumn Property="x => x.CompanyName" Title="Customer" />
             <PropertyColumn Property="x => x.Reference" Title="Project / Reference" />
             <PropertyColumn Property="x => x.QuoteDate" Title="Date" Format="dd/MM/yyyy" CellStyle="width:105px;" />
+            <TemplateColumn Title="Expires" CellStyle="width:120px;">
+                <CellTemplate>
+                    @if (context.Item.IsExpired)
+                    {
+                        <span style="color:var(--tl-error);font-weight:600;">EXPIRED</span>
+                    }
+                    else if (context.Item.IsExpiringSoon)
+                    {
+                        <span style="color:var(--tl-warning);font-weight:600;">@context.Item.ExpiryDate.ToString("dd/MM/yy")</span>
+                    }
+                    else
+                    {
+                        <span>@context.Item.ExpiryDate.ToString("dd/MM/yy")</span>
+                    }
+                </CellTemplate>
+            </TemplateColumn>
             <PropertyColumn Property="x => x.NettPriceTotal" Title="Price ex GST" Format="C0" CellStyle="width:120px;text-align:right;" />
             <PropertyColumn Property="x => x.Margin" Title="Margin %" Format="N1" CellStyle="width:90px;text-align:right;" />
             <TemplateColumn Title="Status" CellStyle="width:145px;">
@@ -190,5 +214,36 @@
         1             => "info",
         _             => "info",
     };
+
+    private async Task ExportCsv()
+    {
+        if (!_quotes.Any())
+        {
+            Snackbar.Add("No data to export", Severity.Warning);
+            return;
+        }
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("Quote #,Customer,Project/Reference,Date,Price ex GST,Margin %,Status,Owner");
+
+        foreach (var q in _quotes)
+        {
+            sb.AppendLine($"\"{q.Qid}\",\"{q.CompanyName}\",\"{q.Reference}\",\"{q.QuoteDate:yyyy-MM-dd}\",{q.NettPriceTotal.ToString("N2")},{q.Margin.ToString("N1")},\"{q.QuoteStatus}\",\"{q.Originator}\"");
+        }
+
+        var csv = sb.ToString();
+        var fileName = $"Quotes_Export_{DateTime.Now:yyyyMMdd}.csv";
+
+        await DownloadFile(fileName, csv);
+        Snackbar.Add($"Exported {_quotes.Count} quotes", Severity.Success);
+    }
+
+    private async Task DownloadFile(string fileName, string content)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+        var base64 = Convert.ToBase64String(bytes);
+        var url = $"data:text/csv;base64,{base64}";
+        await JsRuntime.InvokeVoidAsync("window.open", url, "_blank");
+    }
 }
 

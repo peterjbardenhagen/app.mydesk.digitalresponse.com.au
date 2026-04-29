@@ -1,6 +1,6 @@
 @using MyDesk.Shared.Models
 
-<MudDialog>
+<MudDialog Options="new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small }">
     <DialogContent>
         <MudText Typo="Typo.h6" Class="mb-3">Update Progress</MudText>
         <MudText Typo="Typo.body2" Class="mb-4">@Objective.Title</MudText>
@@ -9,7 +9,6 @@
                   Min="0"
                   Max="100"
                   Step="1"
-                  Label="Progress (%)"
                   Color="Color.Primary" />
         
         <MudNumericField @bind-Value="_progress"

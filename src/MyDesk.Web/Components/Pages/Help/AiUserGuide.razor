@@ -1,0 +1,125 @@
+@page "/help/ai-guide"
+@attribute [Authorize]
+@inject PlatformSettingsService PlatformSettings
+
+<PageTitle>AI User Guide - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <a href="/help">Help Center</a><span class="sep">/</span>
+            <span>AI User Guide</span>
+        </div>
+        <h1>How to talk to @PlatformSettings.GetBrandingName() AI</h1>
+        <p class="tl-subtitle">Get the most out of your AI-powered business assistant</p>
+    </div>
+</div>
+
+<MudGrid Spacing="4" Class="mt-4">
+    <MudItem xs="12" md="8">
+        <MudPaper Class="pa-8 rounded-xl" Elevation="1">
+            <MudText Typo="Typo.h5" Class="mb-6 font-weight-bold">Understanding Your Assistant</MudText>
+            
+            <MudText Typo="Typo.body1" Class="mb-4">
+                The MyDesk AI is not just a chatbot; it's a deeply integrated business analyst that has secure access to your operational data (Quotes, Invoices, Contacts) and your financial data (via integrations like MYOB).
+            </MudText>
+
+            <MudDivider Class="my-8" />
+
+            <MudText Typo="Typo.h6" Class="mb-4 font-weight-bold">Top 10 Things You Can Ask</MudText>
+            
+            <div class="d-flex flex-column gap-4">
+                <div class="prompt-card">
+                    <MudIcon Icon="@Icons.Material.Rounded.AccountBalance" Color="Color.Primary" />
+                    <div>
+                        <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Financial Overview</MudText>
+                        <MudText Typo="Typo.body2">"What is our current cash position including outstanding invoices?"</MudText>
+                    </div>
+                </div>
+
+                <div class="prompt-card">
+                    <MudIcon Icon="@Icons.Material.Rounded.PersonSearch" Color="Color.Primary" />
+                    <div>
+                        <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Customer Briefings</MudText>
+                        <MudText Typo="Typo.body2">"Give me a briefing on Acme Corp before my 2pm call."</MudText>
+                    </div>
+                </div>
+
+                <div class="prompt-card">
+                    <MudIcon Icon="@Icons.Material.Rounded.RequestQuote" Color="Color.Primary" />
+                    <div>
+                        <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Sales Pipeline</MudText>
+                        <MudText Typo="Typo.body2">"Show me all quotes over $10,000 pending approval."</MudText>
+                    </div>
+                </div>
+
+                <div class="prompt-card">
+                    <MudIcon Icon="@Icons.Material.Rounded.Payments" Color="Color.Primary" />
+                    <div>
+                        <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Debt Collection</MudText>
+                        <MudText Typo="Typo.body2">"Who owes us money and which invoices are over 30 days?"</MudText>
+                    </div>
+                </div>
+
+                <div class="prompt-card">
+                    <MudIcon Icon="@Icons.Material.Rounded.SyncAlt" Color="Color.Primary" />
+                    <div>
+                        <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Reconciliation</MudText>
+                        <MudText Typo="Typo.body2">"Show me invoices issued this month that haven't been pushed to MYOB."</MudText>
+                    </div>
+                </div>
+            </div>
+
+            <MudDivider Class="my-8" />
+
+            <MudText Typo="Typo.h6" Class="mb-4 font-weight-bold">Voice Commands (Telegram)</MudText>
+            <MudText Typo="Typo.body1" Class="mb-4">
+                When you're on the road, you can use the Telegram bot to send voice messages. The AI will transcribe your speech and process it exactly like a text command.
+            </MudText>
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="rounded-lg">
+                <strong>Try this:</strong> Tap the microphone in Telegram and say: <em>"Check the status of the Johnson project and let me know if there are any overdue invoices."</em>
+            </MudAlert>
+
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-6 rounded-xl tl-sidebar-card" Elevation="0">
+            <MudText Typo="Typo.h6" Class="mb-4">Pro Tips</MudText>
+            
+            <ul class="tl-tips-list">
+                <li>
+                    <strong>Be Specific:</strong> Instead of "show invoices", try "show unpaid invoices from last week".
+                </li>
+                <li>
+                    <strong>Ask for Analysis:</strong> Try "Analyze our revenue trend over the last 6 months".
+                </li>
+                <li>
+                    <strong>Combined Data:</strong> Ask questions that bridge systems, like "Which projects have costs exceeding their quoted amount?"
+                </li>
+            </ul>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<style>
+    .prompt-card {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 16px;
+        background: var(--gray-50);
+        border-radius: 12px;
+        border: 1px solid var(--gray-200);
+        transition: all 0.2s;
+    }
+    .prompt-card:hover {
+        background: white;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        border-color: var(--tl-primary-300);
+    }
+    .tl-sidebar-card { background: #f0fdfa !important; border: 1px solid #ccfbf1; }
+    .tl-tips-list { padding-left: 20px; color: var(--gray-700); }
+    .tl-tips-list li { margin-bottom: 12px; }
+</style>

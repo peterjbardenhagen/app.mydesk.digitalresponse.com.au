@@ -1,0 +1,156 @@
+@page "/favourites"
+@attribute [Authorize]
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Favourites - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <span>Favourites</span>
+        </div>
+        <h1>Favourites</h1>
+        <p class="tl-subtitle">Quick access to your saved items</p>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
+               OnClick="AddFavourite">
+        Add Favourite
+    </MudButton>
+</div>
+
+<MudGrid Spacing="4">
+    <MudItem xs="12" sm="6" md="4">
+        <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
+            <div class="d-flex align-center gap-2 mb-4">
+                <MudIcon Icon="@Icons.Material.Rounded.RequestQuote" Color="Color.Primary" />
+                <MudText Typo="Typo.h6">Quotes</MudText>
+            </div>
+            <MudLink Href="/quotes">
+                <div class="d-flex align-center gap-2 pa-2 mb-2" style="background: var(--gray-50); border-radius: 8px; cursor: pointer;">
+                    <MudIcon Icon="@Icons.Material.Rounded.ListAlt" Size="Size.Small" />
+                    <MudText>All Quotes</MudText>
+                </div>
+            </MudLink>
+            <MudLink Href="/quotes/create">
+                <div class="d-flex align-center gap-2 pa-2 mb-2" style="background: var(--gray-50); border-radius: 8px; cursor: pointer;">
+                    <MudIcon Icon="@Icons.Material.Rounded.Add" Size="Size.Small" />
+                    <MudText>New Quote</MudText>
+                </div>
+            </MudLink>
+        </MudPaper>
+    </MudItem>
+    
+    <MudItem xs="12" sm="6" md="4">
+        <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
+            <div class="d-flex align-center gap-2 mb-4">
+                <MudIcon Icon="@Icons.Material.Rounded.Receipt" Color="Color.Success" />
+                <MudText Typo="Typo.h6">Invoices</MudText>
+            </div>
+            <MudLink Href="/invoices" Underline="Underline.None">
+                <div class="d-flex align-center gap-2 pa-2 mb-2" style="background: var(--gray-50); border-radius: 8px; cursor: pointer;">
+                    <MudIcon Icon="@Icons.Material.Rounded.ListAlt" Size="Size.Small" />
+                    <MudText>All Invoices</MudText>
+                </div>
+            </MudLink>
+            <MudLink Href="/invoices/create" Underline="Underline.None">
+                <div class="d-flex align-center gap-2 pa-2 mb-2" style="background: var(--gray-50); border-radius: 8px; cursor: pointer;">
+                    <MudIcon Icon="@Icons.Material.Rounded.Add" Size="Size.Small" />
+                    <MudText>New Invoice</MudText>
+                </div>
+            </MudLink>
+        </MudPaper>
+    </MudItem>
+    
+    <MudItem xs="12" sm="6" md="4">
+        <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
+            <div class="d-flex align-center gap-2 mb-4">
+                <MudIcon Icon="@Icons.Material.Rounded.ShoppingCart" Color="Color.Warning" />
+                <MudText Typo="Typo.h6">Purchase Orders</MudText>
+            </div>
+            <MudLink Href="/purchase-orders" Underline="Underline.None">
+                <div class="d-flex align-center gap-2 pa-2 mb-2" style="background: var(--gray-50); border-radius: 8px; cursor: pointer;">
+                    <MudIcon Icon="@Icons.Material.Rounded.ListAlt" Size="Size.Small" />
+                    <MudText>All POs</MudText>
+                </div>
+            </MudLink>
+            <MudLink Href="/purchase-orders/create" Underline="Underline.None">
+                <div class="d-flex align-center gap-2 pa-2 mb-2" style="background: var(--gray-50); border-radius: 8px; cursor: pointer;">
+                    <MudIcon Icon="@Icons.Material.Rounded.Add" Size="Size.Small" />
+                    <MudText>New PO</MudText>
+                </div>
+            </MudLink>
+        </MudPaper>
+    </MudItem>
+    
+    <MudItem xs="12" sm="6" md="4">
+        <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
+            <div class="d-flex align-center gap-2 mb-4">
+                <MudIcon Icon="@Icons.Material.Rounded.People" Color="Color.Info" />
+                <MudText Typo="Typo.h6">Contacts</MudText>
+            </div>
+            <MudLink Href="/contacts" Underline="Underline.None">
+                <div class="d-flex align-center gap-2 pa-2 mb-2" style="background: var(--gray-50); border-radius: 8px; cursor: pointer;">
+                    <MudIcon Icon="@Icons.Material.Rounded.ListAlt" Size="Size.Small" />
+                    <MudText>All Contacts</MudText>
+                </div>
+            </MudLink>
+            <MudLink Href="/contacts/create" Underline="Underline.None">
+                <div class="d-flex align-center gap-2 pa-2 mb-2" style="background: var(--gray-50); border-radius: 8px; cursor: pointer;">
+                    <MudIcon Icon="@Icons.Material.Rounded.Add" Size="Size.Small" />
+                    <MudText>New Contact</MudText>
+                </div>
+            </MudLink>
+        </MudPaper>
+    </MudItem>
+    
+    <MudItem xs="12" sm="6" md="4">
+        <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
+            <div class="d-flex align-center gap-2 mb-4">
+                <MudIcon Icon="@Icons.Material.Rounded.Business" Color="Color.Default" />
+                <MudText Typo="Typo.h6">Companies</MudText>
+            </div>
+            <MudLink Href="/companies" Underline="Underline.None">
+                <div class="d-flex align-center gap-2 pa-2 mb-2" style="background: var(--gray-50); border-radius: 8px; cursor: pointer;">
+                    <MudIcon Icon="@Icons.Material.Rounded.ListAlt" Size="Size.Small" />
+                    <MudText>All Companies</MudText>
+                </div>
+            </MudLink>
+            <MudLink Href="/companies/create" Underline="Underline.None">
+                <div class="d-flex align-center gap-2 pa-2 mb-2" style="background: var(--gray-50); border-radius: 8px; cursor: pointer;">
+                    <MudIcon Icon="@Icons.Material.Rounded.Add" Size="Size.Small" />
+                    <MudText>New Company</MudText>
+                </div>
+            </MudLink>
+        </MudPaper>
+    </MudItem>
+    
+    <MudItem xs="12" sm="6" md="4">
+        <MudPaper Class="pa-4" Elevation="1" Style="height: 100%;">
+            <div class="d-flex align-center gap-2 mb-4">
+                <MudIcon Icon="@Icons.Material.Rounded.Description" Color="Color.Secondary" />
+                <MudText Typo="Typo.h6">Job Orders</MudText>
+            </div>
+            <MudLink Href="/job-orders" Underline="Underline.None">
+                <div class="d-flex align-center gap-2 pa-2 mb-2" style="background: var(--gray-50); border-radius: 8px; cursor: pointer;">
+                    <MudIcon Icon="@Icons.Material.Rounded.ListAlt" Size="Size.Small" />
+                    <MudText>All Jobs</MudText>
+                </div>
+            </MudLink>
+            <MudLink Href="/job-orders/create" Underline="Underline.None">
+                <div class="d-flex align-center gap-2 pa-2 mb-2" style="background: var(--gray-50); border-radius: 8px; cursor: pointer;">
+                    <MudIcon Icon="@Icons.Material.Rounded.Add" Size="Size.Small" />
+                    <MudText>New Job</MudText>
+                </div>
+            </MudLink>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private void AddFavourite()
+    {
+        Snackbar.Add("Use the star icon on any item to add it to favourites", Severity.Info);
+    }
+}

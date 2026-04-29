@@ -9,12 +9,12 @@
 @inject ActivityService ActivitySvc
 @using System.Security.Claims
 
-<PageTitle>@(IsNew ? "New Job Order" : $"Edit Job Order #{Id}") - Techlight MyDesk</PageTitle>
+<PageTitle>@(IsNew ? "New Job Order" : $"Edit Job Order #{Id}") - MyDesk</PageTitle>
 
 <div class="tl-page-header">
     <div>
         <div class="tl-breadcrumb">
-            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/">MyDesk</a><span class="sep">/</span>
             <a href="/job-orders">Job Orders</a><span class="sep">/</span>
             <span style="color:var(--gray-700);font-weight:500;">@(IsNew ? "New Job Order" : $"Edit #{Id}")</span>
         </div>

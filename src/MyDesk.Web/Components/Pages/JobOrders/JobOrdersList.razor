@@ -1,12 +1,15 @@
 @page "/job-orders"
 @attribute [Authorize]
 @inject JobOrderService Svc
+@inject ISnackbar Snackbar
+@inject IJSRuntime JsRuntime
+@using Microsoft.JSInterop
 
-<PageTitle>Job Orders - Techlight MyDesk</PageTitle>
+<PageTitle>Job Orders - MyDesk</PageTitle>
 
 <div class="tl-page-header">
     <div>
-        <div class="tl-breadcrumb"><a href="/">Techlight MyDesk</a><span class="sep">/</span><span style="color:var(--gray-700); font-weight:500;">Job Orders</span></div>
+        <div class="tl-breadcrumb"><a href="/">MyDesk</a><span class="sep">/</span><span style="color:var(--gray-700); font-weight:500;">Job Orders</span></div>
         <h1>Job Orders</h1>
         <p class="tl-subtitle">Internal job tracking and work orders.</p>
     </div>
@@ -25,6 +28,9 @@ else
                 <MudTextField T="string" Placeholder="Search job orders..." @bind-Value="_search" Immediate="true"
                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Search"
                               Variant="Variant.Outlined" Margin="Margin.Dense" />
+                <MudSpacer />
+                <MudButton OnClick="ExportCsv" Variant="Variant.Outlined" Color="Color.Default"
+                           StartIcon="@Icons.Material.Rounded.Download">Export CSV</MudButton>
             </ToolBarContent>
             <Columns>
                 <TemplateColumn Title="Job Order #">
@@ -69,5 +75,32 @@ else
         "cancelled" or "canceled"             => "error",
         _                                     => "info",
     };
+
+    private async Task ExportCsv()
+    {
+        if (!_items.Any())
+        {
+            Snackbar.Add("No data to export", Severity.Warning);
+            return;
+        }
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("Job Order #,Date,Customer,Created by,Status");
+
+        foreach (var j in _items)
+        {
+            sb.AppendLine($"\"{j.JobOrderNumber}\",\"{j.JobOrderDate:yyyy-MM-dd}\",\"{j.CompanyName}\",\"{j.Originator}\",\"{j.StatusName}\"");
+        }
+
+        var csv = sb.ToString();
+        var fileName = $"JobOrders_Export_{DateTime.Now:yyyyMMdd}.csv";
+
+        var bytes = System.Text.Encoding.UTF8.GetBytes(csv);
+        var base64 = Convert.ToBase64String(bytes);
+        var url = $"data:text/csv;base64,{base64}";
+        await JsRuntime.InvokeVoidAsync("window.open", url, "_blank");
+        
+        Snackbar.Add($"Exported {_items.Count} job orders", Severity.Success);
+    }
 }
 

@@ -1,10 +1,11 @@
 @echo off
 setlocal enabledelayedexpansion
 title DR MyDesk Launcher
+color 0B
 
 :: ============================================================================
 ::  DR MyDesk - Launcher
-::  Version 3.0 - April 2026
+::  Version 3.1 - April 2026
 :: ============================================================================
 
 :: Paths
@@ -12,9 +13,11 @@ set "ROOT=%~dp0"
 if "%ROOT:~-1%"=="\" set "ROOT=%ROOT:~0,-1%"
 set "SRC=%ROOT%\src"
 set "WEB=%SRC%\MyDesk.Web"
+set "SHARED=%SRC%\MyDesk.Shared"
 set "DEPLOY=%SRC%\Deployment"
 set "TESTS=%ROOT%\tests\MyDesk.PlaywrightTests"
 set "APPCMD=%SystemRoot%\System32\inetsrv\appcmd.exe"
+set "LOGS=%WEB%\Logs"
 
 :: Check admin
 net session >nul 2>&1
@@ -34,7 +37,7 @@ echo.
 echo  ===============================================================
 echo.
 echo                DR MyDesk - Business Management Platform
-echo                   Version 3.0  -  .NET 8 Blazor Server
+echo                   Version 3.1  -  .NET 8 Blazor Server
 echo.
 echo  ===============================================================
 echo.
@@ -42,7 +45,7 @@ echo.
 if "%IS_ADMIN%"=="YES" (
     echo    [OK]   Administrator        Full access to all options
 ) else (
-    echo    [ !]   Standard User        Options 1, 2, 3 will request elevation
+    echo    [ !]   Standard User        Options 1, 2 will request elevation
 )
 
 if defined DOTNET_VER (
@@ -54,20 +57,26 @@ if defined DOTNET_VER (
 echo.
 echo  ---------------------------------------------------------------
 echo.
-echo    SETUP  (run once, in order)
+echo    SETUP ^& MAINTENANCE
 echo.
 echo      [1]  Database      Migrate Access DB to SQL Server
 echo      [2]  IIS Deploy    Build and publish to local IIS
-echo      [3]  Run Tests     Playwright E2E tests (72+)
+echo      [3]  Clean ^& Build Clean bin/obj and build solution
 echo.
-echo    RUN THE APP
+echo    RUN ^& TEST
 echo.
 echo      [4]  Launch        Standalone (Kestrel) or IIS
+echo      [5]  Playwright    End-to-End Tests (UI, All, Trace)
 echo.
-echo    INFO
+echo    UTILITIES
 echo.
-echo      [5]  Status        Check IIS site, ports, processes
-echo      [6]  Open Docs     README.md / TESTING.md
+echo      [6]  Status        Check IIS, Ports, DB, Environment
+echo      [7]  Logs          View latest application logs
+echo      [8]  Docs          Open README, Roadmap, Trace
+echo.
+echo    DEPLOY TO PRODUCTION
+echo.
+echo      [9]  Deploy       Deploy to techlight.digitalresponse.com.au (IIS)
 echo.
 echo      [Q]  Quit
 echo.
@@ -80,14 +89,17 @@ set /p "choice=   Choose an option: "
 if not defined choice goto MENU
 if /i "%choice%"=="1" goto OPT_DATABASE
 if /i "%choice%"=="2" goto OPT_IIS_DEPLOY
-if /i "%choice%"=="3" goto OPT_TESTS
+if /i "%choice%"=="3" goto OPT_CLEAN_BUILD
 if /i "%choice%"=="4" goto OPT_RUN
-if /i "%choice%"=="5" goto OPT_STATUS
-if /i "%choice%"=="6" goto OPT_DOCS
+if /i "%choice%"=="5" goto OPT_TESTS
+if /i "%choice%"=="6" goto OPT_STATUS
+if /i "%choice%"=="7" goto OPT_LOGS
+if /i "%choice%"=="8" goto OPT_DOCS
+if /i "%choice%"=="9" goto OPT_DEPLOY_PROD
 if /i "%choice%"=="Q" goto END
 
 echo.
-echo    Invalid choice. Try 1, 2, 3, 4, 5, 6 or Q.
+echo    Invalid choice.
 timeout /t 2 >nul
 goto MENU
 
@@ -113,27 +125,12 @@ if "%IS_ADMIN%"=="NO" (
 set "INSTALL_PS=%DEPLOY%\Migration\Install.ps1"
 if not exist "%INSTALL_PS%" (
     echo    ERROR: Install.ps1 not found.
-    echo    Expected: %INSTALL_PS%
     call :PAUSE_RETURN
     goto MENU
 )
 
-echo    This will run the database installation script:
-echo    %INSTALL_PS%
-echo.
-set "reply="
-set /p "reply=   Continue? (Y/N): "
-if /i not "%reply%"=="Y" goto MENU
-
-echo.
+echo    Running database installation script...
 powershell -ExecutionPolicy Bypass -File "%INSTALL_PS%"
-if errorlevel 1 (
-    echo.
-    echo    Database setup reported errors.
-) else (
-    echo.
-    echo    Database setup complete.
-)
 call :PAUSE_RETURN
 goto MENU
 
@@ -157,229 +154,181 @@ if "%IS_ADMIN%"=="NO" (
 )
 
 if not exist "%APPCMD%" (
-    echo    ERROR: IIS is not installed on this machine.
-    echo.
-    echo    To install IIS:
-    echo      1. Open "Turn Windows features on or off"
-    echo      2. Enable: Internet Information Services
-    echo      3. Enable ASP.NET Core Module under World Wide Web Services
-    call :PAUSE_RETURN
-    goto MENU
-)
-
-set "DEPLOY_PS=%DEPLOY%\Deploy.ps1"
-if not exist "%DEPLOY_PS%" (
-    echo    ERROR: Deploy.ps1 not found.
-    echo    Expected: %DEPLOY_PS%
-    call :PAUSE_RETURN
-    goto MENU
-)
-
-echo    This will:
-echo      - Build Release version of DR MyDesk
-echo      - Create IIS App Pool "Techlight.MyDesk"
-echo      - Deploy to C:\inetpub\wwwroot\Techlight.MyDesk
-echo      - Start site on http://localhost
-echo.
-set "reply="
-set /p "reply=   Deploy now? (Y/N): "
-if /i not "%reply%"=="Y" goto MENU
-
-echo.
-echo    Running Deploy.ps1...
-echo.
-powershell -ExecutionPolicy Bypass -File "%DEPLOY_PS%"
-
-if errorlevel 1 (
-    echo.
-    echo    Deployment failed. See errors above.
-    call :PAUSE_RETURN
-    goto MENU
-)
-
-echo.
-echo    Deployment successful!
-echo    Opening http://localhost in your browser...
-timeout /t 2 >nul
-start "" "http://localhost"
-call :PAUSE_RETURN
-goto MENU
-
-:: ============================================================================
-::  OPTION 3: TESTS
-:: ============================================================================
-:OPT_TESTS
-cls
-echo.
-echo  ===============================================================
-echo   Playwright Tests - 72+ end-to-end tests
-echo  ===============================================================
-echo.
-
-if not exist "%TESTS%" (
-    echo    ERROR: Test project not found.
-    echo    Expected: %TESTS%
-    call :PAUSE_RETURN
-    goto MENU
-)
-
-echo    This will run all Playwright tests covering:
-echo      - Login / Dashboard / Quotes / Invoices / POs
-echo      - Navigation / Accessibility / E2E Workflows
-echo.
-echo    NOTE: The app must be running at http://localhost:5235
-echo          or http://localhost (IIS) before tests will pass.
-echo.
-set "reply="
-set /p "reply=   Run tests? (Y/N): "
-if /i not "%reply%"=="Y" goto MENU
-
-echo.
-pushd "%TESTS%"
-dotnet test --logger "console;verbosity=normal" --logger "trx;LogFileName=test-results.trx" --logger "html;LogFileName=test-results.html"
-set "TEST_RESULT=%errorlevel%"
-popd
-
-echo.
-if "%TEST_RESULT%"=="0" (
-    echo    All tests passed!
-) else (
-    echo    Some tests failed. Check output above.
-    echo    Screenshots: %TESTS%\screenshots
-    echo    Test Results: %TESTS%\TestResults\test-results.trx
-    echo    HTML Report: %TESTS%\TestResults\test-results.html
-)
-call :PAUSE_RETURN
-goto MENU
-
-:: ============================================================================
-::  OPTION 4: RUN DR MYDESK
-:: ============================================================================
-:OPT_RUN
-cls
-echo.
-echo  ===============================================================
-echo   Run DR MyDesk - Choose how to launch
-echo  ===============================================================
-echo.
-echo    [1]  Standalone (Kestrel)    Quick dev server
-echo         URL: http://localhost:5235
-echo         No Administrator needed
-echo.
-echo    [2]  Local IIS               Production-like
-echo         URL: http://localhost
-echo         Requires prior deploy (Option 2 on main menu)
-echo         Requires Administrator
-echo.
-echo    [B]  Back to main menu
-echo.
-
-set "runchoice="
-set /p "runchoice=   Choose: "
-
-if /i "%runchoice%"=="1" goto RUN_STANDALONE
-if /i "%runchoice%"=="2" goto RUN_IIS
-if /i "%runchoice%"=="B" goto MENU
-goto OPT_RUN
-
-:RUN_STANDALONE
-cls
-echo.
-echo  ===============================================================
-echo   Standalone Server - Kestrel on http://localhost:5235
-echo  ===============================================================
-echo.
-
-if not defined DOTNET_VER (
-    echo    ERROR: .NET SDK not found.
-    echo    Install .NET 8 SDK from https://dotnet.microsoft.com/download
-    call :PAUSE_RETURN
-    goto MENU
-)
-
-if not exist "%WEB%" (
-    echo    ERROR: Web project not found at %WEB%
-    call :PAUSE_RETURN
-    goto MENU
-)
-
-:: Check if port 5235 is in use
-netstat -ano | findstr ":5235" | findstr "LISTENING" >nul 2>&1
-if %errorlevel%==0 (
-    echo    WARNING: Port 5235 is already in use.
-    echo    Another DR MyDesk instance may be running.
-    echo.
-    set "reply="
-    set /p "reply=   Kill existing process and start fresh? (Y/N): "
-    if /i "!reply!"=="Y" (
-        echo    Stopping existing process...
-        for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5235" ^| findstr "LISTENING"') do (
-            taskkill /F /PID %%a >nul 2>&1
-        )
-        timeout /t 1 >nul
-    ) else (
-        goto MENU
-    )
-)
-
-echo    Starting Kestrel on http://localhost:5235...
-echo    Press Ctrl+C to stop.
-echo.
-timeout /t 2 >nul
-
-:: Open browser after 6 seconds
-start "" /B cmd /c "timeout /t 6 >nul && start http://localhost:5235"
-
-pushd "%WEB%"
-dotnet run --urls "http://localhost:5235"
-popd
-
-echo.
-echo    Server stopped.
-call :PAUSE_RETURN
-goto MENU
-
-:RUN_IIS
-cls
-echo.
-echo  ===============================================================
-echo   Local IIS - http://localhost
-echo  ===============================================================
-echo.
-
-if not exist "%APPCMD%" (
     echo    ERROR: IIS is not installed.
     call :PAUSE_RETURN
     goto MENU
 )
 
-"%APPCMD%" list site "Techlight.MyDesk" >nul 2>&1
-if errorlevel 1 (
-    echo    WARNING: IIS site "Techlight.MyDesk" does not exist.
-    echo    You need to deploy first (Option 2 on main menu).
-    echo.
-    set "reply="
-    set /p "reply=   Go to deployment now? (Y/N): "
-    if /i "!reply!"=="Y" goto OPT_IIS_DEPLOY
-    goto MENU
-)
-
-if "%IS_ADMIN%"=="YES" (
-    "%APPCMD%" start apppool /apppool.name:Techlight.MyDesk >nul 2>&1
-    "%APPCMD%" start site /site.name:Techlight.MyDesk >nul 2>&1
-    echo    IIS site is running.
-    echo    Opening http://localhost...
-    timeout /t 1 >nul
-    start "" "http://localhost"
-) else (
-    echo    Requesting Administrator to start IIS...
-    start powershell -Verb RunAs -Command "& '%APPCMD%' start apppool /apppool.name:Techlight.MyDesk; & '%APPCMD%' start site /site.name:Techlight.MyDesk; Start-Process 'http://localhost'; Write-Host 'DR MyDesk is running at http://localhost' -ForegroundColor Green; Read-Host 'Press Enter to close'"
-)
+powershell -ExecutionPolicy Bypass -File "%DEPLOY%\Deploy.ps1"
 call :PAUSE_RETURN
 goto MENU
 
 :: ============================================================================
-::  OPTION 5: STATUS
+::  OPTION 3: CLEAN ^& BUILD
+:: ============================================================================
+:OPT_CLEAN_BUILD
+cls
+echo.
+echo  ===============================================================
+echo   Clean ^& Build Solution
+echo  ===============================================================
+echo.
+echo    [1]  Full Clean      Delete all bin/obj folders
+echo    [2]  Build All       Restore and build entire solution
+echo    [3]  Restore Only    NuGet packages restore
+echo.
+echo    [B]  Back
+echo.
+
+set "cchoice="
+set /p "cchoice=   Choose: "
+
+if /i "%cchoice%"=="1" (
+    echo    Cleaning...
+    for /d /r . %%d in (bin,obj) do @if exist "%%d" (
+        echo      Deleting %%d
+        rd /s /q "%%d" 2>nul
+    )
+    echo    Clean complete.
+    timeout /t 2 >nul
+    goto OPT_CLEAN_BUILD
+)
+if /i "%cchoice%"=="2" (
+    echo    Building solution...
+    dotnet build "%ROOT%\DR.MyDesk.sln"
+    call :PAUSE_RETURN
+    goto OPT_CLEAN_BUILD
+)
+if /i "%cchoice%"=="3" (
+    echo    Restoring...
+    dotnet restore "%ROOT%\DR.MyDesk.sln"
+    echo    Restore complete.
+    timeout /t 2 >nul
+    goto OPT_CLEAN_BUILD
+)
+if /i "%cchoice%"=="B" goto MENU
+goto OPT_CLEAN_BUILD
+
+:: ============================================================================
+::  OPTION 4: RUN
+:: ============================================================================
+:OPT_RUN
+cls
+echo.
+echo  ===============================================================
+echo   Run DR MyDesk
+echo  ===============================================================
+echo.
+echo    [1]  Quick Launch (Kestrel)  http://localhost:5235
+echo    [2]  IIS Site (Local)        http://localhost
+echo.
+echo    [B]  Back
+echo.
+
+set "rchoice="
+set /p "rchoice=   Choose: "
+
+if /i "%rchoice%"=="1" goto RUN_STANDALONE
+if /i "%rchoice%"=="2" goto RUN_IIS
+if /i "%rchoice%"=="B" goto MENU
+goto OPT_RUN
+
+:RUN_STANDALONE
+cls
+echo  Starting Kestrel server...
+netstat -ano | findstr ":5235" | findstr "LISTENING" >nul 2>&1
+if %errorlevel%==0 (
+    echo    Port 5235 is in use. Killing existing process...
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5235" ^| findstr "LISTENING"') do (
+        taskkill /F /PID %%a >nul 2>&1
+    )
+)
+start "" /B cmd /c "timeout /t 5 >nul && start http://localhost:5235"
+pushd "%WEB%"
+dotnet run --urls "http://localhost:5235"
+popd
+goto MENU
+
+:RUN_IIS
+cls
+if not exist "%APPCMD%" ( echo ERROR: IIS missing. && pause && goto MENU )
+if "%IS_ADMIN%"=="NO" (
+    powershell -Command "Start-Process cmd -ArgumentList '/c cd /d %ROOT% ^&^& Run.bat' -Verb RunAs"
+    exit
+)
+"%APPCMD%" start apppool /apppool.name:Techlight.MyDesk >nul 2>&1
+"%APPCMD%" start site /site.name:Techlight.MyDesk >nul 2>&1
+echo    IIS site started.
+start "" "http://localhost"
+timeout /t 2 >nul
+goto MENU
+
+:: ============================================================================
+::  OPTION 5: PLAYWRIGHT TESTS
+:: ============================================================================
+:OPT_TESTS
+cls
+echo.
+echo  ===============================================================
+echo   Playwright End-to-End Tests
+echo  ===============================================================
+echo.
+echo    [1]  Run All Tests (Headless)
+echo    [2]  Open Playwright UI (Interactive)
+echo    [3]  Trace Viewer (Open latest trace)
+echo    [4]  Install Browsers (One-time setup)
+echo.
+echo    [B]  Back
+echo.
+
+set "tchoice="
+set /p "tchoice=   Choose: "
+
+if /i "%tchoice%"=="1" (
+    echo    Running all tests...
+    pushd "%TESTS%"
+    dotnet test
+    popd
+    call :PAUSE_RETURN
+    goto OPT_TESTS
+)
+if /i "%tchoice%"=="2" (
+    echo    Opening Playwright UI...
+    pushd "%TESTS%"
+    set PWDEBUG=0
+    npx playwright test --ui
+    popd
+    goto OPT_TESTS
+)
+if /i "%tchoice%"=="3" (
+    echo    Searching for latest trace...
+    pushd "%TESTS%"
+    for /f "delims=" %%a in ('dir /s /b *.zip ^| findstr /i "trace"') do (
+        set "LAST_TRACE=%%a"
+    )
+    if defined LAST_TRACE (
+        npx playwright show-trace "!LAST_TRACE!"
+    ) else (
+        echo    No trace files found in %TESTS%
+        timeout /t 3 >nul
+    )
+    popd
+    goto OPT_TESTS
+)
+if /i "%tchoice%"=="4" (
+    echo    Installing Playwright browsers...
+    pushd "%TESTS%"
+    dotnet build
+    powershell -ExecutionPolicy Bypass -File "bin/Debug/net8.0/playwright.ps1" install
+    popd
+    call :PAUSE_RETURN
+    goto OPT_TESTS
+)
+if /i "%tchoice%"=="B" goto MENU
+goto OPT_TESTS
+
+:: ============================================================================
+::  OPTION 6: STATUS
 :: ============================================================================
 :OPT_STATUS
 cls
@@ -388,96 +337,94 @@ echo  ===============================================================
 echo   System Status
 echo  ===============================================================
 echo.
-echo    ENVIRONMENT
+echo    .NET SDK:    !DOTNET_VER!
+echo    Privileges:  %IS_ADMIN%
 echo.
-
-if defined DOTNET_VER (
-    echo      [OK]  .NET SDK         !DOTNET_VER!
-) else (
-    echo      [!!]  .NET SDK         Not installed
-)
-
-if "%IS_ADMIN%"=="YES" (
-    echo      [OK]  Privileges       Administrator
-) else (
-    echo      [ !]  Privileges       Standard User
-)
-
-if exist "%APPCMD%" (
-    echo      [OK]  IIS              Installed
-) else (
-    echo      [!!]  IIS              Not installed
-)
-
-echo.
-echo    IIS SITE
+echo    Port 5235:   
+netstat -ano | findstr ":5235" | findstr "LISTENING" >nul 2>&1 && echo    [ACTIVE] || echo    [FREE]
+echo    Port 80:     
+netstat -ano | findstr ":80 " | findstr "LISTENING" >nul 2>&1 && echo    [ACTIVE] || echo    [FREE]
 echo.
 if exist "%APPCMD%" (
-    "%APPCMD%" list site "Techlight.MyDesk" >nul 2>&1
-    if errorlevel 1 (
-        echo      [ -]  Techlight.MyDesk   Not deployed
-    ) else (
-        echo      [OK]  Techlight.MyDesk   Deployed
+    echo    IIS Site:
+    "%APPCMD%" list site "Techlight.MyDesk"
+)
+echo.
+echo    Latest Log:
+dir /b /o-d "%LOGS%\app-*.log" 2>nul | findstr "^" >nul && (
+    for /f "delims=" %%a in ('dir /b /o-d "%LOGS%\app-*.log"') do (
+        echo      %%a
+        goto :SKIP_LOG_LIST
     )
-) else (
-    echo      IIS not available
-)
-
-echo.
-echo    PORTS
-echo.
-netstat -ano | findstr ":5235" | findstr "LISTENING" >nul 2>&1
-if %errorlevel%==0 (
-    echo      [ACTIVE] Port 5235    Kestrel is running
-) else (
-    echo      [FREE]   Port 5235    Available
-)
-
-netstat -ano | findstr ":80 " | findstr "LISTENING" >nul 2>&1
-if %errorlevel%==0 (
-    echo      [ACTIVE] Port 80      IIS is running
-) else (
-    echo      [FREE]   Port 80      Available
-)
-
-echo.
-echo    PATHS
-echo      Root:    %ROOT%
-echo      Web:     %WEB%
-echo      Deploy:  %DEPLOY%
-echo      Tests:   %TESTS%
-
+) || echo      No logs found.
+:SKIP_LOG_LIST
 call :PAUSE_RETURN
 goto MENU
 
 :: ============================================================================
-::  OPTION 6: DOCS
+::  OPTION 7: LOGS
 :: ============================================================================
-:OPT_DOCS
+:OPT_LOGS
 cls
 echo.
 echo  ===============================================================
-echo   Documentation
+echo   Application Logs
 echo  ===============================================================
 echo.
-echo    [1]  README.md             Main project overview
-echo    [2]  TESTING.md            Test suite guide
-echo    [3]  Deployment README     IIS and production
-echo    [4]  CHANGELOG.md          Release notes
+echo    [1]  Open Logs Folder
+echo    [2]  View Latest App Log (Tail)
+echo    [3]  View Latest Error Log
+echo    [4]  Clear All Logs
 echo.
 echo    [B]  Back
 echo.
 
-set "docchoice="
-set /p "docchoice=   Choose: "
+set "lchoice="
+set /p "lchoice=   Choose: "
 
-if /i "%docchoice%"=="1" start "" "%ROOT%\README.md"
-if /i "%docchoice%"=="2" start "" "%ROOT%\TESTING.md"
-if /i "%docchoice%"=="3" start "" "%DEPLOY%\README.md"
-if /i "%docchoice%"=="4" start "" "%ROOT%\CHANGELOG.md"
-if /i "%docchoice%"=="B" goto MENU
+if /i "%lchoice%"=="1" start "" "%LOGS%"
+if /i "%lchoice%"=="2" (
+    for /f "delims=" %%a in ('dir /b /o-d "%LOGS%\app-*.log"') do (
+        powershell -Command "Get-Content '%LOGS%\%%a' -Wait -Tail 50"
+        goto MENU
+    )
+)
+if /i "%lchoice%"=="3" (
+    for /f "delims=" %%a in ('dir /b /o-d "%LOGS%\errors-*.log"') do (
+        start notepad "%LOGS%\%%a"
+        goto MENU
+    )
+)
+if /i "%lchoice%"=="4" (
+    del /q "%LOGS%\*.log"
+    echo    Logs cleared.
+    timeout /t 2 >nul
+)
+if /i "%lchoice%"=="B" goto MENU
+goto OPT_LOGS
 
-timeout /t 1 >nul
+:: ============================================================================
+::  OPTION 8: DOCS
+:: ============================================================================
+:OPT_DOCS
+cls
+echo.
+echo    [1]  Main README
+echo    [2]  Product Roadmap
+echo    [3]  Testing Guide
+echo    [4]  IIS Deployment Guide
+echo.
+echo    [B]  Back
+echo.
+
+set "dchoice="
+set /p "dchoice=   Choose: "
+
+if /i "%dchoice%"=="1" start "" "%ROOT%\README.md"
+if /i "%dchoice%"=="2" start "" "%ROOT%\PRODUCT_ROADMAP.md"
+if /i "%dchoice%"=="3" start "" "%ROOT%\TESTING.md"
+if /i "%dchoice%"=="4" start "" "%DEPLOY%\README.md"
+if /i "%dchoice%"=="B" goto MENU
 goto OPT_DOCS
 
 :: ============================================================================

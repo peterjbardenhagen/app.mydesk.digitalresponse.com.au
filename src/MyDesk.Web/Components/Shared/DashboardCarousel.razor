@@ -78,9 +78,10 @@
     [Parameter] public DashboardMetrics? Metrics { get; set; }
     [Parameter] public bool IsDirector { get; set; }
     [Parameter] public string? UserCode { get; set; }
+    [Parameter] public List<ChartSeries> ChartSeries { get; set; } = new();
+    [Parameter] public string[] XAxisLabels { get; set; } = Array.Empty<string>();
 
     private int CurrentIndex { get; set; } = 0;
-
     private List<CarouselView> Views { get; set; } = new();
     private CustomerSupplierView _customerSupplierView = CustomerSupplierView.Customers;
 
@@ -1528,13 +1529,7 @@
 
     private List<ChartSeries> GetRevenueSeries()
     {
-        if (Metrics == null) return new();
-        return new List<ChartSeries>
-        {
-            new() { Name = "Quotes", Data = Metrics.MonthlyQuotesThisYear.Select(v => (double)v).ToArray() },
-            new() { Name = "Invoices", Data = Metrics.MonthlyInvoicesThisYear.Select(v => (double)v).ToArray() },
-            new() { Name = "POs", Data = Metrics.MonthlyPOsThisYear.Select(v => (double)v).ToArray() },
-        };
+        return ChartSeries;
     }
 
     private List<ChartSeries> GetComparisonSeries()
@@ -1549,7 +1544,7 @@
 
     private string[] GetMonthLabels()
     {
-        return new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+        return XAxisLabels;
     }
 
     private static string Fmt(decimal v) => "$" + v.ToString("#,##0");

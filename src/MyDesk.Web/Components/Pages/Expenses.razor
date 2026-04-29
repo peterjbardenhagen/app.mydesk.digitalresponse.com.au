@@ -3,32 +3,33 @@
 @using MyDesk.Shared.Models
 @using MyDesk.Shared.Services
 @using MyDesk.Web.Services
+@using MudBlazor
 @inject ExpenseService ExpenseService
 @inject CompanyService CompanyService
 @inject AzureAIService AIService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
-<PageTitle>Expenses - Techlight MyDesk</PageTitle>
+<PageTitle>Expenses - MyDesk</PageTitle>
 
 <div class="tl-page-header">
-    <div class="d-flex justify-space-between align-end">
-        <div>
-            <div class="tl-breadcrumb"><a href="/">Techlight MyDesk</a><span class="sep">/</span><span>Expenses</span></div>
-            <h1>Expenses</h1>
-            <p class="tl-subtitle">Manage business expenses, upload receipts, and use AI to auto-process PDFs.</p>
-        </div>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add" OnClick="OnAddExpense">
-            New Expense
-        </MudButton>
+<div class="d-flex align-center justify-space-between">
+    <div>
+        <div class="tl-breadcrumb"><a href="/">MyDesk</a><span class="sep">/</span><span>Expenses</span></div>
+        <h1>Expenses</h1>
+        <p class="tl-subtitle">Manage business expenses, upload receipts, and use AI to auto-process PDFs.</p>
     </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add" OnClick="OnAddExpense" Class="ml-auto mr-0">
+        New Expense
+    </MudButton>
+</div>
 </div>
 
 <MudGrid Class="mb-6">
     <MudItem xs="12" md="8">
         <MudPaper Class="pa-6 d-flex flex-column align-center justify-center tl-upload-zone" 
                   Elevation="0" Outlined="true" 
-                  Style="border: 2px dashed var(--gray-300); background: var(--gray-50); min-height: 200px;">
+                  Style="border: 2px dashed var(--mud-palette-lines-default); background: var(--mud-palette-background-grey); min-height: 200px;">
             <MudFileUpload T="IReadOnlyList<IBrowserFile>" OnFilesChanged="UploadFiles" Hidden="false" Class="flex-1"
                            InputClass="absolute min-h-full min-w-full z-20 opacity-0 cursor-pointer"
                            @ondragenter="@(() => _dragClass = "tl-upload-zone-active")"
@@ -198,20 +199,37 @@
 
     private async Task OnAddExpense()
     {
-        // Show edit dialog
-        Snackbar.Add("Feature coming soon", Severity.Info);
+        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<Shared.ExpenseDialog>("New Expense", options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is Expense newExpense)
+        {
+            await ExpenseService.SaveExpenseAsync(newExpense);
+            await LoadExpenses();
+            Snackbar.Add("Expense added successfully", Severity.Success);
+        }
     }
 
     private async Task OnEditExpense(Expense expense)
     {
-        // Show edit dialog
-        Snackbar.Add("Feature coming soon", Severity.Info);
+        var parameters = new DialogParameters<Shared.ExpenseDialog> { { "Expense", expense } };
+        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<Shared.ExpenseDialog>("Edit Expense", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is Expense updatedExpense)
+        {
+            await ExpenseService.SaveExpenseAsync(updatedExpense);
+            await LoadExpenses();
+            Snackbar.Add("Expense updated successfully", Severity.Success);
+        }
     }
 
     private async Task OnDeleteExpense(Expense expense)
     {
         var parameters = new DialogParameters<AttentionRow> { { "Content", "Are you sure you want to delete this expense record?" } };
-        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.ExtraSmall };
         var dialog = await DialogService.ShowAsync<MudDialog>("Delete Expense", parameters, options);
         var result = await dialog.Result;
         

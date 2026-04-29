@@ -1,14 +1,14 @@
 @page "/quotes/{Id:int}/history"
 @attribute [Authorize]
-@inject QuoteService Svc
+@inject AuditService AuditService
 @inject NavigationManager Nav
 
-<PageTitle>Quote #@Id History - Techlight MyDesk</PageTitle>
+<PageTitle>Quote #@Id History - MyDesk</PageTitle>
 
 <div class="tl-page-header">
     <div>
         <div class="tl-breadcrumb">
-            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/">MyDesk</a><span class="sep">/</span>
             <a href="/quotes">Quotes</a><span class="sep">/</span>
             <a href="@($"/quotes/{Id}")">Quote #@Id</a><span class="sep">/</span>
             <span style="color:var(--gray-700);font-weight:500;">History</span>
@@ -39,6 +39,7 @@ else
                     <th>Date / Time</th>
                     <th>User</th>
                     <th>Action</th>
+                    <th>Details</th>
                 </tr>
             </thead>
             <tbody>
@@ -46,10 +47,11 @@ else
                 {
                     <tr>
                         <td style="white-space:nowrap;color:var(--gray-500);font-size:0.85rem;">
-                            @e.DateEntered.ToString("dd/MM/yyyy HH:mm")
+                            @e.Timestamp.ToString("dd/MM/yyyy HH:mm")
                         </td>
-                        <td style="font-weight:500;">@(e.UserName ?? e.Code ?? "—")</td>
+                        <td style="font-weight:500;">@e.UserName</td>
                         <td>@e.Action</td>
+                        <td><span style="color:var(--gray-500);font-size:0.85rem;">@e.Details</span></td>
                     </tr>
                 }
             </tbody>
@@ -59,11 +61,11 @@ else
 
 @code {
     [Parameter] public int Id { get; set; }
-    private List<QuoteAuditEntry>? _entries;
+    private List<AuditEntry>? _entries;
 
     protected override async Task OnInitializedAsync()
     {
-        _entries = await Svc.GetAuditAsync(Id);
+        _entries = await AuditService.GetAuditTrailAsync("Quote", Id);
     }
 }
 

@@ -18,6 +18,7 @@ public class PurchaseOrderService
     // ── Shared SELECT fragment ──────────────────────────────────────────────
     private const string SelectCols = @"
         p.POid,
+        ISNULL(d.POPrefix, 'PO-') + CAST(p.POid AS NVARCHAR(20)) AS PONumber,
         ISNULL(p.Code,'')           AS Code,
         ISNULL(u.Name,'')           AS OriginatorName,
         ISNULL(p.Project,'')        AS Project,
@@ -200,6 +201,68 @@ public class PurchaseOrderService
         await _db.ExecuteAsync("DELETE FROM PurchaseOrderContents WHERE POid = @Id", new() { ["Id"] = poId });
         await _db.ExecuteAsync("DELETE FROM PurchaseOrderAudit    WHERE POid = @Id", new() { ["Id"] = poId });
         await _db.ExecuteAsync("DELETE FROM PurchaseOrders        WHERE POid = @Id", new() { ["Id"] = poId });
+    }
+
+    public async Task<int> CopyPOAsync(int poId, string userCode)
+    {
+        var po = await GetPurchaseOrderAsync(poId);
+        if (po == null) throw new Exception("Original PO not found");
+
+        var items = await GetLineItemsAsync(poId);
+        
+        var newPO = new PurchaseOrder
+        {
+            Project = po.Project + " (Copy)",
+            ContactId = po.ContactId,
+            DivisionId = po.DivisionId,
+            PODate = DateTime.Today,
+            POStatusId = 1,
+            GST = po.GST,
+            POPaymentTypeId = po.POPaymentTypeId,
+            Terms = po.Terms,
+            DateRequired = DateTime.Today.AddDays(7),
+            DeliverToLocationId = po.DeliverToLocationId,
+            DeliverToLocation = po.DeliverToLocation,
+            IntroText = po.IntroText,
+            InternalNotes = po.InternalNotes,
+            PriceExTotal = po.PriceExTotal,
+            PriceGSTTotal = po.PriceGSTTotal,
+            PriceIncTotal = po.PriceIncTotal,
+            Qid = po.Qid,
+            RFQid = po.RFQid,
+            HasCapEx = po.HasCapEx
+        };
+
+        return await CreatePurchaseOrderAsync(newPO, items, userCode);
+    }
+
+    public async Task<int> CreatePOFromQuoteAsync(int qid, string userCode, QuoteService quoteService)
+    {
+        var q = await quoteService.GetQuoteAsync(qid);
+        if (q == null) throw new Exception("Quote not found");
+
+        var tpItems = await quoteService.GetThirdPartyItemsAsync(qid);
+        
+        var po = new PurchaseOrder
+        {
+            Project = q.Reference ?? "From Quote #" + qid,
+            DivisionId = q.DivisionId,
+            PODate = DateTime.Today,
+            POStatusId = 1,
+            DateRequired = DateTime.Today.AddDays(14),
+            Qid = qid,
+            Code = userCode
+        };
+
+        var items = tpItems.Select(ti => new POLineItem
+        {
+            Description = ti.Description ?? "",
+            Quantity = (int)ti.Quantity,
+            PriceEx = ti.UnitCost,
+            PriceExSubTotal = ti.UnitCost * ti.Quantity
+        }).ToList();
+
+        return await CreatePurchaseOrderAsync(po, items, userCode);
     }
 
     // ── Audit ──────────────────────────────────────────────────────────────

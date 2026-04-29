@@ -4,10 +4,10 @@
 Write-Host "Deploying MyDesk to local IIS..." -ForegroundColor Cyan
 
 # Stop the IIS application pool
-Write-Host "Stopping IIS application pool 'DR.MyDesk'..." -ForegroundColor Yellow
+Write-Host "Stopping IIS application pool 'MyDesk'..." -ForegroundColor Yellow
 try {
     Import-Module WebAdministration
-    Stop-WebAppPool -Name 'DR.MyDesk' -ErrorAction SilentlyContinue
+    Stop-WebAppPool -Name 'MyDesk' -ErrorAction SilentlyContinue
     Start-Sleep -Seconds 2
     Write-Host "Application pool stopped." -ForegroundColor Green
 } catch {
@@ -15,9 +15,9 @@ try {
 }
 
 # Stop the IIS site
-Write-Host "Stopping IIS site 'DR.MyDesk'..." -ForegroundColor Yellow
+Write-Host "Stopping IIS site 'MyDesk'..." -ForegroundColor Yellow
 try {
-    Stop-Website -Name 'DR.MyDesk' -ErrorAction SilentlyContinue
+    Stop-Website -Name 'MyDesk' -ErrorAction SilentlyContinue
     Start-Sleep -Seconds 1
     Write-Host "Site stopped." -ForegroundColor Green
 } catch {
@@ -30,8 +30,8 @@ Get-Process w3wp -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorActio
 Start-Sleep -Seconds 2
 
 # Copy files
-$source = "C:\temp\DR.MyDesk-publish"
-$destination = "C:\inetpub\wwwroot\DR.MyDesk"
+$source = "C:\temp\MyDesk-publish"
+$destination = "C:\inetpub\wwwroot\MyDesk"
 
 Write-Host "Copying files from $source to $destination..." -ForegroundColor Yellow
 if (Test-Path $source) {
@@ -48,10 +48,10 @@ if (Test-Path $source) {
 }
 
 # Start the IIS application pool
-Write-Host "Starting IIS application pool 'DR.MyDesk'..." -ForegroundColor Yellow
+Write-Host "Starting IIS application pool 'MyDesk'..." -ForegroundColor Yellow
 try {
     Import-Module WebAdministration
-    Start-WebAppPool -Name 'DR.MyDesk' -ErrorAction SilentlyContinue
+    Start-WebAppPool -Name 'MyDesk' -ErrorAction SilentlyContinue
     Start-Sleep -Seconds 2
     Write-Host "Application pool started." -ForegroundColor Green
 } catch {
@@ -59,13 +59,13 @@ try {
 }
 
 # Start the IIS site
-Write-Host "Starting IIS site 'DR.MyDesk'..." -ForegroundColor Yellow
+Write-Host "Starting IIS site 'MyDesk'..." -ForegroundColor Yellow
 try {
-    Start-Website -Name 'DR.MyDesk' -ErrorAction SilentlyContinue
+    Start-Website -Name 'MyDesk' -ErrorAction SilentlyContinue
     Write-Host "Site started." -ForegroundColor Green
 } catch {
     Write-Host "Could not start site: $_" -ForegroundColor Yellow
 }
 
 Write-Host "`nDeployment complete!" -ForegroundColor Green
-Write-Host "Access the site at: http://localhost/DR.MyDesk" -ForegroundColor Cyan
+Write-Host "Access the site at: http://localhost/MyDesk" -ForegroundColor Cyan

@@ -4,7 +4,7 @@
 @inject LogService LogService
 @inject ISnackbar Snackbar
 
-<PageTitle>Log Viewer - Techlight MyDesk</PageTitle>
+<PageTitle>Log Viewer - MyDesk</PageTitle>
 
 <div class="tl-page-header">
     <div>
@@ -250,7 +250,7 @@
     private PurgeOption _purgeOption = PurgeOption.OlderThan30Days;
     private DateTime _lastUpdated;
     private System.Threading.Timer? _refreshTimer;
-    private DialogOptions _dialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
+    private DialogOptions _dialogOptions = new() { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
 
     protected override async Task OnInitializedAsync()
     {

@@ -2,8 +2,10 @@
 @attribute [Authorize]
 @inject ContactService ContactService
 @inject NavigationManager Nav
+@inject IJSRuntime JsRuntime
+@inject PlatformSettingsService PlatformSettings
 
-<PageTitle>Contact - Techlight MyDesk</PageTitle>
+<PageTitle>Contact - @PlatformSettings.GetBrandingName()</PageTitle>
 
 @if (_contact == null)
 {
@@ -15,6 +17,9 @@ else
         <MudText Typo="Typo.h4" Class="font-weight-bold">@_contact.FullName</MudText>
         <div class="d-flex gap-2">
             <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Nav.NavigateTo("/contacts"))">Back</MudButton>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ContactPage" OnClick="DownloadVcf" Color="Color.Info">
+                Export VCF
+            </MudButton>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" Href="@($"/contacts/{_contact.ContactId}/edit")">Edit</MudButton>
         </div>
     </div>
@@ -50,5 +55,53 @@ else
 
     protected override async Task OnInitializedAsync()
         => _contact = await ContactService.GetContactAsync(Id);
-}
 
+    private async Task DownloadVcf()
+    {
+        if (_contact == null) return;
+
+        var vcf = GenerateVcf(_contact);
+        var bytes = System.Text.Encoding.UTF8.GetBytes(vcf);
+        var base64 = Convert.ToBase64String(bytes);
+        var fileName = $"{_contact.FullName.Replace(" ", "_")}.vcf";
+        
+        await JsRuntime.InvokeVoidAsync("downloadBase64File", base64, "text/vcard", fileName);
+    }
+
+    private static string GenerateVcf(Contact c)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("BEGIN:VCARD");
+        sb.AppendLine("VERSION:3.0");
+        sb.AppendLine($"N:{c.Surname};{c.FirstName};;;");
+        sb.AppendLine($"FN:{c.FullName}");
+        
+        if (!string.IsNullOrWhiteSpace(c.CompanyName))
+            sb.AppendLine($"ORG:{c.CompanyName}");
+        
+        if (!string.IsNullOrWhiteSpace(c.Position))
+            sb.AppendLine($"TITLE:{c.Position}");
+        
+        if (!string.IsNullOrWhiteSpace(c.Phone))
+            sb.AppendLine($"TEL;TYPE=WORK,VOICE:{c.Phone}");
+        
+        if (!string.IsNullOrWhiteSpace(c.Mobile))
+            sb.AppendLine($"TEL;TYPE=CELL,VOICE:{c.Mobile}");
+        
+        if (!string.IsNullOrWhiteSpace(c.Fax))
+            sb.AppendLine($"TEL;TYPE=WORK,FAX:{c.Fax}");
+        
+        if (!string.IsNullOrWhiteSpace(c.Email))
+            sb.AppendLine($"EMAIL;TYPE=WORK:{c.Email}");
+        
+        var address = "";
+        if (!string.IsNullOrWhiteSpace(c.Address1))
+            address += c.Address1 + ";";
+        
+        if (!string.IsNullOrWhiteSpace(address.TrimEnd(';')))
+            sb.AppendLine($"ADR;TYPE=WORK:;;{address.TrimEnd(';')}");
+        
+        sb.AppendLine("END:VCARD");
+        return sb.ToString();
+    }
+}

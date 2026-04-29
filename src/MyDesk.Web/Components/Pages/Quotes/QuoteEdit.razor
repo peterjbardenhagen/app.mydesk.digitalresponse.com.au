@@ -7,14 +7,18 @@
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ActivityService ActivitySvc
+@inject SupplierQuoteParseService ParseService
+@inject CompanyService CompanyService
 @using System.Security.Claims
+@using Microsoft.AspNetCore.WebUtilities
+@using MyDesk.Web.Services
 
-<PageTitle>@(IsNew ? "New Quote" : $"Edit Quote #{Id}") - Techlight MyDesk</PageTitle>
+<PageTitle>@(IsNew ? "New Quote" : $"Edit Quote #{Id}") - MyDesk</PageTitle>
 
 <div class="tl-page-header">
     <div>
         <div class="tl-breadcrumb">
-            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/">MyDesk</a><span class="sep">/</span>
             <a href="/quotes">Quotes</a><span class="sep">/</span>
             <span style="color:var(--gray-700);font-weight:500;">@(IsNew ? "New Quote" : $"Edit #{Id}")</span>
         </div>
@@ -33,7 +37,8 @@
                              SearchFunc="SearchContacts" Variant="Variant.Outlined"
                              ToStringFunc="@(c => c == null ? "" : $"{c.CompanyName} — {c.FullName}".TrimEnd(' ').TrimEnd('—').Trim())"
                              ResetValueOnEmptyText="false" ShowProgressIndicator="true"
-                             AdornmentIcon="@Icons.Material.Rounded.Business" />
+                             AdornmentIcon="@Icons.Material.Rounded.Business"
+                             OnSelectionChanged="OnContactSelected" />
         </MudItem>
         <MudItem xs="12" md="4">
             <MudSelect T="int" @bind-Value="_q.DivisionId" Label="Division" Variant="Variant.Outlined">
@@ -82,6 +87,7 @@
             <thead>
                 <tr style="border-bottom:1px solid var(--mud-palette-divider);color:var(--gray-500);">
                     <th style="text-align:left;padding:4px 6px;width:90px;">Type</th>
+                    <th style="text-align:left;padding:4px 6px;width:150px;">Product</th>
                     <th style="text-align:left;padding:4px 6px;">Description</th>
                     <th style="text-align:right;padding:4px 6px;width:70px;">Qty</th>
                     <th style="text-align:right;padding:4px 6px;width:60px;">Units</th>
@@ -98,77 +104,68 @@
                     var r = row;
                     <tr style="border-bottom:1px solid var(--mud-palette-divider);">
                         <td style="padding:2px 4px;">
-                            <MudSelect T="string" Value="@r.Type" ValueChanged="@(v => { r.Type = v; })"
-                                       Variant="Variant.Text" Margin="Margin.Dense" Dense="true">
-                                <MudSelectItem T="string" Value="@("Supply")">Supply</MudSelectItem>
-                                <MudSelectItem T="string" Value="@("Hire")">Hire</MudSelectItem>
-                                <MudSelectItem T="string" Value="@("Labour")">Labour</MudSelectItem>
-                                <MudSelectItem T="string" Value="@("Other")">Other</MudSelectItem>
+                            <MudSelect @bind-Value="r.Type" Margin="Margin.Dense" Variant="Variant.Text">
+                                <MudSelectItem Value="@("Supply")">Supply</MudSelectItem>
+                                <MudSelectItem Value="@("Labour")">Labour</MudSelectItem>
+                                <MudSelectItem Value="@("Delivery")">Delivery</MudSelectItem>
                             </MudSelect>
                         </td>
                         <td style="padding:2px 4px;">
-                            <MudTextField @bind-Value="@r.Description" Variant="Variant.Text"
-                                          Margin="Margin.Dense" Style="min-width:180px;" />
+                            <MudAutocomplete T="Product" SearchFunc="SearchProducts" 
+                                             ToStringFunc="@(p => p == null ? "" : p.ProductName)"
+                                             Value="null" ValueChanged="@(p => OnProductSelected(r, p))"
+                                             Placeholder="Search product..." Margin="Margin.Dense" Variant="Variant.Text" 
+                                             Dense="true" ResetValueOnEmptyText="true" />
                         </td>
                         <td style="padding:2px 4px;">
-                            <MudNumericField Value="@r.Qty" ValueChanged="@((decimal v) => { r.Qty = v; StateHasChanged(); })"
-                                             Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
+                            <MudTextField @bind-Value="r.Description" Variant="Variant.Text" Margin="Margin.Dense" />
                         </td>
                         <td style="padding:2px 4px;">
-                            <MudNumericField Value="@r.Units" ValueChanged="@((decimal v) => { r.Units = v; StateHasChanged(); })"
-                                             Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
+                            <MudNumericField @bind-Value="r.Qty" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
                         </td>
                         <td style="padding:2px 4px;">
-                            <MudNumericField Value="@r.Days" ValueChanged="@((decimal v) => { r.Days = v; StateHasChanged(); })"
-                                             Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
+                            <MudNumericField @bind-Value="r.Units" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
                         </td>
                         <td style="padding:2px 4px;">
-                            <MudNumericField Value="@r.UnitCost" ValueChanged="@((decimal v) => { r.UnitCost = v; StateHasChanged(); })"
-                                             Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
+                            <MudNumericField @bind-Value="r.Days" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
                         </td>
                         <td style="padding:2px 4px;">
-                            <MudNumericField Value="@r.NettPrice" ValueChanged="@((decimal v) => { r.NettPrice = v; StateHasChanged(); })"
-                                             Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
+                            <MudNumericField @bind-Value="r.UnitCost" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
                         </td>
-                        <td style="text-align:right;padding:2px 8px;white-space:nowrap;font-weight:500;">
-                            @r.ExtPrice.ToString("N2")
+                        <td style="padding:2px 4px;">
+                            <MudNumericField @bind-Value="r.NettPrice" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
                         </td>
-                        <td style="padding:2px;">
-                            <MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small" Color="Color.Error"
-                                           OnClick="@(() => RemoveLine(r))" />
+                        <td style="text-align:right;padding:2px 8px;font-weight:500;">
+                            $@r.ExtPrice.ToString("N2")
+                        </td>
+                        <td>
+                            <MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small" Color="Color.Error" OnClick="@(() => RemoveLine(r))" />
                         </td>
                     </tr>
-                }
-                @if (!_lines.Any())
-                {
-                    <tr><td colspan="9" style="padding:16px;text-align:center;color:var(--gray-400);">No line items — click Add Line to begin.</td></tr>
                 }
             </tbody>
         </table>
     </div>
 </MudPaper>
 
-@* ── Third-Party Supply ──────────────────────────────────────────────────── *@
-<MudExpansionPanels Class="mb-4" Elevation="1">
-    <MudExpansionPanel>
+@* ── Third Party Supply ────────────────────────────────────────────────── *@
+<MudExpansionPanels MultiExpansion="true">
+    <MudExpansionPanel Text="Third-Party Supply Items" MaxHeight="600" Expanded="true">
         <TitleContent>
             <div class="d-flex align-center gap-2">
-                <MudIcon Icon="@Icons.Material.Rounded.LocalShipping" Size="Size.Small" />
-                <MudText Typo="Typo.subtitle2">Third-Party Supply (@_tpLines.Count item@(_tpLines.Count == 1 ? "" : "s"))</MudText>
+                <MudIcon Icon="@Icons.Material.Rounded.ShoppingCart" Size="Size.Small" />
+                <MudText Typo="Typo.subtitle2" Style="text-transform:uppercase;">Third-Party Supply Items (@_tpLines.Count)</MudText>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Add" OnClick="AddTpLine" Class="ml-auto">Add Item</MudButton>
             </div>
         </TitleContent>
         <ChildContent>
-            <div class="d-flex justify-end mb-2">
-                <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Add"
-                           OnClick="AddTpLine">Add Supplier Line</MudButton>
-            </div>
             <div style="overflow-x:auto;">
                 <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
                     <thead>
                         <tr style="border-bottom:1px solid var(--mud-palette-divider);color:var(--gray-500);">
                             <th style="text-align:left;padding:4px 6px;">Description</th>
-                            <th style="text-align:left;padding:4px 6px;width:130px;">Supplier</th>
-                            <th style="text-align:right;padding:4px 6px;width:60px;">Qty</th>
+                            <th style="text-align:left;padding:4px 6px;">Supplier</th>
+                            <th style="text-align:right;padding:4px 6px;width:70px;">Qty</th>
                             <th style="text-align:right;padding:4px 6px;width:90px;">Unit Cost</th>
                             <th style="text-align:right;padding:4px 6px;width:90px;">Nett Price</th>
                             <th style="text-align:right;padding:4px 6px;width:100px;">Ext Price</th>
@@ -176,22 +173,18 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var tp in _tpLines)
+                        @foreach (var row in _tpLines)
                         {
-                            var t = tp;
+                            var r = row;
                             <tr style="border-bottom:1px solid var(--mud-palette-divider);">
-                                <td style="padding:2px 4px;"><MudTextField @bind-Value="@t.Description" Variant="Variant.Text" Margin="Margin.Dense" Style="min-width:180px;" /></td>
-                                <td style="padding:2px 4px;"><MudTextField @bind-Value="@t.Supplier" Variant="Variant.Text" Margin="Margin.Dense" /></td>
-                                <td style="padding:2px 4px;"><MudNumericField Value="@t.Qty" ValueChanged="@((decimal v) => { t.Qty = v; StateHasChanged(); })" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" /></td>
-                                <td style="padding:2px 4px;"><MudNumericField Value="@t.UnitCost" ValueChanged="@((decimal v) => { t.UnitCost = v; StateHasChanged(); })" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" /></td>
-                                <td style="padding:2px 4px;"><MudNumericField Value="@t.NettPrice" ValueChanged="@((decimal v) => { t.NettPrice = v; StateHasChanged(); })" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" /></td>
-                                <td style="text-align:right;padding:2px 8px;font-weight:500;">@t.ExtPrice.ToString("N2")</td>
-                                <td style="padding:2px;"><MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small" Color="Color.Error" OnClick="@(() => RemoveTpLine(t))" /></td>
+                                <td style="padding:2px 4px;"><MudTextField @bind-Value="r.Description" Margin="Margin.Dense" /></td>
+                                <td style="padding:2px 4px;"><MudTextField @bind-Value="r.Supplier" Margin="Margin.Dense" /></td>
+                                <td style="padding:2px 4px;"><MudNumericField @bind-Value="r.Qty" Margin="Margin.Dense" Min="0m" Format="N2" /></td>
+                                <td style="padding:2px 4px;"><MudNumericField @bind-Value="r.UnitCost" Margin="Margin.Dense" Min="0m" Format="N2" /></td>
+                                <td style="padding:2px 4px;"><MudNumericField @bind-Value="r.NettPrice" Margin="Margin.Dense" Min="0m" Format="N2" /></td>
+                                <td style="text-align:right;padding:2px 8px;font-weight:500;">$@r.ExtPrice.ToString("N2")</td>
+                                <td><MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small" Color="Color.Error" OnClick="@(() => RemoveTpLine(r))" /></td>
                             </tr>
-                        }
-                        @if (!_tpLines.Any())
-                        {
-                            <tr><td colspan="7" style="padding:12px;text-align:center;color:var(--gray-400);">No third-party lines.</td></tr>
                         }
                     </tbody>
                 </table>
@@ -201,7 +194,7 @@
 </MudExpansionPanels>
 
 @* ── Totals + Save ───────────────────────────────────────────────────────── *@
-<div class="d-flex justify-space-between align-start gap-4 flex-wrap">
+<div class="d-flex justify-space-between align-start gap-4 flex-wrap mt-4">
     <MudPaper Class="pa-4" Elevation="1" Style="min-width:280px;">
         <MudText Typo="Typo.subtitle2" Class="mb-2" Style="color:var(--gray-500);text-transform:uppercase;">Totals (live estimate)</MudText>
         <table style="width:100%;font-size:0.9rem;">
@@ -233,36 +226,67 @@
     private Contact? _selectedContact;
     private List<Contact> _contacts = new();
     private List<Division> _divisions = new();
+    private List<Product> _products = new();
     private List<LineRow> _lines = new();
     private List<TpRow> _tpLines = new();
     private bool _saving;
     private string? _error;
     private string _userCode = "";
+    private string? _supplierKey;
+    private bool _hasGST = true;
 
     private decimal CostTotal  => _lines.Sum(l => l.CostSub)   + _tpLines.Sum(t => t.TotalCost);
     private decimal PriceTotal => _lines.Sum(l => l.ExtPrice)  + _tpLines.Sum(t => t.ExtPrice);
-    private decimal GSTAmount  => PriceTotal * 0.10m;
+    private decimal GSTAmount  => _hasGST ? PriceTotal * 0.10m : 0m;
     private decimal PriceIncGST => PriceTotal + GSTAmount;
     private decimal RealMargin  => PriceTotal > 0 ? (PriceTotal - CostTotal) / PriceTotal * 100 : 0;
 
     protected override async Task OnInitializedAsync()
     {
+        var uri = Nav.ToAbsoluteUri(Nav.Uri);
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("fromSupplier", out var supplierKeys))
+            _supplierKey = supplierKeys.FirstOrDefault();
+
         var auth = await AuthStateProvider.GetAuthenticationStateAsync();
         _userCode = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
 
-        var (contacts, divisions) = (
-            await LookupService.GetContactLookupsAsync(),
-            await LookupService.GetDivisionsAsync());
-        _contacts  = contacts;
-        _divisions = divisions;
+        _contacts = await LookupService.GetContactLookupsAsync();
+        _divisions = await LookupService.GetDivisionsAsync();
+        _products = await LookupService.GetProductsAsync();
 
-        if (!IsNew)
+        if (!string.IsNullOrEmpty(_supplierKey))
+        {
+            var supplierLines = SupplierQuoteSession.Get(_supplierKey);
+            if (supplierLines != null)
+            {
+                _lines = supplierLines.Select(l => new LineRow
+                {
+                    Type = l.Type,
+                    Description = l.Description,
+                    Qty = l.Quantity,
+                    Units = l.Units,
+                    Days = l.Days,
+                    UnitCost = l.UnitCost,
+                    MinNettPrice = 0,
+                    NettPrice = l.NettPrice,
+                }).ToList();
+                Snackbar.Add($"Loaded {supplierLines.Count} line items from supplier quote", Severity.Info);
+            }
+        }
+        else if (!IsNew)
         {
             var existing = await QuoteService.GetQuoteAsync(Id!.Value);
             if (existing != null)
             {
                 _q = existing;
                 _selectedContact = _contacts.FirstOrDefault(c => c.ContactId == _q.ContactId);
+                
+                if (_selectedContact != null && _selectedContact.CompanyId > 0)
+                {
+                    var company = await CompanyService.GetCompanyAsync(_selectedContact.CompanyId);
+                    _hasGST = company?.HasGST ?? true;
+                }
+
                 var items = await QuoteService.GetLineItemsAsync(Id!.Value);
                 _lines = items.Select(i => new LineRow
                 {
@@ -271,6 +295,7 @@
                     Units = i.Units, Days = i.Days, UnitCost = i.UnitCost,
                     MinNettPrice = i.MinNettPrice, NettPrice = i.NettPrice,
                 }).ToList();
+                
                 var tpItems = await QuoteService.GetThirdPartyItemsAsync(Id!.Value);
                 _tpLines = tpItems.Select(i => new TpRow
                 {
@@ -292,6 +317,45 @@
             .Take(30));
     }
 
+    private Task<IEnumerable<Product>> SearchProducts(string value, CancellationToken _)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return Task.FromResult(_products.Take(25));
+        var lower = value.ToLowerInvariant();
+        return Task.FromResult(_products
+            .Where(p => p.ProductName.ToLowerInvariant().Contains(lower)
+                     || (p.ProductCode ?? "").ToLowerInvariant().Contains(lower))
+            .Take(30));
+    }
+
+    private void OnProductSelected(LineRow row, Product? p)
+    {
+        if (p != null)
+        {
+            row.ProductCode = p.ProductCode ?? "";
+            row.Description = p.ProductName;
+            row.UnitCost = p.UnitCost ?? 0m;
+            row.NettPrice = p.UnitPrice ?? 0m;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnContactSelected(Contact? contact)
+    {
+        _selectedContact = contact;
+        if (contact != null && contact.CompanyId > 0)
+        {
+            var company = await CompanyService.GetCompanyAsync(contact.CompanyId);
+            _hasGST = company?.HasGST ?? true;
+            
+            if (company != null && !string.IsNullOrEmpty(company.DefaultTerms))
+            {
+                _q.Terms = company.DefaultTerms;
+            }
+            StateHasChanged();
+        }
+    }
+
     private void AddLine()   { _lines.Add(new LineRow()); StateHasChanged(); }
     private void RemoveLine(LineRow r) { _lines.Remove(r); StateHasChanged(); }
     private void AddTpLine() { _tpLines.Add(new TpRow()); StateHasChanged(); }
@@ -301,8 +365,10 @@
     {
         _error = null;
         if (_selectedContact == null) { _error = "Please select a contact."; return; }
+        if (!_lines.Any() && !_tpLines.Any()) { _error = "Add at least one line item."; return; }
 
         _q.ContactId = _selectedContact.ContactId;
+        _q.CompanyId = _selectedContact.CompanyId;
         if (_q.DivisionId == 0 && _divisions.Any()) _q.DivisionId = _divisions.First().DivisionId;
         if (_q.Validity <= 0) _q.Validity = 30;
 
@@ -311,12 +377,14 @@
             Type = r.Type, ProductCode = r.ProductCode, Description = r.Description,
             Quantity = r.Qty, Units = r.Units, Days = r.Days,
             UnitCost = r.UnitCost, MinNettPrice = r.MinNettPrice, NettPrice = r.NettPrice,
+            ExtNettPrice = r.ExtPrice
         }).ToList();
 
         var tpItems = _tpLines.Select(t => new QuoteThirdPartyItem
         {
             Description = t.Description, Supplier = t.Supplier,
             Quantity = t.Qty, UnitCost = t.UnitCost, NettPrice = t.NettPrice,
+            ExtNettPrice = t.ExtPrice
         }).ToList();
 
         _saving = true;
@@ -332,7 +400,7 @@
             else
             {
                 _q.Qid = Id!.Value;
-                await QuoteService.UpdateQuoteAsync(_q, items, tpItems);
+                await QuoteService.UpdateQuoteAsync(_q, items, tpItems, _userCode);
                 await ActivitySvc.LogAsync(_userCode, "Quote", _q.Qid, "Updated quote", _q.Reference);
                 Snackbar.Add("Quote saved.", Severity.Success);
                 Nav.NavigateTo($"/quotes/{_q.Qid}");
@@ -369,4 +437,3 @@
         public decimal TotalCost   => UnitCost  * Qty;
     }
 }
-

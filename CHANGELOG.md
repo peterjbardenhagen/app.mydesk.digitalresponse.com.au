@@ -94,7 +94,7 @@ C:\Development\Techlight.digitalresponse.com.au\
 │   │       └── README.md
 │   ├── Documentation\
 │   ├── Run.bat                       # Local dev launcher
-│   └── DR.MyDesk.slnx
+│   └── MyDesk.slnx
 │
 ├── tests\                            # Playwright tests
 │   └── MyDesk.PlaywrightTests\

@@ -1,0 +1,209 @@
+@page "/accounting"
+@attribute [Authorize(Roles = "Accounts,Director,Administrator")]
+@using Microsoft.AspNetCore.Components.Authorization
+@using MudBlazor
+@inject MyDesk.Web.Services.PlatformSettingsService SettingsSvc
+@inject MyDesk.Web.Services.McpIntegrationService McpSvc
+
+<PageTitle>Accounting Dashboard - @SettingsSvc.Current.PlatformName</PageTitle>
+
+<MudPaper Class="pa-6" Elevation="2" Style="border-radius:12px;">
+    <MudGrid Spacing="3">
+        <!-- KPI cards -->
+        <MudItem xs="12" sm="4">
+            <MudCard>
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Class="mb-1"><MudIcon Icon="@Icons.Material.Rounded.TrendingUp" Class="mr-1" /> Cash Position</MudText>
+                    @if (IsLoading)
+                    {
+                        <MudSkeleton Height="36px" Width="160px" />
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.h5" Color="Color.Primary">$@CashBalance</MudText>
+                    }
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Current bank balance across accounts</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="4">
+            <MudCard>
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Class="mb-1"><MudIcon Icon="@Icons.Material.Rounded.ReceiptLong" Class="mr-1" /> Outstanding Receivables</MudText>
+                    @if (IsLoading)
+                    {
+                        <MudSkeleton Height="36px" Width="140px" />
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.h5" Color="Color.Success">@ReceivablesTotal</MudText>
+                    }
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Invoices overdue >30 days</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="4">
+            <MudCard>
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Class="mb-1"><MudIcon Icon="@Icons.Material.Rounded.ShowChart" Class="mr-1" /> Profit &amp; Loss (MTD)</MudText>
+                    @if (IsLoading)
+                    {
+                        <MudSkeleton Height="36px" Width="120px" />
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.h5" Color="Color.Warning">@ProfitLoss</MudText>
+                    }
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Month‑to‑date (excluding tax)</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <MudDivider Class="my-6" />
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="7">
+            <MudText Typo="Typo.h6" Class="mb-3">Recent MYOB Sync Activity</MudText>
+            @if (IsLoading)
+            {
+                <MudPaper Class="pa-4"><MudSkeleton Height="200px" /></MudPaper>
+            }
+            else
+            {
+                <MudTable Items="RecentSyncs" Dense="true" Hover="true" Bordered="false">
+                    <HeaderContent>
+                        <MudTh>Timestamp</MudTh>
+                        <MudTh>Operation</MudTh>
+                        <MudTh>Status</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Timestamp">@context.Timestamp.ToString("dd MMM HH:mm")</MudTd>
+                        <MudTd DataLabel="Operation">@context.Operation</MudTd>
+                        <MudTd DataLabel="Status">
+                            <MudChip T="string" Color="@(context.Success ? Color.Success : Color.Error)" Variant="Variant.Filled" Size="Size.Small">
+                                @context.Status
+                            </MudChip>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudItem>
+
+        <MudItem xs="12" md="5">
+            <MudText Typo="Typo.h6" Class="mb-3">MYOB Summary</MudText>
+            <MudPaper Class="pa-4" Style="min-height:200px;">
+                @if (IsLoading)
+                {
+                    <MudSkeleton Height="160px" />
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Class="mb-2">Business Summary</MudText>
+                    <MudText Typo="Typo.caption" Class="mb-3">@MyobSummary</MudText>
+
+                    <MudDivider Class="my-2" />
+
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.caption">Last synced: <strong>@LastSyncedText</strong></MudText>
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="Refresh">Refresh</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="ExportInvoices">Export Invoices (CSV)</MudButton>
+                    </MudStack>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@code {
+    private bool IsLoading { get; set; } = true;
+
+    private string CashBalance { get; set; } = "—";
+    private string ReceivablesTotal { get; set; } = "—";
+    private string ProfitLoss { get; set; } = "—";
+
+    private string MyobSummary { get; set; } = "No summary available.";
+    private string LastSyncedText { get; set; } = "Never";
+
+    private List<SyncLog> RecentSyncs { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        IsLoading = true;
+        try
+        {
+            // PoC: use McpIntegrationService to get MYOB context text
+            var context = await McpSvc.GetMYOBContextAsync();
+            MyobSummary = context ?? "MYOB context unavailable.";
+
+            // Simple extraction from the returned context string (PoC)
+            // For production, prefer strongly-typed DTOs from McpIntegrationService
+            CashBalance = ExtractLineValue(context, "Bank Balance") ?? CashBalance;
+            ReceivablesTotal = ExtractLineValue(context, "Outstanding Invoices") ?? ReceivablesTotal;
+            ProfitLoss = ExtractLineValue(context, "Profit Loss") ?? ProfitLoss;
+
+            // Load recent syncs – placeholder (replace with real audit log fetch)
+            RecentSyncs = new List<SyncLog>
+            {
+                new SyncLog { Timestamp = DateTime.Now.AddMinutes(-15), Operation = "Invoice Export", Status = "Completed", Success = true },
+                new SyncLog { Timestamp = DateTime.Now.AddHours(-2), Operation = "Bank Reconciliation", Status = "Failed", Success = false },
+                new SyncLog { Timestamp = DateTime.Now.AddDays(-1), Operation = "Customer Sync", Status = "Completed", Success = true },
+            };
+
+            LastSyncedText = DateTime.Now.AddMinutes(-15).ToString("dd MMM HH:mm");
+        }
+        catch (Exception)
+        {
+            // Log if a logger is available; keep UI graceful
+            MyobSummary = "Error loading MYOB context.";
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private string? ExtractLineValue(string? text, string key)
+    {
+        if (string.IsNullOrEmpty(text)) return null;
+        // Very simple extraction: look for the key and take the following line
+        var idx = text.IndexOf(key, StringComparison.OrdinalIgnoreCase);
+        if (idx < 0) return null;
+        var rest = text.Substring(idx);
+        var lines = rest.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        if (lines.Length > 1)
+        {
+            // Take the first following line (trim)
+            return lines[1].Trim().Trim('"');
+        }
+        return null;
+    }
+
+    private Task Refresh()
+    {
+        return LoadDataAsync();
+    }
+
+    private Task ExportInvoices()
+    {
+        // Hook: call a backend endpoint to export invoices (PoC placeholder)
+        // e.g. await Http.PostAsJsonAsync("/api/accounting/export-invoices", new { dateFrom, dateTo });
+        return Task.CompletedTask;
+    }
+
+    private class SyncLog
+    {
+        public DateTime Timestamp { get; set; }
+        public string Operation { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public bool Success { get; set; }
+    }
+}

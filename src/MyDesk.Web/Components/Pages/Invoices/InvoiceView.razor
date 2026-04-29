@@ -3,6 +3,7 @@
 @inject InvoiceService InvoiceService
 @inject LookupService LookupService
 @inject PdfService PdfService
+@inject EmailService EmailService
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 @inject IDialogService Dialog
@@ -11,7 +12,7 @@
 @using System.Security.Claims
 @using Microsoft.JSInterop
 
-<PageTitle>Invoice @_inv?.InvoiceNum - Techlight MyDesk</PageTitle>
+<PageTitle>Invoice @_inv?.InvoiceNum - MyDesk</PageTitle>
 
 @if (_inv == null)
 {
@@ -22,7 +23,7 @@ else
     <div class="tl-page-header">
         <div>
             <div class="tl-breadcrumb">
-                <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+                <a href="/">MyDesk</a><span class="sep">/</span>
                 <a href="/invoices">Invoices</a><span class="sep">/</span>
                 <span>@_inv.InvoiceNum</span>
             </div>
@@ -38,14 +39,14 @@ else
                        Href="@($"/invoices/{Id}/history")">History</MudButton>
             <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.LocalShipping"
                        Href="@($"/invoices/{Id}/delivery-note")">Delivery Note</MudButton>
-            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.LocalShipping"
+            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Rounded.LocalShipping"
                        Href="@($"/invoices/{Id}/despatch")" Color="Color.Secondary">Despatch</MudButton>
             <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.PictureAsPdf"
                        OnClick="GeneratePdf" Disabled="_generatingPdf">
                 @(_generatingPdf ? "Generating..." : "PDF")
             </MudButton>
             <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Email"
-                       Href="@($"/invoices/{Id}/email")">Email</MudButton>
+                       OnClick="@(() => { _showEmailPanel = !_showEmailPanel; })">Email</MudButton>
             @if (CanEdit())
             {
                 <MudButton Variant="Variant.Filled" Color="Color.Primary"
@@ -60,6 +61,30 @@ else
             }
         </div>
     </div>
+
+    @* Email panel *@
+    @if (_showEmailPanel)
+    {
+        <MudPaper Class="pa-4 mb-4" Elevation="1" Style="border-left:4px solid var(--mud-palette-primary);max-width:560px;">
+            <MudText Typo="Typo.subtitle2" Class="mb-3">Email Invoice PDF</MudText>
+            <div class="d-flex flex-column gap-2">
+                <MudTextField @bind-Value="_emailTo"      Label="To (email address)" Variant="Variant.Outlined"
+                              Margin="Margin.Dense" InputType="InputType.Email" Required="true" />
+                <MudTextField @bind-Value="_emailSubject" Label="Subject" Variant="Variant.Outlined"
+                              Margin="Margin.Dense" />
+                <MudTextField @bind-Value="_emailMessage" Label="Message (optional)" Variant="Variant.Outlined"
+                              Margin="Margin.Dense" Lines="3" />
+            </div>
+            <div class="d-flex gap-2 mt-3">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           OnClick="SendEmailAsync" Disabled="_emailSending"
+                           StartIcon="@Icons.Material.Rounded.Send">
+                    @(_emailSending ? "Sending…" : "Send")
+                </MudButton>
+                <MudButton Variant="Variant.Text" OnClick="@(() => _showEmailPanel = false)">Cancel</MudButton>
+            </div>
+        </MudPaper>
+    }
 
     <MudGrid Spacing="3">
         @* ── Left column: Invoice details ── *@
@@ -232,6 +257,12 @@ else
     private string _userCode = "";
     private bool   _generatingPdf;
 
+    private bool   _showEmailPanel;
+    private string _emailTo        = "";
+    private string _emailSubject   = "";
+    private string _emailMessage   = "";
+    private bool   _emailSending;
+
     protected override async Task OnInitializedAsync()
     {
         var auth = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -243,7 +274,49 @@ else
             await InvoiceService.GetLineItemsAsync(Id),
             await LookupService.GetInvoiceStatusesAsync());
 
-        if (_inv != null) _newStatusId = _inv.InvoiceStatusId;
+        if (_inv != null)
+        {
+            _newStatusId = _inv.InvoiceStatusId;
+            _emailSubject = $"Invoice {_inv.InvoiceNum}";
+        }
+    }
+
+    private async Task SendEmailAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_emailTo))
+        {
+            Snackbar.Add("Please enter a recipient email address.", Severity.Warning);
+            return;
+        }
+        _emailSending = true;
+        try
+        {
+            byte[]? pdf = null;
+            try { pdf = await PdfService.GenerateInvoicePdfAsync(Id); }
+            catch { Snackbar.Add("PDF generation failed — email will be sent without attachment.", Severity.Warning); }
+
+            var ok = await EmailService.EmailInvoiceAsync(Id, _emailTo, _emailSubject, _emailMessage, _userCode, pdf);
+            if (ok)
+            {
+                var oldStatus = _inv?.InvoiceStatusId;
+                var newStatus = await InvoiceService.LogEmailActionAsync(Id, _userCode);
+                
+                if (_inv != null)
+                {
+                    _inv.InvoiceStatusId = newStatus;
+                    _inv.StatusName = newStatus == 2 ? "Issued" : _inv.StatusName;
+                }
+
+                Snackbar.Add($"Invoice emailed to {_emailTo}.", Severity.Success);
+                _showEmailPanel = false;
+                _emailMessage   = "";
+            }
+            else
+            {
+                Snackbar.Add("Email failed — check SMTP settings.", Severity.Error);
+            }
+        }
+        finally { _emailSending = false; }
     }
 
     private async Task UpdateStatusAsync()
@@ -290,16 +363,14 @@ else
             
             await JsRuntime.InvokeVoidAsync("downloadBase64File", base64, "application/pdf", fileName);
             
-            Snackbar.Add("PDF generated and downloading...", Severity.Success);
+            var oldStatus = _inv.InvoiceStatusId;
+            var newStatus = await InvoiceService.LogPrintActionAsync(Id, _userCode);
             
-            // Update status to Issued (2) if currently Draft (1)
-            if (_inv.InvoiceStatusId == 1)
-            {
-                await InvoiceService.UpdateStatusAsync(Id, 2, _userCode, "Issued");
-                _inv.InvoiceStatusId = 2;
-                _inv.StatusName = "Issued";
-                Snackbar.Add("Invoice status updated to Issued.", Severity.Info);
-            }
+            _inv.InvoiceStatusId = newStatus;
+            _inv.StatusName = newStatus == 2 ? "Issued" : _inv.StatusName;
+            
+            var action = oldStatus == 1 ? "PDF downloaded, status changed to Issued" : "PDF downloaded (reprint)";
+            Snackbar.Add(action, Severity.Success);
         }
         catch (Exception ex) { Snackbar.Add($"PDF generation failed: {ex.Message}", Severity.Error); }
         finally { _generatingPdf = false; }

@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>MyDesk.Web</RootNamespace>
-    <AssemblyName>DR.MyDesk.Web</AssemblyName>
+    <AssemblyName>MyDesk.Web</AssemblyName>
     
     <!-- Production optimizations -->
     <PublishAot>false</PublishAot>
@@ -16,6 +16,9 @@
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
     <RetainVMGarbageCollection>true</RetainVMGarbageCollection>
+    
+    <!-- Warning suppression for MudBlazor analyzers and other non-critical warnings -->
+    <NoWarn>$(NoWarn);MUD0002;RZ10012;CS8618;CS8619;CS8602;CS8604;CS0414</NoWarn>
   </PropertyGroup>
 
   <!-- Production publish settings -->
@@ -43,7 +46,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MyDesk.Shared\DR.MyDesk.Shared.csproj" />
+    <ProjectReference Include="..\MyDesk.Shared\MyDesk.Shared.csproj" />
   </ItemGroup>
 
 </Project>

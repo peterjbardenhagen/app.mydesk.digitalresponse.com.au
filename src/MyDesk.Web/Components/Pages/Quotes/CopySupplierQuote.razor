@@ -1,0 +1,175 @@
+@page "/quotes/copy-supplier"
+@attribute [Authorize]
+@inject SupplierQuoteParseService ParseService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Copy Supplier Quote - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">MyDesk</a><span class="sep">/</span>
+            <a href="/quotes">Quotes</a><span class="sep">/</span>
+            <span style="color:var(--gray-700);font-weight:500;">Copy Supplier Quote</span>
+        </div>
+        <h1>Copy Supplier Quote</h1>
+        <p class="tl-subtitle">Upload a supplier quote (PDF or image) to have AI extract the line items.</p>
+    </div>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ArrowBack"
+               Href="/quotes">Cancel</MudButton>
+</div>
+
+<MudPaper Class="pa-6 mb-4" Elevation="1">
+    <MudText Typo="Typo.subtitle2" Class="mb-4" Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">
+        Upload Supplier Quote
+    </MudText>
+
+    <InputFile id="fileInput" OnChange="HandleFilesChanged" Accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.bmp" hidden />
+
+    <div Class="d-flex flex-column align-center justify-center pa-8"
+         Style="border: 2px dashed var(--mud-palette-grey-light); border-radius: 8px; cursor: pointer;"
+         onclick="document.getElementById('fileInput').click()">
+        <MudIcon Icon="@Icons.Material.Rounded.CloudUpload" Size="Size.Large" Class="mb-2" Style="color: var(--mud-palette-grey);" />
+        <MudText Typo="Typo.body1">Drag & drop files here or click to browse</MudText>
+        <MudText Typo="Typo.caption" Class="mt-1" Style="color: var(--gray-400);">
+            Supports PDF, JPG, PNG, GIF, WEBP (max 50MB per file)
+        </MudText>
+    </div>
+
+    @if (_files.Any())
+    {
+        <MudList T="string">
+            @foreach (var f in _files)
+            {
+                <MudListItem T="string" Icon="@Icons.Material.Rounded.InsertDriveFile">
+                    @f.Name <span style="color:var(--gray-400);">(@(f.Size / 1024)KB)</span>
+                </MudListItem>
+            }
+        </MudList>
+    }
+
+    @if (_processing)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mt-4" />
+        <MudText Class="mt-2">Processing with AI...</MudText>
+    }
+
+    @if (_parseResult != null && !_parseResult.IsSuccess)
+    {
+        <MudAlert Severity="Severity.Error" Class="mt-4">@_parseResult.ErrorMessage</MudAlert>
+    }
+
+    @if (_parseResult != null && _parseResult.IsSuccess && _parseResult.Lines.Any())
+    {
+        <MudAlert Severity="Severity.Success" Class="mt-4">
+            Successfully extracted @_parseResult.Lines.Count line item(s) from the supplier quote.
+        </MudAlert>
+
+        <MudSimpleTable Dense="true" Class="mt-4" Style="max-height: 300px; overflow: auto;">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Description</th>
+                    <th style="text-align:right;">Qty</th>
+                    <th style="text-align:right;">Unit Cost</th>
+                    <th style="text-align:right;">Nett Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var line in _parseResult.Lines)
+                {
+                    <tr>
+                        <td>@line.Type</td>
+                        <td>@line.Description</td>
+                        <td style="text-align:right;">@line.Quantity</td>
+                        <td style="text-align:right;">@line.UnitCost.ToString("N2")</td>
+                        <td style="text-align:right;">@line.NettPrice.ToString("N2")</td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+
+        <MudText Typo="Typo.body2" Class="mt-4" Style="color:var(--gray-500);">
+            Total lines: @_parseResult.Lines.Count | 
+            Total cost: $@_parseResult.Lines.Sum(l => l.UnitCost * l.Quantity).ToString("N2") | 
+            Total price: $@_parseResult.Lines.Sum(l => l.NettPrice * l.Quantity).ToString("N2")
+        </MudText>
+    }
+</MudPaper>
+
+@if (_parseResult != null && _parseResult.IsSuccess && _parseResult.Lines.Any())
+{
+    <MudPaper Class="pa-4" Elevation="1">
+        <MudText Typo="Typo.subtitle2" Class="mb-4" Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">
+            Ready to Create Quote?
+        </MudText>
+        
+        <MudText Class="mb-4">
+            The extracted line items will be pre-populated in the Add Quote screen. 
+            You can edit/add/remove lines as needed before saving.
+        </MudText>
+
+        <div class="d-flex gap-2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
+                     OnClick="CreateQuote">
+                Create Quote with These Lines
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" OnClick="ClearAndStartOver">
+                Start Over
+            </MudButton>
+        </div>
+    </MudPaper>
+}
+
+@code {
+    private List<IBrowserFile> _files = new();
+    private bool _processing;
+    private SupplierQuoteParseResult? _parseResult;
+
+    private async Task HandleFilesChanged(InputFileChangeEventArgs e)
+    {
+        _files = e.GetMultipleFiles().ToList();
+        if (!_files.Any()) return;
+
+        _processing = true;
+        _parseResult = null;
+        StateHasChanged();
+
+        try
+        {
+            _parseResult = await ParseService.ParseFilesAsync(_files);
+            if (!_parseResult.IsSuccess)
+            {
+                Snackbar.Add(_parseResult.ErrorMessage ?? "Failed to parse files", Severity.Error);
+            }
+            else if (!_parseResult.Lines.Any())
+            {
+                Snackbar.Add("No line items found in the uploaded files", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _processing = false;
+        }
+    }
+
+    private void CreateQuote()
+    {
+        if (_parseResult == null || !_parseResult.Lines.Any()) return;
+
+        var key = SupplierQuoteSession.Store(_parseResult.Lines);
+        Nav.NavigateTo($"/quotes/create?fromSupplier={key}");
+    }
+
+    private void ClearAndStartOver()
+    {
+        _files.Clear();
+        _parseResult = null;
+        StateHasChanged();
+    }
+}

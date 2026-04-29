@@ -94,9 +94,9 @@ Write-Host " OK" -ForegroundColor Green
 
 # 4. Stop existing site/pool if running
 Write-Host "[4/6] Preparing IIS..." -NoNewline
-$siteName = "DR.MyDesk"
-$appPoolName = "DR.MyDesk"
-$physicalPath = "C:\inetpub\wwwroot\DR.MyDesk"
+$siteName = "MyDesk"
+$appPoolName = "MyDesk"
+$physicalPath = "C:\inetpub\wwwroot\MyDesk"
 
 # Stop and remove default site on port 80 if it exists and conflicts
 $defaultSite = & $appCmd list site "Default Web Site" 2>$null

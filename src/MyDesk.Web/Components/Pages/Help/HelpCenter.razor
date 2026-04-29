@@ -1,6 +1,8 @@
 @page "/help-center"
 @inject PlatformSettingsService PlatformSettings
 
+@inject NavigationManager Nav
+
 <PageTitle>Help Centre - @PlatformSettings.GetBrandingName()</PageTitle>
 
 <div class="help-center">
@@ -40,11 +42,38 @@
                     </MudCard>
                 </MudItem>
                 <MudItem xs="12" md="4">
-                    <MudCard Elevation="0" Class="help-card" @onclick='() => NavigateToSection("ask-ai")'>
+                    <MudCard Elevation="0" Class="help-card" @onclick='() => Nav.NavigateTo("/copy-supplier-quote")'>
                         <MudCardContent>
-                            <MudIcon Icon="@Icons.Material.Rounded.SmartToy" Color="Color.Primary" />
-                            <MudText Typo="Typo.h6" Class="mt-2">Using Ask AI</MudText>
-                            <MudText Typo="Typo.body2" Class="mt-1 mud-text-secondary">How to get intelligent insights from your business data.</MudText>
+                            <MudIcon Icon="@Icons.Material.Rounded.ContentCopy" Color="Color.Secondary" />
+                            <MudText Typo="Typo.h6" Class="mt-2">Copy Supplier Quote</MudText>
+                            <MudText Typo="Typo.body2" Class="mt-1 mud-text-secondary">Upload supplier PDFs, extract lines with AI, create quotes with automatic margin.</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudCard Elevation="0" Class="help-card" @onclick='() => Nav.NavigateTo("/customer-login")'>
+                        <MudCardContent>
+                            <MudIcon Icon="@Icons.Material.Rounded.Business" Color="Color.Info" />
+                            <MudText Typo="Typo.h6" Class="mt-2">Customer Portal</MudText>
+                            <MudText Typo="Typo.body2" Class="mt-1 mud-text-secondary">Self-service portal for customers to view quotes, invoices, and orders.</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudCard Elevation="0" Class="help-card" @onclick='() => Nav.NavigateTo("/help/ai-guide")'>
+                        <MudCardContent>
+                            <MudIcon Icon="@Icons.Material.Rounded.AutoAwesome" Color="Color.Secondary" />
+                            <MudText Typo="Typo.h6" Class="mt-2">Talking to the AI</MudText>
+                            <MudText Typo="Typo.body2" Class="mt-1 mud-text-secondary">Learn how to ask complex questions and use voice commands.</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudCard Elevation="0" Class="help-card" @onclick='() => Nav.NavigateTo("/help/roadmap")'>
+                        <MudCardContent>
+                            <MudIcon Icon="@Icons.Material.Rounded.Map" Color="Color.Info" />
+                            <MudText Typo="Typo.h6" Class="mt-2">Product Roadmap</MudText>
+                            <MudText Typo="Typo.body2" Class="mt-1 mud-text-secondary">Explore the strategic direction and future features of the platform.</MudText>
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
@@ -156,8 +185,17 @@
                 <MudExpansionPanel Text="How do I create my first quote?">
                     <MudText Typo="Typo.body1">Navigate to Quotes in the side menu, then click "New Quote" button. Select a customer, add line items with your products and pricing, review the total, and save. You can then email the quote directly to the customer or convert it to an invoice or job order.</MudText>
                 </MudExpansionPanel>
+                <MudExpansionPanel Text="How does the Copy Supplier Quote feature work?">
+                    <MudText Typo="Typo.body1">Go to Quotes → Copy Supplier Quote, upload a supplier's PDF quote or image. Our AI will extract all line items (description, quantity, unit price) automatically. The system applies a 30% default gross profit margin to calculate your selling price. Review and edit the extracted lines, then click "Create Quote" to generate a customer-ready quote.</MudText>
+                </MudExpansionPanel>
+                <MudExpansionPanel Text="How do I give a customer portal access?">
+                    <MudText Typo="Typo.body1">Edit the contact record, go to the Portal tab, enable "Portal Access", set a username and password, and optionally set an expiry date. The customer can then log in at /customer-login to view their quotes, invoices, and orders.</MudText>
+                </MudExpansionPanel>
                 <MudExpansionPanel Text="How does the approval workflow work for Purchase Orders?">
                     <MudText Typo="Typo.body1">When you create a Purchase Order, it follows the approval hierarchy based on user roles. Each approver has a defined PO approval limit. If the PO value exceeds their limit, it automatically escalates to their line manager. Approvers receive email notifications.</MudText>
+                </MudExpansionPanel>
+                <MudExpansionPanel Text="Can I export my data to CSV?">
+                    <MudText Typo="Typo.body1">Yes! All major list pages have an "Export CSV" button. You can export Quotes, Invoices, Purchase Orders, Contacts, Companies, and Job Orders. The exported file includes key fields and can be opened in Excel or other spreadsheet applications.</MudText>
                 </MudExpansionPanel>
                 <MudExpansionPanel Text="Can I integrate with MYOB?">
                     <MudText Typo="Typo.body1">Yes! @PlatformSettings.Current.PlatformName has built-in MYOB integration for invoice reconciliation and payment tracking. Go to Admin → MYOB Sync to configure your connection and sync invoices bidirectionally.</MudText>

@@ -1,7 +1,7 @@
 @inject MarketingDataService Data
 @inject ISnackbar Snackbar
 
-<MudDialog>
+<MudDialog Options="new DialogOptions { CloseButton = true, CloseOnEscapeKey = true }">
     <DialogContent>
         <MudForm @ref="_form">
             <MudTextField T="string" @bind-Value="_campaign.Name" Label="Campaign Name" 

@@ -93,6 +93,124 @@ public class ContactService
         });
     }
 
+    public class ImportPreviewResult
+    {
+        public int NewCompanies { get; set; }
+        public int NewContacts { get; set; }
+    }
+
+    public class ImportResult
+    {
+        public int CompaniesImported { get; set; }
+        public int ContactsImported { get; set; }
+    }
+
+    public async Task<ImportPreviewResult> PreviewImportFromInvoicesAsync()
+    {
+        // Find companies in invoices that don't exist in Companies table
+        var newCompaniesDt = await _db.QueryAsync(@"
+            SELECT DISTINCT i.InvCompany AS CompanyName
+            FROM Invoices i
+            LEFT JOIN Companies c ON i.CompanyId = c.CompanyId
+            WHERE i.InvCompany IS NOT NULL AND i.InvCompany <> ''
+              AND (c.CompanyId IS NULL OR c.Company <> i.InvCompany)
+            ORDER BY i.InvCompany");
+        
+        // Find contacts in invoices that don't exist in Contacts table
+        var newContactsDt = await _db.QueryAsync(@"
+            SELECT DISTINCT i.Attention AS FullName, i.InvCompany AS CompanyName
+            FROM Invoices i
+            LEFT JOIN Contacts c ON i.Attention = (c.FirstName + ' ' + c.Surname)
+            WHERE i.Attention IS NOT NULL AND i.Attention <> ''
+              AND c.ContactId IS NULL
+            ORDER BY i.Attention");
+        
+        return new ImportPreviewResult
+        {
+            NewCompanies = newCompaniesDt.Rows.Count,
+            NewContacts = newContactsDt.Rows.Count
+        };
+    }
+
+    public async Task<ImportResult> ImportFromInvoicesAsync()
+    {
+        int companiesImported = 0;
+        int contactsImported = 0;
+        
+        // Import companies
+        var companiesDt = await _db.QueryAsync(@"
+            SELECT DISTINCT i.InvCompany AS CompanyName, i.InvAddress AS Address
+            FROM Invoices i
+            LEFT JOIN Companies c ON i.CompanyId = c.CompanyId
+            WHERE i.InvCompany IS NOT NULL AND i.InvCompany <> ''
+              AND (c.CompanyId IS NULL OR c.Company <> i.InvCompany)");
+        
+        foreach (DataRow row in companiesDt.Rows)
+        {
+            var companyName = row["CompanyName"]?.ToString();
+            if (string.IsNullOrEmpty(companyName)) continue;
+            
+            // Check if company already exists
+            var existing = await _db.QueryAsync(
+                "SELECT CompanyId FROM Companies WHERE Company = @Name",
+                new() { ["Name"] = companyName });
+            
+            if (existing.Rows.Count > 0) continue;
+            
+            await _db.ExecuteAsync(
+                "INSERT INTO Companies (Company, Address1) VALUES (@Name, @Addr)",
+                new() { ["Name"] = companyName, ["Addr"] = row["Address"]?.ToString() ?? "" });
+            companiesImported++;
+        }
+        
+        // Import contacts
+        var contactsDt = await _db.QueryAsync(@"
+            SELECT DISTINCT i.Attention AS FullName, i.InvCompany AS CompanyName
+            FROM Invoices i
+            LEFT JOIN Contacts c ON i.Attention = (c.FirstName + ' ' + c.Surname)
+            WHERE i.Attention IS NOT NULL AND i.Attention <> ''
+              AND c.ContactId IS NULL");
+        
+        foreach (DataRow row in contactsDt.Rows)
+        {
+            var fullName = row["FullName"]?.ToString();
+            if (string.IsNullOrEmpty(fullName)) continue;
+            
+            // Split name
+            var nameParts = fullName.Split(' ', 2);
+            var firstName = nameParts[0];
+            var surname = nameParts.Length > 1 ? nameParts[1] : "";
+            
+            // Find company ID
+            int? companyId = null;
+            var companyName = row["CompanyName"]?.ToString();
+            if (!string.IsNullOrEmpty(companyName))
+            {
+                var companyDt = await _db.QueryAsync(
+                    "SELECT CompanyId FROM Companies WHERE Company = @Name",
+                    new() { ["Name"] = companyName });
+                if (companyDt.Rows.Count > 0)
+                    companyId = Convert.ToInt32(companyDt.Rows[0]["CompanyId"]);
+            }
+            
+            await _db.ExecuteAsync(@"
+                INSERT INTO Contacts (FirstName, Surname, CompanyId, Code)
+                VALUES (@First, @Last, @Cid, 'Import')",
+                new() { 
+                    ["First"] = firstName, 
+                    ["Last"] = surname, 
+                    ["Cid"] = (object?)companyId ?? DBNull.Value 
+                });
+            contactsImported++;
+        }
+        
+        return new ImportResult
+        {
+            CompaniesImported = companiesImported,
+            ContactsImported = contactsImported
+        };
+    }
+
     public async Task<int> UpdateContactAsync(Contact contact)
     {
         var sql = @"
@@ -140,5 +258,78 @@ public class ContactService
         SupplierCode = r["SupplierCode"] == DBNull.Value ? null : r["SupplierCode"]?.ToString(),
         Originator = r["Originator"]?.ToString() ?? "",
         CompanyId = Convert.ToInt32(r["CompanyId"]),
+        PortalUsername = r.Table.Columns.Contains("PortalUsername") && r["PortalUsername"] != DBNull.Value ? r["PortalUsername"]?.ToString() : null,
+        IsPortalEnabled = r.Table.Columns.Contains("IsPortalEnabled") && r["IsPortalEnabled"] != DBNull.Value && Convert.ToBoolean(r["IsPortalEnabled"]),
+        PortalAccessExpires = r.Table.Columns.Contains("PortalAccessExpires") && r["PortalAccessExpires"] != DBNull.Value ? Convert.ToDateTime(r["PortalAccessExpires"]) : null,
     };
+
+    public async Task<Contact?> ValidatePortalCredentialsAsync(string username, string password)
+    {
+        var sql = @"
+            SELECT c.ContactId, c.FirstName, c.Surname, c.CompanyId, co.Company,
+                   c.PortalUsername, c.PortalPasswordHash, c.IsPortalEnabled, c.PortalAccessExpires
+            FROM Contacts c
+            LEFT JOIN Companies co ON co.CompanyId = c.CompanyId
+            WHERE (c.PortalUsername = @Username OR c.Email = @Username)
+              AND c.PortalPasswordHash IS NOT NULL";
+
+        var dt = await _db.QueryAsync(sql, new() { ["Username"] = username });
+        if (dt.Rows.Count == 0) return null;
+
+        var hashedPassword = HashPassword(password);
+        var contact = MapContact(dt.Rows[0]);
+
+        if (contact.PortalPasswordHash != hashedPassword) return null;
+        return contact;
+    }
+
+    public async Task<Contact?> GetCurrentPortalContactAsync()
+    {
+        return null;
+    }
+
+    public async Task UpdatePortalLoginAsync(int contactId)
+    {
+        var sql = "UPDATE Contacts SET PortalLastLogin = GETDATE() WHERE ContactId = @ContactId";
+        await _db.ExecuteAsync(sql, new() { ["ContactId"] = contactId });
+    }
+
+    public async Task SetPortalCredentialsAsync(int contactId, string username, string password, DateTime? expires = null)
+    {
+        var sql = @"
+            UPDATE Contacts SET 
+                PortalUsername = @Username,
+                PortalPasswordHash = @PasswordHash,
+                IsPortalEnabled = 1,
+                PortalAccessExpires = @Expires
+            WHERE ContactId = @ContactId";
+
+        await _db.ExecuteAsync(sql, new()
+        {
+            ["ContactId"] = contactId,
+            ["Username"] = username,
+            ["PasswordHash"] = HashPassword(password),
+            ["Expires"] = (object?)expires ?? DBNull.Value,
+        });
+    }
+
+    public async Task DisablePortalAsync(int contactId)
+    {
+        var sql = @"
+            UPDATE Contacts SET 
+                IsPortalEnabled = 0,
+                PortalUsername = NULL,
+                PortalPasswordHash = NULL
+            WHERE ContactId = @ContactId";
+
+        await _db.ExecuteAsync(sql, new() { ["ContactId"] = contactId });
+    }
+
+    private static string HashPassword(string password)
+    {
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        var bytes = System.Text.Encoding.UTF8.GetBytes(password + "MyDeskPortalSalt2024");
+        var hash = sha.ComputeHash(bytes);
+        return Convert.ToBase64String(hash);
+    }
 }

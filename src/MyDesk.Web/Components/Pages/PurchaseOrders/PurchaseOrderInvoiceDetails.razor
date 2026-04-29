@@ -6,7 +6,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @using System.Security.Claims
 
-<PageTitle>PO Invoice Details @Id - Techlight MyDesk</PageTitle>
+<PageTitle>PO Invoice Details @Id - MyDesk</PageTitle>
 
 @if (_po == null)
 {
@@ -17,7 +17,7 @@ else
     <div class="tl-page-header">
         <div>
             <div class="tl-breadcrumb">
-                <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+                <a href="/">MyDesk</a><span class="sep">/</span>
                 <a href="/purchase-orders">Purchase Orders</a><span class="sep">/</span>
                 <a href="@($"/purchase-orders/{Id}")">PO @Id</a><span class="sep">/</span>
                 <span>Invoice Details</span>

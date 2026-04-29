@@ -4,13 +4,14 @@
 @inject CompanyService Svc
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
+@inject PlatformSettingsService PlatformSettings
 
-<PageTitle>@(_isNew ? "New Company" : "Edit Company") - Techlight MyDesk</PageTitle>
+<PageTitle>@(_isNew ? "New Company" : "Edit Company") - @PlatformSettings.GetBrandingName()</PageTitle>
 
 <div class="tl-page-header">
     <div>
         <div class="tl-breadcrumb">
-            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/">@PlatformSettings.GetBrandingName()</a><span class="sep">/</span>
             <a href="/companies">Companies</a><span class="sep">/</span>
             <span style="color:var(--gray-700);font-weight:500;">@(_isNew ? "New Company" : _c.CompanyName)</span>
         </div>
@@ -110,6 +111,17 @@ else
             Snackbar.Add("Company name is required.", Severity.Warning);
             return;
         }
+
+        if (!string.IsNullOrWhiteSpace(_c.ABN))
+        {
+            var cleanABN = _c.ABN.Replace(" ", "");
+            if (cleanABN.Length != 11 || !cleanABN.All(char.IsDigit))
+            {
+                Snackbar.Add("ABN must be exactly 11 digits.", Severity.Warning);
+                return;
+            }
+        }
+
         _saving = true;
         try
         {

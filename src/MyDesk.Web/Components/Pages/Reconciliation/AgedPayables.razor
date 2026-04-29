@@ -1,0 +1,121 @@
+@page "/aged-payables"
+@attribute [Authorize]
+@inject ReconciliationService ReconSvc
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+@using MyDesk.Shared.Services
+@using System.Security.Claims
+
+<PageTitle>Aged Payables - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">MyDesk</a><span class="sep">/</span>
+            <span>Aged Payables</span>
+        </div>
+        <h1 style="display:flex; align-items:center; gap:10px;">
+            <MudIcon Icon="@Icons.Material.Rounded.AccountBalance" Style="color:var(--tl-primary);" />
+            Aged Payables
+        </h1>
+        <p class="tl-subtitle">Track outstanding supplier payments by age.</p>
+    </div>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Refresh"
+               OnClick="RefreshAsync" Disabled="_loading">
+        Refresh
+    </MudButton>
+</div>
+
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" Class="mx-auto my-8 d-block" />
+}
+else
+{
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudText Typo="Typo.overline" Style="color:var(--gray-500);">Current (0-30 days)</MudText>
+                <MudText Typo="Typo.h4" Style="color:#166534;">@_aged.Current.ToString("C")</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudText Typo="Typo.overline" Style="color:var(--gray-500);">31-60 days</MudText>
+                <MudText Typo="Typo.h4" Style="color:#854d0e;">@_aged.Days31_60.ToString("C")</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudText Typo="Typo.overline" Style="color:var(--gray-500);">61-90 days</MudText>
+                <MudText Typo="Typo.h4" Style="color:#9a3412;">@_aged.Days61_90.ToString("C")</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudText Typo="Typo.overline" Style="color:var(--gray-500);">Over 90 days</MudText>
+                <MudText Typo="Typo.h4" Style="color:#991b1b;">@_aged.Over90.ToString("C")</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Class="pa-4" Elevation="1">
+        <MudText Typo="Typo.h6" Class="mb-3">Outstanding Purchase Orders by Supplier</MudText>
+        <MudTable Items="_payables" Dense="true" Hover="true" Striped="true">
+            <HeaderContent>
+                <MudTh>Supplier</MudTh>
+                <MudTh>Supplier Code</MudTh>
+                <MudTh Style="text-align:right;">Current</MudTh>
+                <MudTh Style="text-align:right;">31-60</MudTh>
+                <MudTh Style="text-align:right;">61-90</MudTh>
+                <MudTh Style="text-align:right;">90+</MudTh>
+                <MudTh Style="text-align:right;">Total</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.SupplierName</MudTd>
+                <MudTd>@context.SupplierCode</MudTd>
+                <MudTd Style="text-align:right;">@context.CurrentAmount.ToString("N2")</MudTd>
+                <MudTd Style="text-align:right;">@context.Days30Amount.ToString("N2")</MudTd>
+                <MudTd Style="text-align:right;">@context.Days60Amount.ToString("N2")</MudTd>
+                <MudTd Style="text-align:right;">@context.Days90PlusAmount.ToString("N2")</MudTd>
+                <MudTd Style="text-align:right; font-weight:600;">@context.TotalOutstanding.ToString("C")</MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+}
+
+@code {
+    private bool _loading = true;
+    private List<AgedPayable> _payables = new();
+    private AgedReceivables _aged = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        _loading = true;
+        try
+        {
+            _payables = await ReconSvc.GetAgedPayablesAsync();
+            _aged = new AgedReceivables
+            {
+                Current = _payables.Sum(p => p.CurrentAmount),
+                Days31_60 = _payables.Sum(p => p.Days30Amount),
+                Days61_90 = _payables.Sum(p => p.Days60Amount),
+                Over90 = _payables.Sum(p => p.Days90PlusAmount),
+                Total = _payables.Sum(p => p.TotalOutstanding)
+            };
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Load failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

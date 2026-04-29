@@ -1,0 +1,134 @@
+@page "/customer-login"
+@layout CustomerPortalLayout
+@inject ContactService ContactService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Customer Login - Techlight</PageTitle>
+
+<div class="customer-login-container">
+    <MudPaper Class="login-card pa-8" Elevation="4">
+        <div class="text-center mb-6">
+            <MudIcon Icon="@Icons.Material.Rounded.Business" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+            <MudText Typo="Typo.h4" Class="mb-1">Customer Portal</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Default">Sign in to access your quotes, invoices and files</MudText>
+        </div>
+
+        <MudForm @ref="_form">
+            <MudTextField @bind-Value="_username" Label="Username or Email" 
+                         Variant="Variant.Outlined" Margin="Margin.Dense"
+                         Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Person"
+                         Required="true" Class="mb-4" />
+            
+            <MudTextField @bind-Value="_password" Label="Password" 
+                         Variant="Variant.Outlined" Margin="Margin.Dense"
+                         InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                         Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Lock"
+                         Required="true" Class="mb-2">
+                <AdornmentEnd>
+                    <MudIconButton Icon="@(_showPassword ? Icons.Material.Rounded.VisibilityOff : Icons.Material.Rounded.Visibility)"
+                                  OnClick="() => _showPassword = !_showPassword"
+                                  Edge="Edge.End" />
+                </AdornmentEnd>
+            </MudTextField>
+
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">@_errorMessage</MudAlert>
+            }
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                       FullWidth="true" ButtonSize="Size.Large"
+                       OnClick="LoginAsync" Disabled="@_loggingIn">
+                @(_loggingIn ? "Signing in..." : "Sign In")
+            </MudButton>
+        </MudForm>
+
+        <div class="mt-6 text-center">
+            <MudLink Href="/forgot-password" Underline="Underline.Hover">
+                Forgot your password?
+            </MudLink>
+        </div>
+
+        <MudDivider Class="my-6" />
+
+        <div class="text-center">
+            <MudText Typo="Typo.caption" Color="Color.Default">
+                Not a portal user? Contact your account manager to get access.
+            </MudText>
+        </div>
+    </MudPaper>
+</div>
+
+<style>
+    .customer-login-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, var(--mud-palette-background-grey) 0%, var(--mud-palette-primary-lighten) 100%);
+        padding: 20px;
+    }
+
+    .login-card {
+        max-width: 420px;
+        width: 100%;
+        border-radius: 16px;
+    }
+</style>
+
+@code {
+    private MudForm? _form;
+    private string _username = "";
+    private string _password = "";
+    private bool _showPassword;
+    private bool _loggingIn;
+    private string? _errorMessage;
+
+    private async Task LoginAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_username) || string.IsNullOrWhiteSpace(_password))
+        {
+            _errorMessage = "Please enter username and password";
+            return;
+        }
+
+        _loggingIn = true;
+        _errorMessage = null;
+
+        try
+        {
+            var contact = await ContactService.ValidatePortalCredentialsAsync(_username, _password);
+            if (contact != null)
+            {
+                if (!contact.IsPortalEnabled)
+                {
+                    _errorMessage = "Your portal access has been disabled. Please contact your account manager.";
+                    return;
+                }
+
+                if (contact.PortalAccessExpires.HasValue && contact.PortalAccessExpires.Value < DateTime.Now)
+                {
+                    _errorMessage = "Your portal access has expired. Please contact your account manager.";
+                    return;
+                }
+
+                await ContactService.UpdatePortalLoginAsync(contact.ContactId);
+                Nav.NavigateTo("/customer-portal");
+            }
+            else
+            {
+                _errorMessage = "Invalid username or password";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Login failed. Please try again.";
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _loggingIn = false;
+        }
+    }
+}

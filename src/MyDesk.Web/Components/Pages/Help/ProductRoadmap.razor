@@ -1,0 +1,138 @@
+@page "/help/roadmap"
+@attribute [Authorize]
+@inject PlatformSettingsService PlatformSettings
+
+<PageTitle>Product Roadmap - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <a href="/help-center">Help Center</a><span class="sep">/</span>
+            <span>Product Roadmap</span>
+        </div>
+        <h1>Product Roadmap</h1>
+        <p class="tl-subtitle">The strategic direction for MyDesk AI-powered platform</p>
+    </div>
+</div>
+
+<MudGrid Spacing="4" Class="mt-4">
+    <MudItem xs="12" md="8">
+        <MudPaper Class="pa-8 rounded-xl" Elevation="1">
+            <MudText Typo="Typo.h5" Class="mb-6 font-weight-bold">🚀 Current Status (v3.0)</MudText>
+            
+            <div class="d-flex flex-column gap-3 mb-8">
+                <div class="status-item">
+                    <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                    <MudText Typo="Typo.body1"><strong>AI Core:</strong> Natural language querying of operational and financial data.</MudText>
+                </div>
+                <div class="status-item">
+                    <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                    <MudText Typo="Typo.body1"><strong>Multi-Tenancy:</strong> Architecture support for dynamic rebranding and tenant-specific configuration.</MudText>
+                </div>
+                <div class="status-item">
+                    <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                    <MudText Typo="Typo.body1"><strong>Voice-to-Action:</strong> Telegram bot integration with voice transcription (Whisper) and task execution.</MudText>
+                </div>
+                <div class="status-item">
+                    <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                    <MudText Typo="Typo.body1"><strong>Unified Branding:</strong> Dynamic UI and PDF generation based on tenant settings.</MudText>
+                </div>
+                <div class="status-item">
+                    <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                    <MudText Typo="Typo.body1"><strong>Copy Supplier Quote:</strong> AI-powered PDF extraction with automatic margin markup.</MudText>
+                </div>
+                <div class="status-item">
+                    <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                    <MudText Typo="Typo.body1"><strong>Customer Portal:</strong> Self-service portal for customers to view quotes, invoices, and orders.</MudText>
+                </div>
+                <div class="status-item">
+                    <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                    <MudText Typo="Typo.body1"><strong>CSV Export:</strong> Export data from all major list pages.</MudText>
+                </div>
+            </div>
+
+            <MudDivider Class="my-8" />
+
+            <MudText Typo="Typo.h5" Class="mb-6 font-weight-bold">🗺️ Future Roadmap</MudText>
+
+            <div class="roadmap-section mb-8">
+                <MudText Typo="Typo.h6" Class="mb-4 color-primary font-weight-bold">Phase 1: Financial & Compliance Deepening</MudText>
+                <ul class="roadmap-list">
+                    <li><strong>Integrated Bank Feeds:</strong> Direct connection to Australian banks (via Basiq/Yodlee) for real-time cash flow visibility and "conversational reconciliation".</li>
+                    <li><strong>ATO / STP Phase 2 Integration:</strong> Built-in payroll module supporting Single Touch Payroll requirements, allowing micro-SMEs to manage employees without separate software.</li>
+                    <li><strong>BAS Preparation Assistant:</strong> AI-driven categorization and reporting to simplify quarterly BAS lodgement.</li>
+                </ul>
+            </div>
+
+            <div class="roadmap-section mb-8">
+                <MudText Typo="Typo.h6" Class="mb-4 color-primary font-weight-bold">Phase 2: Operations & Growth</MudText>
+                <ul class="roadmap-list">
+                    <li><strong>AI Marketing Automation:</strong> 
+                        <ul>
+                            <li>Automatic draft generation for LinkedIn/Email based on "Project Wins".</li>
+                            <li>Predictive customer nurture sequences based on purchase patterns.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Inventory & Asset Tracking:</strong> 
+                        <ul>
+                            <li>"Scan to MyDesk" mobile app for QR-code based stock management.</li>
+                            <li>Warehouse heatmaps driven by AI-analyzed order frequency.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Advanced Project Profitability:</strong> Real-time cross-referencing of MYOB purchase costs against MyDesk quote estimates with proactive "Overrun Alerts".</li>
+                </ul>
+            </div>
+
+            <div class="roadmap-section mb-8">
+                <MudText Typo="Typo.h6" Class="mb-4 color-primary font-weight-bold">Phase 3: Ecosystem & Platform</MudText>
+                <ul class="roadmap-list">
+                    <li><strong>White-Label Portal:</strong> A dedicated "Client Portal" where tenants can invite their own customers to view quotes, pay invoices, and talk to a restricted "Customer AI".</li>
+                    <li><strong>Integrated Payment Gateway:</strong> One-click "Pay Now" on invoices (Stripe/Square) with automatic fee reconciliation in MYOB.</li>
+                    <li><strong>Predictive Analytics:</strong> 
+                        <ul>
+                            <li>Cash flow forecasting (3-6 months).</li>
+                            <li>"Customer at Risk" detection based on order decay.</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+
+            <MudDivider Class="my-8" />
+
+            <MudText Typo="Typo.h5" Class="mb-6 font-weight-bold">🛠️ Infrastructure Evolution</MudText>
+            <ul class="roadmap-list">
+                <li><strong>Database Partitioning:</strong> Moving from shared schema to schema-per-tenant for high-security Australian government/medical clients.</li>
+                <li><strong>Self-Healing Data Layer:</strong> AI-monitored data integrity that automatically fixes common entry errors (e.g., incorrect ABN formats or GST mismatches).</li>
+                <li><strong>On-Premise LLM Support:</strong> Support for locally hosted models (Llama 3/Phi-3) for clients with extreme data sovereignty requirements.</li>
+            </ul>
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-6 rounded-xl sidebar-card" Elevation="0">
+            <MudText Typo="Typo.h6" Class="mb-4">Strategic Vision</MudText>
+            <MudText Typo="Typo.body2" Class="mb-4">
+                MyDesk is evolving into a <strong>one-stop-shop</strong> AI powered business management system that brings all of an Australian SMB's systems together into one easy to use platform.
+            </MudText>
+            <MudText Typo="Typo.body2">
+                The goal is a platform that you can <strong>talk to</strong>, and it <strong>talks to you</strong>.
+            </MudText>
+        </MudPaper>
+        
+        <MudPaper Class="pa-6 rounded-xl mt-4" Elevation="0" Style="background: var(--gray-50);">
+            <MudText Typo="Typo.subtitle2" Class="mb-2 opacity-60">PREPARED BY</MudText>
+            <MudText Typo="Typo.body1" Class="font-weight-bold">Digital Response</MudText>
+            <MudText Typo="Typo.caption" Class="d-block mt-1">Last Updated: April 27, 2026</MudText>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<style>
+    .status-item { display: flex; align-items: flex-start; gap: 12px; }
+    .color-primary { color: var(--tl-primary-600); }
+    .roadmap-list { padding-left: 20px; color: var(--gray-700); }
+    .roadmap-list li { margin-bottom: 12px; line-height: 1.5; }
+    .roadmap-list ul { margin-top: 8px; margin-left: 20px; list-style-type: circle; }
+    .sidebar-card { background: #fffbeb !important; border: 1px solid #fef3c7; }
+</style>

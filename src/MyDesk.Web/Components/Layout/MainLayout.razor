@@ -1,5 +1,6 @@
 @inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
+@inject PlatformSettingsService PlatformSettings
 
 <MudThemeProvider @bind-IsDarkMode="_isDarkMode" Theme="_theme" />
 <MudDialogProvider CloseButton="true" BackdropClick="true" CloseOnEscapeKey="true" FullWidth="true" MaxWidth="MaxWidth.Small" />
@@ -10,7 +11,7 @@
 
 <MudLayout id="main-content" role="main">
     <MudAppBar Elevation="0" Dense="true" Style="position:relative; overflow:visible;" role="banner" aria-label="Main navigation">
-        <!-- Techlight Brand Swoosh -->
+        <!-- Brand Swoosh -->
         <div class="tl-brand-swoosh d-none d-sm-block">
             <div class="tl-swoosh-accent-line"></div>
             <div class="tl-swoosh-gold-dot tl-swoosh-gold-dot-1"></div>
@@ -19,14 +20,6 @@
         </div>
 
         <MudIconButton Icon="@Icons.Material.Rounded.Menu" Color="Color.Default" Edge="Edge.Start" OnClick="DrawerToggle" aria-label="Toggle navigation menu" />
-
-        <a href="/" class="tl-logo-wrap ml-2" style="text-decoration:none; position:relative; z-index:1;" aria-label="Techlight MyDesk home">
-            <img src="/images/techlight-mark.svg" alt="Techlight" class="tl-logo-mark" />
-            <span class="tl-logo-text-stack d-none d-sm-inline-flex">
-                <span class="tl-logo-brand">Techlight</span>
-                <span class="tl-logo-product">MyDesk</span>
-            </span>
-        </a>
 
         <MudSpacer />
 
@@ -58,9 +51,93 @@
 
         <AuthorizeView>
             <Authorized>
-                <MudTooltip Text="Ask Techlight AI" Arrow="true" Placement="Placement.Bottom">
-                    <MudIconButton Icon="@Icons.Material.Rounded.AutoAwesome" Color="Color.Primary" Href="/ask-ai" aria-label="Ask Techlight AI" />
+                <MudTooltip Text="@_aiTooltipText" Arrow="true" Placement="Placement.Bottom">
+                    <MudIconButton Icon="@Icons.Material.Rounded.AutoAwesome" Color="Color.Primary" Href="/ask-ai" aria-label="Ask AI" />
                 </MudTooltip>
+
+                <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+                         Dense="true" Class="ml-1" aria-label="All Pages">
+                    <ActivatorContent>
+                        <MudButton Variant="Variant.Text" Color="Color.Default" StartIcon="@Icons.Material.Rounded.GridView">
+                            All Pages
+                        </MudButton>
+                    </ActivatorContent>
+                     <ChildContent>
+                         <div style="min-width: 280px; max-height: 60vh; overflow-y: auto;">
+                             <MudText Typo="Typo.subtitle2" Class="px-4 py-2 mud-text-secondary" Style="font-weight:600;">Quick Navigation</MudText>
+                             
+                             <MudText Typo="Typo.caption" Class="px-4 py-1 mud-text-secondary">Dashboard</MudText>
+                             <MudMenuItem Href="/">Dashboard</MudMenuItem>
+                             <MudMenuItem Href="/activity">Latest Activity</MudMenuItem>
+                             <MudMenuItem Href="/favourites">Favourites</MudMenuItem>
+                             
+                             <MudDivider Class="my-2" />
+                             <MudText Typo="Typo.caption" Class="px-4 py-1 mud-text-secondary">CRM</MudText>
+                             <MudMenuItem Href="/contacts">Contacts</MudMenuItem>
+                             <MudMenuItem Href="/companies">Companies</MudMenuItem>
+                             
+                             <MudDivider Class="my-2" />
+                             <MudText Typo="Typo.caption" Class="px-4 py-1 mud-text-secondary">Sales</MudText>
+                             <MudMenuItem Href="/quotes">Quotes</MudMenuItem>
+                             <MudMenuItem Href="/invoices">Invoices</MudMenuItem>
+                             <MudMenuItem Href="/despatch">Despatch</MudMenuItem>
+                             
+                             <MudDivider Class="my-2" />
+                             <MudText Typo="Typo.caption" Class="px-4 py-1 mud-text-secondary">Purchasing</MudText>
+                             <MudMenuItem Href="/purchase-orders">Purchase Orders</MudMenuItem>
+                             <MudMenuItem Href="/expenses">Expenses</MudMenuItem>
+                             
+                             <MudDivider Class="my-2" />
+                             <MudText Typo="Typo.caption" Class="px-4 py-1 mud-text-secondary">Operations</MudText>
+                             <MudMenuItem Href="/job-orders">Job Orders</MudMenuItem>
+                             <MudMenuItem Href="/products">Products</MudMenuItem>
+                             
+                             <MudDivider Class="my-2" />
+                             <MudText Typo="Typo.caption" Class="px-4 py-1 mud-text-secondary">Insights</MudText>
+                             <MudMenuItem Href="/reports">Reports</MudMenuItem>
+                             <MudMenuItem Href="/noticeboard">Noticeboard</MudMenuItem>
+                             
+                             <MudDivider Class="my-2" />
+                             <MudText Typo="Typo.caption" Class="px-4 py-1 mud-text-secondary">Accounts</MudText>
+                             <MudMenuItem Href="/reconciliation">Aged Receivables</MudMenuItem>
+                             <MudMenuItem Href="/aged-payables">Aged Payables</MudMenuItem>
+                             <MudMenuItem Href="/banking">Banking</MudMenuItem>
+                             <MudMenuItem Href="/accounting">Accounting</MudMenuItem>
+                             
+                             <MudDivider Class="my-2" />
+                             <MudText Typo="Typo.caption" Class="px-4 py-1 mud-text-secondary">Marketing</MudText>
+                             <MudMenuItem Href="/marketing">Marketing Hub</MudMenuItem>
+                             
+                             <MudDivider Class="my-2" />
+                             <MudText Typo="Typo.caption" Class="px-4 py-1 mud-text-secondary">Help</MudText>
+                             <MudMenuItem Href="/help-center">Help Center</MudMenuItem>
+                             <MudMenuItem Href="/release-notes">Release Notes</MudMenuItem>
+                             <MudMenuItem Href="/help/roadmap">Product Roadmap</MudMenuItem>
+                             <MudMenuItem Href="/help/ai-guide">AI User Guide</MudMenuItem>
+                             
+                             <MudDivider Class="my-2" />
+                             <MudText Typo="Typo.caption" Class="px-4 py-1 mud-text-secondary">System</MudText>
+                             <MudMenuItem Href="/admin/setup">Setup</MudMenuItem>
+                             <MudMenuItem Href="/admin/users">Users</MudMenuItem>
+                             <MudMenuItem Href="/admin/logs">Log Viewer</MudMenuItem>
+                             <MudMenuItem Href="/admin/parameters">Parameters</MudMenuItem>
+                             <MudMenuItem Href="/admin/platform">Platform Settings</MudMenuItem>
+                             <MudMenuItem Href="/admin/divisions">Divisions</MudMenuItem>
+                             <MudMenuItem Href="/admin/locations">Locations</MudMenuItem>
+                             <MudMenuItem Href="/admin/user-roles">User Roles</MudMenuItem>
+                             <MudMenuItem Href="/admin/nav-menu">Navigation Menu</MudMenuItem>
+                             <MudMenuItem Href="/admin/brand-assets">Brand Assets</MudMenuItem>
+                             <MudMenuItem Href="/integrations">Integrations</MudMenuItem>
+                             <MudMenuItem Href="/settings">Settings</MudMenuItem>
+                             
+                             <MudDivider Class="my-2" />
+                             <MudText Typo="Typo.caption" Class="px-4 py-1 mud-text-secondary">Other</MudText>
+                             <MudMenuItem Href="/ask-ai">Ask AI</MudMenuItem>
+                             <MudMenuItem Href="/search">Search</MudMenuItem>
+                             <MudMenuItem Href="/profile">Profile</MudMenuItem>
+                          </div>
+                      </ChildContent>
+                 </MudMenu>
 
                 <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
                          Dense="true" Class="ml-1" aria-label="Notifications">
@@ -101,7 +178,7 @@
                                         </div>
                                         <MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small" 
                                                        Style="position:absolute; top:8px; right:8px;"
-                                                       OnClick:stopPropagation="true"
+                                                       StopPropagation="true"
                                                        OnClick="@(() => RemoveNotification(notification))" />
                                     </div>
                                 }
@@ -117,11 +194,11 @@
                     </ChildContent>
                 </MudMenu>
 
-                <MudTooltip Text="Keyboard shortcuts" Arrow="true" Placement="Placement.Bottom" Class="ml-2">
+                <MudTooltip Text="Keyboard shortcuts" Arrow="true" Placement="Placement.Bottom" Class="ml-2 d-none d-sm-inline-flex">
                     <MudIconButton Icon="@Icons.Material.Rounded.Keyboard" Color="Color.Default" OnClick="OpenKeyboardShortcuts" aria-label="Keyboard shortcuts" />
                 </MudTooltip>
 
-                <MudTooltip Text="Toggle dark mode" Arrow="true" Placement="Placement.Bottom" Class="ml-2">
+                <MudTooltip Text="Toggle dark mode" Arrow="true" Placement="Placement.Bottom" Class="ml-2 d-none d-sm-inline-flex">
                     <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Rounded.LightMode : Icons.Material.Rounded.DarkMode)"
                                   Color="Color.Default"
                                   OnClick="ToggleDarkMode"
@@ -160,7 +237,10 @@
         </AuthorizeView>
     </MudAppBar>
 
-    <MudDrawer @bind-Open="_drawerOpen" Elevation="0" ClipMode="DrawerClipMode.Docked" Variant="DrawerVariant.Mini" OpenMiniOnHover="true" role="navigation" aria-label="Main navigation">
+    <MudDrawer @bind-Open="_drawerOpen" Elevation="0" ClipMode="DrawerClipMode.Docked" 
+               Variant="DrawerVariant.Mini" OpenMiniOnHover="true" 
+               Width="280px" MiniWidth="72px"
+               Class="tl-nav-drawer" role="navigation" aria-label="Main navigation">
         <NavMenu />
     </MudDrawer>
 
@@ -207,6 +287,7 @@
     private List<string> _searchHistory = new();
     private int _notificationCount = 3;
     private List<NotificationItem> _notifications = new();
+    private string _aiTooltipText => $"Ask {PlatformSettings.GetBrandingName()} AI";
 
     [Inject] IJSRuntime JS { get; set; } = null!;
     [Inject] IDialogService DialogService { get; set; } = null!;
@@ -378,36 +459,6 @@
         };
     }
 
-    private void LoadSampleNotifications()
-    {
-        _notifications = new List<NotificationItem>
-        {
-            new NotificationItem
-            {
-                Title = "New quote created",
-                Message = "Quote #4132 has been created for Techlight Industries",
-                Type = "info",
-                Time = "2 minutes ago",
-                Url = "/quotes/4132"
-            },
-            new NotificationItem
-            {
-                Title = "Invoice approved",
-                Message = "Invoice #3221 has been approved for payment",
-                Type = "success",
-                Time = "1 hour ago",
-                Url = "/invoices/3221"
-            },
-            new NotificationItem
-            {
-                Title = "Low stock alert",
-                Message = "Product ABC-123 is running low on stock",
-                Type = "warning",
-                Time = "3 hours ago",
-                Url = "/products"
-            }
-        };
-    }
 
     private void ClearNotifications()
     {
@@ -449,7 +500,8 @@
 
     private void OpenKeyboardShortcuts()
     {
-        DialogService.Show<KeyboardShortcutsDialog>("Keyboard Shortcuts");
+        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        DialogService.Show<KeyboardShortcutsDialog>("Keyboard Shortcuts", options);
     }
 }
 
@@ -520,6 +572,10 @@
         --gray-900: #f8fafc;
     }
     .mud-dark-mode .mud-table { background-color: var(--gray-50) !important; }
+    .mud-dark-mode .tl-nav-drawer { 
+        background: linear-gradient(180deg, #0f172a 0%, #020617 100%) !important;
+        border-right: 1px solid rgba(255,255,255,0.05) !important;
+    }
     .mud-dark-mode .mud-drawer { background-color: var(--gray-100) !important; }
     .mud-dark-mode .mud-appbar { 
         background-color: var(--gray-100) !important;
@@ -527,6 +583,12 @@
     }
     .mud-dark-mode .tl-logo-brand { color: #fff !important; }
     .mud-dark-mode .tl-logo-product { color: #94a3b8 !important; }
+    
+    /* Light mode nav drawer styling */
+    .tl-nav-drawer {
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        border-right: 1px solid rgba(0,0,0,0.05);
+    }
     
     /* Ensure MudDialogs are clickable-out */
     .mud-dialog-container {

@@ -1,14 +1,14 @@
 @page "/invoices/{Id:int}/history"
 @attribute [Authorize]
-@inject InvoiceService InvoiceService
+@inject AuditService AuditService
 @inject NavigationManager Nav
 
-<PageTitle>Invoice @Id History - Techlight MyDesk</PageTitle>
+<PageTitle>Invoice @Id History - MyDesk</PageTitle>
 
 <div class="tl-page-header">
     <div>
         <div class="tl-breadcrumb">
-            <a href="/">Techlight MyDesk</a><span class="sep">/</span>
+            <a href="/">MyDesk</a><span class="sep">/</span>
             <a href="/invoices">Invoices</a><span class="sep">/</span>
             <a href="@($"/invoices/{Id}")">Invoice @Id</a><span class="sep">/</span>
             <span>History</span>
@@ -35,11 +35,13 @@ else
                 <MudTh>Date</MudTh>
                 <MudTh>User</MudTh>
                 <MudTh>Action</MudTh>
+                <MudTh>Details</MudTh>
             </HeaderContent>
             <RowTemplate>
-                <MudTd>@context.DateEntered.ToString("dd MMM yyyy HH:mm")</MudTd>
-                <MudTd>@(context.UserName ?? context.Code)</MudTd>
+                <MudTd>@context.Timestamp.ToString("dd MMM yyyy HH:mm")</MudTd>
+                <MudTd>@context.UserName</MudTd>
                 <MudTd>@context.Action</MudTd>
+                <MudTd>@context.Details</MudTd>
             </RowTemplate>
         </MudTable>
     </MudPaper>
@@ -47,12 +49,12 @@ else
 
 @code {
     [Parameter] public int Id { get; set; }
-    private List<InvoiceAuditEntry> _entries = new();
+    private List<AuditEntry> _entries = new();
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        try   { _entries = await InvoiceService.GetAuditAsync(Id); }
+        try   { _entries = await AuditService.GetAuditTrailAsync("Invoice", Id); }
         finally { _loading = false; }
     }
 }

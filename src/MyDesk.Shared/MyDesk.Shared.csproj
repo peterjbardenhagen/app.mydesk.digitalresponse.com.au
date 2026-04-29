@@ -5,7 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>MyDesk.Shared</RootNamespace>
-    <AssemblyName>DR.MyDesk.Shared</AssemblyName>
+    <AssemblyName>MyDesk.Shared</AssemblyName>
+    <NoWarn>$(NoWarn);CS8618;CS8619;CS8602;CS8604</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
