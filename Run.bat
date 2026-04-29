@@ -37,7 +37,7 @@ echo.
 echo  ===============================================================
 echo.
 echo                DR MyDesk - Business Management Platform
-echo                   Version 3.1  -  .NET 8 Blazor Server
+echo                   Version 3.1  -  .NET 10 Blazor Server
 echo.
 echo  ===============================================================
 echo.
@@ -195,13 +195,13 @@ if /i "%cchoice%"=="1" (
 )
 if /i "%cchoice%"=="2" (
     echo    Building solution...
-    dotnet build "%ROOT%\DR.MyDesk.sln"
+    dotnet build "%ROOT%\MyDesk.slnx"
     call :PAUSE_RETURN
     goto OPT_CLEAN_BUILD
 )
 if /i "%cchoice%"=="3" (
     echo    Restoring...
-    dotnet restore "%ROOT%\DR.MyDesk.sln"
+    dotnet restore "%ROOT%\MyDesk.slnx"
     echo    Restore complete.
     timeout /t 2 >nul
     goto OPT_CLEAN_BUILD
@@ -256,8 +256,8 @@ if "%IS_ADMIN%"=="NO" (
     powershell -Command "Start-Process cmd -ArgumentList '/c cd /d %ROOT% ^&^& Run.bat' -Verb RunAs"
     exit
 )
-"%APPCMD%" start apppool /apppool.name:Techlight.MyDesk >nul 2>&1
-"%APPCMD%" start site /site.name:Techlight.MyDesk >nul 2>&1
+"%APPCMD%" start apppool /apppool.name:MyDesk >nul 2>&1
+"%APPCMD%" start site /site.name:MyDesk >nul 2>&1
 echo    IIS site started.
 start "" "http://localhost"
 timeout /t 2 >nul
@@ -347,7 +347,7 @@ netstat -ano | findstr ":80 " | findstr "LISTENING" >nul 2>&1 && echo    [ACTIVE
 echo.
 if exist "%APPCMD%" (
     echo    IIS Site:
-    "%APPCMD%" list site "Techlight.MyDesk"
+    "%APPCMD%" list site "MyDesk"
 )
 echo.
 echo    Latest Log:

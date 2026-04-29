@@ -157,7 +157,7 @@ builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<TransporterService>();
 builder.Services.AddScoped<LogService>();
 builder.Services.AddScoped<ExpenseService>();
-builder.Services.AddScoped<NotificationService>();
+// builder.Services.AddScoped<NotificationService>(); // Not used - removed
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<AIFunctionExecutor>();
 

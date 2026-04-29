@@ -3,6 +3,17 @@
 
 Write-Host "Deploying MyDesk to local IIS..." -ForegroundColor Cyan
 
+# Stop IIS and release locks
+Write-Host "Stopping IIS and releasing file locks..." -ForegroundColor Yellow
+try {
+    iisreset /stop
+} catch {
+    Write-Host "  iisreset failed, trying alternative..." -ForegroundColor Yellow
+}
+Get-Process w3wp -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 3
+Write-Host "  IIS stopped and locks released." -ForegroundColor Green
+
 # Stop the IIS application pool
 Write-Host "Stopping IIS application pool 'MyDesk'..." -ForegroundColor Yellow
 try {

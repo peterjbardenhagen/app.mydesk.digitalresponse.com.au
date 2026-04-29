@@ -292,7 +292,6 @@
 
     [Inject] IJSRuntime JS { get; set; } = null!;
     [Inject] IDialogService DialogService { get; set; } = null!;
-    [Inject] NotificationService NotiSvc { get; set; } = null!;
 
     public class NotificationItem
     {
@@ -349,54 +348,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadRealNotifications();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            // Load dark mode preference from localStorage
-            var darkMode = await JS.InvokeAsync<string>("localStorage.getItem", "darkMode");
-            _isDarkMode = !string.IsNullOrEmpty(darkMode) && darkMode == "true";
-            if (_isDarkMode)
-            {
-                ApplyDarkMode();
-            }
-            StateHasChanged();
-
-            await LoadSearchHistory();
-
-            // Setup JavaScript utility functions
-            await JS.InvokeVoidAsync("eval", @"
-                window.downloadFile = function(fileName, byteArray) {
-                    const blob = new Blob([byteArray], { type: 'application/pdf' });
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = fileName;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
-                };
-            ");
-        }
-    }
-
-    private async Task LoadRealNotifications()
-    {
-        var real = await NotiSvc.GetNotificationsAsync();
-        _notifications = real.Select(n => new NotificationItem 
-        {
-            Id = n.Id,
-            Title = n.Title,
-            Message = n.Message,
-            Type = n.Type,
-            Time = n.Time,
-            Url = n.Url
-        }).ToList();
-        _notificationCount = _notifications.Count;
+        await LoadSearchHistory();
     }
 
     private async Task LoadSearchHistory()
