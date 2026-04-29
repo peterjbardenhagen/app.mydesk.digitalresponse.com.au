@@ -379,6 +379,20 @@ app.MapGet("/api/pdf/purchase-order/{id:int}", async (int id, PdfService pdfSvc)
     }
 }).RequireAuthorization();
 
+app.MapGet("/api/pdf/despatch/{id:int}", async (int id, PdfService pdfSvc) =>
+{
+    try
+    {
+        var bytes = await pdfSvc.GenerateDespatchPdfAsync(id);
+        return Results.File(bytes, "application/pdf", $"Despatch-{id}.pdf");
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "PDF generation failed for despatch {Id}", id);
+        return Results.Problem($"Could not generate PDF: {ex.Message}");
+    }
+}).RequireAuthorization();
+
 // ── Marketing asset endpoints (authenticated, X-Robots-Tag: noindex) ────────
 app.MapGet("/api/marketing/download/{key}/{label}", (string key, string label, HttpContext ctx, MarketingService svc) =>
 {

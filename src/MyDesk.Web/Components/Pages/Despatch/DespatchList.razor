@@ -1,6 +1,10 @@
 @page "/despatch"
 @attribute [Authorize]
 @inject DespatchService Svc
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IDialogService Dialog
+@inject ISnackbar Snackbar
+@using System.Security.Claims
 
 <PageTitle>Despatch - MyDesk</PageTitle>
 
@@ -50,16 +54,20 @@ else
                 </TemplateColumn>
                 <PropertyColumn Property="x => x.Carrier" Title="Carrier" CellStyle="width:120px;" />
                 <PropertyColumn Property="x => x.TrackingNumber" Title="Tracking" CellStyle="width:150px;" />
-                <TemplateColumn Title="Actions" CellStyle="width:140px;" Sortable="false">
+                <TemplateColumn Title="Actions" CellStyle="width:180px;" Sortable="false">
                     <CellTemplate>
                         <div class="d-flex gap-1">
                             @if (context.Item.InvoiceId.HasValue)
                             {
                                 <MudIconButton Icon="@Icons.Material.Rounded.Visibility" Size="Size.Small" Color="Color.Info"
-                                               Href="@($"/invoices/{context.Item.InvoiceId}")" title="View Invoice" />
+                                                Href="@($"/invoices/{context.Item.InvoiceId}")" title="View Invoice" />
+                                <MudIconButton Icon="@Icons.Material.Rounded.PictureAsPdf" Size="Size.Small" Color="Color.Error"
+                                            Href="@($"/api/pdf/despatch/{context.Item.InvoiceId}")" target="_blank" title="Download PDF" />
                                 <MudIconButton Icon="@Icons.Material.Rounded.LocalShipping" Size="Size.Small" Color="Color.Secondary"
-                                               Href="@($"/invoices/{context.Item.InvoiceId}/delivery-note")" title="Delivery Note" />
+                                                Href="@($"/invoices/{context.Item.InvoiceId}/despatch")" title="Edit Despatch" />
                             }
+                                <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
+                                            OnClick="@(() => DeleteDespatch(context.Item.DespatchId))" title="Delete" />
                         </div>
                     </CellTemplate>
                 </TemplateColumn>
@@ -72,9 +80,14 @@ else
 @code {
     private List<DespatchRow>? _items;
     private string _search = "";
+    private bool _isAdmin;
+    private string _userCode = "";
 
     protected override async Task OnInitializedAsync()
     {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        _isAdmin  = auth.User.IsInRole("Admin") || auth.User.FindFirst("IsAdmin")?.Value == "True";
+        _userCode = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
         _items = await Svc.GetAllAsync();
     }
 
@@ -83,5 +96,20 @@ else
         (d.CompanyName?.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false) ||
         (d.InvoiceNumber?.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false) ||
         (d.TrackingNumber?.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false);
+
+    private async Task DeleteDespatch(int despatchId)
+    {
+        bool? ok = await Dialog.ShowMessageBox("Delete Despatch",
+            "Delete this despatch record? This cannot be undone.",
+            yesText: "Delete", cancelText: "Cancel");
+        if (ok != true) return;
+        try
+        {
+            await Svc.DeleteAsync(despatchId, _userCode);
+            _items = await Svc.GetAllAsync();
+            Snackbar.Add("Despatch deleted.", Severity.Success);
+        }
+        catch (Exception ex) { Snackbar.Add($"Delete failed: {ex.Message}", Severity.Error); }
+    }
 }
 

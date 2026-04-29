@@ -13,9 +13,9 @@ public class DespatchService
     public async Task<List<DespatchRow>> GetAllAsync(int limit = 500)
     {
         var sql = $@"
-            SELECT TOP {limit} d.DespatchId, d.DespatchDate, d.Carrier,
+            SELECT TOP {limit} d.DespatchId, d.DespatchDate, d.Carrier, d.CarrierRef AS TrackingNumber, d.PackageDetails AS Notes,
                    COALESCE(NULLIF(co.Company, ''), NULLIF(i.InvCompany, ''), NULLIF(i.DelCompany, ''), 'No Customer') AS CompanyName,
-                   i.InvoiceId
+                   i.InvoiceId, i.InvoiceNumber
             FROM Despatch d
             LEFT JOIN Invoices i ON i.InvoiceId = d.InvoiceId
             LEFT JOIN Companies co ON co.CompanyId = i.CompanyId
@@ -27,11 +27,20 @@ public class DespatchService
             DespatchDate  = r["DespatchDate"] != DBNull.Value ? Convert.ToDateTime(r["DespatchDate"]) : (DateTime?)null,
             CompanyName   = r["CompanyName"]?.ToString() ?? "No Customer",
             InvoiceId     = r["InvoiceId"] == DBNull.Value ? null : Convert.ToInt32(r["InvoiceId"]),
-            InvoiceNumber = "",
+            InvoiceNumber = r["InvoiceNumber"] == DBNull.Value ? null : r["InvoiceNumber"]?.ToString(),
             Carrier       = r["Carrier"]?.ToString() ?? "",
-            TrackingNumber = "",
-            Notes         = ""
+            TrackingNumber = r["TrackingNumber"]?.ToString() ?? "",
+            Notes         = r["Notes"]?.ToString() ?? ""
         }).ToList();
+    }
+
+    public async Task DeleteAsync(int despatchId, string userCode)
+    {
+        await _db.ExecuteAsync(@"
+            DELETE FROM Despatch WHERE DespatchId = @Id",
+            new() { ["Id"] = despatchId });
+
+        _logger.LogInformation("Despatch {DespatchId} deleted by {UserCode}", despatchId, userCode);
     }
 }
 

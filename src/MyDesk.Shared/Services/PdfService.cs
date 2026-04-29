@@ -453,6 +453,102 @@ public class PdfService
         }).GeneratePdf();
     }
 
+    // ── Despatch Note ─────────────────────────────────────────────────────
+
+    public async Task<byte[]> GenerateDespatchPdfAsync(int invoiceId)
+    {
+        var hDt = await _db.QueryAsync(@"
+            SELECT d.DespatchId, d.DespatchDate, d.Carrier, d.CarrierRef AS TrackingNumber,
+                   d.PackageDetails, d.InternalNotes,
+                   ISNULL(i.InvoiceNumber,'') AS InvoiceNumber,
+                   COALESCE(NULLIF(co.Company, ''), NULLIF(i.InvCompany, ''), NULLIF(i.DelCompany, ''), 'No Customer') AS CompanyName,
+                   ISNULL(i.DelAddress1,'') AS Address1,
+                   ISNULL(i.DelAddress2,'') AS Address2,
+                   ISNULL(i.DelSuburb,'')    AS Suburb,
+                   ISNULL(i.DelState,'')     AS State,
+                   ISNULL(i.DelPostCode,'') AS Postcode,
+                   ISNULL(i.DelCountry,'')  AS Country,
+                   ISNULL(u.Name,'')         AS OriginatorName,
+                   ISNULL(u.Email,'')       AS OriginatorEmail,
+                   ISNULL(div.Logo,'')      AS DivisionLogo
+            FROM Despatch d
+            LEFT JOIN Invoices i ON i.InvoiceId = d.InvoiceId
+            LEFT JOIN Companies co ON co.CompanyId = i.CompanyId
+            LEFT JOIN Users u ON u.Code = i.Code
+            LEFT JOIN Divisions div ON div.DivisionId = i.DivisionId
+            WHERE d.InvoiceId = @Id",
+            new() { ["Id"] = invoiceId });
+
+        if (hDt.Rows.Count == 0)
+            throw new InvalidOperationException($"Despatch for invoice {invoiceId} not found");
+
+        var h = hDt.Rows[0];
+        var docNum = $"DN-{h["DespatchId"]}";
+        var invoiceNum = h["InvoiceNumber"].ToString();
+        var company = h["CompanyName"].ToString()!;
+        var addr1 = h["Address1"].ToString()!;
+        var addr2 = h["Address2"].ToString()!;
+        var suburb = h["Suburb"].ToString()!;
+        var state = h["State"].ToString()!;
+        var postcode = h["Postcode"].ToString()!;
+        var country = h["Country"].ToString()!;
+        var address = string.Join(", ",
+            new[] { addr1, addr2, suburb, state, postcode, country }.Where(s => !string.IsNullOrWhiteSpace(s)));
+
+        return Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.MarginHorizontal(1.5f, Unit.Centimetre);
+                page.MarginVertical(1.2f, Unit.Centimetre);
+                page.DefaultTextStyle(s => s.FontFamily(Fonts.Arial).FontSize(9));
+
+                page.Header().Element(c => DocHeader(c, "DESPA TCH NOTE", docNum,
+                    h["OriginatorName"].ToString()!, h["OriginatorEmail"].ToString()!));
+
+                page.Content().Column(col =>
+                {
+                    col.Item().Row(r =>
+                    {
+                        r.RelativeItem().Column(cc =>
+                        {
+                            cc.Item().Text("Customer").FontSize(8).FontColor(Gray500);
+                            cc.Item().Text(company).FontSize(10).Bold().FontColor(Gray700);
+                            if (!string.IsNullOrWhiteSpace(address))
+                                cc.Item().Text(address).FontSize(8.5f).FontColor(Gray700);
+                        });
+                        r.ConstantItem(180).Column(cc =>
+                        {
+                            DocDetailRow(cc, "Invoice #:", invoiceNum);
+                            DocDetailRow(cc, "Despatch Date:",
+                                h["DespatchDate"] == DBNull.Value ? "" : Convert.ToDateTime(h["DespatchDate"]).ToString("dd/MM/yyyy"));
+                            DocDetailRow(cc, "Carrier:", h["Carrier"].ToString()!);
+                            DocDetailRow(cc, "Tracking #:", h["TrackingNumber"].ToString()!);
+                        });
+                    });
+
+                    col.Item().PaddingVertical(10).LineHorizontal(0.5f).LineColor(Gray200);
+
+                    if (!string.IsNullOrWhiteSpace(h["PackageDetails"]?.ToString()))
+                    {
+                        col.Item().Text("Package Details").FontSize(8).FontColor(Gray500);
+                        col.Item().Text(h["PackageDetails"].ToString()!).FontSize(9.5f).FontColor(Gray700);
+                        col.Item().PaddingVertical(6).LineHorizontal(0.5f).LineColor(Gray200);
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(h["InternalNotes"]?.ToString()))
+                    {
+                        col.Item().Text("Internal Notes").FontSize(8).FontColor(Gray500);
+                        col.Item().Text(h["InternalNotes"].ToString()!).FontSize(9.5f).FontColor(Gray700).Italic();
+                    }
+                });
+
+                DocFooter(page, h["OriginatorName"].ToString()!);
+            });
+        }).GeneratePdf();
+    }
+
     // ── Shared layout helpers ────────────────────────────────────────────────
 
     private void DocHeader(IContainer container, string docType, string docNumber,

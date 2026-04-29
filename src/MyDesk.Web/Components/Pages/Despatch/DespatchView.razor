@@ -1,0 +1,155 @@
+@page "/despatch/{Id:int}"
+@attribute [Authorize]
+@inject DespatchService DespatchSvc
+@inject InvoiceService InvoiceService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject IDialogService Dialog
+@inject PdfService PdfService
+@inject IJSRuntime JsRuntime
+@inject AuthenticationStateProvider AuthStateProvider
+@using System.Security.Claims
+
+<PageTitle>Despatch Note @Id - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">MyDesk</a><span class="sep">/</span>
+            <a href="/despatch">Despatch</a><span class="sep">/</span>
+            <span>Note @Id</span>
+        </div>
+        <h1>Despatch Note @(_d?.DespatchId ?? Id)</h1>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ArrowBack"
+                   Href="/despatch">Back</MudButton>
+        @if (_d != null && _invoiceId.HasValue)
+        {
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Edit"
+                       Href="@($"/invoices/{_invoiceId}/despatch")">Edit</MudButton>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.PictureAsPdf"
+                       OnClick="DownloadPdf" Disabled="_generatingPdf">
+                @(_generatingPdf ? "Generating..." : "PDF")
+            </MudButton>
+        }
+    </div>
+</div>
+
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" Class="mx-auto my-8 d-block" />
+}
+else if (_d == null)
+{
+    <MudText>Despatch note not found.</MudText>
+}
+else
+{
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudText Typo="Typo.caption" Class="mb-1" Style="color:var(--gray-500);">CUSTOMER</MudText>
+                <MudText>@_companyName</MudText>
+                @if (!string.IsNullOrEmpty(_address))
+                {
+                    <MudText Style="white-space:pre-line;">@_address</MudText>
+                }
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudGrid Spacing="2">
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.caption" Class="mb-1" Style="color:var(--gray-500);">INVOICE #</MudText>
+                        @if (_invoiceId.HasValue)
+                        {
+                            <MudLink Href="@($"/invoices/{_invoiceId}")">@_invoiceNumber</MudLink>
+                        }
+                        else
+                        {
+                            <MudText>@_invoiceNumber</MudText>
+                        }
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.caption" Class="mb-1" Style="color:var(--gray-500);">DESPATCH DATE</MudText>
+                        <MudText>@(_d.DespatchDate.ToString("dd/MM/yyyy"))</MudText>
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.caption" Class="mb-1" Style="color:var(--gray-500);">CARRIER</MudText>
+                        <MudText>@(_d.Carrier ?? "—")</MudText>
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.caption" Class="mb-1" Style="color:var(--gray-500);">TRACKING #</MudText>
+                        <MudText>@(_d.CarrierRef ?? "—")</MudText>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        </MudItem>
+        @if (!string.IsNullOrEmpty(_d.PackageDetails))
+        {
+            <MudItem xs="12">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.caption" Class="mb-1" Style="color:var(--gray-500);">PACKAGE DETAILS</MudText>
+                    <MudText Style="white-space:pre-line;">@_d.PackageDetails</MudText>
+                </MudPaper>
+            </MudItem>
+        }
+        @if (!string.IsNullOrEmpty(_d.InternalNotes))
+        {
+            <MudItem xs="12">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.caption" Class="mb-1" Style="color:var(--gray-500);">INTERNAL NOTES</MudText>
+                    <MudText Style="white-space:pre-line;">@_d.InternalNotes</MudText>
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private DespatchDetail? _d;
+    private bool _loading = true;
+    private bool _generatingPdf;
+    private int? _invoiceId;
+    private string _invoiceNumber = "";
+    private string _companyName = "";
+    private string _address = "";
+    private string _userCode = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        _userCode = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+
+        // Get despatch by Id - need to get invoice first
+        var despatches = await DespatchSvc.GetAllAsync();
+        var row = despatches.FirstOrDefault(d => d.DespatchId == Id);
+        if (row?.InvoiceId.HasValue == true)
+        {
+            _invoiceId = row.InvoiceId;
+            _invoiceNumber = row.InvoiceNumber ?? "";
+            _companyName = row.CompanyName ?? "";
+
+            _d = await InvoiceService.GetDespatchAsync(_invoiceId.Value);
+        }
+        _loading = false;
+    }
+
+    private async Task DownloadPdf()
+    {
+        if (!_invoiceId.HasValue) return;
+        _generatingPdf = true;
+        try
+        {
+            var pdfBytes = await PdfService.GenerateDespatchPdfAsync(_invoiceId.Value);
+            var fileName = $"Despatch-{Id}.pdf";
+            var base64 = Convert.ToBase64String(pdfBytes);
+            await JsRuntime.InvokeVoidAsync("downloadBase64File", base64, "application/pdf", fileName);
+        }
+        catch (Exception ex) { Snackbar.Add($"PDF failed: {ex.Message}", Severity.Error); }
+        finally { _generatingPdf = false; }
+    }
+}
