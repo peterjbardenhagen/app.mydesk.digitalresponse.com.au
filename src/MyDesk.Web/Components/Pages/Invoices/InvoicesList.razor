@@ -65,6 +65,10 @@
                    StartIcon="@Icons.Material.Rounded.Output">MYOB Export</MudButton>
         <MudButton OnClick="ExportCsv" Variant="Variant.Outlined" Color="Color.Default"
                    StartIcon="@Icons.Material.Rounded.Download">Export CSV</MudButton>
+        <MudButton OnClick="ShowBulkEmailDialog" Variant="Variant.Outlined" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Rounded.Email">Bulk Email</MudButton>
+        <MudButton OnClick="ShowBulkStatusDialog" Variant="Variant.Outlined" Color="Color.Secondary"
+                   StartIcon="@Icons.Material.Rounded.Update">Bulk Status</MudButton>
     </div>
 </MudPaper>
 
@@ -214,6 +218,16 @@
 
         await DownloadFile(fileName, csv);
         Snackbar.Add($"Exported {_invoices.Count} invoices", Severity.Success);
+    }
+
+    private void ShowBulkEmailDialog()
+    {
+        Snackbar.Add("Bulk email feature coming soon.", Severity.Info);
+    }
+
+    private void ShowBulkStatusDialog()
+    {
+        Snackbar.Add("Bulk status update feature coming soon.", Severity.Info);
     }
 
     private async Task DownloadFile(string fileName, string content)
