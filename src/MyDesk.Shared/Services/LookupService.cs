@@ -146,15 +146,29 @@ public class LookupService
 
     public async Task<List<Product>> GetProductsAsync()
     {
-        var dt = await _db.QueryAsync("SELECT ProductId, ProductCode, ProductName, ProductDesc, UnitCost, NettPrice FROM Products ORDER BY ProductName");
+        var dt = await _db.QueryAsync("SELECT ProductId, ISNULL(ProductCode, '') AS ProductCode, ISNULL(ProductName, '') AS ProductName FROM Products ORDER BY ProductName");
         return dt.Map(r => new Product
         {
             ProductId = Convert.ToInt32(r["ProductId"]),
-            ProductName = r["ProductName"]?.ToString() ?? "",
-            Description = r["ProductDesc"]?.ToString(),
-            UnitCost = r["UnitCost"] == DBNull.Value ? 0m : Convert.ToDecimal(r["UnitCost"]),
-            UnitPrice = r["NettPrice"] == DBNull.Value ? 0m : Convert.ToDecimal(r["NettPrice"])
+            ProductCode = r["ProductCode"]?.ToString() ?? "",
+            ProductName = r["ProductName"]?.ToString() ?? ""
         });
+    }
+
+    /// <summary>
+    /// Gets overdue invoices for calendar display
+    /// </summary>
+    public async Task<DataTable> GetOverdueInvoicesAsync(string userCode)
+    {
+        var sql = @"
+            SELECT i.InvoiceId, i.InvoiceNumber, i.InvoiceDate, i.DueDate, c.CompanyName AS InvCompany
+            FROM Invoices i
+            LEFT JOIN Companies c ON i.CompanyId = c.CompanyId
+            WHERE i.InvoiceStatus NOT IN ('Paid', 'Cancelled')
+            AND i.DueDate < GETDATE()
+            ORDER BY i.DueDate";
+        
+        return await _db.QueryAsync(sql);
     }
 
     public List<string> GetCarriers() => new() 

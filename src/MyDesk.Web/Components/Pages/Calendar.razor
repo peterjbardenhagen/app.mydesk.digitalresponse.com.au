@@ -1,0 +1,242 @@
+@page "/calendar"
+@attribute [Authorize]
+@inject LookupService LookupService
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+@using System.Security.Claims
+@using System.Data;
+
+<PageTitle>Calendar - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">MyDesk</a><span class="sep">/</span>
+            <span>Calendar</span>
+        </div>
+        <h1>Calendar</h1>
+        <p class="tl-subtitle">View important dates, deadlines, and schedule follow-ups.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
+                   OnClick="ShowAddEventDialog">
+            Add Event
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.FilterList"
+                   @onclick="@(() => _showFilters = !_showFilters)">
+            Filters
+        </MudButton>
+    </div>
+</div>
+
+@if (_showFilters)
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="0">
+        <MudGrid Spacing="2">
+            <MudItem xs="12" sm="3">
+                <MudCheckBox T="bool" @bind-Value="_showInvoices" Label="Invoices" Color="Color.Primary" />
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudCheckBox T="bool" @bind-Value="_showQuotes" Label="Quotes" Color="Color.Tertiary" />
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudCheckBox T="bool" @bind-Value="_showPOs" Label="Purchase Orders" Color="Color.Warning" />
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudCheckBox T="bool" @bind-Value="_showFollowUps" Label="Follow-ups" Color="Color.Success" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+}
+
+@* Calendar Grid *@
+<div class="calendar-container">
+    <div class="calendar-header">
+        <MudIconButton Icon="@Icons.Material.Rounded.ChevronLeft" OnClick="PrevMonth" />
+        <MudText Typo="Typo.h5">@_currentMonth.ToString("MMMM yyyy")</MudText>
+        <MudIconButton Icon="@Icons.Material.Rounded.ChevronRight" OnClick="NextMonth" />
+        <MudButton Variant="Variant.Text" Class="ml-4" OnClick="GoToToday">Today</MudButton>
+    </div>
+
+    <div class="calendar-grid">
+        @* Day headers *@
+        <div class="calendar-day-header">Mon</div>
+        <div class="calendar-day-header">Tue</div>
+        <div class="calendar-day-header">Wed</div>
+        <div class="calendar-day-header">Thu</div>
+        <div class="calendar-day-header">Fri</div>
+        <div class="calendar-day-header">Sat</div>
+        <div class="calendar-day-header">Sun</div>
+
+        @* Calendar days *@
+        @foreach (var day in _calendarDays)
+        {
+            <div class="calendar-day @(day.IsToday ? "today" : "") @(day.IsCurrentMonth ? "" : "other-month")">
+                <div class="day-number">@day.Date.Day</div>
+                @foreach (var evt in day.Events)
+                {
+                    <div class="calendar-event @evt.CssClass" 
+                         @onclick="@(() => OnEventClick(evt))"
+                         title="@evt.Title">
+                        <MudText Typo="Typo.caption">@evt.Title</MudText>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private DateTime _currentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private List<CalendarDay> _calendarDays = new();
+    private CalendarEvent? _selectedEvent;
+    private bool _showFilters = true;
+    private bool _showInvoices = true;
+    private bool _showQuotes = true;
+    private bool _showPOs = true;
+    private bool _showFollowUps = true;
+    private List<CalendarEvent> _allEvents = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEvents();
+        GenerateCalendarDays();
+    }
+
+    private async Task LoadEvents()
+    {
+        _allEvents = new List<CalendarEvent>();
+
+        var currentUser = (await AuthStateProvider.GetAuthenticationStateAsync()).User;
+        var userCode = currentUser.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+
+        // Load invoice due dates
+        if (_showInvoices)
+        {
+            var dt = await LookupService.GetOverdueInvoicesAsync(userCode);
+            foreach (DataRow row in dt.Rows)
+            {
+                _allEvents.Add(new CalendarEvent
+                {
+                    Title = $"Invoice {row["InvoiceNumber"]}",
+                    Date = row["InvoiceDate"] != DBNull.Value ? Convert.ToDateTime(row["InvoiceDate"]) : DateTime.Today,
+                    Description = $"Customer: {row["InvCompany"]}",
+                    CssClass = "invoice",
+                    Link = $"/invoices/{row["InvoiceId"]}",
+                    Type = "Invoice"
+                });
+            }
+        }
+
+        // Add sample follow-ups
+        if (_showFollowUps)
+        {
+            _allEvents.Add(new CalendarEvent
+            {
+                Title = "Call client re: Project X",
+                Date = DateTime.Today.AddDays(1),
+                Description = "Discuss project timeline and deliverables",
+                CssClass = "followup",
+                Type = "Follow-up"
+            });
+        }
+    }
+
+    private void GenerateCalendarDays()
+    {
+        _calendarDays = new List<CalendarDay>();
+
+        var firstDay = _currentMonth;
+        var startDay = firstDay.AddDays(-(int)firstDay.DayOfWeek + 1); // Monday as first day
+        if (startDay > firstDay) startDay = startDay.AddDays(-7);
+
+        for (int i = 0; i < 42; i++)
+        {
+            var date = startDay.AddDays(i);
+            var dayEvents = _allEvents.Where(e => e.Date.Date == date.Date).ToList();
+
+            _calendarDays.Add(new CalendarDay
+            {
+                Date = date,
+                IsCurrentMonth = date.Month == _currentMonth.Month && date.Year == _currentMonth.Year,
+                IsToday = date.Date == DateTime.Today,
+                Events = dayEvents
+            });
+        }
+    }
+
+    private void PrevMonth() { _currentMonth = _currentMonth.AddMonths(-1); GenerateCalendarDays(); }
+    private void NextMonth() { _currentMonth = _currentMonth.AddMonths(1); GenerateCalendarDays(); }
+    private void GoToToday() { _currentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1); GenerateCalendarDays(); }
+
+    private void OnEventClick(CalendarEvent evt) { _selectedEvent = evt; }
+    private void ShowAddEventDialog() { Nav.NavigateTo("/calendar"); } // Placeholder
+}
+
+<style>
+    .calendar-container {
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .calendar-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+    }
+
+    .calendar-day-header {
+        text-align: center;
+        font-weight: 600;
+        font-size: 12px;
+        color: var(--gray-500);
+        padding: 8px;
+        text-transform: uppercase;
+    }
+
+    .calendar-day {
+        min-height: 100px;
+        border: 1px solid var(--gray-200);
+        border-radius: 8px;
+        padding: 4px;
+        background: white;
+    }
+
+    .calendar-day.other-month {
+        opacity: 0.4;
+    }
+
+    .calendar-day.today {
+        background: rgba(33, 150, 243, 0.05);
+        border-color: #2196F3;
+    }
+
+    .day-number {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--gray-700);
+        margin-bottom: 4px;
+    }
+
+    .calendar-event {
+        padding: 2px 4px;
+        border-radius: 4px;
+        margin-bottom: 2px;
+        cursor: pointer;
+        font-size: 11px;
+    }
+
+    .calendar-event.invoice { background: rgba(33, 150, 243, 0.1); color: #1976D2; }
+    .calendar-event.quote { background: rgba(156, 39, 176, 0.1); color: #7B1FA2; }
+    .calendar-event.followup { background: rgba(76, 175, 80, 0.1); color: #388E3C; }
+</style>
