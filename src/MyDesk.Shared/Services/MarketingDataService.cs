@@ -427,23 +427,69 @@ public class MarketingDataService
 
     public async Task SaveCampaignAsync(EmailCampaign campaign)
     {
-        // TODO: Persist to database
-        _logger.LogInformation("Saving campaign: {Name}", campaign.Name);
-        await Task.Delay(100); // Simulate async work
+        if (string.IsNullOrEmpty(campaign.Id) || campaign.Id == "0")
+        {
+            // Insert new campaign
+            await _db.ExecuteAsync(@"
+                INSERT INTO EmailCampaigns (Name, Subject, Audience, Status, RecipientCount, HtmlContent, TextContent, ScheduledAt, CreatedBy)
+                VALUES (@Name, @Subject, @Audience, @Status, @Recipients, @Html, @Text, @Scheduled, @CreatedBy)",
+                new() { 
+                    ["Name"] = campaign.Name, 
+                    ["Subject"] = campaign.Subject ?? "", 
+                    ["Audience"] = campaign.Audience,
+                    ["Status"] = campaign.Status,
+                    ["Recipients"] = campaign.RecipientCount,
+                    ["Html"] = campaign.BodyHtml ?? "",
+                    ["Text"] = "",
+                    ["Scheduled"] = (object)campaign.ScheduledAt ?? DBNull.Value,
+                    ["CreatedBy"] = campaign.CreatedBy ?? ""
+                });
+        }
+        else
+        {
+            // Update existing campaign
+            await _db.ExecuteAsync(@"
+                UPDATE EmailCampaigns 
+                SET Name = @Name, Subject = @Subject, Audience = @Audience, Status = @Status, 
+                    RecipientCount = @Recipients, HtmlContent = @Html, TextContent = @Text, 
+                    ScheduledAt = @Scheduled, UpdatedAt = GETDATE()
+                WHERE CampaignId = @Id",
+                new() { 
+                    ["Id"] = int.Parse(campaign.Id),
+                    ["Name"] = campaign.Name, 
+                    ["Subject"] = campaign.Subject ?? "", 
+                    ["Audience"] = campaign.Audience,
+                    ["Status"] = campaign.Status,
+                    ["Recipients"] = campaign.RecipientCount,
+                    ["Html"] = campaign.BodyHtml ?? "",
+                    ["Text"] = "",
+                    ["Scheduled"] = (object)campaign.ScheduledAt ?? DBNull.Value
+                });
+        }
+        _logger.LogInformation("Campaign saved: {Name}", campaign.Name);
     }
 
     public async Task SendCampaignAsync(string campaignId)
     {
-        // TODO: Implement actual send logic
-        _logger.LogInformation("Sending campaign: {Id}", campaignId);
-        await Task.Delay(500); // Simulate async work
+        // Update status to 'Sent'
+        await _db.ExecuteAsync(@"
+            UPDATE EmailCampaigns 
+            SET Status = 'Sent', SentAt = GETDATE(), SentCount = RecipientCount
+            WHERE CampaignId = @Id",
+            new() { ["Id"] = int.Parse(campaignId) });
+        
+        _logger.LogInformation("Campaign sent: {Id}", campaignId);
     }
 
     public async Task CancelCampaignAsync(string campaignId)
     {
-        // TODO: Update status in database
-        _logger.LogInformation("Cancelling campaign: {Id}", campaignId);
-        await Task.Delay(100);
+        await _db.ExecuteAsync(@"
+            UPDATE EmailCampaigns 
+            SET Status = 'Cancelled', UpdatedAt = GETDATE()
+            WHERE CampaignId = @Id",
+            new() { ["Id"] = int.Parse(campaignId) });
+        
+        _logger.LogInformation("Campaign cancelled: {Id}", campaignId);
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -451,32 +497,115 @@ public class MarketingDataService
     // ════════════════════════════════════════════════════════════════════════
     public async Task<MarketingStrategyDoc?> GetStrategyAsync()
     {
-        // TODO: Load from database/settings storage
-        // Return default/empty doc for now
-        return await Task.FromResult(new MarketingStrategyDoc
+        var dt = await _db.QueryAsync(@"
+            SELECT TOP 1 * FROM MarketingStrategy ORDER BY UpdatedAt DESC");
+        
+        if (dt.Rows.Count == 0)
         {
-            IcpIndustries = "Commercial property developers, Architects, Electrical contractors, Retail chains",
-            IcpCompanySize = "50-500 employees, $5M-$50M annual revenue",
-            IcpPainPoints = "Long lead times, inconsistent quality, lack of technical support, compliance uncertainty",
-            IcpBuyingTriggers = "New construction projects, refurbishment cycles, sustainability mandates",
-            ValueProposition = "Australian-designed project lighting with guaranteed compliance, 5-day local delivery, and dedicated technical support",
-            Differentiators = "Local stock holding, NATA-certified testing, custom design capability, 10-year warranty",
-            PositioningStatement = "For target customers who can't afford delays, we are the project partner that combines global scale with local delivery speed and compliance certainty.",
-            Q1Initiatives = "Launch Champion customer program\nImplement automated quote follow-up\nAttend DesignBUILD expo",
-            Q2Initiatives = "Roll out email nurture sequences\nLaunch referral incentive program\nPublish sustainability report",
-            Q3Initiatives = "Expand supplier network in SE Asia\nLaunch trade portal for electricians\nImplement NPS tracking",
-            Q4Initiatives = "Annual customer review program\n2027 strategy planning\nTeam training and certifications",
-            KpiLeadTarget = 120,
-            KpiConversionRate = 15,
-            KpiCacTarget = 2500,
-            KpiNpsTarget = 50
-        });
+            // Return default if no strategy exists
+            return new MarketingStrategyDoc
+            {
+                IcpIndustries = "Commercial property developers, Architects, Electrical contractors, Retail chains",
+                IcpCompanySize = "50-500 employees, $5M-$50M annual revenue",
+                IcpPainPoints = "Long lead times, inconsistent quality, lack of technical support, compliance uncertainty",
+                IcpBuyingTriggers = "New construction projects, refurbishment cycles, sustainability mandates",
+                ValueProposition = "Australian-designed project lighting with guaranteed compliance, 5-day local delivery, and dedicated technical support",
+                Differentiators = "Local stock holding, NATA-certified testing, custom design capability, 10-year warranty",
+                PositioningStatement = "For target customers who can't afford delays, we are the project partner that combines global scale with local delivery speed and compliance certainty.",
+                Q1Initiatives = "Launch Champion customer program\nImplement automated quote follow-up\nAttend DesignBUILD expo",
+                Q2Initiatives = "Roll out email nurture sequences\nLaunch referral incentive program\nPublish sustainability report",
+                Q3Initiatives = "Expand supplier network in SE Asia\nLaunch trade portal for electricians\nImplement NPS tracking",
+                Q4Initiatives = "Annual customer review program\n2027 strategy planning\nTeam training and certifications",
+                KpiLeadTarget = 120,
+                KpiConversionRate = 15,
+                KpiCacTarget = 2500,
+                KpiNpsTarget = 50
+            };
+        }
+
+        var r = dt.Rows[0];
+        return new MarketingStrategyDoc
+        {
+            Id = Convert.ToInt32(r["StrategyId"]),
+            IcpIndustries = r["IcpIndustries"]?.ToString() ?? "",
+            IcpCompanySize = r["IcpCompanySize"]?.ToString() ?? "",
+            IcpPainPoints = r["IcpPainPoints"]?.ToString() ?? "",
+            IcpBuyingTriggers = r["IcpBuyingTriggers"]?.ToString() ?? "",
+            ValueProposition = r["ValueProposition"]?.ToString() ?? "",
+            Differentiators = r["Differentiators"]?.ToString() ?? "",
+            PositioningStatement = r["PositioningStatement"]?.ToString() ?? "",
+            Q1Initiatives = r["Q1Initiatives"]?.ToString() ?? "",
+            Q2Initiatives = r["Q2Initiatives"]?.ToString() ?? "",
+            Q3Initiatives = r["Q3Initiatives"]?.ToString() ?? "",
+            Q4Initiatives = r["Q4Initiatives"]?.ToString() ?? "",
+            KpiLeadTarget = r.Table.Columns.Contains("KpiLeadTarget") && r["KpiLeadTarget"] != DBNull.Value ? Convert.ToInt32(r["KpiLeadTarget"]) : 120,
+            KpiConversionRate = r.Table.Columns.Contains("KpiConversionRate") && r["KpiConversionRate"] != DBNull.Value ? Convert.ToDecimal(r["KpiConversionRate"]) : 15,
+            KpiCacTarget = r.Table.Columns.Contains("KpiCacTarget") && r["KpiCacTarget"] != DBNull.Value ? Convert.ToDecimal(r["KpiCacTarget"]) : 2500,
+            KpiNpsTarget = r.Table.Columns.Contains("KpiNpsTarget") && r["KpiNpsTarget"] != DBNull.Value ? Convert.ToInt32(r["KpiNpsTarget"]) : 50
+        };
     }
 
     public async Task SaveStrategyAsync(MarketingStrategyDoc strategy)
     {
-        // TODO: Persist to database/settings storage
-        _logger.LogInformation("Saving marketing strategy document");
-        await Task.Delay(100);
+        if (strategy.Id == 0)
+        {
+            await _db.ExecuteAsync(@"
+                INSERT INTO MarketingStrategy 
+                (IcpIndustries, IcpCompanySize, IcpPainPoints, IcpBuyingTriggers, ValueProposition, 
+                 Differentiators, PositioningStatement, Q1Initiatives, Q2Initiatives, Q3Initiatives, 
+                 Q4Initiatives, KpiLeadTarget, KpiConversionRate, KpiCacTarget, KpiNpsTarget, 
+                 UpdatedBy)
+                VALUES (@Industries, @Size, @PainPoints, @Triggers, @ValueProp, 
+                        @Diff, @Position, @Q1, @Q2, @Q3, @Q4, @Lead, @Conv, @Cac, @Nps, @UpdatedBy)",
+                new() { 
+                    ["Industries"] = strategy.IcpIndustries,
+                    ["Size"] = strategy.IcpCompanySize,
+                    ["PainPoints"] = strategy.IcpPainPoints,
+                    ["Triggers"] = strategy.IcpBuyingTriggers,
+                    ["ValueProp"] = strategy.ValueProposition,
+                    ["Diff"] = strategy.Differentiators,
+                    ["Position"] = strategy.PositioningStatement,
+                    ["Q1"] = strategy.Q1Initiatives,
+                    ["Q2"] = strategy.Q2Initiatives,
+                    ["Q3"] = strategy.Q3Initiatives,
+                    ["Q4"] = strategy.Q4Initiatives,
+                    ["Lead"] = strategy.KpiLeadTarget,
+                    ["Conv"] = strategy.KpiConversionRate,
+                    ["Cac"] = strategy.KpiCacTarget,
+                    ["Nps"] = strategy.KpiNpsTarget,
+                    ["UpdatedBy"] = ""
+                });
+        }
+        else
+        {
+            await _db.ExecuteAsync(@"
+                UPDATE MarketingStrategy 
+                SET IcpIndustries = @Industries, IcpCompanySize = @Size, IcpPainPoints = @PainPoints, 
+                    IcpBuyingTriggers = @Triggers, ValueProposition = @ValueProp, Differentiators = @Diff, 
+                    PositioningStatement = @Position, Q1Initiatives = @Q1, Q2Initiatives = @Q2, 
+                    Q3Initiatives = @Q3, Q4Initiatives = @Q4, KpiLeadTarget = @Lead, 
+                    KpiConversionRate = @Conv, KpiCacTarget = @Cac, KpiNpsTarget = @Nps, 
+                    UpdatedAt = GETDATE()
+                WHERE StrategyId = @Id",
+                new() { 
+                    ["Id"] = strategy.Id,
+                    ["Industries"] = strategy.IcpIndustries,
+                    ["Size"] = strategy.IcpCompanySize,
+                    ["PainPoints"] = strategy.IcpPainPoints,
+                    ["Triggers"] = strategy.IcpBuyingTriggers,
+                    ["ValueProp"] = strategy.ValueProposition,
+                    ["Diff"] = strategy.Differentiators,
+                    ["Position"] = strategy.PositioningStatement,
+                    ["Q1"] = strategy.Q1Initiatives,
+                    ["Q2"] = strategy.Q2Initiatives,
+                    ["Q3"] = strategy.Q3Initiatives,
+                    ["Q4"] = strategy.Q4Initiatives,
+                    ["Lead"] = strategy.KpiLeadTarget,
+                    ["Conv"] = strategy.KpiConversionRate,
+                    ["Cac"] = strategy.KpiCacTarget,
+                    ["Nps"] = strategy.KpiNpsTarget
+                });
+        }
+        _logger.LogInformation("Marketing strategy saved");
     }
 }

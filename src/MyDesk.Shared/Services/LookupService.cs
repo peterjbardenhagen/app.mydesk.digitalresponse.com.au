@@ -171,6 +171,37 @@ public class LookupService
         return await _db.QueryAsync(sql);
     }
 
+    /// <summary>
+    /// Gets stale quotes (over 30 days old, not won/lost) for calendar display
+    /// </summary>
+    public async Task<DataTable> GetStaleQuotesAsync(string userCode)
+    {
+        var sql = @"
+            SELECT q.Qid, q.QuoteNumber, q.QuoteDate, q.ValidUntil, c.CompanyName AS QuoteCompany
+            FROM Quotes q
+            LEFT JOIN Companies c ON q.CompanyId = c.CompanyId
+            WHERE q.QuoteStatusId NOT IN (4, 10) -- Not Won or Lost
+            AND q.QuoteDate < DATEADD(day, -30, GETDATE())
+            ORDER BY q.QuoteDate";
+        
+        return await _db.QueryAsync(sql);
+    }
+
+    /// <summary>
+    /// Gets open purchase orders for calendar display
+    /// </summary>
+    public async Task<DataTable> GetOpenPOsAsync(string userCode)
+    {
+        var sql = @"
+            SELECT p.POid, p.PONumber, p.PODate, p.RequiredDate, c.CompanyName AS POCompany
+            FROM PurchaseOrders p
+            LEFT JOIN Companies c ON p.CompanyId = c.CompanyId
+            WHERE p.POStatusId IN (1, 2, 3) -- Open/Partial/Ordered
+            ORDER BY p.RequiredDate";
+        
+        return await _db.QueryAsync(sql);
+    }
+
     public List<string> GetCarriers() => new() 
     { 
         "General Road Freight", "Express Overnight", "Customer Pickup", "Local Delivery", 

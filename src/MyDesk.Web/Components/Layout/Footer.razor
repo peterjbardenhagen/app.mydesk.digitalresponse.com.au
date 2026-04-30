@@ -1,41 +1,56 @@
 @inject PlatformSettingsService PlatformSettings
 
-<MudAppBar Elevation="0" Dense="true" Bottom="true" Fixed="false" Style="background: var(--gray-900); border-top: 1px solid var(--gray-800);">
-    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="d-flex align-center justify-space-between py-2" Style="width: 100%;">
-        <div class="d-flex align-center gap-4">
-            <MudText Typo="Typo.caption" Style="color: var(--gray-500);">
-                @PlatformSettings.Current.CopyrightText
-            </MudText>
-            <MudText Typo="Typo.caption" Style="color: var(--gray-500);">
-                |
-            </MudText>
-            <MudLink Href="@PlatformSettings.Current.CompanyWebsite" Target="_blank" Typo="Typo.caption" Style="color: var(--gray-400);">
-                @PlatformSettings.Current.CompanyName
-            </MudLink>
+<MudAppBar Elevation="0" Dense="true" Bottom="true" Fixed="false" Style="background: var(--gray-900); border-top: 1px solid var(--gray-800); height: auto; min-height: 64px;">
+    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="d-flex flex-column align-center py-3" Style="width: 100%;">
+        <div class="d-flex align-center justify-space-between w-100 mb-2">
+            <div class="d-flex align-center gap-4">
+                <MudText Typo="Typo.caption" Style="color: var(--gray-500);">
+                    &copy; @DateTime.Now.Year @PlatformSettings.Current.CompanyName
+                </MudText>
+                <MudText Typo="Typo.caption" Style="color: var(--gray-500);">
+                    |
+                </MudText>
+                <MudLink Href="/about" Typo="Typo.caption" Style="color: var(--gray-400);">
+                    About
+                </MudLink>
+                <MudText Typo="Typo.caption" Style="color: var(--gray-500);">
+                    |
+                </MudText>
+                <MudLink Href="https://www.digitalresponse.com.au" Target="_blank" Typo="Typo.caption" Style="color: var(--gray-400);">
+                    Digital Response
+                </MudLink>
+            </div>
+            
+            <div class="d-flex align-center gap-4">
+                <MudLink Href="/privacy-policy" Typo="Typo.caption" Style="color: var(--gray-400);">
+                    Privacy Policy
+                </MudLink>
+                <MudText Typo="Typo.caption" Style="color: var(--gray-500);">
+                    |
+                </MudText>
+                <MudLink Href="/terms-and-conditions" Typo="Typo.caption" Style="color: var(--gray-400);">
+                    Terms
+                </MudLink>
+                <MudText Typo="Typo.caption" Style="color: var(--gray-500);">
+                    |
+                </MudText>
+                <MudLink Href="@($"mailto:{PlatformSettings.Current.SupportEmail}")" Typo="Typo.caption" Style="color: var(--gray-400);">
+                    Support
+                </MudLink>
+            </div>
         </div>
         
-        <div class="d-flex align-center gap-4">
-            <MudLink Href="https://mydesk.digitalresponse.com.au/privacy.html" Target="_blank" Typo="Typo.caption" Style="color: var(--gray-400);">
-                Privacy Policy
-            </MudLink>
-            <MudText Typo="Typo.caption" Style="color: var(--gray-500);">
-                |
-            </MudText>
-            <MudLink Href="https://mydesk.digitalresponse.com.au/terms.html" Target="_blank" Typo="Typo.caption" Style="color: var(--gray-400);">
-                Terms & Conditions
-            </MudLink>
-            <MudText Typo="Typo.caption" Style="color: var(--gray-500);">
-                |
-            </MudText>
-            <MudLink Href="@($"mailto:{PlatformSettings.Current.SupportEmail}")" Typo="Typo.caption" Style="color: var(--gray-400);">
-                Support
-            </MudLink>
-        </div>
-        
-        <div class="d-flex align-center gap-2">
-            <MudText Typo="Typo.caption" Style="color: var(--gray-600);">
-                v@(PlatformSettings.Current.Version)
-            </MudText>
+        <div class="d-flex align-center justify-space-between w-100">
+            <div class="d-flex align-center gap-2">
+                <MudText Typo="Typo.caption" Style="color: var(--gray-600); font-size: 10px; letter-spacing: 0.02em;">
+                    POWERED BY <strong>MICROSOFT AZURE</strong> · AZURE AI FOUNDRY · AZURE DOCUMENT INTELLIGENCE · AZURE MACHINE LEARNING
+                </MudText>
+            </div>
+            <div class="d-flex align-center gap-2">
+                <MudText Typo="Typo.caption" Style="color: var(--gray-700);">
+                    v@(PlatformSettings.Current.Version)
+                </MudText>
+            </div>
         </div>
     </MudContainer>
 </MudAppBar>
@@ -44,8 +59,10 @@
     :root {
         --gray-900: #111827;
         --gray-800: #1f2937;
+        --gray-700: #374151;
         --gray-600: #4b5563;
         --gray-500: #6b7280;
         --gray-400: #9ca3af;
     }
+    .w-100 { width: 100%; }
 </style>

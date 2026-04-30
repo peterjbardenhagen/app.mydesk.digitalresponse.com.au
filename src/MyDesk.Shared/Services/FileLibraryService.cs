@@ -60,8 +60,8 @@ public class FileLibraryService
             INSERT INTO FileLibrary (FileId, ParentFolderId, CompanyId, Name, IsFolder, CreatedBy)
             VALUES (@FileId, @ParentId, @CompanyId, @Name, 1, @CreatedBy)",
             new() { ["FileId"] = fileId, 
-                    ["ParentId"] = (object)parentFolderId ?? DBNull.Value,
-                    ["CompanyId"] = (object)companyId ?? DBNull.Value,
+                    ["ParentId"] = parentFolderId.HasValue ? (object)parentFolderId.Value : (object)DBNull.Value,
+                    ["CompanyId"] = companyId.HasValue ? (object)companyId.Value : (object)DBNull.Value,
                     ["Name"] = name,
                     ["CreatedBy"] = createdBy });
 
@@ -92,14 +92,12 @@ public class FileLibraryService
     {
         var sharedCompanies = companyIds != null ? System.Text.Json.JsonSerializer.Serialize(companyIds) : null;
         var sharedContacts = contactIds != null ? System.Text.Json.JsonSerializer.Serialize(contactIds) : null;
-
+        
         await _db.ExecuteAsync(@"
             UPDATE FileLibrary 
-            SET SharedWithCompanies = @Companies, SharedWithContacts = @Contacts
+            SET SharedWithCompanies = @Companies, SharedWithContacts = @Contacts, IsShared = 1
             WHERE FileId = @Id",
-            new() { ["Id"] = fileId, 
-                    ["Companies"] = (object)sharedCompanies ?? DBNull.Value,
-                    ["Contacts"] = (object)sharedContacts ?? DBNull.Value });
+            new() { ["Id"] = fileId, ["Companies"] = sharedCompanies ?? (object)DBNull.Value, ["Contacts"] = sharedContacts ?? (object)DBNull.Value });
     }
 
     private static FileLibraryItem MapRow(DataRow r)

@@ -86,6 +86,25 @@
     </div>
 </div>
 
+<MudDialog @bind-Visible="_showAddEventDialog" Options="@(new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true })">
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Add New Event</MudText>
+        <MudTextField @bind-Value="_newEventTitle" Label="Event Title" FullWidth Class="mb-3" />
+        <MudTextField @bind-Value="_newEventDescription" Label="Description" Lines="3" FullWidth Class="mb-3" />
+        <MudDatePicker @bind-Date="_newEventDate" Label="Event Date" FullWidth Class="mb-3" />
+        <MudSelect @bind-Value="_newEventType" Label="Event Type" FullWidth>
+            <MudSelectItem Value="@("invoice")">Invoice</MudSelectItem>
+            <MudSelectItem Value="@("quote")">Quote</MudSelectItem>
+            <MudSelectItem Value="@("po")">Purchase Order</MudSelectItem>
+            <MudSelectItem Value="@("followup")">Follow-up</MudSelectItem>
+        </MudSelect>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showAddEventDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="SaveNewEvent">Save Event</MudButton>
+    </DialogActions>
+</MudDialog>
+
 @code {
     private DateTime _currentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
     private List<CalendarDay> _calendarDays = new();
@@ -96,6 +115,11 @@
     private bool _showPOs = true;
     private bool _showFollowUps = true;
     private List<CalendarEvent> _allEvents = new();
+    private bool _showAddEventDialog = false;
+    private string _newEventTitle = "";
+    private string _newEventDescription = "";
+    private DateTime? _newEventDate = DateTime.Today;
+    private string _newEventType = "followup";
 
     protected override async Task OnInitializedAsync()
     {
@@ -119,11 +143,47 @@
                 _allEvents.Add(new CalendarEvent
                 {
                     Title = $"Invoice {row["InvoiceNumber"]}",
-                    Date = row["InvoiceDate"] != DBNull.Value ? Convert.ToDateTime(row["InvoiceDate"]) : DateTime.Today,
+                    Date = row["DueDate"] != DBNull.Value ? Convert.ToDateTime(row["DueDate"]) : DateTime.Today,
                     Description = $"Customer: {row["InvCompany"]}",
                     CssClass = "invoice",
                     Link = $"/invoices/{row["InvoiceId"]}",
                     Type = "Invoice"
+                });
+            }
+        }
+
+        // Load stale quotes
+        if (_showQuotes)
+        {
+            var dt = await LookupService.GetStaleQuotesAsync(userCode);
+            foreach (DataRow row in dt.Rows)
+            {
+                _allEvents.Add(new CalendarEvent
+                {
+                    Title = $"Quote {row["QuoteNumber"]}",
+                    Date = row["ValidUntil"] != DBNull.Value ? Convert.ToDateTime(row["ValidUntil"]) : DateTime.Today,
+                    Description = $"Customer: {row["QuoteCompany"]}",
+                    CssClass = "quote",
+                    Link = $"/quotes/{row["Qid"]}",
+                    Type = "Quote"
+                });
+            }
+        }
+
+        // Load open POs
+        if (_showPOs)
+        {
+            var dt = await LookupService.GetOpenPOsAsync(userCode);
+            foreach (DataRow row in dt.Rows)
+            {
+                _allEvents.Add(new CalendarEvent
+                {
+                    Title = $"PO {row["PONumber"]}",
+                    Date = row["RequiredDate"] != DBNull.Value ? Convert.ToDateTime(row["RequiredDate"]) : DateTime.Today,
+                    Description = $"Supplier: {row["POCompany"]}",
+                    CssClass = "po",
+                    Link = $"/purchase-orders/{row["POid"]}",
+                    Type = "PO"
                 });
             }
         }
@@ -170,7 +230,28 @@
     private void GoToToday() { _currentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1); GenerateCalendarDays(); }
 
     private void OnEventClick(CalendarEvent evt) { _selectedEvent = evt; }
-    private void ShowAddEventDialog() { Nav.NavigateTo("/calendar"); } // Placeholder
+    private void ShowAddEventDialog() { _showAddEventDialog = true; }
+    
+    private void SaveNewEvent()
+    {
+        if (string.IsNullOrWhiteSpace(_newEventTitle) || _newEventDate == null) return;
+        
+        _allEvents.Add(new CalendarEvent
+        {
+            Title = _newEventTitle,
+            Date = _newEventDate.Value,
+            Description = _newEventDescription,
+            CssClass = _newEventType,
+            Type = _newEventType
+        });
+        
+        GenerateCalendarDays();
+        _showAddEventDialog = false;
+        _newEventTitle = "";
+        _newEventDescription = "";
+        _newEventDate = DateTime.Today;
+        _newEventType = "followup";
+    }
 }
 
 <style>
@@ -239,4 +320,5 @@
     .calendar-event.invoice { background: rgba(33, 150, 243, 0.1); color: #1976D2; }
     .calendar-event.quote { background: rgba(156, 39, 176, 0.1); color: #7B1FA2; }
     .calendar-event.followup { background: rgba(76, 175, 80, 0.1); color: #388E3C; }
+    .calendar-event.po { background: rgba(255, 152, 0, 0.1); color: #F57C00; }
 </style>

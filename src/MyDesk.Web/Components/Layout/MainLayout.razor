@@ -21,6 +21,16 @@
 
         <MudIconButton Icon="@Icons.Material.Rounded.Menu" Color="Color.Default" Edge="Edge.Start" OnClick="DrawerToggle" aria-label="Toggle navigation menu" />
 
+        <MudLink Href="/" Underline="Underline.None" Class="d-flex align-center ml-2">
+            <div class="tl-logo-wrap">
+                <img src="/images/mydesk-mark.svg" class="tl-logo-mark" alt="MyDesk" style="width: 32px; height: 32px;" />
+                <div class="tl-logo-text-stack d-none d-sm-flex ml-2 @(IsSpecialPage ? "tl-logo-text--dark" : "")">
+                    <span class="tl-logo-brand" style="font-weight: 800; font-size: 18px; color: @(IsSpecialPage ? "#111827" : "inherit");">MyDesk</span>
+                    <span class="tl-logo-product" style="font-size: 10px; font-weight: 600; color: var(--tl-primary-600); text-transform: uppercase; letter-spacing: 0.1em; margin-top: -2px;">Business Platform</span>
+                </div>
+            </div>
+        </MudLink>
+
         <MudSpacer />
 
         <div class="d-none d-lg-flex align-center" style="flex:1; max-width:420px; margin:0 24px;" role="search">
@@ -286,9 +296,11 @@
     private bool _isDarkMode = false;
     private bool _showSearchHistory = false;
     private List<string> _searchHistory = new();
-    private int _notificationCount = 3;
+    private int _notificationCount => _notifications.Count;
     private List<NotificationItem> _notifications = new();
     private string _aiTooltipText => $"Ask {PlatformSettings.GetBrandingName()} AI";
+    
+    private bool IsSpecialPage => NavigationManager.Uri.Contains("/help/roadmap") || NavigationManager.Uri.Contains("/pricing");
 
     [Inject] IJSRuntime JS { get; set; } = null!;
     [Inject] IDialogService DialogService { get; set; } = null!;
@@ -348,15 +360,29 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadSearchHistory();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadSearchHistory();
+        }
     }
 
     private async Task LoadSearchHistory()
     {
-        var historyJson = await JS.InvokeAsync<string>("localStorage.getItem", "searchHistory");
-        if (!string.IsNullOrWhiteSpace(historyJson))
+        try
         {
-            _searchHistory = System.Text.Json.JsonSerializer.Deserialize<List<string>>(historyJson) ?? new();
+            var historyJson = await JS.InvokeAsync<string>("localStorage.getItem", "searchHistory");
+            if (!string.IsNullOrWhiteSpace(historyJson))
+            {
+                _searchHistory = System.Text.Json.JsonSerializer.Deserialize<List<string>>(historyJson) ?? new();
+            }
+        }
+        catch
+        {
+            // JS interop not available during prerendering
         }
     }
 
@@ -416,13 +442,11 @@
     private void ClearNotifications()
     {
         _notifications.Clear();
-        _notificationCount = 0;
     }
 
     private void RemoveNotification(NotificationItem item)
     {
         _notifications.Remove(item);
-        _notificationCount = _notifications.Count;
     }
 
     private void NavigateToNotification(NotificationItem item)

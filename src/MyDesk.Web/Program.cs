@@ -158,8 +158,10 @@ builder.Services.AddScoped<TransporterService>();
 builder.Services.AddScoped<LogService>();
 builder.Services.AddScoped<ExpenseService>();
 // builder.Services.AddScoped<NotificationService>(); // Not used - removed
-builder.Services.AddScoped<AuditService>();
-builder.Services.AddScoped<AIFunctionExecutor>();
+    builder.Services.AddScoped<AuditService>();
+    builder.Services.AddScoped<FileLibraryService>();
+    builder.Services.AddScoped<FavouritesService>();
+    builder.Services.AddScoped<AIFunctionExecutor>();
 
 builder.Services.AddHttpClient();
 builder.Services.Configure<AzureAIOptions>(builder.Configuration.GetSection(AzureAIOptions.Section));

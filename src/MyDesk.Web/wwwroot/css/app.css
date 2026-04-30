@@ -1883,3 +1883,121 @@ body.mud-dark-mode {
   --gray-800: #f1f5f9;
   --gray-900: #f8fafc;
 }
+
+/* -------- ENHANCED UI COMPONENTS -------- */
+
+.tl-experience-section {
+    background: linear-gradient(135deg, #f0fdfd 0%, #ffffff 100%);
+    border: 1px solid #ccfbf1;
+    box-shadow: 0 10px 15px -3px rgba(0, 200, 200, 0.05);
+}
+
+.mud-dark-mode .tl-experience-section {
+    background: linear-gradient(135deg, #0f172a 0%, #020617 100%);
+    border: 1px solid rgba(0, 200, 200, 0.1);
+}
+
+.tl-mockup-container {
+    position: relative;
+    padding: 20px;
+}
+
+.tl-mockup-screen {
+    background: #f1f5f9;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    box-shadow: var(--shadow-xl);
+    transform: perspective(1000px) rotateY(-5deg) rotateX(2deg);
+    transition: transform 0.5s ease;
+}
+
+.tl-mockup-screen:hover {
+    transform: perspective(1000px) rotateY(0deg) rotateX(0deg);
+}
+
+.tl-mockup-browser-bar {
+    background: #e2e8f0;
+    padding: 10px 16px;
+    display: flex;
+    gap: 6px;
+}
+
+.tl-mockup-browser-bar .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.tl-mockup-browser-bar .dot.red { background: #ff5f56; }
+.tl-mockup-browser-bar .dot.yellow { background: #ffbd2e; }
+.tl-mockup-browser-bar .dot.green { background: #27c93f; }
+
+.tl-mockup-shadow {
+    position: absolute;
+    bottom: -10px;
+    left: 10%;
+    right: 10%;
+    height: 20px;
+    background: rgba(0,0,0,0.1);
+    filter: blur(15px);
+    border-radius: 50%;
+    z-index: -1;
+}
+
+/* Header Logo Fixes */
+.tl-logo-mark {
+    filter: none !important;
+}
+
+.tl-logo-text--dark .tl-logo-brand {
+    color: #111827 !important;
+}
+
+.tl-logo-text--dark .tl-logo-product {
+    color: #4b5563 !important;
+}
+
+/* Promo Cards */
+.tl-promo-card-modern {
+    height: 100%;
+    border: 1px solid var(--gray-200) !important;
+    background: white !important;
+    transition: all 200ms ease;
+}
+.tl-promo-card-modern:hover {
+    border-color: var(--tl-primary-300) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+.tl-promo-icon-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+.tl-promo-icon-wrap.ai { background: linear-gradient(135deg, var(--tl-primary-500) 0%, var(--tl-primary-600) 100%); }
+.tl-promo-icon-wrap.telegram { background: linear-gradient(135deg, #229ED9 0%, #1d8ab9 100%); }
+
+.tl-chat-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 12px;
+}
+
+.tl-chat-bubble {
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    max-width: 90%;
+    line-height: 1.4;
+}
+.tl-chat-bubble.bot { background: white; border: 1px solid #e2e8f0; align-self: flex-start; border-bottom-left-radius: 2px; }
+.tl-chat-bubble.human { background: #e0f2fe; color: #0369a1; align-self: flex-end; border-bottom-right-radius: 2px; font-weight: 500; }
+

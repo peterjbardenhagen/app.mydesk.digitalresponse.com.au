@@ -1,0 +1,197 @@
+@page "/about"
+@inject PlatformSettingsService PlatformSettings
+
+<PageTitle>About MyDesk - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-about-page">
+    <div class="tl-about-hero">
+        <div class="tl-about-hero-inner">
+            <h1 class="tl-about-title">Intelligent Business Management</h1>
+            <p class="tl-about-subtitle">Powered by cutting-edge AI and Azure infrastructure</p>
+        </div>
+    </div>
+
+    <MudContainer MaxWidth="MaxWidth.Large" Class="py-12">
+        <MudGrid Spacing="6">
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.h4" Class="mb-4 font-weight-bold">Your MBA in Your Pocket</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4" Style="font-size: 1.1rem; line-height: 1.6; color: var(--gray-700);">
+                    MyDesk isn't just a management tool; it's like having your own MBA in your pocket, 
+                    constantly advising and coaching you towards your goals and increased profitability.
+                </MudText>
+                <MudText Typo="Typo.body1" Class="mb-6" Style="color: var(--gray-600);">
+                    By analysing your quotes, invoices, and supplier data in real-time, MyDesk identifies 
+                    opportunities for growth, flags at-risk accounts, and suggests strategic moves 
+                    that traditionally required expensive consultants.
+                </MudText>
+                
+                <div class="tl-about-badge-stack">
+                    <div class="tl-about-badge">
+                        <MudIcon Icon="@Icons.Material.Rounded.AutoAwesome" Color="Color.Primary" />
+                        <span>AI Coaching</span>
+                    </div>
+                    <div class="tl-about-badge">
+                        <MudIcon Icon="@Icons.Material.Rounded.TrendingUp" Color="Color.Success" />
+                        <span>Profit Optimization</span>
+                    </div>
+                    <div class="tl-about-badge">
+                        <MudIcon Icon="@Icons.Material.Rounded.Speed" Color="Color.Info" />
+                        <span>Real-time Insights</span>
+                    </div>
+                </div>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="0" Class="pa-8 tl-azure-card">
+                    <MudText Typo="Typo.h5" Class="mb-6 font-weight-bold">Enterprise Technology Stack</MudText>
+                    
+                    <div class="tl-tech-list">
+                        <div class="tl-tech-item">
+                            <div class="tl-tech-icon azure">
+                                <MudIcon Icon="@Icons.Custom.Brands.Microsoft" />
+                            </div>
+                            <div class="tl-tech-content">
+                                <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Microsoft Azure</MudText>
+                                <MudText Typo="Typo.caption">Scalable, secure, and reliable enterprise cloud infrastructure.</MudText>
+                            </div>
+                        </div>
+
+                        <div class="tl-tech-item">
+                            <div class="tl-tech-icon ai">
+                                <MudIcon Icon="@Icons.Material.Rounded.Psychology" />
+                            </div>
+                            <div class="tl-tech-content">
+                                <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Azure AI Foundry</MudText>
+                                <MudText Typo="Typo.caption">Powering our intelligent reasoning and natural language processing.</MudText>
+                            </div>
+                        </div>
+
+                        <div class="tl-tech-item">
+                            <div class="tl-tech-icon doc">
+                                <MudIcon Icon="@Icons.Material.Rounded.Description" />
+                            </div>
+                            <div class="tl-tech-content">
+                                <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Azure Document Intelligence</MudText>
+                                <MudText Typo="Typo.caption">Automated data extraction from supplier quotes and invoices.</MudText>
+                            </div>
+                        </div>
+
+                        <div class="tl-tech-item">
+                            <div class="tl-tech-icon ml">
+                                <MudIcon Icon="@Icons.Material.Rounded.ModelTraining" />
+                            </div>
+                            <div class="tl-tech-content">
+                                <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Azure Machine Learning</MudText>
+                                <MudText Typo="Typo.caption">Predictive analytics for sales forecasting and health scoring.</MudText>
+                            </div>
+                        </div>
+                    </div>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <div class="mt-12 text-center">
+            <MudText Typo="Typo.h4" Class="mb-8 font-weight-bold">Talk to Your Business</MudText>
+            <MudGrid Spacing="4" Class="justify-center">
+                <MudItem xs="12" md="4">
+                    <MudCard Elevation="0" Class="tl-mockup-card">
+                        <div class="tl-mockup-header telegram">
+                            <MudIcon Icon="@Icons.Custom.Brands.Telegram" Class="mr-2" />
+                            <span>Telegram to MyDesk</span>
+                        </div>
+                        <div class="tl-mockup-body">
+                            <div class="chat-bubble ai">How was the profit margin last week?</div>
+                            <div class="chat-bubble user">It was 32.5%, up 4% from the previous week. Your top contributor was ABC Corp.</div>
+                            <div class="chat-bubble ai">Show me the top 3 quotes pending.</div>
+                        </div>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudCard Elevation="0" Class="tl-mockup-card">
+                        <div class="tl-mockup-header ai">
+                            <MudIcon Icon="@Icons.Material.Rounded.AutoAwesome" Class="mr-2" />
+                            <span>Ask MyDesk AI</span>
+                        </div>
+                        <div class="tl-mockup-body">
+                            <div class="chat-bubble ai">Analyse my supplier pricing.</div>
+                            <div class="chat-bubble user">I've found that Supplier X has increased prices by 12% on LED components. Recommendation: Check Supplier Y for better rates.</div>
+                        </div>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+        </div>
+    </MudContainer>
+</div>
+
+<style>
+    .tl-about-page { background: var(--surface-sunken); min-height: 100vh; }
+    
+    .tl-about-hero {
+        background: linear-gradient(135deg, var(--tl-dark) 0%, var(--tl-dark-3) 100%);
+        padding: 80px 24px;
+        text-align: center;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .tl-about-hero::after {
+        content: ""; position: absolute; inset: 0;
+        background-image: radial-gradient(circle at 20% 20%, rgba(0,200,200,0.15), transparent 45%);
+        pointer-events: none;
+    }
+    
+    .tl-about-title { font-size: 3rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; }
+    .tl-about-subtitle { font-size: 1.25rem; opacity: 0.8; font-weight: 400; }
+    
+    .tl-about-badge-stack { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+    .tl-about-badge {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 8px 16px; background: white; border: 1px solid var(--gray-200);
+        border-radius: 999px; font-size: 0.9rem; font-weight: 600; color: var(--gray-800);
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .tl-azure-card {
+        background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%) !important;
+        border: 1px solid #bae6fd !important;
+        border-radius: 24px !important;
+    }
+    
+    .tl-tech-list { display: flex; flex-direction: column; gap: 20px; }
+    .tl-tech-item { display: flex; gap: 16px; align-items: flex-start; }
+    
+    .tl-tech-icon {
+        width: 48px; height: 48px; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        color: white; flex-shrink: 0;
+    }
+    .tl-tech-icon.azure { background: #0078d4; }
+    .tl-tech-icon.ai { background: #00c8c8; }
+    .tl-tech-icon.doc { background: #6941c6; }
+    .tl-tech-icon.ml { background: #f79009; }
+    
+    .tl-mockup-card {
+        border-radius: 16px !important; overflow: hidden;
+        border: 1px solid var(--gray-200) !important;
+        background: white !important;
+        text-align: left; height: 100%;
+    }
+    
+    .tl-mockup-header {
+        padding: 12px 16px; font-weight: 700; color: white;
+        display: flex; align-items: center;
+    }
+    .tl-mockup-header.telegram { background: #229ED9; }
+    .tl-mockup-header.ai { background: var(--tl-primary); }
+    
+    .tl-mockup-body { padding: 16px; background: #f1f5f9; display: flex; flex-direction: column; gap: 10px; }
+    .chat-bubble {
+        padding: 8px 12px; border-radius: 12px; font-size: 0.85rem; max-width: 85%;
+        line-height: 1.4;
+    }
+    .chat-bubble.ai { background: white; align-self: flex-start; border-bottom-left-radius: 2px; color: var(--gray-800); }
+    .chat-bubble.user { background: #dcf8c6; align-self: flex-end; border-bottom-right-radius: 2px; color: var(--gray-800); }
+    
+    .font-weight-bold { font-weight: 700 !important; }
+</style>

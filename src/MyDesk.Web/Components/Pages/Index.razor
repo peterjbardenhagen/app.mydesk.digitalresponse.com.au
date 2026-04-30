@@ -25,7 +25,7 @@
                     Real-time business intelligence for @PlatformSettings.GetBrandingName(). 
                     @if (_isDirectorOrAdmin)
                     {
-                        <span>Accessing full company analytics and team performance metrics.</span>
+                        <span>Accessing company analytics and team performance metrics. <strong>It's like having your own MBA in your pocket advising and coaching you towards your goals and increased profitability.</strong></span>
                     }
                     else
                     {
@@ -326,6 +326,118 @@ else
             }
         </MudGrid>
     }
+
+    @* ── AI & Telegram Promos ─────────────────────────────────────────── *@
+    <div class="tl-promo-section mt-4 mb-8">
+        <MudGrid Spacing="4">
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="0" Class="pa-6 rounded-xl tl-promo-card-modern ai">
+                    <div class="d-flex align-center gap-3 mb-4">
+                        <div class="tl-promo-icon-wrap ai">
+                            <MudIcon Icon="@Icons.Material.Rounded.AutoAwesome" Size="Size.Medium" />
+                        </div>
+                        <MudText Typo="Typo.h6" Class="font-weight-bold">Ask MyDesk AI</MudText>
+                    </div>
+                    <div class="tl-chat-preview">
+                        <div class="tl-chat-bubble bot">What's our most profitable product category this quarter?</div>
+                        <div class="tl-chat-bubble human">Lighting components are leading with a 42% average margin.</div>
+                    </div>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="0" Class="pa-6 rounded-xl tl-promo-card-modern telegram">
+                    <div class="d-flex align-center gap-3 mb-4">
+                        <div class="tl-promo-icon-wrap telegram">
+                            <MudIcon Icon="@Icons.Custom.Brands.Telegram" Size="Size.Medium" />
+                        </div>
+                        <MudText Typo="Typo.h6" Class="font-weight-bold">Business on Telegram</MudText>
+                    </div>
+                    <div class="tl-chat-preview">
+                        <div class="tl-chat-bubble bot">Voice: "Create a quote for ABC Corp for 10x LED panels"</div>
+                        <div class="tl-chat-bubble human">Draft Quote #4282 created for ABC Corp. Ready for review.</div>
+                    </div>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </div>
+
+    @* ── Client Experience Section ─────────────────────────────────────────── *@
+    <div class="tl-experience-section mt-8 pa-8 rounded-2xl mb-8">
+        <MudGrid Spacing="6" Class="align-center">
+            <MudItem xs="12" md="6">
+                <div class="tl-experience-content">
+                    <div class="tl-welcome-badge mb-4">
+                        <MudIcon Icon="@Icons.Material.Rounded.Stars" Size="Size.Small" />
+                        <span>Client Experience</span>
+                    </div>
+                    <h2 class="tl-h2 font-weight-bold mb-4">Give your clients a 5-star experience.</h2>
+                    <p class="tl-body-lg mb-6" style="color: var(--gray-600);">
+                        The Customer Portal allows your clients to view their own quotes, invoices, and project status in real-time. 
+                        Reduce support volume and build trust through transparency.
+                    </p>
+                    <div class="d-flex gap-4">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Launch" 
+                                   Class="rounded-xl px-6 py-3" Href="/customer-portal">
+                            Explore Portal
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Rounded.Settings" 
+                                   Class="rounded-xl px-6 py-3">
+                            Configure
+                        </MudButton>
+                    </div>
+                </div>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <div class="tl-mockup-container">
+                    <div class="tl-mockup-screen">
+                        <div class="tl-mockup-browser-bar">
+                            <div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div>
+                        </div>
+                        <div class="tl-mockup-content">
+                            @* Mockup with Light Background and Dark Foreground as requested *@
+                            <div class="pa-6" style="background: white; height: 100%; border-radius: 0 0 12px 12px;">
+                                <div class="d-flex align-center gap-3 mb-6">
+                                    <div style="width: 40px; height: 40px; border-radius: 8px; background: var(--tl-primary-50); display: flex; align-items: center; justify-content: center;">
+                                        <MudIcon Icon="@Icons.Material.Rounded.Business" Color="Color.Primary" />
+                                    </div>
+                                    <div>
+                                        <div style="height: 14px; width: 120px; background: #111827; border-radius: 4px; margin-bottom: 4px;"></div>
+                                        <div style="height: 10px; width: 80px; background: #64748b; border-radius: 4px;"></div>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex gap-4 mb-8">
+                                    <div style="flex: 1; padding: 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+                                        <div style="height: 8px; width: 40%; background: #94a3b8; border-radius: 4px; margin-bottom: 8px;"></div>
+                                        <div style="height: 24px; width: 60%; background: #1e40af; border-radius: 4px;"></div>
+                                    </div>
+                                    <div style="flex: 1; padding: 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+                                        <div style="height: 8px; width: 40%; background: #94a3b8; border-radius: 4px; margin-bottom: 8px;"></div>
+                                        <div style="height: 24px; width: 60%; background: #059669; border-radius: 4px;"></div>
+                                    </div>
+                                </div>
+
+                                <div style="padding: 16px; border: 1px solid #f1f5f9; border-radius: 12px; background: white;">
+                                    <div class="d-flex justify-space-between mb-4">
+                                        <div style="height: 12px; width: 100px; background: #e2e8f0; border-radius: 4px;"></div>
+                                        <div style="height: 12px; width: 60px; background: #e2e8f0; border-radius: 4px;"></div>
+                                    </div>
+                                    <div style="height: 1px; width: 100%; background: #f1f5f9; margin-bottom: 12px;"></div>
+                                    @for(int i=0; i<3; i++) {
+                                        <div class="d-flex justify-space-between mb-3">
+                                            <div style="height: 10px; width: 140px; background: #f1f5f9; border-radius: 4px;"></div>
+                                            <div style="height: 10px; width: 40px; background: #f1f5f9; border-radius: 4px;"></div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tl-mockup-shadow"></div>
+                </div>
+            </MudItem>
+        </MudGrid>
+    </div>
 
     @* ── Quick Actions Bar ──────────────────────────────────────────────────── *@
     <div class="tl-quick-actions-bar">

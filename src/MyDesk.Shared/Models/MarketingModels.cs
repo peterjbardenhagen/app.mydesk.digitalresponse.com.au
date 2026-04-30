@@ -221,6 +221,7 @@ public class CampaignStats
 // ============================================================================
 public class MarketingStrategyDoc
 {
+    public int Id { get; set; }
     public string IcpIndustries { get; set; } = "";
     public string IcpCompanySize { get; set; } = "";
     public string IcpPainPoints { get; set; } = "";
