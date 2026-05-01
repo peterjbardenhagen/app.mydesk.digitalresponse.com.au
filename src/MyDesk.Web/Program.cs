@@ -135,6 +135,7 @@ builder.Services.AddScoped<InvoiceService>();
 builder.Services.AddScoped<PurchaseOrderService>();
 builder.Services.AddScoped<ContactService>();
 builder.Services.AddScoped<CompanyService>();
+builder.Services.AddScoped<SupplierService>(); // Added this
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddSingleton<ITargetsProvider, TargetsProvider>();
 builder.Services.AddScoped<IntelligenceService>();
@@ -144,6 +145,10 @@ builder.Services.AddScoped<MarketingDataService>();
 builder.Services.AddScoped<MarketingAIService>();
 builder.Services.AddSingleton<MarketingStrategyStore>();
 builder.Services.AddScoped<CampaignService>();
+builder.Services.AddScoped<CampaignService>();
+builder.Services.AddSingleton<WeatherOptions>();
+builder.Services.AddHttpClient<WeatherService>();
+builder.Services.AddScoped<IWeatherService, WeatherService>();
 builder.Services.AddScoped<LookupService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<SystemService>();
@@ -609,6 +614,42 @@ app.MapGet("/logout", async (HttpContext ctx) =>
 
 Log.Information("Application configured. Environment={Env}, URLs={Urls}",
     app.Environment.EnvironmentName, string.Join(", ", app.Urls.DefaultIfEmpty("default")));
+
+// ── Quote Action endpoints (Email approve/decline) ───────────────────────────
+app.MapGet("/quotes/{id:int}/action/{action}", async (int id, string action, QuoteService quoteSvc, ActivityService activitySvc) =>
+{
+    var quote = await quoteSvc.GetQuoteAsync(id);
+    if (quote == null) return Results.NotFound("Quote not found");
+
+    string resultMessage = "";
+
+    // 1. Validate status: Don't let customer click Decline after Approved
+    if (quote.QuoteStatusId == 10 && action.Equals("decline", StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.BadRequest("Cannot decline an already approved quote.");
+    }
+
+    if (action.Equals("approve", StringComparison.OrdinalIgnoreCase))
+    {
+        if (quote.QuoteStatusId == 10) return Results.BadRequest("Quote is already approved.");
+        await quoteSvc.UpdateStatusAsync(id, 10, "Approved via Email", "Customer");
+        await activitySvc.LogAsync("Customer", "Quote", id, "Approved via Email", quote.Reference);
+        resultMessage = "Quote has been approved successfully.";
+    }
+    else if (action.Equals("decline", StringComparison.OrdinalIgnoreCase))
+    {
+        await quoteSvc.UpdateStatusAsync(id, 11, "Declined via Email", "Customer");
+        await activitySvc.LogAsync("Customer", "Quote", id, "Declined via Email", quote.Reference);
+        resultMessage = "Quote has been declined.";
+    }
+    else
+    {
+        return Results.BadRequest("Invalid action");
+    }
+
+    // Return a simple HTML response
+    return Results.Content($@"<html><body style='font-family:sans-serif;text-align:center;padding:50px;'><h1>{resultMessage}</h1><p>Thank you.</p></body></html>", "text/html");
+});
 
 app.Run();
 
