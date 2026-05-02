@@ -1,0 +1,368 @@
+@page "/timeshets"
+@attribute [Authorize]
+@inject TimesheetService TimesheetSvc
+@inject UserService UserSvc
+@inject CompanyService CompanySvc
+@inject ProjectService ProjectSvc
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+@using System.Security.Claims
+@using System.Timers
+
+<PageTitle>Timesheets - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <span>Timesheets</span>
+        </div>
+        <h1>Timesheets</h1>
+        <p class="tl-subtitle">Track billable and non-billable time against companies and projects.</p>
+    </div>
+    <div class="d-flex gap-2">
+        @if (_showStopwatch)
+        {
+            <MudChip T="string" Color="Color.Secondary" Variant="Variant.Filled" Size="Size.Medium" Class="stopwatch-chip">
+                <MudIcon Icon="@Icons.Material.Rounded.Timer" Size="Size.Small" Class="mr-2" />
+                @GetElapsedTime()
+            </MudChip>
+            <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Rounded.Stop" OnClick="StopStopwatch">Stop & Save</MudButton>
+        }
+        else
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Timer" OnClick="ShowStopwatchDialog">Start Stopwatch</MudButton>
+        }
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add" OnClick="CreateNewTimesheet">New Timesheet</MudButton>
+    </div>
+</div>
+
+<!-- Stopwatch Dialog -->
+@if (_showStopwatchDialog)
+{
+    <MudDialog>
+        <DialogContent>
+            <MudText Typo="Typo.h6" Class="mb-3">Quick Time Entry</MudText>
+            <MudText Typo="Typo.body2" Class="mb-4">Timer: <strong>@GetElapsedTime()</strong></MudText>
+            
+            <MudForm>
+                <MudSelect T="string" @bind-Value="_stopwatchTimeType" Label="Time Type" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3">
+                    <MudSelectItem Value="@("Billable")">Billable</MudSelectItem>
+                    <MudSelectItem Value="@("Non-Billable")">Non-Billable</MudSelectItem>
+                </MudSelect>
+
+                @if (_stopwatchTimeType == "Billable")
+                {
+                    <MudSelect T="int?" @bind-Value="_stopwatchCompanyId" Label="Company" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3">
+                        <MudSelectItem Value="@((int?)null)">None</MudSelectItem>
+                        @foreach (var c in _companies)
+                        {
+                            <MudSelectItem Value="@c.CompanyId">@c.CompanyName</MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    <MudSelect T="int?" @bind-Value="_stopwatchProjectId" Label="Project" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3">
+                        <MudSelectItem Value="@((int?)null)">None</MudSelectItem>
+                        @foreach (var p in _projects)
+                        {
+                            <MudSelectItem Value="@p.ProjectId">@p.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+
+                <MudTextField @bind-Value="_stopwatchDescription" Label="Description" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" />
+                <MudTextField @bind-Value="_stopwatchTaskName" Label="Task Name" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" />
+            </MudForm>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="() => _showStopwatchDialog = false">Cancel</MudButton>
+            <MudButton Color="Color.Primary" OnClick="StartStopwatch" Disabled="@(_stopwatchRunning)">
+                @(_stopwatchRunning ? "Running..." : "Start Timer")
+            </MudButton>
+        </DialogActions>
+    </MudDialog>
+}
+
+<!-- Week Navigation -->
+<MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+    <div class="d-flex align-center justify-space-between">
+        <MudIconButton Icon="@Icons.Material.Rounded.ChevronLeft" OnClick="PreviousWeek" />
+        <div class="text-center">
+            <MudText Typo="Typo.h6">Week of @(_currentWeek.ToString("dd MMM yyyy"))</MudText>
+            <MudText Typo="Typo.caption" Class="opacity-60">to @(_currentWeek.AddDays(6).ToString("dd MMM yyyy"))</MudText>
+        </div>
+        <MudIconButton Icon="@Icons.Material.Rounded.ChevronRight" OnClick="NextWeek" />
+    </div>
+</MudPaper>
+
+<!-- Timesheets List -->
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" Class="mx-auto my-8 d-block" />
+}
+else if (_timesheets.Any())
+{
+    <MudPaper Elevation="0" Outlined="true">
+        <MudDataGrid T="TimesheetSummary" Items="_timesheets" Dense="true" Hover="true">
+            <Columns>
+                <PropertyColumn Property="x => x.UserName" Title="User" />
+                <PropertyColumn Property="x => x.WeekStartDate" Title="Week Starting" Format="dd MMM" />
+                <PropertyColumn Property="x => x.TotalHours" Title="Total Hours" CellStyle="width:120px;" />
+                <PropertyColumn Property="x => x.BillableHours" Title="Billable" CellStyle="width:100px;" />
+                <PropertyColumn Property="x => x.NonBillableHours" Title="Non-Billable" CellStyle="width:100px;" />
+                <PropertyColumn Property="x => x.Status" Title="Status" CellStyle="width:120px;">
+                    <CellTemplate>
+                        <MudChip T="string" Size="Size.Small" 
+                                    Color="@(context.Item.Status == "Draft" ? Color.Default : context.Item.Status == "Submitted" ? Color.Info : Color.Success)">
+                            @context.Item.Status
+                        </MudChip>
+                    </CellTemplate>
+                </PropertyColumn>
+                <TemplateColumn Title="Actions" CellStyle="width:120px;">
+                    <CellTemplate>
+                        <MudIconButton Icon="@Icons.Material.Rounded.Visibility" Size="Size.Small" Color="Color.Primary"
+                                    OnClick="@(() => ViewTimesheet(context.Item.TimesheetId))" />
+                        @if (context.Item.Status == "Draft")
+                        {
+                            <MudIconButton Icon="@Icons.Material.Rounded.Send" Size="Size.Small" Color="Color.Info"
+                                        OnClick="@(() => SubmitTimesheet(context.Item.TimesheetId))" />
+                        }
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+        </MudDataGrid>
+    </MudPaper>
+}
+else
+{
+    <MudPaper Class="pa-10 text-center" Elevation="0" Outlined="true">
+        <MudIcon Icon="@Icons.Material.Rounded.EventNote" Size="Size.Large" Class="mb-4 opacity-60" />
+        <MudText Typo="Typo.h6">No timesheets found</MudText>
+        <MudText Typo="Typo.body2" Class="mt-2">Create a new timesheet to get started.</MudText>
+    </MudPaper>
+}
+
+<!-- Timesheet Detail Dialog -->
+@if (_selectedTimesheet != null)
+{
+    <MudDialog FullWidth="true" MaxWidth="MaxWidth.Large">
+        <DialogContent>
+            <MudText Typo="Typo.h6" Class="mb-3">Timesheet - Week of @(_selectedTimesheet.WeekStartDate.ToString("dd MMM yyyy"))</MudText>
+            <MudText Typo="Typo.caption" Class="mb-4">Status: <strong>@_selectedTimesheet.Status</strong></MudText>
+
+            <MudTable Items="_selectedTimesheet.Entries" Dense="true" Hover="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh>Date</MudTh>
+                    <MudTh>Hours</MudTh>
+                    <MudTh>Type</MudTh>
+                    <MudTh>Company</MudTh>
+                    <MudTh>Project</MudTh>
+                    <MudTh>Task</MudTh>
+                    <MudTh>Description</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.EntryDate.ToString("ddd, dd MMM")</MudTd>
+                    <MudTd>@context.Hours:@(context.Minutes.ToString("D2"))</MudTd>
+                    <MudTd>
+                        <MudChip T="string" Size="Size.Small" Color="@(context.TimeType == "Billable" ? Color.Success : Color.Default)">
+                            @context.TimeType
+                        </MudChip>
+                    </MudTd>
+                    <MudTd>@context.CompanyName</MudTd>
+                    <MudTd>@context.ProjectName</MudTd>
+                    <MudTd>@context.TaskName</MudTd>
+                    <MudTd>@context.Description</MudTd>
+                </RowTemplate>
+            </MudTable>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="() => _selectedTimesheet = null">Close</MudButton>
+        </DialogActions>
+    </MudDialog>
+}
+
+@code {
+    private List<TimesheetSummary> _timesheets = new();
+    private Timesheet? _selectedTimesheet;
+    private bool _loading = true;
+    private DateTime _currentWeek = TimesheetService.GetMonday(DateTime.Today);
+    private int _currentUserId;
+    private string _currentUserName = "";
+    
+    // Stopwatch
+    private bool _showStopwatch;
+    private bool _showStopwatchDialog = false;
+    private bool _stopwatchRunning;
+    private DateTime _stopwatchStart;
+    private System.Timers.Timer? _stopwatchTimer;
+    private string _stopwatchTimeType = "Billable";
+    private int? _stopwatchCompanyId;
+    private int? _stopwatchProjectId;
+    private string _stopwatchDescription = "";
+    private string _stopwatchTaskName = "";
+    
+    private List<Company> _companies = new();
+    private List<Project> _projects = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = auth.User.FindFirst("UserId")?.Value;
+        var nameClaim = auth.User.FindFirst(ClaimTypes.Name)?.Value;
+        
+        if (int.TryParse(userIdClaim, out var userId))
+        {
+            _currentUserId = userId;
+            _currentUserName = nameClaim ?? "";
+        }
+        
+        await LoadCompaniesAndProjects();
+        await LoadTimesheets();
+    }
+
+    private async Task LoadCompaniesAndProjects()
+    {
+        _companies = await CompanySvc.GetCompaniesForDropdownAsync();
+        // Load projects - assuming GetProjectsForDropdownAsync exists or similar
+        // _projects = await ProjectSvc.GetProjectsForDropdownAsync();
+    }
+
+    private async Task LoadTimesheets()
+    {
+        _loading = true;
+        try
+        {
+            _timesheets = await TimesheetSvc.GetTimesheetsAsync(_currentUserId, null, 1, 50);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading timesheets: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void PreviousWeek()
+    {
+        _currentWeek = _currentWeek.AddDays(-7);
+        LoadTimesheets().ConfigureAwait(false);
+    }
+
+    private void NextWeek()
+    {
+        _currentWeek = _currentWeek.AddDays(7);
+        LoadTimesheets().ConfigureAwait(false);
+    }
+
+    private void ShowStopwatchDialog()
+    {
+        _showStopwatchDialog = true;
+        _stopwatchTimeType = "Billable";
+        _stopwatchCompanyId = null;
+        _stopwatchProjectId = null;
+        _stopwatchDescription = "";
+        _stopwatchTaskName = "";
+    }
+
+    private void StartStopwatch()
+    {
+        _stopwatchStart = DateTime.Now;
+        _stopwatchRunning = true;
+        _showStopwatch = true;
+        _showStopwatchDialog = false;
+        
+        _stopwatchTimer = new System.Timers.Timer(1000);
+        _stopwatchTimer.Elapsed += (s, e) => InvokeAsync(StateHasChanged);
+        _stopwatchTimer.Start();
+    }
+
+    private string GetElapsedTime()
+    {
+        if (!_stopwatchRunning) return "00:00:00";
+        var elapsed = DateTime.Now - _stopwatchStart;
+        return $"{(int)elapsed.TotalHours:00}:{elapsed.Minutes:00}:{elapsed.Seconds:00}";
+    }
+
+    private async Task StopStopwatch()
+    {
+        _stopwatchRunning = false;
+        _showStopwatch = false;
+        _stopwatchTimer?.Stop();
+        _stopwatchTimer?.Dispose();
+
+        var elapsed = DateTime.Now - _stopwatchStart;
+        var totalMinutes = (int)elapsed.TotalMinutes;
+        var hours = totalMinutes / 60;
+        var minutes = totalMinutes % 60;
+
+        if (hours == 0 && minutes == 0)
+        {
+            Snackbar.Add("No time recorded", Severity.Warning);
+            return;
+        }
+
+        // Get or create timesheet for current week
+        var timesheet = await GetOrCreateTimesheet();
+
+        var entry = new TimesheetEntry
+        {
+            TimesheetId = timesheet.TimesheetId,
+            EntryDate = DateTime.Today,
+            Hours = hours,
+            Minutes = minutes,
+            TimeType = _stopwatchTimeType,
+            CompanyId = _stopwatchCompanyId,
+            ProjectId = _stopwatchProjectId,
+            Description = _stopwatchDescription,
+            TaskName = _stopwatchTaskName
+        };
+
+        await TimesheetSvc.SaveEntryAsync(entry);
+        await LoadTimesheets();
+        Snackbar.Add($"Recorded {hours}h {minutes}m of {_stopwatchTimeType.ToLower()} time", Severity.Success);
+    }
+
+    private async Task<Timesheet> GetOrCreateTimesheet()
+    {
+        var timesheets = await TimesheetSvc.GetTimesheetsAsync(_currentUserId);
+        var existing = timesheets.FirstOrDefault(t => t.WeekStartDate.Date == _currentWeek.Date && t.Status == "Draft");
+        
+        if (existing != null)
+        {
+            return await TimesheetSvc.GetTimesheetAsync(existing.TimesheetId) ?? new Timesheet();
+        }
+
+        var newTimesheet = new Timesheet
+        {
+            UserId = _currentUserId,
+            UserName = _currentUserName,
+            WeekStartDate = _currentWeek,
+            Status = "Draft"
+        };
+        
+        var id = await TimesheetSvc.SaveTimesheetAsync(newTimesheet);
+        newTimesheet.TimesheetId = id;
+        return newTimesheet;
+    }
+
+    private void CreateNewTimesheet()
+    {
+        // Navigate to create timesheet or show dialog
+        Snackbar.Add("Create new timesheet feature coming soon", Severity.Info);
+    }
+
+    private async Task ViewTimesheet(int timesheetId)
+    {
+        _selectedTimesheet = await TimesheetSvc.GetTimesheetAsync(timesheetId);
+    }
+
+    private async Task SubmitTimesheet(int timesheetId)
+    {
+        await TimesheetSvc.SubmitTimesheetAsync(timesheetId, "Manager"); // TODO: Get actual manager
+        await LoadTimesheets();
+        Snackbar.Add("Timesheet submitted for approval", Severity.Success);
+    }
+}

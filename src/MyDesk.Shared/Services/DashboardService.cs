@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using MyDesk.Shared.Models;
 
 namespace MyDesk.Shared.Services;
@@ -42,8 +42,8 @@ public class DashboardService
             var (periodStart, periodEnd, comparisonStart, comparisonEnd) = period switch
             {
                 ChartPeriod.ThisMonth      => (thisMonth, now, lastMonth, new DateTime(lastMonth.Year, lastMonth.Month, DateTime.DaysInMonth(lastMonth.Year, lastMonth.Month))),
-                ChartPeriod.ThisYear       => (new DateTime(now.Year, 1, 1), now, new DateTime(now.Year - 1, 1, 1), new DateTime(now.Year - 1, now.Month, DateTime.DaysInMonth(now.Year - 1, now.Month))),
-                ChartPeriod.FyToDate       => (new DateTime(now.Month >= 7 ? now.Year : now.Year - 1, 7, 1), now, new DateTime(now.Month >= 7 ? now.Year - 1 : now.Year - 2, 7, 1), new DateTime(now.Month >= 7 ? now.Year - 1 : now.Year - 2, now.Month, DateTime.DaysInMonth(now.Month >= 7 ? now.Year - 1 : now.Year - 2, now.Month))),
+                ChartPeriod.ThisYear       => (new DateTime(now.Year, 1, 1), now, new DateTime(now.Year - 1, 1, 1), new DateTime(now.Year - 1, 12, 31)),
+                ChartPeriod.FyToDate       => (new DateTime(now.Month >= 7 ? now.Year : now.Year - 1, 7, 1), now, new DateTime(now.Month >= 7 ? now.Year - 1 : now.Year - 2, 7, 1), new DateTime(now.Year - 1, 6, 30)),
                 ChartPeriod.LastYear       => (new DateTime(now.Year - 1, 1, 1), new DateTime(now.Year - 1, 12, 31), new DateTime(now.Year - 2, 1, 1), new DateTime(now.Year - 2, 12, 31)),
                 ChartPeriod.SinceInception => (new DateTime(2000, 1, 1), now, new DateTime(2000, 1, 1), now.AddYears(-1)),
                 _                          => (thisMonth, now, lastMonth, new DateTime(lastMonth.Year, lastMonth.Month, DateTime.DaysInMonth(lastMonth.Year, lastMonth.Month)))
@@ -53,42 +53,56 @@ public class DashboardService
             var lastYtdStart   = comparisonStart;
             var lastYtdEnd     = comparisonEnd;
             var thirtyDaysAgo  = now.AddDays(-30);
+            
+            // Use period dates for "this month" queries - this makes all KPI cards respond to period change
+            var queryStart = periodStart;
+            var queryEnd = periodEnd;
 
-            // ── Quotes this month ────────────────────────────────────────────
+            // ── Quotes for selected period ──────────────────────────────────
             m.ThisMonthQuotes = await _db.ScalarAsync<int>(
-                "SELECT COUNT(*) FROM Quotes WHERE QuoteDate >= @S", p(thisMonth));
+                "SELECT COUNT(*) FROM Quotes WHERE QuoteDate >= @S AND QuoteDate <= @E", p2(queryStart, queryEnd));
 
             m.ThisMonthQuotesWon = await _db.ScalarAsync<int>(
-                "SELECT COUNT(*) FROM Quotes WHERE QuoteDate >= @S AND QuoteStatusId IN (4,10)", p(thisMonth));
+                "SELECT COUNT(*) FROM Quotes WHERE QuoteDate >= @S AND QuoteDate <= @E AND QuoteStatusId IN (4,10)", 
+                p2(queryStart, queryEnd));
 
             m.ThisMonthQuotesValue = await _db.ScalarAsync<decimal>(
-                "SELECT ISNULL(SUM(NettPriceTotal),0) FROM Quotes WHERE QuoteDate >= @S", p(thisMonth));
+                "SELECT ISNULL(SUM(NettPriceTotal),0) FROM Quotes WHERE QuoteDate >= @S AND QuoteDate <= @E", 
+                p2(queryStart, queryEnd));
 
+            // Last period comparison (for trend)
+            var lastPeriodStart = periodStart.AddTicks(-1).AddDays(1 - periodStart.Day); // Previous period start
+            if (period == ChartPeriod.ThisMonth) lastPeriodStart = lastMonth;
+            else if (period == ChartPeriod.ThisYear) lastPeriodStart = new DateTime(now.Year - 1, 1, 1);
+            else if (period == ChartPeriod.FyToDate) lastPeriodStart = new DateTime(now.Month >= 7 ? now.Year - 1 : now.Year - 2, 7, 1);
+            else if (period == ChartPeriod.LastYear) lastPeriodStart = new DateTime(now.Year - 2, 1, 1);
+            
             m.LastMonthQuotesWon = await _db.ScalarAsync<int>(
-                "SELECT COUNT(*) FROM Quotes WHERE QuoteDate >= @S AND QuoteDate < @E AND QuoteStatusId IN (4,10)",
-                p2(lastMonth, thisMonth));
+                "SELECT COUNT(*) FROM Quotes WHERE QuoteDate >= @S AND QuoteDate <= @E AND QuoteStatusId IN (4,10)",
+                p2(lastPeriodStart, periodStart.AddTicks(-1)));
 
-            // ── Invoices this month ──────────────────────────────────────────
+            // ── Invoices for selected period ─────────────────────────────────
             m.ThisMonthInvoices = await _db.ScalarAsync<int>(
-                "SELECT COUNT(*) FROM Invoices WHERE InvoiceDate >= @S", p(thisMonth));
+                "SELECT COUNT(*) FROM Invoices WHERE InvoiceDate >= @S AND InvoiceDate <= @E", p2(queryStart, queryEnd));
 
             m.ThisMonthInvoiceValue = await _db.ScalarAsync<decimal>(
-                "SELECT ISNULL(SUM(NettPriceTotal),0) FROM Invoices WHERE InvoiceDate >= @S", p(thisMonth));
+                "SELECT ISNULL(SUM(NettPriceTotal),0) FROM Invoices WHERE InvoiceDate >= @S AND InvoiceDate <= @E", 
+                p2(queryStart, queryEnd));
 
             m.LastMonthInvoices = await _db.ScalarAsync<int>(
-                "SELECT COUNT(*) FROM Invoices WHERE InvoiceDate >= @S AND InvoiceDate < @E",
-                p2(lastMonth, thisMonth));
+                "SELECT COUNT(*) FROM Invoices WHERE InvoiceDate >= @S AND InvoiceDate <= @E",
+                p2(lastPeriodStart, periodStart.AddTicks(-1)));
 
-            // ── Purchase Orders this month ───────────────────────────────────
+            // ── Purchase Orders for selected period ─────────────────────────
             m.ThisMonthPOs = await _db.ScalarAsync<int>(
-                "SELECT COUNT(*) FROM PurchaseOrders WHERE PODate >= @S", p(thisMonth));
+                "SELECT COUNT(*) FROM PurchaseOrders WHERE PODate >= @S AND PODate <= @E", p2(queryStart, queryEnd));
 
             m.ThisMonthPOValue = await _db.ScalarAsync<decimal>(
-                "SELECT ISNULL(SUM(PriceExTotal),0) FROM PurchaseOrders WHERE PODate >= @S", p(thisMonth));
+                "SELECT ISNULL(SUM(PriceExTotal),0) FROM PurchaseOrders WHERE PODate >= @S AND PODate <= @E", p2(queryStart, queryEnd));
 
             m.LastMonthPOs = await _db.ScalarAsync<int>(
-                "SELECT COUNT(*) FROM PurchaseOrders WHERE PODate >= @S AND PODate < @E",
-                p2(lastMonth, thisMonth));
+                "SELECT COUNT(*) FROM PurchaseOrders WHERE PODate >= @S AND PODate <= @E",
+                p2(lastPeriodStart, periodStart.AddTicks(-1)));
 
             // ── Despatch this month ──────────────────────────────────────────
             try
@@ -144,11 +158,11 @@ public class DashboardService
             m.RecentActivity = await _activity.GetRecentAsync(30);
 
             // ── Advanced Business KPIs ─────────────────────────────────────────
-            await CalculateAdvancedKPIsAsync(m, now, thisMonth, lastMonth, ytdStart, lastYtdStart, lastYtdEnd);
+            await CalculateAdvancedKPIsAsync(m, now, queryStart, queryEnd, lastPeriodStart, ytdStart, lastYtdStart, lastYtdEnd);
             
             // ── Team Performance ───────────────────────────────────────────────
-            m.TeamMemberKPIs = await GetTeamMemberKPIsAsync(thisMonth, ytdStart);
-            m.DivisionPerformance = await GetDivisionPerformanceAsync(thisMonth, ytdStart);
+            m.TeamMemberKPIs = await GetTeamMemberKPIsAsync(periodStart, periodEnd, ytdStart);
+            m.DivisionPerformance = await GetDivisionPerformanceAsync(periodStart, periodEnd, ytdStart);
             
             // ── Health Indicators ────────────────────────────────────────────────
             m.Warnings = await GenerateWarningsAsync(m);
@@ -162,21 +176,21 @@ public class DashboardService
         return m;
     }
 
-    private async Task CalculateAdvancedKPIsAsync(DashboardMetrics m, DateTime now, DateTime thisMonth, DateTime lastMonth, DateTime ytdStart, DateTime lastYtdStart, DateTime lastYtdEnd)
+    private async Task CalculateAdvancedKPIsAsync(DashboardMetrics m, DateTime now, DateTime periodStart, DateTime periodEnd, DateTime lastPeriodStart, DateTime ytdStart, DateTime lastYtdStart, DateTime lastYtdEnd)
     {
         try
         {
-            // Average Quote Value
+            // Average Quote Value (for the selected period)
             m.AverageQuoteValue = m.ThisMonthQuotes > 0 
                 ? m.ThisMonthQuotesValue / m.ThisMonthQuotes 
                 : 0;
 
-            // Average Invoice Value
+            // Average Invoice Value (for the selected period)
             m.AverageInvoiceValue = m.ThisMonthInvoices > 0 
                 ? m.ThisMonthInvoiceValue / m.ThisMonthInvoices 
                 : 0;
 
-            // Open Quotes Count
+            // Open Quotes Count (current snapshot, not period-filtered)
             m.OpenQuotesCount = await _db.ScalarAsync<int>(
                 "SELECT COUNT(*) FROM Quotes WHERE QuoteStatusId IN (1, 2, 9)");
 
@@ -187,7 +201,7 @@ public class DashboardService
                   WHERE q.QuoteStatusId IN (1, 2, 9) 
                   AND (qs.QuoteStatus IS NULL OR qs.QuoteStatus NOT LIKE '%lost%')");
 
-            // Gross Profit Margin (simplified: assuming 30% margin on quotes won)
+            // Gross Profit Margin (based on YTD for comparison stability)
             var quotesWonValue = await _db.ScalarAsync<decimal>(
                 "SELECT ISNULL(SUM(NettPriceTotal), 0) FROM Quotes WHERE QuoteDate >= @S AND QuoteStatusId IN (4,10)",
                 p(ytdStart));
@@ -198,7 +212,7 @@ public class DashboardService
                 ? ((quotesWonValue - quotesWonCost) / quotesWonValue) * 100 
                 : 0;
 
-            // Quote to Invoice Conversion Rate
+            // Quote to Invoice Conversion Rate (YTD based)
             var totalQuotesYTD = await _db.ScalarAsync<int>(
                 "SELECT COUNT(*) FROM Quotes WHERE QuoteDate >= @S", p(ytdStart));
             var convertedQuotesYTD = await _db.ScalarAsync<int>(
@@ -209,20 +223,24 @@ public class DashboardService
                 ? ((decimal)convertedQuotesYTD / totalQuotesYTD) * 100 
                 : 0;
 
-            // Growth Calculations
-            var lastMonthValue = await _db.ScalarAsync<decimal>(
-                "SELECT ISNULL(SUM(NettPriceTotal), 0) FROM Invoices WHERE InvoiceDate >= @S AND InvoiceDate < @E",
-                p2(lastMonth, thisMonth));
-            var lastYearThisMonthValue = await _db.ScalarAsync<decimal>(
-                @"SELECT ISNULL(SUM(NettPriceTotal), 0) FROM Invoices 
-                  WHERE InvoiceDate >= DATEADD(year, -1, @S) AND InvoiceDate < DATEADD(year, -1, @E)",
-                p2(thisMonth, thisMonth.AddMonths(1)));
+            // Growth Calculations (comparing selected period to previous period)
+            var lastPeriodEnd = lastPeriodStart.AddTicks(periodEnd.Subtract(periodStart).Ticks);
+            var lastPeriodValue = await _db.ScalarAsync<decimal>(
+                "SELECT ISNULL(SUM(NettPriceTotal), 0) FROM Invoices WHERE InvoiceDate >= @S AND InvoiceDate <= @E",
+                p2(lastPeriodStart, lastPeriodEnd));
+            
+            // Same period last year (for YoY comparison)
+            var lastYearPeriodStart = periodStart.AddYears(-1);
+            var lastYearPeriodEnd = periodStart.AddYears(-1).AddTicks(periodEnd.Subtract(periodStart).Ticks);
+            var lastYearThisPeriodValue = await _db.ScalarAsync<decimal>(
+                "SELECT ISNULL(SUM(NettPriceTotal), 0) FROM Invoices WHERE InvoiceDate >= @S AND InvoiceDate <= @E",
+                p2(lastYearPeriodStart, lastYearPeriodEnd));
 
-            m.ThisMonthVsLastMonthPercent = lastMonthValue > 0 
-                ? ((m.ThisMonthInvoiceValue - lastMonthValue) / lastMonthValue) * 100 
+            m.ThisMonthVsLastMonthPercent = lastPeriodValue > 0 
+                ? ((m.ThisMonthInvoiceValue - lastPeriodValue) / lastPeriodValue) * 100 
                 : 0;
-            m.ThisMonthVsLastYearPercent = lastYearThisMonthValue > 0 
-                ? ((m.ThisMonthInvoiceValue - lastYearThisMonthValue) / lastYearThisMonthValue) * 100 
+            m.ThisMonthVsLastYearPercent = lastYearThisPeriodValue > 0 
+                ? ((m.ThisMonthInvoiceValue - lastYearThisPeriodValue) / lastYearThisPeriodValue) * 100 
                 : 0;
 
             // YTD Growth
@@ -237,12 +255,19 @@ public class DashboardService
             m.MonthOverMonthGrowth = m.ThisMonthVsLastMonthPercent;
             m.YearOverYearGrowth = m.ThisMonthVsLastYearPercent;
 
-            // Projected Monthly Revenue (based on current run rate)
-            var daysInMonth = DateTime.DaysInMonth(now.Year, now.Month);
-            var dayOfMonth = now.Day;
-            m.ProjectedMonthlyRevenue = dayOfMonth > 0 
-                ? m.ThisMonthInvoiceValue / dayOfMonth * daysInMonth 
-                : m.ThisMonthInvoiceValue;
+            // Projected Monthly Revenue (based on current run rate for This Month period)
+            if (periodStart.Month == now.Month && periodStart.Year == now.Year)
+            {
+                var daysInMonth = DateTime.DaysInMonth(now.Year, now.Month);
+                var dayOfMonth = now.Day;
+                m.ProjectedMonthlyRevenue = dayOfMonth > 0 
+                    ? m.ThisMonthInvoiceValue / dayOfMonth * daysInMonth 
+                    : m.ThisMonthInvoiceValue;
+            }
+            else
+            {
+                m.ProjectedMonthlyRevenue = m.ThisMonthInvoiceValue;
+            }
 
             // Quarterly calculations
             var quarterStart = new DateTime(now.Year, ((now.Month - 1) / 3) * 3 + 1, 1);
@@ -265,7 +290,7 @@ public class DashboardService
         }
     }
 
-    private async Task<List<UserKPI>> GetTeamMemberKPIsAsync(DateTime thisMonth, DateTime ytdStart)
+    private async Task<List<UserKPI>> GetTeamMemberKPIsAsync(DateTime periodStart, DateTime periodEnd, DateTime ytdStart)
     {
         var kpis = new List<UserKPI>();
         try
@@ -288,20 +313,20 @@ public class DashboardService
                     UserName = name,
                     IsDirector = isDirector,
                     QuotesRaisedThisMonth = await _db.ScalarAsync<int>(
-                        "SELECT COUNT(*) FROM Quotes WHERE Code = @C AND QuoteDate >= @S",
-                        new() { ["C"] = code, ["S"] = thisMonth }),
+                        "SELECT COUNT(*) FROM Quotes WHERE Code = @C AND QuoteDate >= @S AND QuoteDate <= @E",
+                        new() { ["C"] = code, ["S"] = periodStart, ["E"] = periodEnd }),
                     QuotesWonThisMonth = await _db.ScalarAsync<int>(
-                        "SELECT COUNT(*) FROM Quotes WHERE Code = @C AND QuoteDate >= @S AND QuoteStatusId IN (4,10)",
-                        new() { ["C"] = code, ["S"] = thisMonth }),
+                        "SELECT COUNT(*) FROM Quotes WHERE Code = @C AND QuoteDate >= @S AND QuoteDate <= @E AND QuoteStatusId IN (4,10)",
+                        new() { ["C"] = code, ["S"] = periodStart, ["E"] = periodEnd }),
                     QuoteValueThisMonth = await _db.ScalarAsync<decimal>(
-                        "SELECT ISNULL(SUM(NettPriceTotal), 0) FROM Quotes WHERE Code = @C AND QuoteDate >= @S",
-                        new() { ["C"] = code, ["S"] = thisMonth }),
+                        "SELECT ISNULL(SUM(NettPriceTotal), 0) FROM Quotes WHERE Code = @C AND QuoteDate >= @S AND QuoteDate <= @E",
+                        new() { ["C"] = code, ["S"] = periodStart, ["E"] = periodEnd }),
                     InvoicesClosedThisMonth = await _db.ScalarAsync<int>(
-                        "SELECT COUNT(*) FROM Invoices WHERE Code = @C AND InvoiceDate >= @S",
-                        new() { ["C"] = code, ["S"] = thisMonth }),
+                        "SELECT COUNT(*) FROM Invoices WHERE Code = @C AND InvoiceDate >= @S AND InvoiceDate <= @E",
+                        new() { ["C"] = code, ["S"] = periodStart, ["E"] = periodEnd }),
                     InvoiceValueThisMonth = await _db.ScalarAsync<decimal>(
-                        "SELECT ISNULL(SUM(NettPriceTotal), 0) FROM Invoices WHERE Code = @C AND InvoiceDate >= @S",
-                        new() { ["C"] = code, ["S"] = thisMonth }),
+                        "SELECT ISNULL(SUM(NettPriceTotal), 0) FROM Invoices WHERE Code = @C AND InvoiceDate >= @S AND InvoiceDate <= @E",
+                        new() { ["C"] = code, ["S"] = periodStart, ["E"] = periodEnd }),
                     YtdRevenue = await _db.ScalarAsync<decimal>(
                         "SELECT ISNULL(SUM(NettPriceTotal), 0) FROM Invoices WHERE Code = @C AND InvoiceDate >= @S",
                         new() { ["C"] = code, ["S"] = ytdStart }),
@@ -320,12 +345,12 @@ public class DashboardService
                     ? ((decimal)kpi.QuotesWonThisMonth / kpi.QuotesRaisedThisMonth) * 100 
                     : 0;
 
-                // Calculate trend (compare to previous month)
-                var lastMonthValue = await _db.ScalarAsync<decimal>(
+                // Calculate trend (compare to previous period)
+                var lastPeriodValue = await _db.ScalarAsync<decimal>(
                     "SELECT ISNULL(SUM(NettPriceTotal), 0) FROM Invoices WHERE Code = @C AND InvoiceDate >= DATEADD(month, -1, @S) AND InvoiceDate < @S",
-                    new() { ["C"] = code, ["S"] = thisMonth });
-                kpi.PerformanceTrend = kpi.InvoiceValueThisMonth > lastMonthValue ? "up" : 
-                                       kpi.InvoiceValueThisMonth < lastMonthValue ? "down" : "stable";
+                    new() { ["C"] = code, ["S"] = periodStart });
+                kpi.PerformanceTrend = kpi.InvoiceValueThisMonth > lastPeriodValue ? "up" : 
+                                       kpi.InvoiceValueThisMonth < lastPeriodValue ? "down" : "stable";
 
                 kpis.Add(kpi);
             }
@@ -342,12 +367,11 @@ public class DashboardService
         return kpis;
     }
 
-    private async Task<List<DivisionPerformance>> GetDivisionPerformanceAsync(DateTime thisMonth, DateTime ytdStart)
+    private async Task<List<DivisionPerformance>> GetDivisionPerformanceAsync(DateTime periodStart, DateTime periodEnd, DateTime ytdStart)
     {
         var divisions = new List<DivisionPerformance>();
         try
         {
-            // Get all divisions first
             var dt = await _db.QueryAsync("SELECT DivisionId, Division as DivisionName FROM Divisions WHERE Visible = 1 ORDER BY Division");
 
             foreach (System.Data.DataRow r in dt.Rows)
@@ -355,11 +379,10 @@ public class DashboardService
                 var divisionId = Convert.ToInt32(r["DivisionId"]);
                 var divisionName = r["DivisionName"].ToString() ?? "";
 
-                // Get revenue for this division separately (more efficient)
                 var thisMonthRevenue = await _db.ScalarAsync<decimal>(
                     @"SELECT ISNULL(SUM(NettPriceTotal), 0) FROM Invoices 
-                      WHERE DivisionId = @D AND InvoiceDate >= @M",
-                    new() { ["D"] = divisionId, ["M"] = thisMonth });
+                      WHERE DivisionId = @D AND InvoiceDate >= @S AND InvoiceDate <= @E",
+                    new() { ["D"] = divisionId, ["S"] = periodStart, ["E"] = periodEnd });
 
                 var ytdRevenue = await _db.ScalarAsync<decimal>(
                     @"SELECT ISNULL(SUM(NettPriceTotal), 0) FROM Invoices 
@@ -368,13 +391,13 @@ public class DashboardService
 
                 var quotesCount = await _db.ScalarAsync<int>(
                     @"SELECT COUNT(*) FROM Quotes 
-                      WHERE DivisionId = @D AND QuoteDate >= @M",
-                    new() { ["D"] = divisionId, ["M"] = thisMonth });
+                      WHERE DivisionId = @D AND QuoteDate >= @S AND QuoteDate <= @E",
+                    new() { ["D"] = divisionId, ["S"] = periodStart, ["E"] = periodEnd });
 
                 var invoicesCount = await _db.ScalarAsync<int>(
                     @"SELECT COUNT(*) FROM Invoices 
-                      WHERE DivisionId = @D AND InvoiceDate >= @M",
-                    new() { ["D"] = divisionId, ["M"] = thisMonth });
+                      WHERE DivisionId = @D AND InvoiceDate >= @S AND InvoiceDate <= @E",
+                    new() { ["D"] = divisionId, ["S"] = periodStart, ["E"] = periodEnd });
 
                 divisions.Add(new DivisionPerformance
                 {

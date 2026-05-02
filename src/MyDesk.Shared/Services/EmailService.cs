@@ -6,12 +6,6 @@ using MyDesk.Shared.Models;
 
 namespace MyDesk.Shared.Services;
 
-/// <summary>
-/// SMTP email sending with EmailLog persistence and UserActivity tracking.
-/// Ported from MyDeskMCP/Services/EmailService.cs into the shared library.
-/// Config keys: Email:SmtpHost, Email:SmtpPort, Email:SmtpUser, Email:SmtpPass,
-///              Email:FromAddress, Email:FromName
-/// </summary>
 public class EmailService
 {
     private readonly DatabaseService _db;
@@ -29,7 +23,6 @@ public class EmailService
         _logger   = logger;
     }
 
-    // Constructor for when PlatformSettingsService is available
     public EmailService(DatabaseService db, ActivityService activity,
         IConfiguration config, ILogger<EmailService> logger, PlatformSettings platformSettings)
     {
@@ -81,14 +74,10 @@ public class EmailService
         try
         {
             var dt = await _db.QueryAsync(@"
-                SELECT ISNULL(q.Reference,'')      AS Reference,
-                       ISNULL(co.Company,'')       AS Company,
-                       ISNULL(c.FirstName,'')      AS FirstName,
-                       ISNULL(u.Name,'')           AS OriginatorName,
-                       ISNULL(u.Email,'')          AS OriginatorEmail
+                SELECT q.Reference, co.Company, c.FirstName, u.Name AS OriginatorName, u.Email AS OriginatorEmail
                 FROM Quotes q
                 LEFT JOIN Contacts c ON c.ContactId = q.ContactId
-                LEFT JOIN Companies co ON co.CompanyId = q.CompanyId
+                LEFT JOIN Companies co ON co.CompanyId = c.CompanyId
                 LEFT JOIN Users u    ON u.Code = q.Code
                 WHERE q.Qid = @Id",
                 new() { ["Id"] = quoteId });
@@ -104,7 +93,7 @@ public class EmailService
 
             var platformName = GetPlatformName();
             var emailSubject = subject ?? $"Quote — {reference}";
-            var emailBody    = message ?? BuildQuoteBody(reference, company, firstName, originator, platformName);
+            var emailBody    = message ?? BuildQuoteBody(quoteId, reference, company, firstName, originator, platformName);
 
             await SendAsync(toEmail, emailSubject, emailBody,
                 fromEmail: string.IsNullOrEmpty(originEmail) ? null : originEmail,
@@ -124,6 +113,27 @@ public class EmailService
             _logger.LogError(ex, "Failed to email quote {QuoteId} to {To}", quoteId, toEmail);
             return false;
         }
+    }
+
+    private string BuildQuoteBody(int quoteId, string reference, string company,
+        string firstName, string originator, string platformName)
+    {
+        var host = _config["App:BaseUrl"] ?? "https://mydesk.digitalresponse.com.au";
+        
+        return $"""
+        <p>Dear {(string.IsNullOrEmpty(firstName) ? "Sir/Madam" : firstName)},</p>
+        <p>Please find attached your quote from <strong>{platformName}</strong>.</p>
+        <p><strong>Quote Reference:</strong> {reference}</p>
+        
+        <div style="margin: 20px 0;">
+            <a href="{host}/quotes/{quoteId}/action/approve" style="background:#28a745;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;margin-right:10px;">Approve Quote</a>
+            <a href="{host}/quotes/{quoteId}/action/decline" style="background:#dc3545;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;">Decline Quote</a>
+        </div>
+
+        <p>If you have any questions, please don't hesitate to contact us.</p>
+        <p>Kind regards,<br/>{originator}</p>
+        <p style="color:#999;font-size:12px;">Sent via {platformName} MyDesk.</p>
+        """;
     }
 
     public async Task<bool> EmailInvoiceAsync(
@@ -236,46 +246,18 @@ public class EmailService
         }
     }
 
-    /// <summary>
-    /// Returns true if outbound email sending is enabled for this environment.
-    /// Checks in order:
-    /// 1. Hidden developer-only override (EMAIL_DEV_OVERRIDE_DISABLE=true) - highest priority
-    /// 2. Platform Settings kill switch (DisableAllEmails)
-    /// 3. Configuration setting (Email:DisableOutbound)
-    /// </summary>
     public bool IsOutboundEnabled
     {
         get
         {
-            // Hidden developer-only kill switch - only developers know about this
-            // This takes precedence over everything for absolute safety during testing
             if (string.Equals(_config["EMAIL_DEV_OVERRIDE_DISABLE"], "true", StringComparison.OrdinalIgnoreCase))
-            {
-                _logger.LogWarning("Emails disabled via hidden developer override (EMAIL_DEV_OVERRIDE_DISABLE=true)");
                 return false;
-            }
-
-            // Platform Settings kill switch - accessible to admins via UI
             if (_platformSettings?.DisableAllEmails == true)
-            {
-                _logger.LogWarning("Emails disabled via Platform Settings (DisableAllEmails=true)");
                 return false;
-            }
-
-            // Fallback to config check for platform settings if not injected
             if (string.Equals(_config["Platform:DisableAllEmails"], "true", StringComparison.OrdinalIgnoreCase))
-            {
-                _logger.LogWarning("Emails disabled via Platform Settings config (Platform:DisableAllEmails=true)");
                 return false;
-            }
-
-            // Configuration-based disable (legacy)
             if (string.Equals(_config["Email:DisableOutbound"], "true", StringComparison.OrdinalIgnoreCase))
-            {
-                _logger.LogWarning("Emails disabled via configuration (Email:DisableOutbound=true)");
                 return false;
-            }
-
             return true;
         }
     }
@@ -283,15 +265,10 @@ public class EmailService
     public async Task SendAsync(
         string to, string subject, string htmlBody,
         string? fromEmail = null, string? fromName = null,
-        byte[]? attachment = null, string? attachmentName = null)
+        byte[]? attachment = null, string? attachmentName = null,
+        string? bcc = null)
     {
-        // Production safety: if outbound is disabled, log and return without sending.
-        if (!IsOutboundEnabled)
-        {
-            _logger.LogWarning("Outbound email disabled (Email:DisableOutbound=true). Skipping send to {To} — subject: {Subject}",
-                to, subject);
-            return;
-        }
+        if (!IsOutboundEnabled) return;
 
         var platformName = GetPlatformName();
         var smtpHost    = _config["Email:SmtpHost"] ?? "localhost";
@@ -317,6 +294,7 @@ public class EmailService
             IsBodyHtml = true,
         };
         msg.To.Add(to);
+        if (!string.IsNullOrWhiteSpace(bcc)) msg.Bcc.Add(bcc);
 
         MemoryStream? ms = null;
         try
@@ -358,17 +336,6 @@ public class EmailService
             _logger.LogWarning(ex, "Could not write EmailLog for {EntityType} {EntityId}", entityType, entityId);
         }
     }
-
-    private static string BuildQuoteBody(string reference, string company,
-        string firstName, string originator, string platformName) =>
-        $"""
-        <p>Dear {(string.IsNullOrEmpty(firstName) ? "Sir/Madam" : firstName)},</p>
-        <p>Please find attached your quote from <strong>{platformName}</strong>.</p>
-        <p><strong>Quote Reference:</strong> {reference}</p>
-        <p>If you have any questions, please don't hesitate to contact us.</p>
-        <p>Kind regards,<br/>{originator}</p>
-        <p style="color:#999;font-size:12px;">Sent via {platformName} MyDesk.</p>
-        """;
 
     public async Task SendPasswordResetEmailAsync(string email, string resetLink)
     {

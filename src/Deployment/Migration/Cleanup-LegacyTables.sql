@@ -15,9 +15,9 @@ SELECT @sql = @sql + N'ALTER TABLE ' + QUOTENAME(OBJECT_SCHEMA_NAME(parent_objec
 FROM sys.foreign_keys
 WHERE OBJECT_NAME(referenced_object_id) IN (
     'CallReports','CallReportTypes',
-    'ExpenseTypeGroups','ExpenseTypes','Expenses','ExpensesSignOffs',
-    'Files','FilesCategories','FilesCategoriesDivisionAccess',
-    'FilesCategoriesUserAccess','FilesCategoriesUserLevelAccess',
+    'ExpenseTypeGroups','ExpenseTypes','ExpensesSignOffs',
+    'FilesCategoriesUserLevelAccess',
+    'FilesCategoriesUserAccess','FilesCategoriesDivisionAccess',
     'Employment','TMail',
     'TimesheetItems','Timesheets','TimesheetStatus',
     'Tables','TableFiles',
@@ -33,7 +33,7 @@ DROP TABLE IF EXISTS [CallReports];
 DROP TABLE IF EXISTS [CallReportTypes];
 
 DROP TABLE IF EXISTS [ExpensesSignOffs];
-DROP TABLE IF EXISTS [Expenses];
+-- NOTE: We KEEP [Expenses] table as it's still in use!
 DROP TABLE IF EXISTS [ExpenseTypes];
 DROP TABLE IF EXISTS [ExpenseTypeGroups];
 

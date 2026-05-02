@@ -43,57 +43,57 @@ else
             </h1>
             <p class="tl-subtitle">@(_q.Reference is { Length: > 0 } r ? r : _q.CompanyName)</p>
         </div>
-        <div class="d-flex flex-wrap gap-2">
-            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ArrowBack"
-                       Href="/quotes" Size="Size.Small">All Quotes</MudButton>
-            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Edit"
-                       Href="@($"/quotes/{Id}/edit")" Size="Size.Small">Edit</MudButton>
-            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ContentCopy"
-                       OnClick="CopyAsync" Size="Size.Small">Copy</MudButton>
-            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.History"
-                       Href="@($"/quotes/{Id}/history")" Size="Size.Small">History</MudButton>
+        <div class="d-flex flex-wrap gap-2 align-center">
+            @* Primary Actions *@
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Edit"
+                       Href="@($"/quotes/{Id}/edit")" Size="Size.Small">Edit Quote</MudButton>
+            
+            <MudButtonGroup Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small">
+                <MudButton StartIcon="@Icons.Material.Rounded.PictureAsPdf" OnClick="DownloadPdfAsync">PDF</MudButton>
+                <MudButton StartIcon="@Icons.Material.Rounded.Email" OnClick="@(() => { _showEmailPanel = !_showEmailPanel; _showStatusPanel = false; })">Email</MudButton>
+            </MudButtonGroup>
+            <FavouriteButton EntityType="Quote" EntityId="@Id" EntityName="@_q.Reference" />
+            <MudDivider Vertical="true" FlexItem="true" Class="mx-2 my-1" />
+            @* Workflow Actions *@
             @if (CanApproveDecline)
             {
-                <MudButton Variant="Variant.Filled" Color="Color.Success"
-                           StartIcon="@Icons.Material.Rounded.ThumbUp"
+                <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Rounded.ThumbUp"
                            OnClick="ApproveAsync" Size="Size.Small">Approve</MudButton>
-                <MudButton Variant="Variant.Filled" Color="Color.Error"
-                           StartIcon="@Icons.Material.Rounded.ThumbDown"
+                <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Rounded.ThumbDown"
                            OnClick="DeclineAsync" Size="Size.Small">Decline</MudButton>
             }
-            @if (CanIssue)
-            {
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary"
-                           StartIcon="@Icons.Material.Rounded.Receipt"
-                           Href="@($"/invoices/create?fromQuote={Id}")" Size="Size.Small">Invoice</MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary"
-                           StartIcon="@Icons.Material.Rounded.ShoppingCart"
-                           OnClick="CreatePOAsync" Size="Size.Small" Disabled="@_converting">
-                    @(_converting ? "Creating..." : "Create PO")
-                </MudButton>
-            }
-            <MudButton Variant="Variant.Outlined" Color="Color.Info"
-                       StartIcon="@Icons.Material.Rounded.Work"
-                       OnClick="ConvertToJobOrderAsync" Size="Size.Small" Disabled="@_converting">
-                @(_converting ? "Converting..." : "Convert to Job Order")
-            </MudButton>
-            <MudButton Variant="Variant.Outlined" Color="Color.Success"
-                       StartIcon="@Icons.Material.Rounded.ReceiptLong"
-                       OnClick="ConvertToInvoiceAsync" Size="Size.Small" Disabled="@_converting">
-                @(_converting ? "Converting..." : "Convert to Invoice")
-            </MudButton>
-            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.PictureAsPdf"
-                       OnClick="DownloadPdfAsync" Size="Size.Small">PDF</MudButton>
-            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Email"
-                       OnClick="@(() => { _showEmailPanel = !_showEmailPanel; _showStatusPanel = false; })" Size="Size.Small">Email PDF</MudButton>
-            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.SwapVert"
-                       OnClick="@(() => { _showStatusPanel = !_showStatusPanel; _showEmailPanel = false; })" Size="Size.Small">Update Status</MudButton>
-            @if (CanDelete)
-            {
-                <MudButton Variant="Variant.Outlined" Color="Color.Error"
-                           StartIcon="@Icons.Material.Rounded.Delete"
-                           OnClick="DeleteAsync" Size="Size.Small">Delete</MudButton>
-            }
+            
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.SwapVert" Color="Color.Info"
+                       OnClick="@(() => { _showStatusPanel = !_showStatusPanel; _showEmailPanel = false; })" Size="Size.Small">Status</MudButton>
+
+            <MudDivider Vertical="true" FlexItem="true" Class="mx-2 my-1" />
+
+            @* Conversion Menu *@
+            <MudMenu StartIcon="@Icons.Material.Rounded.Transform" Label="Convert" Variant="Variant.Outlined" 
+                     Color="Color.Default" Size="Size.Small" EndIcon="@Icons.Material.Rounded.KeyboardArrowDown"
+                     AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                @if (CanIssue)
+                {
+                    <MudMenuItem Icon="@Icons.Material.Rounded.Receipt" Href="@($"/invoices/create?fromQuote={Id}")">Invoice (Direct)</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Rounded.ShoppingCart" OnClick="CreatePOAsync">Create Purchase Order</MudMenuItem>
+                }
+                <MudMenuItem Icon="@Icons.Material.Rounded.Work" OnClick="ConvertToJobOrderAsync">Convert to Job Order</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Rounded.ReceiptLong" OnClick="ConvertToInvoiceAsync">Convert to Invoice</MudMenuItem>
+            </MudMenu>
+
+            @* Actions Menu *@
+            <MudMenu Icon="@Icons.Material.Rounded.MoreVert" Variant="Variant.Outlined" 
+                     Color="Color.Default" Size="Size.Small"
+                     AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                <MudMenuItem Icon="@Icons.Material.Rounded.ArrowBack" Href="/quotes">Back to List</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Rounded.ContentCopy" OnClick="CopyAsync">Copy Quote</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Rounded.History" Href="@($"/quotes/{Id}/history")">View History</MudMenuItem>
+                @if (CanDelete)
+                {
+                    <MudDivider />
+                    <MudMenuItem Icon="@Icons.Material.Rounded.Delete" OnClick="DeleteAsync" font-color="var(--mud-palette-error)">Delete Quote</MudMenuItem>
+                }
+            </MudMenu>
         </div>
     </div>
 
@@ -279,11 +279,11 @@ else
                     </tr>
                     <tr>
                         <td style="color:var(--gray-500);padding:4px 0;">GST (10%)</td>
-                        <td style="text-align:right;padding:4px 0;">$@(_q.NettPriceTotal * 0.10m).ToString("N2")</td>
+                        <td style="text-align:right;padding:4px 0;">$@((_q.NettPriceTotal * 0.10m).ToString("N2"))</td>
                     </tr>
                     <tr style="border-top:1px solid var(--mud-palette-divider);">
                         <td style="font-weight:600;padding:6px 0 4px;">Price inc GST</td>
-                        <td style="text-align:right;font-weight:600;font-size:1rem;padding:6px 0 4px;">$@(_q.NettPriceTotal * 1.10m).ToString("N2")</td>
+                        <td style="text-align:right;font-weight:600;font-size:1rem;padding:6px 0 4px;">$@((_q.NettPriceTotal * 1.10m).ToString("N2"))</td>
                     </tr>
                     <tr>
                         <td style="color:var(--gray-500);padding:4px 0;">Margin</td>
@@ -513,4 +513,6 @@ else
         _           => "info",
     };
 }
+
+
 

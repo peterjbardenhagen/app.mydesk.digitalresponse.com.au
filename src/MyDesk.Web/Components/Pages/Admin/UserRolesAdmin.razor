@@ -1,30 +1,104 @@
 @page "/admin/user-roles"
 @attribute [Authorize]
 @inject SystemService Svc
+@inject PermissionService PermSvc
+@inject UserService UserSvc
 @inject ISnackbar Snackbar
+@using System.Security.Claims
+@using MyDesk.Shared.Models
 
-<PageTitle>User Roles - MyDesk</PageTitle>
+<PageTitle>User Roles & Permissions - MyDesk</PageTitle>
 
 <div class="tl-page-header">
     <div>
         <div class="tl-breadcrumb">
             <a href="/admin/setup">Admin</a><span class="sep">/</span>
-            <span style="color:var(--gray-700);font-weight:500;">User Roles</span>
+            <span style="color:var(--gray-700);font-weight:500;">User Roles & Permissions</span>
         </div>
-        <h1>User Roles</h1>
-        <p class="tl-subtitle">Manage user role definitions.</p>
+        <h1>User Roles & Permissions</h1>
+        <p class="tl-subtitle">Define roles and configure granular permissions for each module and function.</p>
     </div>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
-               OnClick="AddNew">Add Role</MudButton>
+    <div class="d-flex gap-2">
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Restore"
+                   OnClick="ApplyDefaults" Color="Color.Secondary">Apply Defaults</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
+                   OnClick="AddNew">Add Role</MudButton>
+    </div>
 </div>
 
-@if (_items == null)
+<MudAlert Severity="Severity.Info" Class="mb-4">
+    <MudText Typo="Typo.body2">
+        <strong>Granular Permissions:</strong> Select a role below to configure which modules and actions users of that role can access.
+        By default, Directors and Administrators have full access to everything, except Directors cannot manage Administrator users.
+    </MudText>
+</MudAlert>
+
+@if (_items == null || _userTypes == null || _permissionModules == null)
 {
     <MudProgressCircular Indeterminate="true" />
 }
 else
 {
-    <MudPaper Class="pa-0" Style="max-width:540px;">
+    @* ── Role Tabs ─────────────────────────────────────────────────────────── *@
+    <MudPaper Class="pa-4 mb-4" Elevation="1">
+        <MudText Typo="Typo.h6" Class="mb-3">User Roles</MudText>
+        <MudTabs @bind-ActivePanelIndex="_selectedRoleIndex" 
+                 PanelClass="tl-perm-tabs"
+                 HeaderClass="tl-perm-tab-header">
+            @foreach (var role in _userTypes ?? new List<UserType>())
+            {
+                <MudTabPanel Text="@role.TypeName" Icon="@GetRoleIcon(role.UserTypeId)">
+                    <div class="d-flex align-center justify-space-between mb-4">
+                        <MudText Typo="Typo.subtitle1">
+                            <strong>@role.TypeName</strong> Permissions
+                        </MudText>
+                        <div class="d-flex gap-2">
+                            <MudButton Size="Size.Small" Variant="Variant.Outlined" 
+                                       OnClick="@(() => SelectAllForRole(role, true))">Select All</MudButton>
+                            <MudButton Size="Size.Small" Variant="Variant.Outlined"
+                                       OnClick="@(() => SelectAllForRole(role, false))">Deselect All</MudButton>
+                            <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
+                                       OnClick="@(() => SaveRolePermissions(role))" Disabled="_saving">
+                                @(_saving ? "Saving..." : "Save Permissions")
+                            </MudButton>
+                        </div>
+                    </div>
+
+                    @foreach (var module in _permissionModules ?? new List<PermissionModule>())
+                    {
+                        <MudPaper Class="pa-4 mb-3" Elevation="0" Style="border: 1px solid var(--gray-200); border-radius: 12px;">
+                            <div class="d-flex align-center justify-space-between mb-2">
+                                <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">
+                                    <MudIcon Icon="@GetModuleIcon(module.Key)" Size="Size.Small" Class="mr-2" />
+                                    @module.DisplayName
+                                </MudText>
+                                <MudCheckBox T="bool" 
+                                             Value="@(_moduleSelectAll.TryGetValue(GetModuleKey(role.UserTypeId, module.Key), out var val) && val)"
+                                             ValueChanged="@((bool val) => ToggleModuleAll(role.UserTypeId, module.Key, val))"
+                                             Label="Select All" Dense="true" />
+                            </div>
+                            <MudGrid Spacing="2">
+                                @foreach (var action in module.Actions)
+                                {
+                                    <MudItem xs="12" sm="6" md="4">
+                                        <MudCheckBox T="bool" 
+                                                     Value="@GetPermissionValue(role.UserTypeId, action.FullKey)"
+                                                     ValueChanged="@((bool val) => SetPermission(role.UserTypeId, action.FullKey, val))"
+                                                     Label="@action.DisplayName"
+                                                     Dense="true" />
+                                    </MudItem>
+                                }
+                            </MudGrid>
+                        </MudPaper>
+                    }
+                </MudTabPanel>
+            }
+        </MudTabs>
+    </MudPaper>
+
+    @* ── Role Definitions (simple CRUD) ───────────────────────────────────── *@
+    <MudPaper Class="pa-4" Elevation="1">
+        <MudText Typo="Typo.h6" Class="mb-3">Role Definitions</MudText>
         <MudDataGrid T="UserRole" Items="_items" Dense="true" Hover="true" Elevation="0">
             <Columns>
                 <PropertyColumn Property="x => x.UserRoleId" Title="#" CellStyle="width:70px;" />
@@ -62,11 +136,39 @@ else
 
 @code {
     private List<UserRole>? _items;
+    private List<UserType>? _userTypes;
     private int? _editingId;
     private string _editingName = "";
+    private int _selectedRoleIndex;
+    private List<PermissionModule>? _permissionModules;
+    private Dictionary<int, UserPermissionSet> _rolePermissions = new();
+    private Dictionary<string, bool> _pendingChanges = new();
+    private bool _saving = false;
 
     protected override async Task OnInitializedAsync() => await Reload();
-    private async Task Reload() => _items = await Svc.GetUserRolesAsync();
+
+    private async Task Reload()
+    {
+        _items = await Svc.GetUserRolesAsync();
+        _userTypes = await UserSvc.GetUserTypesAsync();
+        _permissionModules = PermSvc.GetPermissionsByModule();
+        _rolePermissions = await PermSvc.LoadAllPermissionsAsync();
+        StateHasChanged();
+    }
+
+    private async Task ApplyDefaults()
+    {
+        try
+        {
+            await PermSvc.ApplyDefaultPermissionsAsync();
+            await Reload();
+            Snackbar.Add("Default permissions applied successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed: {ex.Message}", Severity.Error);
+        }
+    }
 
     private void BeginEdit(UserRole r) { _editingId = r.UserRoleId; _editingName = r.RoleName; }
     private void Cancel() { _editingId = null; _editingName = ""; }
@@ -105,5 +207,136 @@ else
         }
         catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
     }
+
+    private string GetRoleIcon(int roleId) => roleId switch
+    {
+        1 => Icons.Material.Rounded.Work,
+        2 => Icons.Material.Rounded.AdminPanelSettings,
+        3 => Icons.Material.Rounded.AccountBalance,
+        4 => Icons.Material.Rounded.TrendingUp,
+        _ => Icons.Material.Rounded.Person
+    };
+
+
+
+    private Dictionary<string, bool> _moduleSelectAll = new();
+
+    private string GetModuleKey(int userTypeId, string moduleKey) => $"{userTypeId}_{moduleKey}";
+
+    private bool GetPermissionValue(int userTypeId, string permissionKey)
+    {
+        if (_rolePermissions.TryGetValue(userTypeId, out var perms))
+        {
+            if (_pendingChanges.TryGetValue(permissionKey, out var pending))
+                return pending;
+            return perms.Permissions.TryGetValue(permissionKey, out var val) && val;
+        }
+        return false;
+    }
+
+    private void SetPermission(int userTypeId, string permissionKey, bool value)
+    {
+        _pendingChanges[permissionKey] = value;
+    }
+
+    private void ToggleModuleAll(int userTypeId, string moduleKey, bool value)
+    {
+        if (_permissionModules == null) return;
+        var module = _permissionModules.FirstOrDefault(m => m.Key == moduleKey);
+        if (module != null)
+        {
+            foreach (var action in module.Actions)
+            {
+                _pendingChanges[action.FullKey] = value;
+            }
+        }
+        _moduleSelectAll[GetModuleKey(userTypeId, moduleKey)] = value;
+    }
+
+    private void SelectAllForRole(UserType role, bool value)
+    {
+        if (_permissionModules == null) return;
+        foreach (var module in _permissionModules)
+        {
+            foreach (var action in module.Actions)
+            {
+                _pendingChanges[action.FullKey] = value;
+            }
+        }
+        StateHasChanged();
+    }
+
+    private async Task SaveRolePermissions(UserType role)
+    {
+        _saving = true;
+        try
+        {
+            // Load current permissions and merge pending changes
+            var perms = _rolePermissions.TryGetValue(role.UserTypeId, out var existing) 
+                ? new Dictionary<string, bool>(existing.Permissions) 
+                : new Dictionary<string, bool>();
+            
+            foreach (var (key, value) in _pendingChanges)
+            {
+                perms[key] = value;
+            }
+            
+            await PermSvc.SaveAllPermissionsAsync(role.UserTypeId, perms);
+            
+            _pendingChanges.Clear();
+            await Reload();
+            Snackbar.Add($"Permissions saved for {role.TypeName}", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private string GetModuleIcon(string module) => module switch
+    {
+        "dashboard" => Icons.Material.Rounded.Dashboard,
+        "quotes" => Icons.Material.Rounded.Description,
+        "invoices" => Icons.Material.Rounded.Receipt,
+        "purchase_orders" => Icons.Material.Rounded.ShoppingBasket,
+        "despatch" => Icons.Material.Rounded.LocalShipping,
+        "job_orders" => Icons.Material.Rounded.Work,
+        "contacts" => Icons.Material.Rounded.Person,
+        "companies" => Icons.Material.Rounded.Business,
+        "products" => Icons.Material.Rounded.Category,
+        "reports" => Icons.Material.Rounded.BarChart,
+        "reconciliation" => Icons.Material.Rounded.AccountBalance,
+        "accounting" => Icons.Material.Rounded.AccountBalance,
+        "marketing" => Icons.Material.Rounded.Campaign,
+        "ask_ai" => Icons.Material.Rounded.AutoAwesome,
+        "files" => Icons.Material.Rounded.Folder,
+        "admin_users" => Icons.Material.Rounded.People,
+        "admin_setup" => Icons.Material.Rounded.Tune,
+        "admin_platform" => Icons.Material.Rounded.Settings,
+        "admin_logs" => Icons.Material.Rounded.Description,
+        "admin_user_roles" => Icons.Material.Rounded.VerifiedUser,
+        "integrations" => Icons.Material.Rounded.Hub,
+        "settings" => Icons.Material.Rounded.Settings,
+        "noticeboard" => Icons.Material.Rounded.Campaign,
+        "calendar" => Icons.Material.Rounded.CalendarToday,
+        "expenses" => Icons.Material.Rounded.Payment,
+        "activity" => Icons.Material.Rounded.History,
+        "favourites" => Icons.Material.Rounded.Star,
+        "profile" => Icons.Material.Rounded.AccountCircle,
+        _ => Icons.Material.Rounded.Folder
+    };
 }
 
+<style>
+    .tl-perm-tab-header .mud-tab {
+        font-weight: 600;
+        padding: 12px 24px;
+    }
+    .tl-perm-tabs .mud-tab-panel {
+        padding: 16px 0;
+    }
+</style>

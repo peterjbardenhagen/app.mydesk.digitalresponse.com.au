@@ -9,6 +9,7 @@
 @inject ActivityService ActivitySvc
 @inject SupplierQuoteParseService ParseService
 @inject CompanyService CompanyService
+@inject UserService UserService
 @using System.Security.Claims
 @using Microsoft.AspNetCore.WebUtilities
 @using MyDesk.Web.Services
@@ -24,8 +25,14 @@
         </div>
         <h1>@(IsNew ? "New Quote" : $"Edit Quote #{Id}")</h1>
     </div>
-    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ArrowBack"
-               Href="@(IsNew ? "/quotes" : $"/quotes/{Id}")">Cancel</MudButton>
+    <div class="d-flex gap-2">
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ArrowBack"
+                   Href="@(IsNew ? "/quotes" : $"/quotes/{Id}")">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Save"
+                   OnClick="SaveAsync" Disabled="@_saving">
+            @(_saving ? "Saving…" : "Save Quote")
+        </MudButton>
+    </div>
 </div>
 
 @* ── Header ─────────────────────────────────────────────────────────────── *@
@@ -41,10 +48,10 @@
                              OnSelectionChanged="OnContactSelected" />
         </MudItem>
         <MudItem xs="12" md="4">
-            <MudSelect T="int" @bind-Value="_q.DivisionId" Label="Division" Variant="Variant.Outlined">
-                @foreach (var d in _divisions)
+            <MudSelect T="string" @bind-Value="_q.Code" Label="Prepared By" Variant="Variant.Outlined">
+                @foreach (var u in _users)
                 {
-                    <MudSelectItem T="int" Value="@d.DivisionId">@d.DivisionName</MudSelectItem>
+                    <MudSelectItem T="string" Value="@u.Code">@u.Name (@u.Code)</MudSelectItem>
                 }
             </MudSelect>
         </MudItem>
@@ -90,8 +97,6 @@
                     <th style="text-align:left;padding:4px 6px;width:150px;">Product</th>
                     <th style="text-align:left;padding:4px 6px;">Description</th>
                     <th style="text-align:right;padding:4px 6px;width:70px;">Qty</th>
-                    <th style="text-align:right;padding:4px 6px;width:60px;">Units</th>
-                    <th style="text-align:right;padding:4px 6px;width:60px;">Days</th>
                     <th style="text-align:right;padding:4px 6px;width:90px;">Unit Cost</th>
                     <th style="text-align:right;padding:4px 6px;width:90px;">Nett Price</th>
                     <th style="text-align:right;padding:4px 6px;width:100px;">Ext Price</th>
@@ -124,19 +129,14 @@
                             <MudNumericField @bind-Value="r.Qty" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
                         </td>
                         <td style="padding:2px 4px;">
-                            <MudNumericField @bind-Value="r.Units" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
-                        </td>
-                        <td style="padding:2px 4px;">
-                            <MudNumericField @bind-Value="r.Days" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
-                        </td>
-                        <td style="padding:2px 4px;">
-                            <MudNumericField @bind-Value="r.UnitCost" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
+                            <MudNumericField Value="r.UnitCost" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" 
+                                             ValueChanged="@((decimal val) => { r.UnitCost = val; r.NettPrice = val / (1 - 0.3m); })" />
                         </td>
                         <td style="padding:2px 4px;">
                             <MudNumericField @bind-Value="r.NettPrice" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
                         </td>
                         <td style="text-align:right;padding:2px 8px;font-weight:500;">
-                            $@r.ExtPrice.ToString("N2")
+                            $@((r.NettPrice * r.Qty).ToString("N2"))
                         </td>
                         <td>
                             <MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small" Color="Color.Error" OnClick="@(() => RemoveLine(r))" />
@@ -227,6 +227,7 @@
     private List<Contact> _contacts = new();
     private List<Division> _divisions = new();
     private List<Product> _products = new();
+    private List<User> _users = new();
     private List<LineRow> _lines = new();
     private List<TpRow> _tpLines = new();
     private bool _saving;
@@ -253,6 +254,16 @@
         _contacts = await LookupService.GetContactLookupsAsync();
         _divisions = await LookupService.GetDivisionsAsync();
         _products = await LookupService.GetProductsAsync();
+        _users = await UserService.GetAllAsync();
+
+        if (IsNew)
+        {
+            _q.Code = "BB";
+        }
+        else
+        {
+             // Keep existing code if editing
+        }
 
         if (!string.IsNullOrEmpty(_supplierKey))
         {
@@ -437,3 +448,6 @@
         public decimal TotalCost   => UnitCost  * Qty;
     }
 }
+
+
+

@@ -1,0 +1,14 @@
+@using MyDesk.Shared.Models
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent><MudText Typo="Typo.h6">Expense Report</MudText></TitleContent>
+    <DialogContent><MudText>Expense report dialog stub</MudText></DialogContent>
+    <DialogActions><MudButton OnClick="Cancel">Close</MudButton></DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public ExpenseReport? Report { get; set; }
+    private void Cancel() => MudDialog.Cancel();
+}

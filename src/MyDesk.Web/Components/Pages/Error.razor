@@ -1,37 +1,201 @@
 @page "/Error"
+@layout EmptyLayout
 @using System.Diagnostics
+@inject PlatformSettingsService PlatformSettings
 
-<PageTitle>Error</PageTitle>
+<PageTitle>Error - @PlatformSettings.GetBrandingName()</PageTitle>
 
-<h1 class="text-danger">Error.</h1>
-<h2 class="text-danger">An error occurred while processing your request.</h2>
+<div class="tl-error-root">
+    <div class="tl-error-container">
+        <div class="tl-error-card">
+            <div class="tl-error-icon">
+                <MudIcon Icon="@Icons.Material.Rounded.ErrorOutline" Size="Size.Large" />
+            </div>
+            
+            <h1>Something went wrong</h1>
+            <p class="tl-error-subtitle">We're sorry, but an unexpected error occurred. Our team has been notified.</p>
+            
+            @if (!string.IsNullOrEmpty(RequestId))
+            {
+                <div class="tl-error-details">
+                    <MudText Typo="Typo.caption" Class="tl-request-id">
+                        <MudIcon Icon="@Icons.Material.Rounded.Fingerprint" Size="Size.Small" />
+                        Request ID: <code>@RequestId</code>
+                    </MudText>
+                </div>
+            }
 
-@if (ShowRequestId)
-{
-    <p>
-        <strong>Request ID:</strong> <code>@RequestId</code>
-    </p>
-}
+            <div class="tl-error-actions">
+                <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" Class="rounded-xl">
+                    <MudIcon Icon="@Icons.Material.Rounded.Home" Size="Size.Small" />
+                    Return to Dashboard
+                </MudButton>
+                <MudButton Href="mailto:support@digitalresponse.com.au" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Large" Class="rounded-xl">
+                    <MudIcon Icon="@Icons.Material.Rounded.Support" Size="Size.Small" />
+                    Contact Support
+                </MudButton>
+            </div>
+        </div>
 
-<h3>Development Mode</h3>
-<p>
-    Swapping to <strong>Development</strong> environment will display more detailed information about the error that occurred.
-</p>
-<p>
-    <strong>The Development environment shouldn't be enabled for deployed applications.</strong>
-    It can result in displaying sensitive information from exceptions to end users.
-    For local debugging, enable the <strong>Development</strong> environment by setting the <strong>ASPNETCORE_ENVIRONMENT</strong> environment variable to <strong>Development</strong>
-    and restarting the app.
-</p>
+        <div class="tl-error-footer">
+            @if (isDevelopment)
+            {
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Class="mt-6">
+                    <MudText Typo="Typo.body2" Class="mb-2">
+                        <strong>Development Mode Active</strong>
+                    </MudText>
+                    <MudText Typo="Typo.caption">
+                        Detailed error information is being logged to the database. Check the Admin > Setup > Error Logs section for details.
+                    </MudText>
+                </MudAlert>
+            }
+            
+            <div class="tl-help-tips">
+                <MudText Typo="Typo.subtitle2" Class="mb-3">Helpful Tips</MudText>
+                <ul>
+                    <li>Try refreshing the page</li>
+                    <li>Clear your browser cache and cookies</li>
+                    <li>Check your internet connection</li>
+                    <li>If the problem persists, contact support with the Request ID above</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
 
-@code{
+<style>
+    .tl-error-root {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        padding: 40px 20px;
+        font-family: 'Outfit', 'Inter', sans-serif;
+    }
+
+    .tl-error-container {
+        max-width: 600px;
+        width: 100%;
+    }
+
+    .tl-error-card {
+        background: white;
+        border-radius: 24px;
+        padding: 48px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+        text-align: center;
+        animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .tl-error-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 24px;
+        color: #dc2626;
+    }
+
+    .tl-error-card h1 {
+        font-size: 32px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 12px;
+    }
+
+    .tl-error-subtitle {
+        font-size: 16px;
+        color: #64748b;
+        margin-bottom: 24px;
+    }
+
+    .tl-error-details {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 16px;
+        margin: 24px 0;
+    }
+
+    .tl-request-id {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-family: monospace;
+    }
+
+    .tl-request-id code {
+        background: white;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+    }
+
+    .tl-error-actions {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        margin-top: 32px;
+        flex-wrap: wrap;
+    }
+
+    .tl-error-footer {
+        margin-top: 32px;
+        text-align: center;
+    }
+
+    .tl-help-tips {
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        margin-top: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .tl-help-tips ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        text-align: left;
+    }
+
+    .tl-help-tips li {
+        padding: 8px 0;
+        color: #64748b;
+        font-size: 14px;
+        position: relative;
+        padding-left: 24px;
+    }
+
+    .tl-help-tips li:before {
+        content: '';
+        position: absolute;
+        left: 0;
+        width: 6px;
+        height: 6px;
+        background: var(--mud-palette-primary);
+        border-radius: 50%;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    @@keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+@code {
     [CascadingParameter]
     private HttpContext? HttpContext { get; set; }
 
     private string? RequestId { get; set; }
-    private bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
+    private bool isDevelopment => Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
 
     protected override void OnInitialized() =>
         RequestId = global::System.Diagnostics.Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
 }
-

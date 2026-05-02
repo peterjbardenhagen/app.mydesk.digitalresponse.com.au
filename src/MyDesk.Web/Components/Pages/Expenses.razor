@@ -6,14 +6,14 @@
 @using MudBlazor
 @inject ExpenseService ExpenseService
 @inject CompanyService CompanyService
-@inject AzureAIService AIService
+@inject IHttpClientFactory HttpFactory
+@inject Microsoft.Extensions.Options.IOptions<AzureAIOptions> AzureOptions
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
 <PageTitle>Expenses - MyDesk</PageTitle>
 
 <div class="tl-page-header">
-<div class="d-flex align-center justify-space-between">
     <div>
         <div class="tl-breadcrumb"><a href="/">MyDesk</a><span class="sep">/</span><span>Expenses</span></div>
         <h1>Expenses</h1>
@@ -23,20 +23,19 @@
         New Expense
     </MudButton>
 </div>
-</div>
 
 <MudGrid Class="mb-6">
     <MudItem xs="12" md="8">
-        <MudPaper Class="pa-6 d-flex flex-column align-center justify-center tl-upload-zone" 
-                  Elevation="0" Outlined="true" 
-                  Style="border: 2px dashed var(--mud-palette-lines-default); background: var(--mud-palette-background-grey); min-height: 200px;">
-            <MudFileUpload T="IReadOnlyList<IBrowserFile>" OnFilesChanged="UploadFiles" Hidden="false" Class="flex-1"
-                           InputClass="absolute min-h-full min-w-full z-20 opacity-0 cursor-pointer"
-                           @ondragenter="@(() => _dragClass = "tl-upload-zone-active")"
-                           @ondragleave="@(() => _dragClass = "")"
-                           @onfocusout="@(() => _dragClass = "")">
+        <MudPaper Class="pa-4" Elevation="0">
+            <MudText Typo="Typo.h6" Class="mb-4">Upload Receipts</MudText>
+            <MudFileUpload T="IReadOnlyList<IBrowserFile>" OnFilesChanged="UploadFiles" Hidden="false" Class="mb-4"
+                          InputClass="mb-2"
+                          @ondragenter="@(() => _dragClass = "tl-upload-zone-active")"
+                          @ondragleave="@(() => _dragClass = "")"
+                          @onfocusout="@(() => _dragClass = "")">
                 <ButtonTemplate>
-                    <div class="d-flex flex-column align-center">
+                    <div class="d-flex flex-column align-center pa-4 @_dragClass" 
+                         style="border: 2px dashed var(--mud-palette-lines-default); background: var(--mud-palette-background-grey); min-height: 120px; border-radius: 8px;">
                         <MudIcon Icon="@Icons.Material.Rounded.CloudUpload" Size="Size.Large" Color="Color.Primary" />
                         <MudText Typo="Typo.h6" Class="mt-2">Drag and drop PDFs here</MudText>
                         <MudText Typo="Typo.body2">or click to browse files</MudText>
@@ -51,7 +50,7 @@
         </MudPaper>
     </MudItem>
     <MudItem xs="12" md="4">
-        <MudPaper Class="pa-6" Elevation="1">
+        <MudPaper Class="pa-4" Elevation="1">
             <MudText Typo="Typo.subtitle2" Class="mb-4">Expense Insights</MudText>
             <div class="d-flex justify-space-between mb-2">
                 <MudText Typo="Typo.body2">Total This Month</MudText>
@@ -170,16 +169,22 @@
                 using var fs = new FileStream(filePath, FileMode.Create);
                 await stream.CopyToAsync(fs);
 
-                // 2. Process with AI (Placeholder for now)
-                // In a real app, we'd send the PDF to Document Intelligence or OpenAI Vision
+                // 2. Process with AI
+                var text = await ExtractTextFromPdfAsync(filePath);
+                
+                var expenseInfo = await ParseExpenseInfoAsync(text);
+                
                 var expense = new Expense
                 {
-                    Date = DateTime.Today,
-                    Description = $"AI Processed: {file.Name}",
+                    Date = expenseInfo.Date ?? DateTime.Today,
+                    Description = expenseInfo.Description ?? $"AI Processed: {file.Name}",
+                    SupplierName = expenseInfo.SupplierName,
+                    Total = expenseInfo.Total ?? 0,
+                    TaxAmount = expenseInfo.TaxAmount ?? 0,
                     FileName = file.Name,
                     FilePath = $"/uploads/expenses/{fileName}",
                     Status = "Pending",
-                    Category = "General"
+                    Category = expenseInfo.Category ?? "General"
                 };
 
                 await ExpenseService.SaveExpenseAsync(expense);
@@ -194,6 +199,106 @@
         finally
         {
             _uploading = false;
+        }
+    }
+
+    public class ExtractedExpenseInfo
+    {
+        public DateTime? Date { get; set; }
+        public string? Description { get; set; }
+        public string? SupplierName { get; set; }
+        public decimal? Total { get; set; }
+        public decimal? TaxAmount { get; set; }
+        public string? Category { get; set; }
+    }
+
+    private async Task<string> ExtractTextFromPdfAsync(string filePath)
+    {
+        try
+        {
+            var bytes = await File.ReadAllBytesAsync(filePath);
+            var base64 = Convert.ToBase64String(bytes);
+
+            var client = HttpFactory.CreateClient("AzureAI");
+            client.DefaultRequestHeaders.Remove("api-key");
+            client.DefaultRequestHeaders.Add("api-key", AzureOptions.Value.OpenAIApiKey);
+
+            var payload = new
+            {
+                model = AzureOptions.Value.OpenAIModel,
+                messages = new object[]
+                {
+                    new { role = "system", content = "You are a document analysis assistant. Extract all text content from the provided PDF document. Return ONLY the raw extracted text without any formatting or explanations." },
+                    new { role = "user", content = new object[] { new { type = "file", file_url = new { url = $"data:application/pdf;base64,{base64}" } } } }
+                }
+            };
+
+            var body = new StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
+            var response = await client.PostAsync(AzureOptions.Value.ChatCompletionsUrl, body);
+            var responseText = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return string.Empty;
+            }
+
+            using var doc = System.Text.Json.JsonDocument.Parse(responseText);
+            return doc.RootElement
+                .GetProperty("choices")[0]
+                .GetProperty("message")
+                .GetProperty("content")
+                .GetString() ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            return string.Empty;
+        }
+    }
+
+    private async Task<ExtractedExpenseInfo> ParseExpenseInfoAsync(string extractedText)
+    {
+        if (string.IsNullOrWhiteSpace(extractedText)) return new ExtractedExpenseInfo();
+
+        try
+        {
+            var client = HttpFactory.CreateClient("AzureAI");
+            client.DefaultRequestHeaders.Remove("api-key");
+            client.DefaultRequestHeaders.Add("api-key", AzureOptions.Value.OpenAIApiKey);
+
+            var systemPrompt = @"You are an expense parsing assistant. Extract details from the provided text of a receipt or invoice.
+Return ONLY a JSON object with: Date (string YYYY-MM-DD), Description (string), SupplierName (string), Total (decimal), TaxAmount (decimal), Category (string).";
+
+            var payload = new
+            {
+                messages = new[]
+                {
+                    new { role = "system", content = systemPrompt },
+                    new { role = "user", content = $"Extract details from this text:\n\n{extractedText}" }
+                },
+                temperature = 0.2
+            };
+
+            var body = new StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
+            var response = await client.PostAsync(AzureOptions.Value.ChatCompletionsUrl, body);
+            var responseText = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode) return new ExtractedExpenseInfo();
+
+            using var doc = System.Text.Json.JsonDocument.Parse(responseText);
+            var content = doc.RootElement
+                .GetProperty("choices")[0]
+                .GetProperty("message")
+                .GetProperty("content")
+                .GetString() ?? "{}";
+
+            // clean up markdown block
+            content = content.Replace("```json", "").Replace("```", "").Trim();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ExtractedExpenseInfo>(content, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new ExtractedExpenseInfo();
+        }
+        catch
+        {
+            return new ExtractedExpenseInfo();
         }
     }
 
@@ -241,3 +346,5 @@
         }
     }
 }
+
+

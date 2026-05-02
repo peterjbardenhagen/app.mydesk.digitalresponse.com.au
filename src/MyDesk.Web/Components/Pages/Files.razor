@@ -8,6 +8,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JsRuntime
 @using System.Security.Claims
+@using System.Text.Json
 
 <PageTitle>Files Library - MyDesk</PageTitle>
 
@@ -20,16 +21,32 @@
         <h1>Files Library</h1>
         <p class="tl-subtitle">Manage company folders and shared files.</p>
     </div>
-    <div class="d-flex gap-2">
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.CreateNewFolder"
-                   OnClick="ShowCreateFolderDialog">
-            New Folder
-        </MudButton>
-        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.UploadFile"
-                   OnClick="ShowUploadDialog">
-            Upload File
-        </MudButton>
-    </div>
+     <div class="d-flex gap-2">
+         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.CreateNewFolder"
+                    OnClick="ShowCreateFolderDialog">
+             New Folder
+         </MudButton>
+         <label for="fileUploadInput">
+             <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.UploadFile" HtmlTag="span">
+                 Upload File
+             </MudButton>
+         </label>
+         <InputFile OnChange="HandleFilesUpload" multiple class="d-none" id="fileUploadInput" />
+         <MudButton Variant="Variant.Outlined" Color="@(_viewMode == "list" ? Color.Primary : Color.Default)"
+                    StartIcon="@Icons.Material.Rounded.ViewList" OnClick="@(() => SetViewMode("list"))">
+             List
+         </MudButton>
+         <MudButton Variant="Variant.Outlined" Color="@(_viewMode == "thumb" ? Color.Primary : Color.Default)"
+                    StartIcon="@Icons.Material.Rounded.GridView" OnClick="@(() => SetViewMode("thumb"))">
+             Thumbnails
+         </MudButton>
+         <MudSelect T="string" Value="@_sortBy" ValueChanged="@((string v) => ChangeSort(v))" 
+                    Variant="Variant.Outlined" Label="Sort by" Style="width:150px;" Margin="Margin.Dense">
+             <MudSelectItem Value="@("newest")">Newest First</MudSelectItem>
+             <MudSelectItem Value="@("oldest")">Oldest First</MudSelectItem>
+             <MudSelectItem Value="@("alpha")">Alphabetical</MudSelectItem>
+         </MudSelect>
+     </div>
 </div>
 
 @if (_folders == null)
@@ -39,7 +56,7 @@
 else
 {
     @* Breadcrumb *@
-    <div class="mb-4">
+    <div class="mb-4 d-flex align-center flex-wrap">
         <MudButton Variant="Variant.Text" Href="/files" Disabled="@(_currentFolderId == null)">
             <MudIcon Icon="@Icons.Material.Rounded.Folder" Class="mr-1" />
             Root
@@ -56,54 +73,94 @@ else
         }
     </div>
 
-    <MudPaper Class="pa-0">
-        <MudDataGrid T="FileLibraryItem" Items="_folders" Dense="true" Hover="true" Elevation="0" Class="tl-compact-grid">
-            <Columns>
-                <TemplateColumn Title="Type" CellStyle="width:60px;">
-                    <CellTemplate>
-                        <MudIcon Icon="@(context.Item.IsFolder ? Icons.Material.Rounded.Folder : Icons.Material.Rounded.InsertDriveFile)" 
-                                   Size="Size.Small" Color="@(context.Item.IsFolder ? Color.Warning : Color.Primary)" />
-                    </CellTemplate>
-                </TemplateColumn>
-                <TemplateColumn Title="Name">
-                    <CellTemplate>
-                        @if (context.Item.IsFolder)
-                        {
-                            <MudLink Href="@($"/files/folder/{context.Item.FileId}")" Color="Color.Primary">
-                                @context.Item.Name
-                            </MudLink>
-                        }
-                        else
-                        {
-                            <MudText>@context.Item.Name</MudText>
-                        }
-                    </CellTemplate>
-                </TemplateColumn>
-                <PropertyColumn Property="x => x.CompanyName" Title="Company" CellStyle="width:150px;" />
-                <TemplateColumn Title="Size" CellStyle="width:100px;">
-                    <CellTemplate>
-                        <MudText>@context.Item.GetFormattedSize()</MudText>
-                    </CellTemplate>
-                </TemplateColumn>
-                <PropertyColumn Property="x => x.CreatedAt" Title="Created" Format="yyyy-MM-dd" CellStyle="width:100px;" />
-                <TemplateColumn Title="Actions" CellStyle="width:120px;" Sortable="false">
-                    <CellTemplate>
-                        <div class="d-flex gap-1">
-                            @if (!context.Item.IsFolder)
+    @if (_viewMode == "list")
+    {
+        <MudPaper Class="pa-0">
+            <MudDataGrid T="FileLibraryItem" Items="_folders" Dense="true" Hover="true" Elevation="0" Class="tl-compact-grid">
+                <Columns>
+                    <TemplateColumn Title="Type" CellStyle="width:60px;">
+                        <CellTemplate>
+                            <MudIcon Icon="@(context.Item.IsFolder ? Icons.Material.Rounded.Folder : Icons.Material.Rounded.InsertDriveFile)" 
+                                       Size="Size.Small" Color="@(context.Item.IsFolder ? Color.Warning : Color.Primary)" />
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Name">
+                        <CellTemplate>
+                            @if (context.Item.IsFolder)
                             {
-                                <MudIconButton Icon="@Icons.Material.Rounded.Download" Size="Size.Small" Color="Color.Primary"
-                                            OnClick="@(() => DownloadFile(context.Item))" />
-                                <MudIconButton Icon="@Icons.Material.Rounded.Share" Size="Size.Small" Color="Color.Info"
-                                            OnClick="@(() => ShowShareDialog(context.Item))" />
+                                <MudLink Href="@($"/files/folder/{context.Item.FileId}")" Color="Color.Primary">
+                                    @context.Item.Name
+                                </MudLink>
                             }
-                            <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
-                                        OnClick="@(() => DeleteItem(context.Item))" />
-                        </div>
-                    </CellTemplate>
-                </TemplateColumn>
-            </Columns>
-        </MudDataGrid>
-    </MudPaper>
+                            else
+                            {
+                                <MudText>@context.Item.Name</MudText>
+                            }
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <PropertyColumn Property="x => x.CompanyName" Title="Company" CellStyle="width:150px;" />
+                    <TemplateColumn Title="Size" CellStyle="width:100px;">
+                        <CellTemplate>
+                            <MudText>@context.Item.GetFormattedSize()</MudText>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <PropertyColumn Property="x => x.CreatedAt" Title="Created" Format="yyyy-MM-dd" CellStyle="width:100px;" />
+                    <TemplateColumn Title="Actions" CellStyle="width:120px;" Sortable="false">
+                        <CellTemplate>
+                            <div class="d-flex gap-1">
+                                @if (!context.Item.IsFolder)
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Rounded.Download" Size="Size.Small" Color="Color.Primary"
+                                                OnClick="@(() => DownloadFile(context.Item))" />
+                                    <MudIconButton Icon="@Icons.Material.Rounded.Share" Size="Size.Small" Color="Color.Info"
+                                                OnClick="@(() => ShowShareDialog(context.Item))" />
+                                }
+                                <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
+                                            OnClick="@(() => DeleteItem(context.Item))" />
+                            </div>
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+            </MudDataGrid>
+        </MudPaper>
+    }
+    else
+    {
+        <MudPaper Class="pa-4">
+            <MudGrid>
+                @foreach (var item in _folders ?? new List<FileLibraryItem>())
+                {
+                    <MudItem xs="6" sm="4" md="3" lg="2">
+                        <MudPaper Class="pa-3 text-center" Elevation="1" Style="cursor:pointer;">
+                            @if (item.IsFolder)
+                            {
+                                <MudIcon Icon="@Icons.Material.Rounded.Folder" Size="Size.Large" Color="Color.Warning" Class="mb-2" />
+                                <MudText><MudLink Href="@($"/files/folder/{item.FileId}")">@item.Name</MudLink></MudText>
+                            }
+                            else if (item.ContentType?.StartsWith("image/") == true && !string.IsNullOrEmpty(item.FilePath) && File.Exists(item.FilePath))
+                            {
+                                <img src="@GetFileUrl(item)" style="max-width:100%;max-height:100px;object-fit:cover;" class="mb-2" />
+                                <MudText>@item.Name</MudText>
+                                <div class="mt-2">
+                                    <MudIconButton Icon="@Icons.Material.Rounded.Download" Size="Size.Small" OnClick="@(() => DownloadFile(item))" />
+                                    <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteItem(item))" />
+                                </div>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Rounded.InsertDriveFile" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                                <MudText>@item.Name</MudText>
+                                <div class="mt-2">
+                                    <MudIconButton Icon="@Icons.Material.Rounded.Download" Size="Size.Small" OnClick="@(() => DownloadFile(item))" />
+                                    <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteItem(item))" />
+                                </div>
+                            }
+                        </MudPaper>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudPaper>
+    }
 }
 
 @code {
@@ -113,6 +170,8 @@ else
     private string _userCode = "";
     private Guid? _currentFolderId;
     private List<FileLibraryItem> _breadcrumb = new();
+    private string _viewMode = "list";
+    private string _sortBy = "newest";
 
     protected override async Task OnInitializedAsync()
     {
@@ -122,11 +181,20 @@ else
         await LoadContents();
     }
 
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_currentFolderId != FolderId)
+        {
+            _currentFolderId = FolderId;
+            await LoadContents();
+        }
+    }
+
     private async Task LoadContents()
     {
         if (_currentFolderId.HasValue)
         {
-            _folders = await FileLibrarySvc.GetFolderContentsAsync(_currentFolderId.Value);
+            _folders = await FileLibrarySvc.GetFolderContentsAsync(_currentFolderId.Value, _sortBy);
             // Build breadcrumb
             _breadcrumb = new();
             var current = await FileLibrarySvc.GetItemAsync(_currentFolderId.Value);
@@ -139,18 +207,78 @@ else
         }
         else
         {
-            _folders = await FileLibrarySvc.GetRootFoldersAsync();
+            _folders = await FileLibrarySvc.GetRootFoldersAsync(sortBy: _sortBy);
         }
+    }
+
+    private void SetViewMode(string mode)
+    {
+        _viewMode = mode;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ChangeSort(string sortBy)
+    {
+        _sortBy = sortBy;
+        LoadContents().ConfigureAwait(false);
+    }
+
+    private string GetFileUrl(FileLibraryItem item)
+    {
+        if (string.IsNullOrEmpty(item.FilePath)) return "";
+        var path = item.FilePath.Replace("wwwroot", "").Replace("\\", "/");
+        return path.StartsWith("/") ? path : "/" + path;
     }
 
     private async Task ShowCreateFolderDialog()
     {
-        bool? ok = await Dialog.ShowMessageBox("Create Folder", "Enter folder name:", yesText: "Create", cancelText: "Cancel");
-        if (ok == true)
+        var parameters = new DialogParameters { { "Label", "Enter folder name:" } };
+        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small };
+        var dialog = await Dialog.ShowAsync<Shared.InputDialog>("Create Folder", parameters, options);
+        var result = await dialog.Result;
+        
+        if (result != null && !result.Canceled && result.Data is string folderName && !string.IsNullOrWhiteSpace(folderName))
         {
-            await FileLibrarySvc.CreateFolderAsync("New Folder", _currentFolderId, createdBy: _userCode);
+            await FileLibrarySvc.CreateFolderAsync(folderName, _currentFolderId, createdBy: _userCode);
             await LoadContents();
             Snackbar.Add("Folder created.", Severity.Success);
+        }
+    }
+
+    private async Task HandleFilesUpload(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            foreach (var file in e.GetMultipleFiles())
+            {
+                var uploadsPath = Path.Combine("wwwroot", "uploads", "files");
+                if (!Directory.Exists(uploadsPath)) Directory.CreateDirectory(uploadsPath);
+
+                var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
+                var filePath = Path.Combine(uploadsPath, fileName);
+
+                using var stream = file.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
+                using var fs = new FileStream(filePath, FileMode.Create);
+                await stream.CopyToAsync(fs);
+
+                var item = new FileLibraryItem
+                {
+                    Name = file.Name,
+                    IsFolder = false,
+                    ParentFolderId = _currentFolderId,
+                    FilePath = filePath,
+                    ContentType = file.ContentType,
+                    FileSize = file.Size, // Changed from SizeBytes to FileSize based on model
+                    CreatedBy = _userCode
+                };
+                await FileLibrarySvc.SaveItemAsync(item, _userCode);
+            }
+            await LoadContents();
+            Snackbar.Add("File(s) uploaded.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Upload failed: {ex.Message}", Severity.Error);
         }
     }
 
@@ -178,9 +306,15 @@ else
 
     private async Task DeleteItem(FileLibraryItem item)
     {
-        bool? ok = await Dialog.ShowMessageBox("Delete",
-            $"Delete '{item.Name}'? This cannot be undone.",
-            yesText: "Delete", cancelText: "Cancel");
+        var parameters = new DialogParameters
+        {
+            { nameof(MudMessageBox.Message), $"Delete '{item.Name}'? This cannot be undone." },
+            { nameof(MudMessageBox.YesText), "Delete" },
+            { nameof(MudMessageBox.NoText), string.Empty },
+            { nameof(MudMessageBox.CancelText), "Cancel" }
+        };
+        var result = await Dialog.ShowAsync<MudMessageBox>("Delete", parameters);
+        bool? ok = (await result.Result)?.Data as bool?;
         if (ok != true) return;
 
         await FileLibrarySvc.DeleteItemAsync(item.FileId, _userCode);
@@ -188,3 +322,5 @@ else
         Snackbar.Add("Deleted.", Severity.Success);
     }
 }
+
+

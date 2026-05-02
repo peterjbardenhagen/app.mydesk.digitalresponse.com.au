@@ -2,6 +2,8 @@ namespace MyDesk.Shared.Models;
 
 public class PlatformSettings
 {
+    public static string GetBrandingName() => PlatformBranding.Title;
+
     // Core branding
     public string PlatformName { get; set; } = "Techlight";
     public string BrandName { get; set; } = "Techlight";
@@ -51,8 +53,9 @@ public class PlatformSettings
     public bool EnableQuickBooksIntegration { get; set; } = false;
     public bool EnableOutlookIntegration { get; set; } = false;
     public bool EnableGoogleIntegration { get; set; } = false;
-    public bool EnablePDFGeneration { get; set; } = true;
+    public bool EnableWeatherIntegration { get; set; } = false;
     public bool EnableEmailNotifications { get; set; } = true;
+    public bool EnablePDFGeneration { get; set; } = true;
     public bool EnableTwoFactorAuth { get; set; } = false;
     public bool EnableSSO { get; set; } = false;
     public bool EnableCustomBranding { get; set; } = false;
@@ -87,6 +90,7 @@ public class PlatformSettings
     public IntegrationSettings QuickBooks { get; set; } = new();
     public IntegrationSettings Outlook { get; set; } = new();
     public IntegrationSettings Google { get; set; } = new();
+    public IntegrationSettings Weather { get; set; } = new();
 
     // Misc defaults
     public string CompanyAddress { get; set; } = "";

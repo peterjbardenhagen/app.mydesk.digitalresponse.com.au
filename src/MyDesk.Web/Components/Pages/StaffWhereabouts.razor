@@ -1,0 +1,287 @@
+@page "/staff-whereabouts"
+@attribute [Authorize]
+@inject StaffWhereaboutsService WhereaboutsService
+@inject UserService UserService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ISnackbar Snackbar
+@using MyDesk.Shared.Models
+@using System.Security.Claims
+
+<PageTitle>Staff Whereabouts - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <span>Staff Whereabouts</span>
+        </div>
+        <h1>Staff Whereabouts</h1>
+        <p class="tl-subtitle">View and manage staff availability Monday-Friday, 8am-6pm</p>
+    </div>
+    <div class="d-flex gap-3">
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@(_isEditing ? Icons.Material.Rounded.Close : Icons.Material.Rounded.Edit)" OnClick="ToggleEditMode" Class="rounded-lg">
+            @(_isEditing ? "Cancel Editing" : "Edit My Whereabouts")
+        </MudButton>
+    </div>
+</div>
+
+<!-- Week Navigation -->
+<MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+    <div class="d-flex align-center justify-space-between">
+        <MudIconButton Icon="@Icons.Material.Rounded.ChevronLeft" OnClick="PreviousWeek" Size="Size.Medium" />
+        <div class="text-center">
+            <MudText Typo="Typo.h6">Week of @GetWeekStartDate().ToString("dd MMM yyyy")</MudText>
+            <MudText Typo="Typo.caption" Class="opacity-60">to @GetWeekStartDate().AddDays(4).ToString("dd MMM yyyy")</MudText>
+        </div>
+        <MudIconButton Icon="@Icons.Material.Rounded.ChevronRight" OnClick="NextWeek" Size="Size.Medium" />
+    </div>
+</MudPaper>
+
+<!-- Legend -->
+<MudPaper Class="pa-3 mb-4" Elevation="0" Outlined="true">
+    <div class="d-flex flex-wrap gap-2">
+        @foreach (var status in _statuses)
+        {
+            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(status.Value)">@status.Key</MudChip>
+        }
+    </div>
+</MudPaper>
+
+<!-- Whereabouts Grid -->
+@if (_loading)
+{
+    <div class="d-flex justify-center pa-6">
+        <MudProgressCircular Size="Size.Medium" Color="Color.Primary" Indeterminate="true" />
+    </div>
+}
+else if (_staff.Any())
+{
+    <MudPaper Elevation="0" Outlined="true" Class="overflow-x-auto">
+        <table class="tl-whereabouts-table">
+            <thead>
+                <tr>
+                    <th class="sticky-col">Staff Member</th>
+                    @for (int day = 1; day <= 5; day++)
+                    {
+                        @foreach (var slot in Enumerable.Range(0, 11))
+                        {
+                            <th>@GetDayName(day)<br/>@GetTimeLabel(slot)</th>
+                        }
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var staff in _staff)
+                {
+                    <tr>
+                        <td class="sticky-col staff-name">
+                            <MudAvatar Color="GetAvatarColor(staff.UserId)" Size="Size.Small" Class="mr-2">@staff.Name[0]</MudAvatar>
+                            <span>@staff.Name</span>
+                        </td>
+                        @for (int day = 1; day <= 5; day++)
+                        {
+                            @foreach (var slot in Enumerable.Range(0, 11))
+                            {
+                                var whereabout = GetWhereabouts(staff.UserId, day, slot);
+                                <td class="@(IsCurrentSlot(day, slot) ? "current-slot" : "")">
+                                    @if (_isEditing && staff.UserId == _currentUserId)
+                                    {
+                                        <MudSelect T="string" Value="@whereabout?.Status" Dense="true" Variant="Variant.Outlined" Size="Size.Small" OnValueChanged="(v) => UpdateSlot(staff, day, slot, v)" Class="w-100">
+                                            @foreach (var status in _statuses)
+                                            {
+                                                <MudSelectItem Value="@status.Value">@status.Key</MudSelectItem>
+                                            }
+                                        </MudSelect>
+                                    }
+                                    else if (whereabout != null)
+                                    {
+                                        <MudTooltip Text="@($"{whereabout.Status}{(string.IsNullOrEmpty(whereabout.Location) ? "" : $" - {whereabout.Location}")}{(string.IsNullOrEmpty(whereabout.Notes) ? "" : $"\n{whereabout.Notes}")}")">
+                                            <div class="status-cell status-@whereabout.Status.ToLower().Replace(" ", "-")">
+                                                @GetStatusShortName(whereabout.Status)
+                                            </div>
+                                        </MudTooltip>
+                                    }
+                                    else
+                                    {
+                                        <div class="status-empty"></div>
+                                    }
+                                </td>
+                            }
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </MudPaper>
+}
+else
+{
+    <MudPaper Class="pa-10 text-center" Elevation="0" Outlined="true">
+        <MudIcon Icon="@Icons.Material.Rounded.PeopleOutline" Size="Size.Large" Class="mb-4 opacity-60" />
+        <MudText Typo="Typo.h6">No staff found</MudText>
+    </MudPaper>
+}
+
+<style>
+    .tl-page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+    .tl-breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--gray-500); margin-bottom: 8px; }
+    .tl-breadcrumb a { color: var(--gray-500); text-decoration: none; }
+    .tl-subtitle { color: var(--gray-500); margin: 0; }
+
+    .tl-whereabouts-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .tl-whereabouts-table th, .tl-whereabouts-table td { border: 1px solid #e2e8f0; padding: 6px; text-align: center; min-width: 80px; }
+    .tl-whereabouts-table th { background: #f8fafc; font-weight: 600; font-size: 11px; }
+    .tl-whereabouts-table .sticky-col { position: sticky; left: 0; background: white; z-index: 10; min-width: 180px; font-weight: 500; }
+    .tl-whereabouts-table thead .sticky-col { background: #f8fafc; z-index: 11; }
+    .tl-whereabouts-table .staff-name { display: flex; align-items: center; padding: 8px; }
+
+    .status-cell { padding: 4px 8px; border-radius: 4px; font-weight: 500; font-size: 10px; cursor: pointer; }
+    .status-available { background: #dcfce7; color: #166534; }
+    .status-in-office { background: #dbeafe; color: #1e40af; }
+    .status-wfh { background: #fef3c7; color: #92400e; }
+    .status-in-meeting { background: #fce7f3; color: #9d174d; }
+    .status-on-leave { background: #fee2e2; color: #991b1b; }
+    .status-client-visit { background: #e0e7ff; color: #3730a3; }
+    .status-lunch { background: #fef9c3; color: #854d0e; }
+    .status-out-of-office { background: #f3e8ff; color: #6b21a8; }
+
+    .status-empty { min-height: 28px; background: #f8fafc; border-radius: 4px; }
+    .current-slot { background: #fef08a; }
+</style>
+
+@code {
+    private List<User> _staff = new();
+    private List<MyDesk.Shared.Models.StaffWhereabouts> _whereabouts = new();
+    private DateTime _weekStartDate = GetMondayOfCurrentWeek();
+    private bool _loading = true;
+    private bool _isEditing;
+    private int _currentUserId;
+    private string _currentUserName = "";
+
+    private readonly Dictionary<string, string> _statuses = new()
+    {
+        { "Available", "Available" },
+        { "In Office", "In Office" },
+        { "WFH", "WFH" },
+        { "In Meeting", "In Meeting" },
+        { "On Leave", "On Leave" },
+        { "Client Visit", "Client Visit" },
+        { "Lunch", "Lunch" },
+        { "Out Of Office", "Out Of Office" }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState.User.FindFirst("UserId")?.Value;
+        var nameClaim = authState.User.FindFirst(ClaimTypes.Name)?.Value;
+        
+        if (int.TryParse(userIdClaim, out var userId))
+        {
+            _currentUserId = userId;
+            _currentUserName = nameClaim ?? "";
+        }
+        
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        try
+        {
+            _staff = await WhereaboutsService.GetAllStaffAsync();
+            _whereabouts = await WhereaboutsService.GetWeekWhereaboutsAsync(_weekStartDate);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static DateTime GetMondayOfCurrentWeek()
+    {
+        var today = DateTime.Today;
+        var daysToMonday = ((int)today.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+        return today.AddDays(-daysToMonday);
+    }
+
+    private DateTime GetWeekStartDate() => _weekStartDate;
+
+    private async Task PreviousWeek()
+    {
+        _weekStartDate = _weekStartDate.AddDays(-7);
+        await LoadData();
+    }
+
+    private async Task NextWeek()
+    {
+        _weekStartDate = _weekStartDate.AddDays(7);
+        await LoadData();
+    }
+
+    private string GetDayName(int day) => day switch
+    {
+        1 => "Mon", 2 => "Tue", 3 => "Wed", 4 => "Thu", 5 => "Fri", _ => ""
+    };
+
+    private string GetTimeLabel(int slot) => $"{slot + 8}:00";
+
+    private StaffWhereabouts? GetWhereabouts(int userId, int day, int slot) =>
+        _whereabouts.FirstOrDefault(w => w.UserId == userId && w.DayOfWeek == day && w.TimeSlot == slot);
+
+    private bool IsCurrentSlot(int day, int slot)
+    {
+        var today = DateTime.Today;
+        var currentDay = ((int)today.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7 + 1;
+        var currentHour = DateTime.Now.Hour;
+        return day == currentDay && slot == (currentHour - 8);
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Available" => Color.Success,
+        "In Office" => Color.Info,
+        "WFH" => Color.Warning,
+        "In Meeting" => Color.Error,
+        "On Leave" => Color.Error,
+        "Client Visit" => Color.Primary,
+        "Lunch" => Color.Default,
+        "Out Of Office" => Color.Secondary,
+        _ => Color.Default
+    };
+
+    private Color GetAvatarColor(int userId)
+    {
+        var colors = new[] { Color.Primary, Color.Secondary, Color.Info, Color.Success, Color.Warning, Color.Error };
+        return colors[userId % colors.Length];
+    }
+
+    private string GetStatusShortName(string status) => status switch
+    {
+        "Available" => "Avail",
+        "In Office" => "Office",
+        "WFH" => "WFH",
+        "In Meeting" => "Meeting",
+        "On Leave" => "Leave",
+        "Client Visit" => "Client",
+        "Lunch" => "Lunch",
+        "Out Of Office" => "OOO",
+        _ => status
+    };
+
+    private async Task UpdateSlot(User staff, int day, int slot, string status)
+    {
+        await WhereaboutsService.SetWhereaboutsAsync(staff.UserId, staff.Name, _weekStartDate, day, slot, status, null, null);
+        await LoadData();
+    }
+
+    private void ToggleEditMode()
+    {
+        _isEditing = !_isEditing;
+    }
+}

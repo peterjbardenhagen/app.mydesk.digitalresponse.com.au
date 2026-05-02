@@ -1,9 +1,13 @@
 @page "/companies"
 @attribute [Authorize]
 @inject CompanyService CompanyService
+@inject IDialogService Dialog
 @inject ISnackbar Snackbar
-@inject IJSRuntime JsRuntime
+@inject IJSRuntime JSRuntime
 @using Microsoft.JSInterop
+@inject FavouritesService FavouritesSvc
+@inject AuthenticationStateProvider AuthStateProvider
+@using System.Security.Claims
 
 <PageTitle>Companies - MyDesk</PageTitle>
 
@@ -16,10 +20,20 @@
         <h1>Companies</h1>
         <p class="tl-subtitle">Customer and supplier organisations.</p>
     </div>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary"
-               StartIcon="@Icons.Material.Rounded.Add" Href="/companies/new">
-        Add Company
-    </MudButton>
+    <div class="d-flex gap-2">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Rounded.Add" Href="/companies/new">
+            Add Company
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Rounded.Download" OnClick="ShowImportDialog">
+            Import from Invoices
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
+                   StartIcon="@Icons.Material.Rounded.Merge" OnClick="NormaliseAndDedupe">
+            Normalise & Dedupe
+        </MudButton>
+    </div>
 </div>
 
 <MudPaper Class="pa-4 mb-3" Elevation="1" Style="max-width:480px;">
@@ -52,9 +66,10 @@
             <PropertyColumn Property="x => x.Email" Title="Email" />
             <PropertyColumn Property="x => x.Suburb" Title="Suburb" />
             <PropertyColumn Property="x => x.State" Title="State" CellStyle="width:70px;" />
-            <TemplateColumn Title="" CellStyle="width:80px;">
+            <TemplateColumn Title="" CellStyle="width:120px;">
                 <CellTemplate>
                     <div class="d-flex gap-1">
+                        <FavouriteButton EntityType="Company" EntityId="@context.Item.CompanyId" EntityName="@context.Item.CompanyName" />
                         <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" Color="Color.Primary"
                                        Href="@($"/companies/{context.Item.CompanyId}/edit")" />
                         <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
@@ -114,9 +129,41 @@
         var bytes = System.Text.Encoding.UTF8.GetBytes(csv);
         var base64 = Convert.ToBase64String(bytes);
         var url = $"data:text/csv;base64,{base64}";
-        await JsRuntime.InvokeVoidAsync("window.open", url, "_blank");
+        await JSRuntime.InvokeVoidAsync("window.open", url, "_blank");
         
         Snackbar.Add($"Exported {_companies.Count} companies", Severity.Success);
     }
+
+    private async Task ShowImportDialog()
+    {
+        await Dialog.ShowAsync<ImportFromInvoicesDialog>("Import Companies from Invoices");
+    }
+
+    private async Task NormaliseAndDedupe()
+    {
+        var result = await Dialog.ShowMessageBox("Normalise & Dedupe", 
+            "This will normalise company names and merge duplicates. Continue?", 
+            yesText: "Yes", cancelText: "Cancel");
+        
+        if (result != true) return;
+
+        try
+        {
+            _loading = true;
+            await CompanyService.NormaliseAndDedupeAsync();
+            Snackbar.Add("Companies normalised and deduped successfully", Severity.Success);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Operation failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
 }
+
+
 

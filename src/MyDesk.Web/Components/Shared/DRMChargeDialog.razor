@@ -1,0 +1,23 @@
+@using MyDesk.Shared.Models
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent><MudText Typo="Typo.h6">@(_charge.ChargeId == 0 ? "Add Charge" : "Edit Charge")</MudText></TitleContent>
+    <DialogContent>
+        <MudTextField T="string" Label="Client Name" @bind-Value="_charge.ClientName" Required="true" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public DRMCharge? Charge { get; set; }
+    private DRMCharge _charge = new();
+
+    protected override void OnInitialized() => _charge = Charge ?? new DRMCharge();
+    private void Cancel() => MudDialog.Cancel();
+    private void Submit() => MudDialog.Close(_charge);
+}

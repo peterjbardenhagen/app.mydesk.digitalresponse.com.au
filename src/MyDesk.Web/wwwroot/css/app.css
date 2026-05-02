@@ -103,6 +103,13 @@ html, body {
   background: var(--surface-sunken);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  height: 100%;
+}
+
+/* Dark mode - fill viewport */
+html.dark-mode, body.dark-mode {
+  height: 100%;
+  background-color: var(--tl-dark);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -768,6 +775,20 @@ html, body {
   box-shadow: var(--shadow-lg);
   border-color: var(--tl-primary-300);
 }
+
+/* Dark mode overrides for cards */
+.mud-dark-mode .tl-kpi-card {
+  background: var(--tl-dark-2);
+  border-color: var(--tl-dark-3);
+  color: white;
+}
+
+.mud-dark-mode .tl-kpi-value,
+.mud-dark-mode .tl-kpi-label,
+.mud-dark-mode .tl-kpi-footer {
+  color: white;
+}
+
 
 .tl-kpi-header {
   display: flex;

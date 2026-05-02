@@ -1,13 +1,11 @@
 using System.Data;
+using Dapper;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace MyDesk.Shared.Services;
 
-/// <summary>
-/// Database service for SQL Server connections. Provides parameterized query execution.
-/// </summary>
 public class DatabaseService
 {
     private readonly string _connectionString;
@@ -27,6 +25,64 @@ public class DatabaseService
         return conn;
     }
 
+    // Dapper-based generic methods (for model classes)
+    public async Task<IEnumerable<T>> QueryAsync<T>(string sql, object parameters)
+    {
+        try
+        {
+            using var conn = await GetConnectionAsync();
+            return await conn.QueryAsync<T>(sql, parameters);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "SQL Query Error: {Sql}", sql);
+            throw;
+        }
+    }
+
+    public async Task<T?> QueryFirstOrDefaultAsync<T>(string sql, object parameters)
+    {
+        try
+        {
+            using var conn = await GetConnectionAsync();
+            return await conn.QueryFirstOrDefaultAsync<T>(sql, parameters);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "SQL Query Error: {Sql}", sql);
+            throw;
+        }
+    }
+
+    public async Task<T> ExecuteScalarAsync<T>(string sql, object parameters)
+    {
+        try
+        {
+            using var conn = await GetConnectionAsync();
+            return await conn.ExecuteScalarAsync<T>(sql, parameters);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "SQL ExecuteScalar Error: {Sql}", sql);
+            throw;
+        }
+    }
+
+    public async Task<int> ExecuteObjAsync(string sql, object parameters)
+    {
+        try
+        {
+            using var conn = await GetConnectionAsync();
+            return await conn.ExecuteAsync(sql, parameters);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "SQL Execute Error: {Sql}", sql);
+            throw;
+        }
+    }
+
+    // ADO.NET-based methods (for Dictionary parameters)
     public async Task<DataTable> QueryAsync(string sql, Dictionary<string, object?>? parameters = null)
     {
         try
@@ -42,7 +98,7 @@ public class DatabaseService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "SQL Error: {Sql}", sql);
+            _logger.LogError(ex, "SQL Query Error: {Sql}", sql);
             throw;
         }
     }
@@ -63,7 +119,7 @@ public class DatabaseService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "SQL Sync Error: {Sql}", sql);
+            _logger.LogError(ex, "SQL Sync Query Error: {Sql}", sql);
             throw;
         }
     }

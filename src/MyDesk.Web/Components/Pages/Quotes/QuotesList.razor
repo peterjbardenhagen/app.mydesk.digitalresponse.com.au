@@ -6,6 +6,7 @@
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthState
 @inject IJSRuntime JsRuntime
+@inject FavouritesService FavouritesSvc
 @using Microsoft.JSInterop
 
 <PageTitle>Quotes - MyDesk</PageTitle>
@@ -102,9 +103,13 @@
                 </CellTemplate>
             </TemplateColumn>
             <PropertyColumn Property="x => x.Originator" Title="Owner" CellStyle="width:130px;" />
-            <TemplateColumn Title="" CellStyle="width:180px;" Sortable="false">
+            <TemplateColumn Title="" CellStyle="width:200px;" Sortable="false">
                 <CellTemplate>
                     <div class="d-flex gap-1">
+                        <MudIconButton Icon="@(IsFavourite(context.Item) ? Icons.Material.Rounded.Star : Icons.Material.Rounded.StarBorder)" 
+                                       Size="Size.Small" 
+                                       Color="@(IsFavourite(context.Item) ? Color.Warning : Color.Default)"
+                                       OnClick="@(() => ToggleFavourite(context.Item))" title="Favourite" />
                         <MudIconButton Icon="@Icons.Material.Rounded.Visibility" Size="Size.Small" Color="Color.Info"
                                        Href="@($"/quotes/{context.Item.Qid}")" title="View" />
                         <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" Color="Color.Primary"
@@ -134,6 +139,7 @@
 @code {
     private List<Quote> _quotes = new();
     private bool _loading;
+    private List<int> _favouriteIds = new();
     [Parameter, SupplyParameterFromQuery(Name = "filter")]
     public string? Filter { get; set; }
 
@@ -150,14 +156,58 @@
         var auth = await AuthState.GetAuthenticationStateAsync();
         _userCode = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         _isAdmin  = auth.User.IsInRole("Admin") || auth.User.IsInRole("Director");
+
+        var today = DateTime.Today;
+        _dateFrom = today.AddMonths(-3);
+        _dateTo   = today;
+
         if (Filter == "thismonth")
         {
-            var today = DateTime.Today;
             _dateFrom = new DateTime(today.Year, today.Month, 1);
             _dateTo   = today;
             _statusId = 0;
         }
+        await LoadFavouritesAsync();
         await LoadAsync();
+    }
+
+    private async Task LoadFavouritesAsync()
+    {
+        if (string.IsNullOrEmpty(_userCode)) return;
+        var favourites = await FavouritesSvc.GetUserFavouritesAsync(_userCode);
+        _favouriteIds = favourites
+            .Where(f => f.EntityType == "Quote")
+            .Select(f => f.EntityId)
+            .ToList();
+    }
+
+    private bool IsFavourite(Quote q) => _favouriteIds.Contains(q.Qid);
+
+    private async Task ToggleFavourite(Quote q)
+    {
+        if (string.IsNullOrEmpty(_userCode)) return;
+
+        var isFav = IsFavourite(q);
+        try
+        {
+            if (isFav)
+            {
+                await FavouritesSvc.RemoveFavouriteAsync(_userCode, "Quote", q.Qid);
+                _favouriteIds.Remove(q.Qid);
+                Snackbar.Add("Removed from favourites", Severity.Success);
+            }
+            else
+            {
+                await FavouritesSvc.AddFavouriteAsync(_userCode, "Quote", q.Qid, q.CompanyName, $"Quote #{q.Qid}");
+                _favouriteIds.Add(q.Qid);
+                Snackbar.Add("Added to favourites", Severity.Success);
+            }
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
     }
 
     private async Task LoadAsync()
@@ -246,4 +296,6 @@
         await JsRuntime.InvokeVoidAsync("window.open", url, "_blank");
     }
 }
+
+
 

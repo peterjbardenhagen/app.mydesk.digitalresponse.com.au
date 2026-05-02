@@ -112,6 +112,7 @@ builder.Services.AddSingleton<LoginTokenStore>();
 
 // Domain services (all in MyDesk.Shared.Services)
 builder.Services.AddScoped<ActivityService>();
+builder.Services.AddSingleton<PermissionService>();
 builder.Services.AddScoped<EmailService>(sp => 
 {
     var db = sp.GetRequiredService<DatabaseService>();
@@ -146,9 +147,9 @@ builder.Services.AddScoped<MarketingAIService>();
 builder.Services.AddSingleton<MarketingStrategyStore>();
 builder.Services.AddScoped<CampaignService>();
 builder.Services.AddScoped<CampaignService>();
-builder.Services.AddSingleton<WeatherOptions>();
-builder.Services.AddHttpClient<WeatherService>();
-builder.Services.AddScoped<IWeatherService, WeatherService>();
+// builder.Services.AddSingleton<WeatherOptions>();
+// builder.Services.AddHttpClient<WeatherService>();
+// builder.Services.AddScoped<IWeatherService, WeatherService>();
 builder.Services.AddScoped<LookupService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<SystemService>();
@@ -162,6 +163,10 @@ builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<TransporterService>();
 builder.Services.AddScoped<LogService>();
 builder.Services.AddScoped<ExpenseService>();
+builder.Services.AddScoped<ErrorLogService>();
+builder.Services.AddScoped<StaffWhereaboutsService>();
+builder.Services.AddScoped<DRMService>();
+builder.Services.AddScoped<ProjectService>();
 // builder.Services.AddScoped<NotificationService>(); // Not used - removed
     builder.Services.AddScoped<AuditService>();
     builder.Services.AddScoped<FileLibraryService>();
@@ -207,6 +212,16 @@ using (var scope = app.Services.CreateScope())
         await logSvc.EnsureTableAsync();
         var expenseSvc = scope.ServiceProvider.GetRequiredService<ExpenseService>();
         await expenseSvc.EnsureTableAsync();
+        var errorLogSvc = scope.ServiceProvider.GetRequiredService<ErrorLogService>();
+        await errorLogSvc.EnsureTableAsync();
+        var drmSvc = scope.ServiceProvider.GetRequiredService<DRMService>();
+        await drmSvc.EnsureTablesAsync();
+        var whereSvc = scope.ServiceProvider.GetRequiredService<StaffWhereaboutsService>();
+        await whereSvc.EnsureTableAsync();
+        var projSvc = scope.ServiceProvider.GetRequiredService<ProjectService>();
+        await projSvc.EnsureTablesAsync();
+        var permSvc = scope.ServiceProvider.GetRequiredService<PermissionService>();
+        await permSvc.InitializeTableAsync();
         Log.Information("Database tables verified successfully");
     }
     catch (Exception ex)
@@ -242,6 +257,35 @@ app.UseExceptionHandler(errorApp =>
             Log.Error(feature.Error,
                 "Unhandled exception at {Path} for user {User}",
                 feature.Path, ctx.User?.Identity?.Name ?? "anonymous");
+
+            // Log to database
+            try
+            {
+                var errorLogSvc = ctx.RequestServices.GetService<ErrorLogService>();
+                if (errorLogSvc != null)
+                {
+                    await errorLogSvc.LogErrorAsync(new MyDesk.Shared.Models.ErrorLog
+                    {
+                        ErrorDate = DateTime.Now,
+                        Severity = "Error",
+                        ExceptionType = feature.Error.GetType().Name,
+                        Message = feature.Error.Message,
+                        StackTrace = feature.Error.StackTrace,
+                        InnerException = feature.Error.InnerException?.Message,
+                        RequestUrl = feature.Path,
+                        HttpMethod = ctx.Request.Method,
+                        UserAgent = ctx.Request.Headers.UserAgent.ToString(),
+                        IPAddress = ctx.Connection.RemoteIpAddress?.ToString(),
+                        UserId = ctx.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,
+                        UserName = ctx.User?.Identity?.Name,
+                        Source = "GlobalExceptionHandler"
+                    });
+                }
+            }
+            catch
+            {
+                // If DB logging fails, we already logged to Serilog above
+            }
         }
         ctx.Response.StatusCode = StatusCodes.Status500InternalServerError;
         ctx.Response.ContentType = "text/html";
@@ -252,6 +296,56 @@ app.UseExceptionHandler(errorApp =>
 });
 
 app.UseStaticFiles();
+
+// ── Robots.txt - Block ALL search engine indexing ──────────────────────────
+app.MapGet("/robots.txt", (HttpContext ctx) =>
+{
+    ctx.Response.ContentType = "text/plain";
+    return Results.Text(@"User-agent: *
+Disallow: /
+Disallow: /login
+Disallow: /dashboard
+Disallow: /quotes
+Disallow: /invoices
+Disallow: /purchase-orders
+Disallow: /contacts
+Disallow: /companies
+Disallow: /products
+Disallow: /despatch
+Disallow: /reports
+Disallow: /reconciliation
+Disallow: /marketing
+Disallow: /admin
+Disallow: /settings
+Disallow: /profile
+Disallow: /files
+Disallow: /ask-ai
+Disallow: /activity
+Disallow: /favourites
+Disallow: /calendar
+Disallow: /expenses
+Disallow: /integrations
+Disallow: /accounting
+Disallow: /job-orders
+Disallow: /noticeboard
+Disallow: /help
+Disallow: /customer-portal
+Disallow: /supplier-portal
+Disallow: /api/
+Sitemap: ", contentType: "text/plain");
+});
+
+// ── X-Robots-Tag middleware - Prevent indexing of ALL pages ────────────────
+app.Use(async (ctx, next) =>
+{
+    // Never allow search engines to index any page
+    ctx.Response.Headers["X-Robots-Tag"] = "noindex, nofollow, noarchive, nosnippet, noimageindex";
+    ctx.Response.Headers["Cache-Control"] = ctx.Request.Path.StartsWithSegments("/api/marketing") 
+        ? "private, no-store, max-age=0" 
+        : "no-store, no-cache, must-revalidate";
+    await next();
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();

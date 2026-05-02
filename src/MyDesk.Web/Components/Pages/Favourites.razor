@@ -30,7 +30,6 @@ else if (!_items.Any())
         <MudIcon Icon="@Icons.Material.Rounded.StarOutline" Size="Size.Large" Class="mb-4" Style="color:var(--gray-400);" />
         <MudText Typo="Typo.h6" Class="mb-2">No favourites yet</MudText>
         <MudText Class="mb-4" Style="color:var(--gray-500);">Bookmark quotes, invoices, or contacts using the star icon on those pages.</MudText>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/quotes">Browse Quotes</MudButton>
     </MudPaper>
 }
 else
@@ -79,9 +78,15 @@ else
 
     private async Task RemoveFavourite(FavouriteItem item)
     {
-        bool? ok = await Dialog.ShowMessageBox("Remove Favourite",
-            $"Remove {item.EntityType} '{item.EntityName}' from favourites?",
-            yesText: "Remove", cancelText: "Cancel");
+        var parameters = new DialogParameters
+        {
+            { nameof(MudMessageBox.Message), $"Remove {item.EntityType} '{item.EntityName}' from favourites?" },
+            { nameof(MudMessageBox.YesText), "Remove" },
+            { nameof(MudMessageBox.NoText), string.Empty },
+            { nameof(MudMessageBox.CancelText), "Cancel" }
+        };
+        var result = await Dialog.ShowAsync<MudMessageBox>("Remove Favourite", parameters);
+        bool? ok = (await result.Result)?.Data as bool?;
         if (ok != true) return;
 
         await FavouritesSvc.RemoveFavouriteAsync(_userCode, item.EntityType, item.EntityId);
@@ -89,3 +94,5 @@ else
         Snackbar.Add("Removed from favourites.", Severity.Success);
     }
 }
+
+

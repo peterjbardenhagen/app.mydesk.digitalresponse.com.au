@@ -33,62 +33,58 @@
         <MudNavGroup Icon="@Icons.Material.Rounded.People" Title="CRM" Expanded="true" HideExpandIcon="false">
             @if (NavMenuSvc.IsVisible("contacts"))
             {
-                <MudNavLink Href="/contacts">Contacts</MudNavLink>
+                <MudNavLink Href="/contacts" Icon="@Icons.Material.Rounded.Person">Contacts</MudNavLink>
             }
             @if (NavMenuSvc.IsVisible("companies"))
             {
-                <MudNavLink Href="/companies">Companies</MudNavLink>
-            }
-            @if (NavMenuSvc.IsVisible("call-reports"))
-            {
-                <MudNavLink Href="/call-reports">Call Reports</MudNavLink>
-            }
-            @if (NavMenuSvc.IsVisible("sales-projects"))
-            {
-                <MudNavLink Href="/sales-projects">Sales Projects</MudNavLink>
+                <MudNavLink Href="/companies" Icon="@Icons.Material.Rounded.Business">Companies</MudNavLink>
             }
         </MudNavGroup>
 
         <MudNavGroup Icon="@Icons.Material.Rounded.ReceiptLong" Title="Sales" Expanded="true" HideExpandIcon="false">
             @if (NavMenuSvc.IsVisible("quotes"))
             {
-                <MudNavLink Href="/quotes">Quotes</MudNavLink>
+                <MudNavLink Href="/quotes" Icon="@Icons.Material.Rounded.Description">Quotes</MudNavLink>
             }
             @if (NavMenuSvc.IsVisible("invoices"))
             {
-                <MudNavLink Href="/invoices">Invoices</MudNavLink>
+                <MudNavLink Href="/invoices" Icon="@Icons.Material.Rounded.Receipt">Invoices</MudNavLink>
             }
             @if (NavMenuSvc.IsVisible("despatch"))
             {
-                <MudNavLink Href="/despatch">Despatch</MudNavLink>
+                <MudNavLink Href="/despatch" Icon="@Icons.Material.Rounded.LocalShipping">Despatch</MudNavLink>
             }
         </MudNavGroup>
 
         <MudNavGroup Icon="@Icons.Material.Rounded.ShoppingCart" Title="Purchasing" Expanded="true" HideExpandIcon="false">
             @if (NavMenuSvc.IsVisible("purchase-orders"))
             {
-                <MudNavLink Href="/purchase-orders">Purchase Orders</MudNavLink>
+                <MudNavLink Href="/purchase-orders" Icon="@Icons.Material.Rounded.ShoppingBasket">Purchase Orders</MudNavLink>
             }
             @if (NavMenuSvc.IsVisible("expenses"))
             {
-                <MudNavLink Href="/expenses">Expenses</MudNavLink>
+                <MudNavLink Href="/expenses" Icon="@Icons.Material.Rounded.Payment">Expenses</MudNavLink>
             }
             @if (NavMenuSvc.IsVisible("rfq"))
             {
-                <MudNavLink Href="/rfq">RFQ</MudNavLink>
+                <MudNavLink Href="/rfq" Icon="@Icons.Material.Rounded.Quiz">RFQ</MudNavLink>
             }
         </MudNavGroup>
 
-        @if (NavMenuSvc.IsVisible("job-orders") || NavMenuSvc.IsVisible("products"))
+        @if (NavMenuSvc.IsVisible("job-orders") || NavMenuSvc.IsVisible("products") || NavMenuSvc.IsVisible("timeshets"))
         {
             <MudNavGroup Icon="@Icons.Material.Rounded.Construction" Title="Operations" Expanded="false" HideExpandIcon="false">
                 @if (NavMenuSvc.IsVisible("job-orders"))
                 {
-                    <MudNavLink Href="/job-orders">Job Orders</MudNavLink>
+                    <MudNavLink Href="/job-orders" Icon="@Icons.Material.Rounded.Work">Job Orders</MudNavLink>
                 }
                 @if (NavMenuSvc.IsVisible("products"))
                 {
-                    <MudNavLink Href="/products">Products</MudNavLink>
+                    <MudNavLink Href="/products" Icon="@Icons.Material.Rounded.Category">Products</MudNavLink>
+                }
+                @if (NavMenuSvc.IsVisible("timeshets"))
+                {
+                    <MudNavLink Href="/timeshets" Icon="@Icons.Material.Rounded.Timer">Timeshets</MudNavLink>
                 }
             </MudNavGroup>
         }
@@ -150,13 +146,31 @@
         {
             <MudNavGroup Icon="@Icons.Material.Rounded.Settings" Title="System" Expanded="false" HideExpandIcon="false">
                 <MudNavLink Href="/admin/users" Icon="@Icons.Material.Rounded.People">Users</MudNavLink>
+                <MudNavLink Href="/admin/user-roles" Icon="@Icons.Material.Rounded.VerifiedUser">User Roles & Permissions</MudNavLink>
                 <MudNavLink Href="/admin/setup" Icon="@Icons.Material.Rounded.Tune">Setup</MudNavLink>
+                <MudNavLink Href="/admin/platform" Icon="@Icons.Material.Rounded.Web">Platform Settings</MudNavLink>
                 <MudNavLink Href="/admin/logs" Icon="@Icons.Material.Rounded.Description">Log Viewer</MudNavLink>
             </MudNavGroup>
             
             <MudNavGroup Icon="@Icons.Material.Rounded.AccountBalance" Title="Finance" Expanded="false" HideExpandIcon="false">
                 <MudNavLink Href="/accounting">Accounting</MudNavLink>
                 <MudNavLink Href="/reconciliation">Reconciliation</MudNavLink>
+            </MudNavGroup>
+            
+            <MudNavGroup Icon="@Icons.Material.Rounded.Tune" Title="Reference Data" Expanded="false" HideExpandIcon="false">
+                <MudNavLink Href="/admin/divisions" Icon="@Icons.Material.Rounded.AccountTree">Divisions</MudNavLink>
+                <MudNavLink Href="/admin/locations" Icon="@Icons.Material.Rounded.LocationOn">Locations</MudNavLink>
+                <MudNavLink Href="/admin/quote-status" Icon="@Icons.Material.Rounded.RequestQuote">Quote Status</MudNavLink>
+                <MudNavLink Href="/admin/invoice-status" Icon="@Icons.Material.Rounded.ReceiptLong">Invoice Status</MudNavLink>
+                <MudNavLink Href="/admin/po-status" Icon="@Icons.Material.Rounded.Inventory2">PO Status</MudNavLink>
+                <MudNavLink Href="/admin/currency" Icon="@Icons.Material.Rounded.CurrencyExchange">Currency</MudNavLink>
+                <MudNavLink Href="/admin/part-codes" Icon="@Icons.Material.Rounded.Tag">Part Codes</MudNavLink>
+                <MudNavLink Href="/admin/activity-types" Icon="@Icons.Material.Rounded.Category">Activity Types</MudNavLink>
+                <MudNavLink Href="/admin/parameters" Icon="@Icons.Material.Rounded.Tune">Parameters</MudNavLink>
+                <MudNavLink Href="/admin/nav-menu" Icon="@Icons.Material.Rounded.Menu">Nav Menu</MudNavLink>
+                <MudNavLink Href="/admin/setup-menu" Icon="@Icons.Material.Rounded.DashboardCustomize">Setup Menu</MudNavLink>
+                <MudNavLink Href="/admin/brand-assets" Icon="@Icons.Material.Rounded.Style">Brand Assets</MudNavLink>
+                <MudNavLink Href="/admin/ai-audit" Icon="@Icons.Material.Rounded.AutoAwesome">AI Audit Log</MudNavLink>
             </MudNavGroup>
         }
         
@@ -310,3 +324,5 @@
         padding: 8px;
     }
 </style>
+
+

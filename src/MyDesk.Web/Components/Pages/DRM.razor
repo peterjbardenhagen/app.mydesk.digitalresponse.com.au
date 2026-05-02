@@ -1,0 +1,287 @@
+@page "/drm"
+@attribute [Authorize(Roles = "Admin,Director")]
+@inject DRMService DRMSvc
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>DRM - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <span>DRM Management</span>
+        </div>
+        <h1>DRM Management</h1>
+        <p class="tl-subtitle">Subscriptions, Charges, Expense Reports, O365 & Credentials</p>
+    </div>
+</div>
+
+<MudTabs Elevation="0" Rounded="true" PanelClass="pa-4 mt-4" Color="Color.Primary" Outlined="true">
+    <MudTabPanel Text="Subscriptions" Icon="@Icons.Material.Rounded.Subscriptions">
+        @if (_loading) { <div class="d-flex justify-center pa-6"><MudProgressCircular Size="Size.Medium" Indeterminate="true" /></div> }
+        else
+        {
+            <div class="d-flex justify-end mb-3">
+                <MudButton Variant="Variant.Filled" Size="Size.Small" StartIcon="@Icons.Material.Rounded.Add" OnClick="AddSubscription">Add Subscription</MudButton>
+            </div>
+            <MudTable Items="_subscriptions" Hover="true" Striped="true" Elevation="0" Outlined="true">
+                <HeaderContent>
+                    <MudTh>Client</MudTh>
+                    <MudTh>Description</MudTh>
+                    <MudTh>Category</MudTh>
+                    <MudTh>Schedule</MudTh>
+                    <MudTh>Ex GST</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Next Invoice</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Client">@context.ClientName</MudTd>
+                    <MudTd DataLabel="Description"><div class="text-truncate-1">@context.Description</div></MudTd>
+                    <MudTd DataLabel="Category"><MudChip T="string" Size="Size.Small">@context.Category</MudChip></MudTd>
+                    <MudTd DataLabel="Schedule">@context.Schedule</MudTd>
+                    <MudTd DataLabel="Ex GST">@context.AmountExGST.ToString("C")</MudTd>
+                    <MudTd DataLabel="Status"><MudChip T="string" Size="Size.Small" Color="@GetSubStatusColor(context.Status)">@context.Status</MudChip></MudTd>
+                    <MudTd DataLabel="Next Invoice">@context.NextInvoiceDate?.ToString("dd/MM/yyyy")</MudTd>
+                    <MudTd DataLabel="Actions">
+                        <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" OnClick="() => EditSubscription(context)" />
+                        <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error" OnClick="() => DeleteSubscription(context)" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudTabPanel>
+
+    <MudTabPanel Text="Charges" Icon="@Icons.Material.Rounded.ReceiptLong">
+        @if (_loading) { <div class="d-flex justify-center pa-6"><MudProgressCircular Size="Size.Medium" Indeterminate="true" /></div> }
+        else
+        {
+            <div class="d-flex justify-end mb-3">
+                <MudButton Variant="Variant.Filled" Size="Size.Small" StartIcon="@Icons.Material.Rounded.Add" OnClick="AddCharge">Add Charge</MudButton>
+            </div>
+            <MudTable Items="_charges" Hover="true" Striped="true" Elevation="0" Outlined="true">
+                <HeaderContent>
+                    <MudTh>Date</MudTh>
+                    <MudTh>Client</MudTh>
+                    <MudTh>Project</MudTh>
+                    <MudTh>Category</MudTh>
+                    <MudTh>Description</MudTh>
+                    <MudTh>Amount</MudTh>
+                    <MudTh>Cost</MudTh>
+                    <MudTh>Invoiced</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Date">@context.ChargeDate.ToString("dd/MM/yyyy")</MudTd>
+                    <MudTd DataLabel="Client">@context.ClientName</MudTd>
+                    <MudTd DataLabel="Project">@context.ProjectName</MudTd>
+                    <MudTd DataLabel="Category">@context.Category</MudTd>
+                    <MudTd DataLabel="Description"><div class="text-truncate-1">@context.Description</div></MudTd>
+                    <MudTd DataLabel="Amount">@context.Amount.ToString("C")</MudTd>
+                    <MudTd DataLabel="Cost">@context.Cost.ToString("C")</MudTd>
+                    <MudTd DataLabel="Invoiced">@(context.IsInvoiced ? "Yes" : "No")</MudTd>
+                    <MudTd DataLabel="Actions">
+                        <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" OnClick="() => EditCharge(context)" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudTabPanel>
+
+    <MudTabPanel Text="Expense Reports" Icon="@Icons.Material.Rounded.AccountBalance">
+        @if (_loading) { <div class="d-flex justify-center pa-6"><MudProgressCircular Size="Size.Medium" Indeterminate="true" /></div> }
+        else
+        {
+            <div class="d-flex justify-end mb-3">
+                <MudButton Variant="Variant.Filled" Size="Size.Small" StartIcon="@Icons.Material.Rounded.Add" OnClick="CreateExpenseReport">New Report</MudButton>
+            </div>
+            <MudTable Items="_expenseReports" Hover="true" Striped="true" Elevation="0" Outlined="true">
+                <HeaderContent>
+                    <MudTh>Period</MudTh>
+                    <MudTh>Owner</MudTh>
+                    <MudTh>Ex GST</MudTh>
+                    <MudTh>GST</MudTh>
+                    <MudTh>Incl GST</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Submitted</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Period">@context.ReportPeriod.ToString("MMM yyyy")</MudTd>
+                    <MudTd DataLabel="Owner">@context.OwnerType</MudTd>
+                    <MudTd DataLabel="Ex GST">@context.TotalExGST.ToString("C")</MudTd>
+                    <MudTd DataLabel="GST">@context.TotalGST.ToString("C")</MudTd>
+                    <MudTd DataLabel="Incl GST" Style="font-weight: 600;">@context.TotalInclGST.ToString("C")</MudTd>
+                    <MudTd DataLabel="Status"><MudChip T="string" Size="Size.Small" Color="@GetReportStatusColor(context.Status)">@context.Status</MudChip></MudTd>
+                    <MudTd DataLabel="Submitted">@context.SubmittedDate?.ToString("dd/MM/yyyy")</MudTd>
+                    <MudTd DataLabel="Actions">
+                        <MudIconButton Icon="@Icons.Material.Rounded.Visibility" Size="Size.Small" OnClick="() => ViewExpenseReport(context)" />
+                        @if (context.Status == "Draft") { <MudIconButton Icon="@Icons.Material.Rounded.Send" Size="Size.Small" Color="Color.Primary" OnClick="() => SubmitExpenseReport(context)" /> }
+                        @if (context.Status == "Submitted" && _isDirectorOrAdmin) { <MudIconButton Icon="@Icons.Material.Rounded.Approval" Size="Size.Small" Color="Color.Success" OnClick="() => ApproveExpenseReport(context)" /> }
+                        @if (context.Status == "Approved" && _isDirectorOrAdmin) { <MudIconButton Icon="@Icons.Material.Rounded.Payments" Size="Size.Small" Color="Color.Info" OnClick="() => ReimburseExpenseReport(context)" /> }
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudTabPanel>
+
+    <MudTabPanel Text="O365" Icon="@Icons.Material.Rounded.Cloud">
+        @if (_loading) { <div class="d-flex justify-center pa-6"><MudProgressCircular Size="Size.Medium" Indeterminate="true" /></div> }
+        else
+        {
+            <div class="d-flex justify-end mb-3">
+                <MudButton Variant="Variant.Filled" Size="Size.Small" StartIcon="@Icons.Material.Rounded.Add" OnClick="AddO365Subscription">Add O365</MudButton>
+            </div>
+            <MudTable Items="_o365Subs" Hover="true" Striped="true" Elevation="0" Outlined="true">
+                <HeaderContent>
+                    <MudTh>Service</MudTh>
+                    <MudTh>Customer</MudTh>
+                    <MudTh>User</MudTh>
+                    <MudTh>Billing</MudTh>
+                    <MudTh>Cost</MudTh>
+                    <MudTh>Sell</MudTh>
+                    <MudTh>Margin</MudTh>
+                    <MudTh>Active</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Service">@context.ServiceName</MudTd>
+                    <MudTd DataLabel="Customer">@context.CustomerName</MudTd>
+                    <MudTd DataLabel="User">@context.UserName</MudTd>
+                    <MudTd DataLabel="Billing">@context.BillingCycle</MudTd>
+                    <MudTd DataLabel="Cost">@context.CostPrice.ToString("C")</MudTd>
+                    <MudTd DataLabel="Sell">@context.SellPrice.ToString("C")</MudTd>
+                    <MudTd DataLabel="Margin">@(context.SellPrice > 0 ? (((context.SellPrice - context.CostPrice) / context.SellPrice) * 100).ToString("F0") + "%" : "N/A")</MudTd>
+                    <MudTd DataLabel="Active"><MudChip T="string" Size="Size.Small" Color="@(context.IsActive ? Color.Success : Color.Error)">@(context.IsActive ? "Yes" : "No")</MudChip></MudTd>
+                    <MudTd DataLabel="Actions">
+                        <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" OnClick="() => EditO365Subscription(context)" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudTabPanel>
+
+    <MudTabPanel Text="Credentials" Icon="@Icons.Material.Rounded.Password">
+        @if (_loading) { <div class="d-flex justify-center pa-6"><MudProgressCircular Size="Size.Medium" Indeterminate="true" /></div> }
+        else
+        {
+            <div class="d-flex justify-end mb-3">
+                <MudButton Variant="Variant.Filled" Size="Size.Small" StartIcon="@Icons.Material.Rounded.Add" OnClick="AddCredential">Add Credential</MudButton>
+            </div>
+            <MudTable Items="_credentials" Hover="true" Striped="true" Elevation="0" Outlined="true">
+                <HeaderContent>
+                    <MudTh>Site</MudTh>
+                    <MudTh>Description</MudTh>
+                    <MudTh>Website</MudTh>
+                    <MudTh>Username</MudTh>
+                    <MudTh>Category</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Site" Style="font-weight: 600;">@context.SiteName</MudTd>
+                    <MudTd DataLabel="Description">@context.Description</MudTd>
+                    <MudTd DataLabel="Website"><MudLink Href="@context.Website" Target="_blank" Typo="Typo.body2">@context.Website</MudLink></MudTd>
+                    <MudTd DataLabel="Username">@context.Username</MudTd>
+                    <MudTd DataLabel="Category">@context.Category</MudTd>
+                    <MudTd DataLabel="Actions">
+                        <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" OnClick="() => EditCredential(context)" />
+                        <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error" OnClick="() => DeleteCredential(context)" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudTabPanel>
+</MudTabs>
+
+<style>
+    .tl-page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+    .tl-breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--gray-500); margin-bottom: 8px; }
+    .tl-breadcrumb a { color: var(--gray-500); text-decoration: none; }
+    .tl-subtitle { color: var(--gray-500); margin: 0; }
+    .text-truncate-1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; }
+</style>
+
+@code {
+    private bool _loading = true;
+    private bool _isDirectorOrAdmin;
+
+    private List<DRMSubscription> _subscriptions = new();
+    private List<DRMCharge> _charges = new();
+    private List<ExpenseReport> _expenseReports = new();
+    private List<O365Subscription> _o365Subs = new();
+    private List<SystemCredential> _credentials = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _isDirectorOrAdmin = authState.User.IsInRole("Director") || authState.User.IsInRole("Admin");
+        await LoadAll();
+    }
+
+    private async Task LoadAll()
+    {
+        _loading = true;
+        try
+        {
+            _subscriptions = await DRMSvc.GetSubscriptionsAsync();
+            _charges = await DRMSvc.GetChargesAsync();
+            _expenseReports = await DRMSvc.GetExpenseReportsAsync();
+            _o365Subs = await DRMSvc.GetO365SubscriptionsAsync();
+            _credentials = await DRMSvc.GetCredentialsAsync();
+        }
+        finally { _loading = false; }
+    }
+
+    private Color GetSubStatusColor(string status) => status switch { "Active" => Color.Success, "Cancelled" => Color.Error, "Suspended" => Color.Warning, _ => Color.Default };
+    private Color GetReportStatusColor(string status) => status switch { "Draft" => Color.Default, "Submitted" => Color.Warning, "Approved" => Color.Success, "Reimbursed" => Color.Info, "Rejected" => Color.Error, _ => Color.Default };
+
+    // Subscription actions
+    private async Task AddSubscription()
+    {
+        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<DRMSubscriptionDialog>("Add Subscription", options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled && result.Data is DRMSubscription newSub)
+        {
+            await DRMSvc.CreateSubscriptionAsync(newSub);
+            await LoadAll();
+            Snackbar.Add("Subscription added", Severity.Success);
+        }
+    }
+    private async Task EditSubscription(DRMSubscription sub)
+    {
+        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var parameters = new DialogParameters { { "Subscription", sub } };
+        var dialog = await DialogService.ShowAsync<DRMSubscriptionDialog>("Edit Subscription", parameters, options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled && result.Data is DRMSubscription updatedSub)
+        {
+            await DRMSvc.UpdateSubscriptionAsync(updatedSub);
+            await LoadAll();
+            Snackbar.Add("Subscription updated", Severity.Success);
+        }
+    }
+    private async Task DeleteSubscription(DRMSubscription sub) { if (await DialogService.ShowMessageBox("Delete", $"Delete subscription for {sub.ClientName}?") == true) { await DRMSvc.DeleteSubscriptionAsync(sub.SubscriptionId); await LoadAll(); Snackbar.Add("Deleted", Severity.Success); } }
+
+    // Charge actions
+    private async Task AddCharge() => await DialogService.ShowAsync<DRMChargeDialog>("Add Charge");
+    private async Task EditCharge(DRMCharge charge) => await DialogService.ShowAsync<DRMChargeDialog>("Edit Charge", new DialogParameters { { "Charge", charge } });
+
+    // Expense Report actions
+    private async Task CreateExpenseReport() => await DialogService.ShowAsync<ExpenseReportDialog>("New Expense Report");
+    private async Task ViewExpenseReport(ExpenseReport report) => await DialogService.ShowAsync<ExpenseReportDialog>("Expense Report", new DialogParameters { { "Report", report } });
+    private async Task SubmitExpenseReport(ExpenseReport report) { await DRMSvc.SubmitExpenseReportAsync(report.ReportId, 0, "Current User"); await LoadAll(); Snackbar.Add("Report submitted", Severity.Success); }
+    private async Task ApproveExpenseReport(ExpenseReport report) { await DRMSvc.ApproveExpenseReportAsync(report.ReportId, 0, "Director", report.TotalInclGST); await LoadAll(); Snackbar.Add("Report approved", Severity.Success); }
+    private async Task ReimburseExpenseReport(ExpenseReport report) { await DRMSvc.ReimburseExpenseReportAsync(report.ReportId); await LoadAll(); Snackbar.Add("Report marked as reimbursed", Severity.Success); }
+
+    // O365 actions
+    private async Task AddO365Subscription() => await DialogService.ShowAsync<O365SubscriptionDialog>("Add O365 Subscription");
+    private async Task EditO365Subscription(O365Subscription sub) => await DialogService.ShowAsync<O365SubscriptionDialog>("Edit O365", new DialogParameters { { "Subscription", sub } });
+
+    // Credential actions
+    private async Task AddCredential() => await DialogService.ShowAsync<SystemCredentialDialog>("Add Credential");
+    private async Task EditCredential(SystemCredential cred) => await DialogService.ShowAsync<SystemCredentialDialog>("Edit Credential", new DialogParameters { { "Credential", cred } });
+    private async Task DeleteCredential(SystemCredential cred) { if (await DialogService.ShowMessageBox("Delete", $"Delete credential for {cred.SiteName}?") == true) { await DRMSvc.UpdateCredentialAsync(new SystemCredential { CredentialId = cred.CredentialId, IsActive = false }); await LoadAll(); Snackbar.Add("Deleted", Severity.Success); } }
+}

@@ -239,6 +239,51 @@ public class ContactService
         });
     }
 
+    public async Task<int> NormaliseAndDedupeAsync()
+    {
+        // 1. Assign contacts to companies based on name match
+        var sql = @"
+            UPDATE Contacts 
+            SET CompanyId = co.CompanyId
+            FROM Contacts c
+            INNER JOIN Companies co ON c.FirstName + ' ' + c.Surname LIKE '%' + co.Company + '%' -- Basic heuristic
+            WHERE c.CompanyId IS NULL OR c.CompanyId = 0";
+        return await _db.ExecuteAsync(sql);
+    }
+
+    public async Task DeleteContactAsync(int id) =>
+        await _db.ExecuteAsync("DELETE FROM Contacts WHERE ContactId = @id", new() { ["id"] = id });
+
+
+
+    public async Task<List<ContactNote>> GetContactNotesAsync(int contactId)
+    {
+        var sql = "SELECT NoteId, ContactId, Date, NoteType, NoteText, CreatedBy FROM ContactNotes WHERE ContactId = @Id ORDER BY Date DESC";
+        var dt = await _db.QueryAsync(sql, new() { ["Id"] = contactId });
+        return dt.Rows.Cast<DataRow>().Select(r => new ContactNote
+        {
+            NoteId = Convert.ToInt32(r["NoteId"]),
+            ContactId = Convert.ToInt32(r["ContactId"]),
+            Date = Convert.ToDateTime(r["Date"]),
+            NoteType = r["NoteType"]?.ToString() ?? "",
+            NoteText = r["NoteText"]?.ToString() ?? "",
+            CreatedBy = r["CreatedBy"]?.ToString() ?? ""
+        }).ToList();
+    }
+
+    public async Task<int> AddContactNoteAsync(ContactNote note)
+    {
+        var sql = "INSERT INTO ContactNotes (ContactId, Date, NoteType, NoteText, CreatedBy) VALUES (@ContactId, @Date, @NoteType, @NoteText, @CreatedBy)";
+        return await _db.InsertAsync(sql, new()
+        {
+            ["ContactId"] = note.ContactId,
+            ["Date"] = note.Date,
+            ["NoteType"] = note.NoteType,
+            ["NoteText"] = note.NoteText,
+            ["CreatedBy"] = note.CreatedBy
+        });
+    }
+
     private static Contact MapContact(DataRow r) => new()
     {
         ContactId = Convert.ToInt32(r["ContactId"]),

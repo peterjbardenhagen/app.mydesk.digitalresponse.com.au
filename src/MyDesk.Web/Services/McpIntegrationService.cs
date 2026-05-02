@@ -56,7 +56,13 @@ public class McpIntegrationService
             content.Headers.Add("X-API-Key", _config["Api:Key"] ?? "");
 
             var response = await _httpClient.PostAsync($"{baseUrl}/mcp/v1/tools/call", content);
-            response.EnsureSuccessStatusCode();
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("MyDeskMCP returned {StatusCode}: {Error}", response.StatusCode, errorContent);
+                return null;
+            }
 
             var responseJson = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<McpToolResponse>(responseJson);
@@ -71,8 +77,8 @@ public class McpIntegrationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to call MyDeskMCP tool {Tool}", toolName);
-            return null;
+            _logger.LogError(ex, "Failed to call MyDeskMCP tool {Tool}. Graceful fallback applied.", toolName);
+            return "MyDesk MCP services are currently unavailable. Please contact support if this persists.";
         }
     }
 
@@ -104,19 +110,25 @@ public class McpIntegrationService
                 ["status"] = "Pending"
             }, userCode);
 
+            // Handle null returns gracefully
+            var userInfoText = userInfo?.ToString() ?? "User info unavailable";
+            var quotesText = quotes?.ToString() ?? "No recent quotes";
+            var invoicesText = invoices?.ToString() ?? "No recent invoices";
+            var posText = pos?.ToString() ?? "No pending purchase orders";
+
             return $@"MyDesk Current Context:
 User: {userCode}
 
-Recent Quotes (last 30 days): {SerializeForPrompt(quotes)}
+Recent Quotes (last 30 days): {quotesText}
 
-Recent Invoices (last 30 days): {SerializeForPrompt(invoices)}
+Recent Invoices (last 30 days): {invoicesText}
 
-Pending Purchase Orders: {SerializeForPrompt(pos)}";
+Pending Purchase Orders: {posText}";
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get MyDesk context");
-            return "Platform context unavailable.";
+            return "MyDesk platform context is currently unavailable. Basic operations can continue without AI assistance.";
         }
     }
 
@@ -159,7 +171,13 @@ Pending Purchase Orders: {SerializeForPrompt(pos)}";
             }
 
             var response = await _httpClient.PostAsync($"{baseUrl}/mcp/v1/tools/call", content);
-            response.EnsureSuccessStatusCode();
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("MYOBMCP returned {StatusCode}: {Error}", response.StatusCode, errorContent);
+                return "MYOB MCP server returned an error. Please check the server status.";
+            }
 
             var responseJson = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<McpToolResponse>(responseJson);
@@ -171,6 +189,22 @@ Pending Purchase Orders: {SerializeForPrompt(pos)}";
             }
 
             return result?.Result?.Content?.FirstOrDefault()?.Text;
+        }
+        catch (HttpRequestException ex) when (ex.InnerException is System.Net.Sockets.SocketException socketEx && 
+                                            socketEx.SocketErrorCode == System.Net.Sockets.SocketError.ConnectionRefused)
+        {
+            _logger.LogWarning("MYOB MCP server is unavailable (connection refused). Tool: {Tool}", toolName);
+            return "MYOB MCP server is currently unavailable. Please ensure the server is running.";
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogWarning("MYOB MCP request failed: {Message}", ex.Message);
+            return "Unable to connect to MYOB MCP server. Please try again later.";
+        }
+        catch (TaskCanceledException)
+        {
+            _logger.LogWarning("MYOB MCP request timed out. Tool: {Tool}", toolName);
+            return "Request to MYOB MCP server timed out. Please try again.";
         }
         catch (Exception ex)
         {

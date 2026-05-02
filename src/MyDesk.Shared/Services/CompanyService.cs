@@ -148,6 +148,67 @@ public class CompanyService
     public async Task DeleteCompanyAsync(int id) =>
         await _db.ExecuteAsync("DELETE FROM Companies WHERE CompanyId = @id", new() { ["id"] = id });
 
+    public async Task NormaliseAndDedupeAsync()
+    {
+        // Normalise company names
+        var companies = await GetCompaniesAsync(null, 5000);
+        foreach (var c in companies)
+        {
+            var normalised = NormaliseCompanyName(c.CompanyName);
+            if (normalised != c.CompanyName)
+            {
+                await _db.ExecuteAsync("UPDATE Companies SET Company = @n WHERE CompanyId = @id",
+                    new() { ["n"] = normalised, ["id"] = c.CompanyId });
+            }
+        }
+
+        // Find and merge duplicates
+        var allCompanies = await GetCompaniesAsync(null, 5000);
+        var groups = allCompanies
+            .GroupBy(c => NormaliseCompanyName(c.CompanyName), StringComparer.OrdinalIgnoreCase)
+            .Where(g => g.Count() > 1)
+            .ToList();
+
+        foreach (var group in groups)
+        {
+            var sorted = group.OrderByDescending(c => 
+                (!string.IsNullOrEmpty(c.Phone) ? 1 : 0) +
+                (!string.IsNullOrEmpty(c.Email) ? 1 : 0) +
+                (!string.IsNullOrEmpty(c.Address1) ? 1 : 0)).ToList();
+            
+            var keep = sorted.First();
+            var duplicates = sorted.Skip(1).ToList();
+
+            foreach (var dup in duplicates)
+            {
+                // Update invoices/shipments referencing duplicate to point to kept company
+                await _db.ExecuteAsync("UPDATE Invoices SET InvCompany = @name WHERE InvCompany = @dupName",
+                    new() { ["name"] = keep.CompanyName, ["dupName"] = dup.CompanyName });
+                await _db.ExecuteAsync("UPDATE Shipments SET Company = @name WHERE Company = @dupName",
+                    new() { ["name"] = keep.CompanyName, ["dupName"] = dup.CompanyName });
+                
+                // Delete duplicate
+                await DeleteCompanyAsync(dup.CompanyId);
+            }
+        }
+    }
+
+    private static string NormaliseCompanyName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return name;
+        
+        var normalised = name.Trim()
+            .Replace("  ", " ")
+            .Replace("pty Ltd", "Pty Ltd")
+            .Replace("PTY LTD", "Pty Ltd")
+            .Replace("Pty. Ltd.", "Pty Ltd")
+            .Replace("pty ltd", "Pty Ltd")
+            .Replace("&", "&")
+            .Trim();
+        
+        return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(normalised.ToLower());
+    }
+
     public async Task<List<CompanyImportItem>> GetCompaniesFromInvoicesAsync()
     {
         var sql = @"

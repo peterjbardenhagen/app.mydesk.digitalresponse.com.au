@@ -138,9 +138,12 @@
             await LookupService.GetInvoiceStatusesAsync(),
             await LookupService.GetUsersAsync());
 
+        var today = DateTime.Today;
+        _dateFrom = today.AddMonths(-3);
+        _dateTo   = today;
+
         if (Filter == "thismonth")
         {
-            var today = DateTime.Today;
             _dateFrom = new DateTime(today.Year, today.Month, 1);
             _dateTo   = today;
         }
@@ -172,9 +175,15 @@
 
     private async Task DeleteAsync(Invoice inv)
     {
-        bool? ok = await Dialog.ShowMessageBox("Delete Invoice",
-            $"Delete invoice {inv.InvoiceNum} for {inv.CCompany}? This cannot be undone.",
-            yesText: "Delete", cancelText: "Cancel");
+        var parameters = new DialogParameters
+        {
+            { nameof(MudMessageBox.Message), $"Delete invoice {inv.InvoiceNum} for {inv.CCompany}? This cannot be undone." },
+            { nameof(MudMessageBox.YesText), "Delete" },
+            { nameof(MudMessageBox.NoText), string.Empty },
+            { nameof(MudMessageBox.CancelText), "Cancel" }
+        };
+        var result = await Dialog.ShowAsync<MudMessageBox>("Delete Invoice", parameters);
+        bool? ok = (await result.Result)?.Data as bool?;
         if (ok != true) return;
         try
         {
@@ -238,4 +247,6 @@
         await JsRuntime.InvokeVoidAsync("window.open", url, "_blank");
     }
 }
+
+
 

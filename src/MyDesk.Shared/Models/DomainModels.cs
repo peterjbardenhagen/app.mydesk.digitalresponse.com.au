@@ -381,9 +381,16 @@ public class CompanyImportItem
     public bool IsDuplicate => ExistingCompanyId.HasValue;
 }
 
-// ============================================================================
-// User & Auth Models
-// ============================================================================
+public class ContactNote
+{
+    public int NoteId { get; set; }
+    public int ContactId { get; set; }
+    public DateTime Date { get; set; }
+    public string NoteType { get; set; } = "";
+    public string NoteText { get; set; } = "";
+    public string CreatedBy { get; set; } = "";
+}
+
 public enum RoleType
 {
     Director = 1,

@@ -38,6 +38,7 @@ public class NavMenuService
         // Operations
         new("job-orders",      "Job Orders",       "/job-orders",      "Operations"),
         new("products",        "Products",         "/products",        "Operations"),
+        new("timeshets",       "Timeshets",        "/timeshets",       "Operations"),
         
         // Insights
         new("reports",         "Reports",          "/reports",         "Insights"),

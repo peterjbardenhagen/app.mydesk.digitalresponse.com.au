@@ -1,0 +1,48 @@
+@inject FavouritesService FavouritesSvc
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ISnackbar Snackbar
+@using System.Security.Claims
+@using MyDesk.Shared.Services
+
+<MudIconButton Icon="@(_isFavourited ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
+               Color="@(_isFavourited ? Color.Warning : Color.Default)"
+               OnClick="ToggleFavourite"
+               title="@(_isFavourited ? "Remove from favourites" : "Add to favourites")" />
+
+@code {
+    [Parameter] public string EntityType { get; set; } = "";
+    [Parameter] public int EntityId { get; set; }
+    [Parameter] public string EntityName { get; set; } = "";
+
+    private bool _isFavourited;
+    private string _userCode = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        _userCode = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+        if (!string.IsNullOrEmpty(_userCode))
+        {
+            _isFavourited = await FavouritesSvc.IsFavouriteAsync(_userCode, EntityType, EntityId);
+        }
+    }
+
+    private async Task ToggleFavourite()
+    {
+        if (string.IsNullOrEmpty(_userCode)) return;
+
+        if (_isFavourited)
+        {
+            await FavouritesSvc.RemoveFavouriteAsync(_userCode, EntityType, EntityId);
+            Snackbar.Add("Removed from favourites", Severity.Info);
+        }
+        else
+        {
+            await FavouritesSvc.AddFavouriteAsync(_userCode, EntityType, EntityId, EntityName);
+            Snackbar.Add("Added to favourites", Severity.Success);
+        }
+        _isFavourited = !_isFavourited;
+    }
+}
+
+

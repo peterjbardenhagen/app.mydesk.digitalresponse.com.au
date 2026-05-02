@@ -155,7 +155,8 @@ else
     private async Task CreateCampaign()
     {
         var parameters = new DialogParameters { ["AudienceOptions"] = new[] { "Champions", "Top-50", "All Customers", "At-Risk", "Custom Segment" } };
-        var dialog = await Dialogs.ShowAsync<CampaignEditorDialog>("New Campaign", parameters);
+        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await Dialogs.ShowAsync<CampaignEditorDialog>("New Campaign", parameters, options);
         var result = await dialog.Result;
 
         if (result is { Canceled: false, Data: EmailCampaign campaign })
@@ -168,7 +169,8 @@ else
     private async Task EditCampaign(EmailCampaign campaign)
     {
         var parameters = new DialogParameters { ["Campaign"] = campaign };
-        var dialog = await Dialogs.ShowAsync<CampaignEditorDialog>("Edit Campaign", parameters);
+        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await Dialogs.ShowAsync<CampaignEditorDialog>("Edit Campaign", parameters, options);
         var result = await dialog.Result;
 
         if (result is { Canceled: false })
@@ -180,7 +182,15 @@ else
 
     private async Task SendCampaign(EmailCampaign campaign)
     {
-        if (await Dialogs.ShowMessageBox("Send Campaign?", $"Send \"{campaign.Name}\" to {campaign.RecipientCount} recipients?", yesText: "Send", noText: "Cancel") == true)
+        var sendParams = new DialogParameters
+        {
+            { nameof(MudMessageBox.Message), $"Send \"{campaign.Name}\" to {campaign.RecipientCount} recipients?" },
+            { nameof(MudMessageBox.YesText), "Send" },
+            { nameof(MudMessageBox.NoText), "Cancel" },
+            { nameof(MudMessageBox.CancelText), string.Empty }
+        };
+        var sendResult = await Dialogs.ShowAsync<MudMessageBox>("Send Campaign?", sendParams);
+        if ((await sendResult.Result)?.Data is true)
         {
             try
             {
@@ -197,7 +207,15 @@ else
 
     private async Task CancelCampaign(EmailCampaign campaign)
     {
-        if (await Dialogs.ShowMessageBox("Cancel Campaign?", "Stop this scheduled campaign?", yesText: "Cancel Campaign", noText: "Keep") == true)
+        var cancelParams = new DialogParameters
+        {
+            { nameof(MudMessageBox.Message), "Stop this scheduled campaign?" },
+            { nameof(MudMessageBox.YesText), "Cancel Campaign" },
+            { nameof(MudMessageBox.NoText), "Keep" },
+            { nameof(MudMessageBox.CancelText), string.Empty }
+        };
+        var cancelResult = await Dialogs.ShowAsync<MudMessageBox>("Cancel Campaign?", cancelParams);
+        if ((await cancelResult.Result)?.Data is true)
         {
             await Data.CancelCampaignAsync(campaign.Id);
             Snackbar.Add("Campaign cancelled", Severity.Success);
@@ -210,3 +228,5 @@ else
         // Show campaign details / report
     }
 }
+
+

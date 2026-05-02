@@ -25,17 +25,18 @@
         Upload Supplier Quote
     </MudText>
 
-    <InputFile id="fileInput" OnChange="HandleFilesChanged" Accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.bmp" hidden />
-
-    <div Class="d-flex flex-column align-center justify-center pa-8"
-         Style="border: 2px dashed var(--mud-palette-grey-light); border-radius: 8px; cursor: pointer;"
-         onclick="document.getElementById('fileInput').click()">
-        <MudIcon Icon="@Icons.Material.Rounded.CloudUpload" Size="Size.Large" Class="mb-2" Style="color: var(--mud-palette-grey);" />
-        <MudText Typo="Typo.body1">Drag & drop files here or click to browse</MudText>
-        <MudText Typo="Typo.caption" Class="mt-1" Style="color: var(--gray-400);">
-            Supports PDF, JPG, PNG, GIF, WEBP (max 50MB per file)
-        </MudText>
-    </div>
+    <MudFileUpload T="IReadOnlyList<IBrowserFile>" OnFilesChanged="HandleFilesChanged" Accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.bmp" Hidden="false">
+        <ButtonTemplate>
+            <div Class="d-flex flex-column align-center justify-center pa-8"
+                 Style="border: 2px dashed var(--mud-palette-grey-light); border-radius: 8px; cursor: pointer; background-color: var(--mud-palette-background-grey)">
+                <MudIcon Icon="@Icons.Material.Rounded.CloudUpload" Size="Size.Large" Class="mb-2" Style="color: var(--mud-palette-grey);" />
+                <MudText Typo="Typo.body1">Drag & drop files here or click to browse</MudText>
+                <MudText Typo="Typo.caption" Class="mt-1" Style="color: var(--gray-400);">
+                    Supports PDF, JPG, PNG, GIF, WEBP (max 50MB per file)
+                </MudText>
+            </div>
+        </ButtonTemplate>
+    </MudFileUpload>
 
     @if (_files.Any())
     {
@@ -173,3 +174,5 @@
         StateHasChanged();
     }
 }
+
+

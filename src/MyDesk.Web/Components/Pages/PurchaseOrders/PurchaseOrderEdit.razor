@@ -1,4 +1,5 @@
 @page "/purchase-orders/create"
+@page "/purchaseorders/create"
 @page "/purchase-orders/{Id:int}/edit"
 @attribute [Authorize]
 @inject PurchaseOrderService POService
@@ -319,4 +320,6 @@
         public decimal ExtPrice        => Qty * PriceEx;
     }
 }
+
+
 

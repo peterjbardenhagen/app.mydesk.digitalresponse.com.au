@@ -86,7 +86,7 @@
     </div>
 </div>
 
-<MudDialog @bind-Visible="_showAddEventDialog" Options="@(new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true })">
+<MudDialog @bind-Visible="_showAddEventDialog" Options="@(new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true })">
     <DialogContent>
         <MudText Typo="Typo.h6" Class="mb-4">Add New Event</MudText>
         <MudTextField @bind-Value="_newEventTitle" Label="Event Title" FullWidth Class="mb-3" />
@@ -322,3 +322,5 @@
     .calendar-event.followup { background: rgba(76, 175, 80, 0.1); color: #388E3C; }
     .calendar-event.po { background: rgba(255, 152, 0, 0.1); color: #F57C00; }
 </style>
+
+

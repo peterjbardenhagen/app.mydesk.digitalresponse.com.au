@@ -296,9 +296,15 @@ else
     private async Task DeleteAsync()
     {
         if (_po == null) return;
-        bool? ok = await Dialog.ShowMessageBox("Delete PO",
-            $"Delete PO #{Id} for {_po.SupplierName}? This cannot be undone.",
-            yesText: "Delete", cancelText: "Cancel");
+        var parameters = new DialogParameters
+        {
+            { nameof(MudMessageBox.Message), $"Delete PO #{Id} for {_po.SupplierName}? This cannot be undone." },
+            { nameof(MudMessageBox.YesText), "Delete" },
+            { nameof(MudMessageBox.NoText), string.Empty },
+            { nameof(MudMessageBox.CancelText), "Cancel" }
+        };
+        var result = await Dialog.ShowAsync<MudMessageBox>("Delete PO", parameters);
+        bool? ok = (await result.Result)?.Data as bool?;
         if (ok != true) return;
         try
         {
@@ -344,4 +350,6 @@ else
         _                  => Color.Default,
     };
 }
+
+
 

@@ -1,12 +1,12 @@
 @page "/contacts"
 @attribute [Authorize]
 @inject ContactService ContactService
-@inject NavigationManager Nav
-@inject PlatformSettingsService PlatformSettings
+@inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JsRuntime
-@inject IDialogService DialogService
-@using Microsoft.JSInterop
+@inject NavigationManager Nav
+@inject PlatformSettingsService PlatformSettings
+@using MyDesk.Shared.Models
 
 <PageTitle>Contacts - @PlatformSettings.GetBrandingName()</PageTitle>
 
@@ -17,11 +17,12 @@
             <span>Contacts</span>
         </div>
         <h1>Contacts</h1>
+        <p class="tl-subtitle">Manage company and personal contacts.</p>
     </div>
     <div class="d-flex gap-2">
         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
                    OnClick="@(() => Nav.NavigateTo("/contacts/create"))">New Contact</MudButton>
-        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Upload"
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Upload"
                    OnClick="ImportFromInvoices">Import from Invoices</MudButton>
     </div>
 </div>
@@ -33,10 +34,9 @@
     <div class="d-flex gap-2 mt-3">
         <MudButton OnClick="LoadAsync" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.FilterList">Search</MudButton>
         <MudButton OnClick="Reset" Variant="Variant.Outlined">Reset</MudButton>
-        <MudButton OnClick="ExportCsv" Variant="Variant.Outlined" Color="Color.Default"
-                   StartIcon="@Icons.Material.Rounded.Download">Export CSV</MudButton>
-        <MudButton OnClick="ExportVcf" Variant="Variant.Outlined" Color="Color.Default"
-                   StartIcon="@Icons.Material.Rounded.ContactPage">Export VCF</MudButton>
+        <MudButton OnClick="NormaliseAndDedupe" Variant="Variant.Outlined" Color="Color.Warning"
+                   Size="Size.Small" StartIcon="@Icons.Material.Rounded.MergeType">Normalise & Dedupe</MudButton>
+        <MudCheckBox @bind-Value="_showOnlyWithRecords" Label="Only contacts with records" Color="Color.Primary" Dense="true" Class="ml-2" />
     </div>
 </MudPaper>
 
@@ -49,13 +49,16 @@
         <PropertyColumn Property="x => x.Position" Title="Position" />
         <PropertyColumn Property="x => x.Email" Title="Email" />
         <PropertyColumn Property="x => x.Phone" Title="Phone" />
-        <TemplateColumn Title="Actions" Sortable="false" CellStyle="width:80px;">
+        <TemplateColumn Title="Actions" Sortable="false" CellStyle="width:120px;">
             <CellTemplate>
                 <div class="d-flex gap-1">
+                    <FavouriteButton EntityType="Contact" EntityId="@context.Item.ContactId" EntityName="@context.Item.FullName" />
                     <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Info"
                                    Href="@($"/contacts/{context.Item.ContactId}")" />
                     <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
                                    Href="@($"/contacts/{context.Item.ContactId}/edit")" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => DeleteAsync(context.Item))" />
                 </div>
             </CellTemplate>
         </TemplateColumn>
@@ -69,6 +72,7 @@
     private List<Contact> _contacts = new();
     private bool _loading = true;
     private string? _search;
+    private bool _showOnlyWithRecords = false;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -76,7 +80,41 @@
     {
         _loading = true;
         try { _contacts = await ContactService.GetContactsAsync(_search); }
+        catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
         finally { _loading = false; }
+    }
+    
+    private async Task DeleteAsync(Contact c)
+    {
+        var parameters = new DialogParameters
+        {
+            { nameof(MudMessageBox.Message), $"Delete contact '{c.FullName}'?" },
+            { nameof(MudMessageBox.YesText), "Delete" },
+            { nameof(MudMessageBox.NoText), string.Empty },
+            { nameof(MudMessageBox.CancelText), "Cancel" }
+        };
+        var result = await DialogService.ShowAsync<MudMessageBox>("Delete Contact", parameters);
+        bool? ok = (await result.Result)?.Data as bool?;
+        if (ok != true) return;
+
+        try
+        {
+            await ContactService.DeleteContactAsync(c.ContactId);
+            Snackbar.Add($"Contact '{c.FullName}' deleted.", Severity.Info);
+            await LoadAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Delete failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task NormaliseAndDedupe()
+    {
+        try
+        {
+            var count = await ContactService.NormaliseAndDedupeAsync();
+            Snackbar.Add($"Normalised {count} contacts.", Severity.Success);
+            await LoadAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
     }
 
     private async Task ImportFromInvoices()
@@ -127,44 +165,6 @@
         
         Snackbar.Add($"Exported {_contacts.Count} contacts", Severity.Success);
     }
-
-    private async Task ExportVcf()
-    {
-        if (!_contacts.Any())
-        {
-            Snackbar.Add("No data to export", Severity.Warning);
-            return;
-        }
-
-        var sb = new System.Text.StringBuilder();
-        foreach (var c in _contacts)
-        {
-            sb.AppendLine("BEGIN:VCARD");
-            sb.AppendLine("VERSION:3.0");
-            sb.AppendLine($"FN:{c.FullName}");
-            sb.AppendLine($"N:{c.Surname};{c.FirstName};;;");
-            sb.AppendLine($"ORG:{c.CompanyName}");
-            if (!string.IsNullOrEmpty(c.Email)) sb.AppendLine($"EMAIL;TYPE=INTERNET:{c.Email}");
-            if (!string.IsNullOrEmpty(c.Phone)) sb.AppendLine($"TEL;TYPE=WORK,VOICE:{c.Phone}");
-            if (!string.IsNullOrEmpty(c.Mobile)) sb.AppendLine($"TEL;TYPE=CELL,VOICE:{c.Mobile}");
-            if (!string.IsNullOrEmpty(c.Position)) sb.AppendLine($"TITLE:{c.Position}");
-            if (!string.IsNullOrEmpty(c.Address1)) 
-            {
-                var adr = $"{c.Address1} {c.Address2};{c.Suburb};;{c.PostCode};Australia";
-                sb.AppendLine($"ADR;TYPE=WORK:;;{adr.Replace("\n", " ")}");
-            }
-            sb.AppendLine("END:VCARD");
-        }
-
-        var vcf = sb.ToString();
-        var fileName = $"Contacts_Export_{DateTime.Now:yyyyMMdd}.vcf";
-
-        var bytes = System.Text.Encoding.UTF8.GetBytes(vcf);
-        var base64 = Convert.ToBase64String(bytes);
-        var url = $"data:text/vcard;base64,{base64}";
-        await JsRuntime.InvokeVoidAsync("window.open", url, "_blank");
-        
-        Snackbar.Add($"Exported {_contacts.Count} vCards", Severity.Success);
-    }
 }
+
 

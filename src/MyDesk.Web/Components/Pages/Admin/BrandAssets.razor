@@ -312,14 +312,17 @@ else
 
     private async Task DeleteAsset(BrandAssetFile asset)
     {
-        var result = await DialogService.ShowMessageBox(
-            "Delete Asset",
-            $"Are you sure you want to delete '{asset.OriginalFileName}'?",
-            yesText: "Delete", 
-            cancelText: "Cancel",
-            options: new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true });
+        var parameters = new DialogParameters
+        {
+            { nameof(MudMessageBox.Message), $"Are you sure you want to delete '{asset.OriginalFileName}'?" },
+            { nameof(MudMessageBox.YesText), "Delete" },
+            { nameof(MudMessageBox.NoText), string.Empty },
+            { nameof(MudMessageBox.CancelText), "Cancel" }
+        };
+        var result = await DialogService.ShowAsync<MudMessageBox>("Delete Asset", parameters, new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small });
+        var confirmed = (await result.Result)?.Data is true;
 
-        if (result == true)
+        if (confirmed)
         {
             try
             {
@@ -349,7 +352,7 @@ else
             ["Link"] = new ImportantLink { DisplayOrder = _importantLinks.Count +1 }
         };
         
-        var dialog = DialogService.Show<LinkDialog>("Add Link", parameters, new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true });
+        var dialog = await DialogService.ShowAsync<LinkDialog>("Add Link", parameters, new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small });
         var result = await dialog.Result;
 
         if (!result.Canceled)
@@ -383,7 +386,7 @@ else
             }
         };
         
-        var dialog = DialogService.Show<LinkDialog>("Edit Link", parameters, new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true });
+        var dialog = await DialogService.ShowAsync<LinkDialog>("Edit Link", parameters, new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small });
         var result = await dialog.Result;
 
         if (!result.Canceled)
@@ -405,14 +408,17 @@ else
 
     private async Task DeleteLink(ImportantLink link)
     {
-        var result = await DialogService.ShowMessageBox(
-            "Delete Link",
-            $"Are you sure you want to delete '{link.Title}'?",
-            yesText: "Delete", 
-            cancelText: "Cancel",
-            options: new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true });
+        var parameters = new DialogParameters
+        {
+            { nameof(MudMessageBox.Message), $"Are you sure you want to delete '{link.Title}'?" },
+            { nameof(MudMessageBox.YesText), "Delete" },
+            { nameof(MudMessageBox.NoText), string.Empty },
+            { nameof(MudMessageBox.CancelText), "Cancel" }
+        };
+        var result = await DialogService.ShowAsync<MudMessageBox>("Delete Link", parameters, new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small });
+        var confirmed = (await result.Result)?.Data is true;
 
-        if (result == true)
+        if (confirmed)
         {
             link.IsActive = false;
             BrandAssetService.SaveImportantLinks(_importantLinks);
@@ -451,3 +457,5 @@ else
         };
     }
 }
+
+

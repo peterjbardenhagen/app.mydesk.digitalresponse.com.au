@@ -37,8 +37,6 @@ else
                        Href="/invoices">Back</MudButton>
             <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.History"
                        Href="@($"/invoices/{Id}/history")">History</MudButton>
-            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.LocalShipping"
-                       Href="@($"/invoices/{Id}/despatch")">Despatch Note</MudButton>
             <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Rounded.LocalShipping"
                        Href="@($"/invoices/{Id}/despatch")" Color="Color.Secondary">Despatch</MudButton>
             <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.PictureAsPdf"
@@ -338,9 +336,15 @@ else
     private async Task DeleteAsync()
     {
         if (_inv == null) return;
-        bool? ok = await Dialog.ShowMessageBox("Delete Invoice",
-            $"Delete invoice {_inv.InvoiceNum}? This cannot be undone.",
-            yesText: "Delete", cancelText: "Cancel");
+        var parameters = new DialogParameters
+        {
+            { nameof(MudMessageBox.Message), $"Delete invoice {_inv.InvoiceNum}? This cannot be undone." },
+            { nameof(MudMessageBox.YesText), "Delete" },
+            { nameof(MudMessageBox.NoText), string.Empty },
+            { nameof(MudMessageBox.CancelText), "Cancel" }
+        };
+        var result = await Dialog.ShowAsync<MudMessageBox>("Delete Invoice", parameters);
+        bool? ok = (await result.Result)?.Data as bool?;
         if (ok != true) return;
         try
         {
@@ -403,4 +407,6 @@ else
         _          => Color.Default,
     };
 }
+
+
 

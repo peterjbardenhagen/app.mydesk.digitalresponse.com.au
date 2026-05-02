@@ -1,4 +1,5 @@
 @page "/job-orders"
+@page "/joborders"
 @attribute [Authorize]
 @inject JobOrderService Svc
 @inject ISnackbar Snackbar
@@ -103,4 +104,6 @@ else
         Snackbar.Add($"Exported {_items.Count} job orders", Severity.Success);
     }
 }
+
+
 

@@ -1,0 +1,150 @@
+@inject ErrorLogService ErrorLogService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudDialogContent>
+    @if (_errorLog != null)
+    {
+        <MudGrid Spacing="3">
+            <MudItem xs="12">
+                <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                    <div class="d-flex align-center gap-3 mb-3">
+                        <MudChip T="string" Color="@GetSeverityColor(_errorLog.Severity)" Size="Size.Medium">
+                            @_errorLog.Severity
+                        </MudChip>
+                        @if (_errorLog.IsResolved)
+                        {
+                            <MudChip T="string" Color="Color.Success" Size="Size.Medium">Resolved</MudChip>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Color="Color.Warning" Size="Size.Medium">Pending</MudChip>
+                        }
+                    </div>
+                    <MudText Typo="Typo.body1" Class="mb-2"><strong>Date:</strong> @_errorLog.ErrorDate.ToString("dd/MM/yyyy HH:mm:ss")</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-2"><strong>Source:</strong> @_errorLog.Source</MudText>
+                    @if (!string.IsNullOrEmpty(_errorLog.RequestUrl))
+                    {
+                        <MudText Typo="Typo.body1" Class="mb-2"><strong>URL:</strong> @_errorLog.RequestUrl</MudText>
+                    }
+                    @if (!string.IsNullOrEmpty(_errorLog.HttpMethod))
+                    {
+                        <MudText Typo="Typo.body1" Class="mb-2"><strong>Method:</strong> @_errorLog.HttpMethod</MudText>
+                    }
+                    @if (!string.IsNullOrEmpty(_errorLog.UserName))
+                    {
+                        <MudText Typo="Typo.body1" Class="mb-2"><strong>User:</strong> @_errorLog.UserName (@_errorLog.UserId)</MudText>
+                    }
+                    @if (!string.IsNullOrEmpty(_errorLog.IPAddress))
+                    {
+                        <MudText Typo="Typo.body1" Class="mb-2"><strong>IP Address:</strong> @_errorLog.IPAddress</MudText>
+                    }
+                    @if (!string.IsNullOrEmpty(_errorLog.UserAgent))
+                    {
+                        <MudText Typo="Typo.caption" Class="opacity-60"><strong>User Agent:</strong> @_errorLog.UserAgent</MudText>
+                    }
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                    <MudText Typo="Typo.subtitle2" Class="mb-3">Error Message</MudText>
+                    <MudText Typo="Typo.body2" Class="font-monospace" Style="white-space: pre-wrap;">@_errorLog.Message</MudText>
+                </MudPaper>
+            </MudItem>
+
+            @if (!string.IsNullOrEmpty(_errorLog.StackTrace))
+            {
+                <MudItem xs="12">
+                    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                        <MudText Typo="Typo.subtitle2" Class="mb-3">Stack Trace</MudText>
+                        <MudText Typo="Typo.caption" Class="font-monospace" Style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;">@_errorLog.StackTrace</MudText>
+                    </MudPaper>
+                </MudItem>
+            }
+
+            @if (!string.IsNullOrEmpty(_errorLog.InnerException))
+            {
+                <MudItem xs="12">
+                    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                        <MudText Typo="Typo.subtitle2" Class="mb-3">Inner Exception</MudText>
+                        <MudText Typo="Typo.caption" Class="font-monospace" Style="white-space: pre-wrap;">@_errorLog.InnerException</MudText>
+                    </MudPaper>
+                </MudItem>
+            }
+
+            @if (!_errorLog.IsResolved)
+            {
+                <MudItem xs="12">
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12" md="8">
+                            <MudTextField T="string" @bind-Value="_resolutionNotes" Label="Resolution Notes" Variant="Variant.Outlined" Lines="2" />
+                        </MudItem>
+                        <MudItem xs="12" md="4" Class="d-flex align-end">
+                            <MudButton Variant="Variant.Filled" Color="Color.Success" FullWidth="true" OnClick="ResolveError">
+                                <MudIcon Icon="@Icons.Material.Rounded.Check" Size="Size.Small" />
+                                Mark as Resolved
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudItem>
+            }
+            else
+            {
+                <MudItem xs="12">
+                    <MudPaper Class="pa-4" Elevation="0" Outlined="true" Style="background: #f0fdf4;">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2" Color="Color.Success">Resolved</MudText>
+                        @if (!string.IsNullOrEmpty(_errorLog.ResolutionNotes))
+                        {
+                            <MudText Typo="Typo.body2">@_errorLog.ResolutionNotes</MudText>
+                        }
+                        <MudText Typo="Typo.caption" Class="opacity-60">
+                            Resolved by @_errorLog.ResolvedBy on @_errorLog.ResolvedDate?.ToString("dd/MM/yyyy HH:mm")
+                        </MudText>
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</MudDialogContent>
+
+<MudDialogActions>
+    <MudButton OnClick="Cancel">Close</MudButton>
+</MudDialogActions>
+
+@code {
+    [CascadingParameter] public MudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public ErrorLog ErrorLog { get; set; } = default!;
+
+    private ErrorLog? _errorLog;
+    private string? _resolutionNotes;
+
+    protected override void OnInitialized()
+    {
+        _errorLog = ErrorLog;
+    }
+
+    private Color GetSeverityColor(string severity)
+    {
+        return severity switch
+        {
+            "Critical" => Color.Error,
+            "Error" => Color.Warning,
+            "Warning" => Color.Info,
+            "Info" => Color.Default,
+            _ => Color.Default
+        };
+    }
+
+    private async Task ResolveError()
+    {
+        await ErrorLogService.MarkAsResolvedAsync(_errorLog!.ErrorLogId, "Admin", _resolutionNotes);
+        Snackbar.Add("Error marked as resolved", Severity.Success);
+        MudDialog.Close(true);
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}

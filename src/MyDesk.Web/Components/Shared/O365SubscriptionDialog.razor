@@ -1,0 +1,14 @@
+@using MyDesk.Shared.Models
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent><MudText Typo="Typo.h6">O365 Subscription</MudText></TitleContent>
+    <DialogContent><MudText>O365 subscription dialog stub</MudText></DialogContent>
+    <DialogActions><MudButton OnClick="Cancel">Close</MudButton></DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public O365Subscription? Subscription { get; set; }
+    private void Cancel() => MudDialog.Cancel();
+}

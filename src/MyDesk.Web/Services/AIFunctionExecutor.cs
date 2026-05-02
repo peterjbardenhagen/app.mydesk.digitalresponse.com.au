@@ -42,7 +42,7 @@ public class AIFunctionExecutor
         try
         {
             var sql = @"
-                SELECT TOP (@l) q.Qid, q.Reference, q.QuoteDate, q.NetTotalPrice, qs.QuoteStatus,
+                SELECT TOP (@l) q.Qid, q.Reference, q.QuoteDate, q.NettPriceTotal as NetTotalPrice, qs.QuoteStatus,
                        c.Company as CompanyName, u.Name as Originator
                 FROM Quotes q
                 LEFT JOIN QuoteStatus qs ON q.QuoteStatusId = qs.QuoteStatusId
@@ -61,7 +61,7 @@ public class AIFunctionExecutor
 
             if (minAmount.HasValue)
             {
-                sql += " AND q.NetTotalPrice >= @min";
+                sql += " AND q.NettPriceTotal >= @min";
                 parameters["min"] = minAmount.Value;
             }
 
@@ -85,23 +85,24 @@ public class AIFunctionExecutor
         try
         {
             var sql = @"
-                SELECT TOP (@l) i.InvoiceId, i.InvoiceNumber, i.InvoiceDate, i.NetTotalPrice, i.Balance, i.Status,
+                SELECT TOP (@l) i.InvoiceId, i.InvoiceNumber, i.InvoiceDate, i.NettPriceTotal as NetTotalPrice, s.InvoiceStatus as Status,
                        c.Company as CompanyName
                 FROM Invoices i
                 LEFT JOIN Companies c ON i.CompanyId = c.CompanyId
+                LEFT JOIN InvoiceStatus s ON i.InvoiceStatusId = s.InvoiceStatusId
                 WHERE 1=1";
 
             var parameters = new Dictionary<string, object?> { ["l"] = limit ?? 10 };
 
             if (!string.IsNullOrEmpty(status))
             {
-                sql += " AND i.Status = @status";
+                sql += " AND s.InvoiceStatus = @status";
                 parameters["status"] = status;
             }
 
             if (minAmount.HasValue)
             {
-                sql += " AND i.NetTotalPrice >= @min";
+                sql += " AND i.NettPriceTotal >= @min";
                 parameters["min"] = minAmount.Value;
             }
 
@@ -223,17 +224,18 @@ public class AIFunctionExecutor
         try
         {
             var sql = @"
-                SELECT c.Company, i.InvoiceNumber, i.InvoiceDate, i.DueDate, 
-                       i.NetTotalPrice, i.Balance, DATEDIFF(day, i.DueDate, GETDATE()) as DaysOverdue
+                SELECT c.Company, i.InvoiceNumber, i.InvoiceDate, 
+                       i.NettPriceTotal, DATEDIFF(day, i.InvoiceDate, GETDATE()) as DaysSinceInvoice
                 FROM Invoices i
                 LEFT JOIN Companies c ON i.CompanyId = c.CompanyId
-                WHERE i.Balance > 0 AND i.Status NOT IN ('Paid', 'Cancelled')
-                ORDER BY DaysOverdue DESC";
+                LEFT JOIN InvoiceStatus s ON i.InvoiceStatusId = s.InvoiceStatusId
+                WHERE s.InvoiceStatus = 'ISSUED'
+                ORDER BY DaysSinceInvoice DESC";
 
             var dt = await _db.QueryAsync(sql);
             return new
             {
-                summary = $"Total outstanding: {dt.Rows.Cast<DataRow>().Sum(r => Convert.ToDecimal(r["Balance"])).ToString("C")}",
+                summary = $"Total outstanding: {dt.Rows.Cast<DataRow>().Sum(r => Convert.ToDecimal(r["NettPriceTotal"])).ToString("C")}",
                 invoices = DataTableToList(dt)
             };
         }
@@ -255,12 +257,12 @@ public class AIFunctionExecutor
             
             // Quotes this month
             var quotesThisMonth = await _db.ScalarAsync<decimal>(
-                "SELECT ISNULL(SUM(NetTotalPrice), 0) FROM Quotes WHERE MONTH(QuoteDate) = MONTH(GETDATE()) AND YEAR(QuoteDate) = YEAR(GETDATE())");
+                "SELECT ISNULL(SUM(NettPriceTotal), 0) FROM Quotes WHERE MONTH(QuoteDate) = MONTH(GETDATE()) AND YEAR(QuoteDate) = YEAR(GETDATE())");
             stats["quotesThisMonth"] = quotesThisMonth;
 
             // Invoices outstanding
             var outstanding = await _db.ScalarAsync<decimal>(
-                "SELECT ISNULL(SUM(Balance), 0) FROM Invoices WHERE Balance > 0 AND Status NOT IN ('Paid', 'Cancelled')");
+                "SELECT ISNULL(SUM(i.NettPriceTotal), 0) FROM Invoices i LEFT JOIN InvoiceStatus s ON i.InvoiceStatusId = s.InvoiceStatusId WHERE s.InvoiceStatus = 'ISSUED'");
             stats["outstandingInvoices"] = outstanding;
 
             // Total expenses this month

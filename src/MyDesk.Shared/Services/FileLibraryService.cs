@@ -11,8 +11,9 @@ public class FileLibraryService
     public FileLibraryService(DatabaseService db, ILogger<FileLibraryService> logger)
     { _db = db; _logger = logger; }
 
-    public async Task<List<FileLibraryItem>> GetRootFoldersAsync(int? companyId = null)
+    public async Task<List<FileLibraryItem>> GetRootFoldersAsync(int? companyId = null, string sortBy = "newest")
     {
+        var orderBy = GetSortClause(sortBy);
         var dt = await _db.QueryAsync(@"
             SELECT fl.*, 
                    co.Company AS CompanyName
@@ -20,25 +21,33 @@ public class FileLibraryService
             LEFT JOIN Companies co ON co.CompanyId = fl.CompanyId
             WHERE fl.ParentFolderId IS NULL
               AND (fl.CompanyId = @CompanyId OR (@CompanyId IS NULL AND fl.CompanyId IS NULL))
-            ORDER BY fl.IsFolder DESC, fl.Name",
+            ORDER BY fl.IsFolder DESC, " + orderBy,
             new() { ["CompanyId"] = companyId.HasValue ? (object)companyId.Value : DBNull.Value });
 
         return dt.Rows.Cast<DataRow>().Select(MapRow).ToList();
     }
 
-    public async Task<List<FileLibraryItem>> GetFolderContentsAsync(Guid folderId)
+    public async Task<List<FileLibraryItem>> GetFolderContentsAsync(Guid folderId, string sortBy = "newest")
     {
+        var orderBy = GetSortClause(sortBy);
         var dt = await _db.QueryAsync(@"
             SELECT fl.*, 
                    co.Company AS CompanyName
             FROM FileLibrary fl
             LEFT JOIN Companies co ON co.CompanyId = fl.CompanyId
             WHERE fl.ParentFolderId = @Id
-            ORDER BY fl.IsFolder DESC, fl.Name",
+            ORDER BY fl.IsFolder DESC, " + orderBy,
             new() { ["Id"] = folderId });
 
         return dt.Rows.Cast<DataRow>().Select(MapRow).ToList();
     }
+
+    private static string GetSortClause(string sortBy) => sortBy switch
+    {
+        "oldest" => "fl.CreatedAt ASC",
+        "alpha" => "fl.Name ASC",
+        _ => "fl.CreatedAt DESC"
+    };
 
     public async Task<FileLibraryItem?> GetItemAsync(Guid fileId)
     {
@@ -88,6 +97,63 @@ public class FileLibraryService
         _logger.LogInformation("File/Folder deleted: {FileId} by {UserCode}", fileId, userCode);
     }
 
+    public async Task SaveItemAsync(FileLibraryItem item, string userCode)
+    {
+        var now = DateTime.Now;
+        if (item.CreatedAt < new DateTime(1753, 1, 1)) item.CreatedAt = now;
+        if (item.ModifiedAt < new DateTime(1753, 1, 1)) item.ModifiedAt = now;
+
+        var existing = await GetItemAsync(item.FileId);
+        if (existing == null)
+        {
+            await _db.ExecuteAsync(@"
+                INSERT INTO FileLibrary (FileId, ParentFolderId, CompanyId, Name, IsFolder, FilePath, FileSize, ContentType, SharedWithCompanies, SharedWithContacts, IsPublic, CreatedBy, CreatedAt, ModifiedAt)
+                VALUES (@FileId, @ParentFolderId, @CompanyId, @Name, @IsFolder, @FilePath, @FileSize, @ContentType, @SharedWithCompanies, @SharedWithContacts, @IsPublic, @CreatedBy, @CreatedAt, @ModifiedAt)",
+                new() {
+                    ["FileId"] = item.FileId,
+                    ["ParentFolderId"] = item.ParentFolderId.HasValue ? (object)item.ParentFolderId.Value : DBNull.Value,
+                    ["CompanyId"] = item.CompanyId.HasValue ? (object)item.CompanyId.Value : DBNull.Value,
+                    ["Name"] = item.Name,
+                    ["IsFolder"] = item.IsFolder,
+                    ["FilePath"] = item.FilePath ?? (object)DBNull.Value,
+                    ["FileSize"] = item.FileSize.HasValue ? (object)item.FileSize.Value : DBNull.Value,
+                    ["ContentType"] = item.ContentType ?? (object)DBNull.Value,
+                    ["SharedWithCompanies"] = item.SharedWithCompanies ?? (object)DBNull.Value,
+                    ["SharedWithContacts"] = item.SharedWithContacts ?? (object)DBNull.Value,
+                    ["IsPublic"] = item.IsPublic,
+                    ["CreatedBy"] = item.CreatedBy,
+                    ["CreatedAt"] = item.CreatedAt,
+                    ["ModifiedAt"] = item.ModifiedAt
+                });
+            _logger.LogInformation("File item inserted: {Name} by {UserCode}", item.Name, userCode);
+        }
+        else
+        {
+            await _db.ExecuteAsync(@"
+                UPDATE FileLibrary 
+                SET ParentFolderId = @ParentFolderId, CompanyId = @CompanyId, Name = @Name, IsFolder = @IsFolder,
+                    FilePath = @FilePath, FileSize = @FileSize, ContentType = @ContentType,
+                    SharedWithCompanies = @SharedWithCompanies, SharedWithContacts = @SharedWithContacts,
+                    IsPublic = @IsPublic, ModifiedAt = @ModifiedAt
+                WHERE FileId = @FileId",
+                new() {
+                    ["FileId"] = item.FileId,
+                    ["ParentFolderId"] = item.ParentFolderId.HasValue ? (object)item.ParentFolderId.Value : DBNull.Value,
+                    ["CompanyId"] = item.CompanyId.HasValue ? (object)item.CompanyId.Value : DBNull.Value,
+                    ["Name"] = item.Name,
+                    ["IsFolder"] = item.IsFolder,
+                    ["FilePath"] = item.FilePath ?? (object)DBNull.Value,
+                    ["FileSize"] = item.FileSize.HasValue ? (object)item.FileSize.Value : DBNull.Value,
+                    ["ContentType"] = item.ContentType ?? (object)DBNull.Value,
+                    ["SharedWithCompanies"] = item.SharedWithCompanies ?? (object)DBNull.Value,
+                    ["SharedWithContacts"] = item.SharedWithContacts ?? (object)DBNull.Value,
+                    ["IsPublic"] = item.IsPublic,
+                    ["ModifiedAt"] = now
+                });
+            _logger.LogInformation("File item updated: {Name} by {UserCode}", item.Name, userCode);
+        }
+    }
+
     public async Task ShareItemAsync(Guid fileId, List<int>? companyIds = null, List<int>? contactIds = null)
     {
         var sharedCompanies = companyIds != null ? System.Text.Json.JsonSerializer.Serialize(companyIds) : null;
@@ -114,11 +180,11 @@ public class FileLibraryService
             ContentType = r["ContentType"]?.ToString(),
             SharedWithCompanies = r["SharedWithCompanies"]?.ToString(),
             SharedWithContacts = r["SharedWithContacts"]?.ToString(),
-            IsPublic = Convert.ToBoolean(r["IsPublic"]),
+            IsPublic = r.Table.Columns.Contains("IsPublic") && r["IsPublic"] != DBNull.Value ? Convert.ToBoolean(r["IsPublic"]) : false,
             CreatedBy = r["CreatedBy"]?.ToString() ?? "",
-            CreatedAt = r["CreatedAt"] != DBNull.Value ? Convert.ToDateTime(r["CreatedAt"]) : DateTime.Now,
-            ModifiedAt = r["ModifiedAt"] != DBNull.Value ? Convert.ToDateTime(r["ModifiedAt"]) : DateTime.Now,
-            CompanyName = r["CompanyName"]?.ToString()
+            CreatedAt = r.Table.Columns.Contains("CreatedAt") && r["CreatedAt"] != DBNull.Value ? Convert.ToDateTime(r["CreatedAt"]) : DateTime.Now,
+            ModifiedAt = r.Table.Columns.Contains("ModifiedAt") && r["ModifiedAt"] != DBNull.Value ? Convert.ToDateTime(r["ModifiedAt"]) : DateTime.Now,
+            CompanyName = r.Table.Columns.Contains("CompanyName") ? r["CompanyName"]?.ToString() : null
         };
     }
 }
@@ -132,13 +198,14 @@ public class FileLibraryItem
     public bool IsFolder { get; set; }
     public string? FilePath { get; set; }
     public long? FileSize { get; set; }
+    public long SizeBytes { get; set; }
     public string? ContentType { get; set; }
     public string? SharedWithCompanies { get; set; } // JSON array of CompanyId
     public string? SharedWithContacts { get; set; } // JSON array of ContactId
     public bool IsPublic { get; set; }
     public string CreatedBy { get; set; } = "";
-    public DateTime CreatedAt { get; set; }
-    public DateTime ModifiedAt { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime ModifiedAt { get; set; } = DateTime.Now;
     public string? CompanyName { get; set; }
 
     public string GetFormattedSize()

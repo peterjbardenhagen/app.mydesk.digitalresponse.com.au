@@ -74,15 +74,15 @@ public class QuoteService
             QuoteItemId = Convert.ToInt32(r["QuoteItemId"]),
             Qid = qid,
             Description = r["Description"]?.ToString() ?? "",
-            Quantity = Convert.ToDecimal(r[r.Table.Columns.Contains("Quantity") ? "Quantity" : "Qty"]),
-            NettPrice = Convert.ToDecimal(r["NettPrice"]),
-            ExtNettPrice = Convert.ToDecimal(r.Table.Columns.Contains("ExtNettPrice") ? r["ExtNettPrice"] : 0),
+            Quantity = r.Table.Columns.Contains("Quantity") && r["Quantity"] != DBNull.Value ? Convert.ToDecimal(r["Quantity"]) : 0m,
+            NettPrice = r["NettPrice"] != DBNull.Value ? Convert.ToDecimal(r["NettPrice"]) : 0m,
+            ExtNettPrice = r.Table.Columns.Contains("ExtNettPrice") && r["ExtNettPrice"] != DBNull.Value ? Convert.ToDecimal(r["ExtNettPrice"]) : 0m,
             Type = r["Type"]?.ToString(),
             ProductCode = r["ProductCode"]?.ToString(),
-            Units = Convert.ToDecimal(r.Table.Columns.Contains("Units") ? r["Units"] : 0),
-            Days = Convert.ToDecimal(r.Table.Columns.Contains("Days") ? r["Days"] : 0),
-            UnitCost = Convert.ToDecimal(r["UnitCost"]),
-            MinNettPrice = Convert.ToDecimal(r.Table.Columns.Contains("MinNettPrice") ? r["MinNettPrice"] : 0)
+            Units = r.Table.Columns.Contains("Units") && r["Units"] != DBNull.Value ? Convert.ToDecimal(r["Units"]) : 0m,
+            Days = r.Table.Columns.Contains("Days") && r["Days"] != DBNull.Value ? Convert.ToDecimal(r["Days"]) : 0m,
+            UnitCost = r["UnitCost"] != DBNull.Value ? Convert.ToDecimal(r["UnitCost"]) : 0m,
+            MinNettPrice = r.Table.Columns.Contains("MinNettPrice") && r["MinNettPrice"] != DBNull.Value ? Convert.ToDecimal(r["MinNettPrice"]) : 0m
         }).ToList();
     }
 
@@ -259,13 +259,13 @@ public class QuoteService
             QuoteDate = r["QuoteDate"] == DBNull.Value ? DateTime.Today : Convert.ToDateTime(r["QuoteDate"]),
             Originator = r["Originator"]?.ToString() ?? "",
             QuoteNumber = HasCol("QuoteNum") ? r["QuoteNum"]?.ToString() : (HasCol("QuoteNumber") ? r["QuoteNumber"]?.ToString() : $"Q{r["Qid"]}"),
-            QuoteStatusId = HasCol("QuoteStatusId") ? Convert.ToInt32(r["QuoteStatusId"]) : 0,
-            ContactId = HasCol("ContactId") ? Convert.ToInt32(r["ContactId"]) : 0,
-            CompanyId = HasCol("CompanyId") ? Convert.ToInt32(r["CompanyId"]) : 0,
-            DivisionId = HasCol("DivisionId") ? Convert.ToInt32(r["DivisionId"]) : 0,
-            Attention = HasCol("Attention") ? r["Attention"]?.ToString() : "",
-            Delivery = HasCol("Delivery") ? r["Delivery"]?.ToString() : "",
-            Validity = HasCol("Validity") ? Convert.ToInt32(r["Validity"]) : 30,
+            QuoteStatusId = HasCol("QuoteStatusId") && r["QuoteStatusId"] != DBNull.Value ? Convert.ToInt32(r["QuoteStatusId"]) : 0,
+            ContactId = HasCol("ContactId") && r["ContactId"] != DBNull.Value ? Convert.ToInt32(r["ContactId"]) : 0,
+            CompanyId = HasCol("CompanyId") && r["CompanyId"] != DBNull.Value ? Convert.ToInt32(r["CompanyId"]) : 0,
+            DivisionId = HasCol("DivisionId") && r["DivisionId"] != DBNull.Value ? Convert.ToInt32(r["DivisionId"]) : 0,
+            Attention = HasCol("Attention") && r["Attention"] != DBNull.Value ? r["Attention"]?.ToString() : "",
+            Delivery = HasCol("Delivery") && r["Delivery"] != DBNull.Value ? r["Delivery"]?.ToString() : "",
+            Validity = HasCol("Validity") && r["Validity"] != DBNull.Value ? Convert.ToInt32(r["Validity"]) : 30,
             Terms = HasCol("Terms") ? r["Terms"]?.ToString() : "",
             CustomerNotes = HasCol("CustomerNotes") ? r["CustomerNotes"]?.ToString() : "",
             InternalNotes = HasCol("InternalNotes") ? r["InternalNotes"]?.ToString() : ""

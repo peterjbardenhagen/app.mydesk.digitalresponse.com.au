@@ -21,6 +21,9 @@
     public async Task ShowShortcutsDialog()
     {
         var parameters = new DialogParameters();
-        DialogService.Show<ShortcutsDialog>("Keyboard Shortcuts", parameters);
+        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        await DialogService.ShowAsync<KeyboardShortcutsDialog>("Keyboard Shortcuts", parameters, options);
     }
 }
+
+

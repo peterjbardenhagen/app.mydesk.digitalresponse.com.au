@@ -1,0 +1,82 @@
+@using MudBlazor
+@using MyDesk.Shared.Models
+@inject MudBlazor.ISnackbar Snackbar
+
+<MudForm @ref="_form">
+    <MudDialog>
+        <TitleContent>
+            <MudText Typo="Typo.h6">Subscription</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Client Name" @bind-Value="_sub.ClientName" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Description" @bind-Value="_sub.Description" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Category" @bind-Value="_sub.Category">
+                        <MudSelectItem Value="@("Hosting")">Hosting</MudSelectItem>
+                        <MudSelectItem Value="@("Software")">Software</MudSelectItem>
+                        <MudSelectItem Value="@("Support")">Support</MudSelectItem>
+                        <MudSelectItem Value="@("Other")">Other</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Schedule" @bind-Value="_sub.Schedule">
+                        <MudSelectItem Value="@("Monthly")">Monthly</MudSelectItem>
+                        <MudSelectItem Value="@("Quarterly")">Quarterly</MudSelectItem>
+                        <MudSelectItem Value="@("Yearly")">Yearly</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal" Label="Amount (ex GST)" @bind-Value="_sub.AmountExGST" Min="0" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal" Label="Amount (incl GST)" @bind-Value="_sub.AmountInclGST" Min="0" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="Start Date" @bind-Date="_sub.StartDate" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="Next Invoice Date" @bind-Date="_sub.NextInvoiceDate" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Status" @bind-Value="_sub.Status">
+                        <MudSelectItem Value="@("Active")">Active</MudSelectItem>
+                        <MudSelectItem Value="@("Cancelled")">Cancelled</MudSelectItem>
+                        <MudSelectItem Value="@("Suspended")">Suspended</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Notes" @bind-Value="_sub.Notes" Lines="2" />
+                </MudItem>
+            </MudGrid>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="Cancel">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Save</MudButton>
+        </DialogActions>
+    </MudDialog>
+</MudForm>
+
+@code {
+    [CascadingParameter] private MudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public DRMSubscription Subscription { get; set; } = new();
+
+    private MudForm _form = default!;
+    private DRMSubscription _sub = new();
+
+    protected override void OnInitialized()
+    {
+        _sub = Subscription ?? new DRMSubscription();
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        MudDialog.Close(_sub);
+    }
+}

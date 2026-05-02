@@ -1,9 +1,11 @@
 @page "/marketing/brand-assets"
 @attribute [Authorize]
-@inject MarketingService Service
+@inject BrandAssetService Service
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
 @inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IDialogService DialogService
 
 <PageTitle>Brand Assets - DR MyDesk</PageTitle>
 
@@ -29,47 +31,68 @@
 else
 {
     @* Primary Brand Assets *@
-    <MudText Typo="Typo.h6" Class="mb-4">Brand Kit</MudText>
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h6">Brand Assets</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Rounded.Add"
+                   OnClick="ShowUploadDialog">Upload Asset</MudButton>
+    </div>
     <div class="tl-mkt-grid mb-6">
         @foreach (var asset in _brandAssets)
         {
             <MudCard Elevation="0" Outlined="true" Class="tl-asset-card">
-                <MudCardContent Class="d-flex flex-column align-center pa-6">
-                    <div class="tl-asset-icon">
-                        <MudIcon Icon="@asset.Icon" Size="Size.Large" />
+                <MudCardContent Class="d-flex flex-column pa-4">
+                    <div class="d-flex align-center gap-3 mb-3">
+                        <div class="tl-asset-icon">
+                            <MudIcon Icon="@GetIconForCategory(asset.Category)" Size="Size.Large" />
+                        </div>
+                        <div class="flex-grow-1">
+                            <MudText Typo="Typo.h6" Class="mb-1">@asset.OriginalFileName</MudText>
+                            <MudText Typo="Typo.caption" Style="color: var(--gray-500);">
+                                @asset.Category @(asset.FileSize > 0 ? $"• {FormatFileSize(asset.FileSize)}" : "")
+                            </MudText>
+                        </div>
+                        <div class="d-flex gap-1">
+                            <MudIconButton Icon="@Icons.Material.Rounded.Download" Size="Size.Small" 
+                                          Href="@GetAssetUrl(asset)" Target="_blank" Color="Color.Primary" />
+                            <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" 
+                                          OnClick="() => DeleteAsset(asset)" Color="Color.Error" />
+                        </div>
                     </div>
-                    <MudText Typo="Typo.h6" Align="Align.Center" Class="mt-4 mb-1">@asset.Title</MudText>
-                    <MudText Typo="Typo.body2" Align="Align.Center" Style="color: var(--gray-500);" Class="mb-4">
-                        @asset.Description
-                    </MudText>
-                    <div class="d-flex gap-2 mt-auto">
-                        @if (asset.HasView)
-                        {
-                            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Rounded.Visibility"
-                                      OnClick="() => ViewAsset(asset)">View</MudButton>
-                        }
-                        @if (asset.HasDownload)
-                        {
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" 
-                                      StartIcon="@Icons.Material.Rounded.Download"
-                                      OnClick="() => DownloadAsset(asset)" Disabled="!asset.Exists">
-                                Download
-                            </MudButton>
-                        }
-                    </div>
-                    @if (!asset.Exists)
+                    @if (!string.IsNullOrEmpty(asset.Description))
                     {
-                        <MudText Typo="Typo.caption" Style="color: var(--error-500);" Class="mt-2">
-                            File not found
+                        <MudText Typo="Typo.body2" Style="color: var(--gray-600);">
+                            @asset.Description
                         </MudText>
                     }
+                    <MudText Typo="Typo.caption" Style="color: var(--gray-400);" Class="mt-2">
+                        Uploaded @asset.UploadedAt.ToString("g") by @asset.UploadedBy
+                    </MudText>
                 </MudCardContent>
             </MudCard>
         }
+        @if (!_brandAssets.Any())
+        {
+            <MudPaper Elevation="0" Outlined="true" Class="pa-8 text-center">
+                <MudIcon Icon="@Icons.Material.Rounded.CloudUpload" Size="Size.Large" Color="Color.Default" Class="mb-4" Style="opacity:0.5;" />
+                <MudText Typo="Typo.h6" Class="mb-2">No Brand Assets Yet</MudText>
+                <MudText Typo="Typo.body2" Style="color: var(--gray-500);" Class="mb-4">
+                    Upload your first brand asset to get started.
+                </MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Rounded.Add"
+                           OnClick="ShowUploadDialog">Upload Asset</MudButton>
+            </MudPaper>
+        }
     </div>
 
-    @* Important Files & Links Section (moved from Setup) *@
-    <MudText Typo="Typo.h6" Class="mb-4">Important Files & Links</MudText>
+    @* Important Files & Links Section *@
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h6">Important Links</MudText>
+        <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                   StartIcon="@Icons.Material.Rounded.Add"
+                   OnClick="ShowAddLinkDialog">Add Link</MudButton>
+    </div>
     <MudCard Elevation="0" Outlined="true">
         <MudCardContent>
             <MudGrid Spacing="3">
@@ -77,14 +100,26 @@ else
                 {
                     <MudItem xs="12" md="6" lg="4">
                         <div class="d-flex align-center gap-3 p-3" style="background: var(--gray-50); border-radius: 8px;">
-                            <MudIcon Icon="@link.Icon" Color="link.Color" />
+                            <MudIcon Icon="@GetIconForLink(link.Icon)" Color="link.IsExternal ? Color.Primary : Color.Default" />
                             <div class="flex-grow-1">
                                 <MudText Typo="Typo.body1" Style="font-weight: 500;">@link.Title</MudText>
                                 <MudText Typo="Typo.caption" Style="color: var(--gray-500);">@link.Description</MudText>
                             </div>
-                            <MudIconButton Icon="@Icons.Material.Rounded.OpenInNew" Size="Size.Small" 
-                                          Href="@link.Url" Target="_blank" />
+                            <div class="d-flex gap-1">
+                                <MudIconButton Icon="@Icons.Material.Rounded.OpenInNew" Size="Size.Small" 
+                                              Href="@link.Url" Target="_blank" />
+                                <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" 
+                                              OnClick="() => DeleteLink(link)" Color="Color.Error" />
+                            </div>
                         </div>
+                    </MudItem>
+                }
+                @if (!_importantLinks.Any())
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.body2" Style="color: var(--gray-500);" Class="text-center pa-4">
+                            No important links configured. Click "Add Link" to create one.
+                        </MudText>
                     </MudItem>
                 }
             </MudGrid>
@@ -174,107 +209,18 @@ else
 
 @code {
     private bool _loading = true;
-    private List<AssetItem> _brandAssets = new();
+    private List<BrandAssetFile> _brandAssets = new();
     private List<ImportantLink> _importantLinks = new();
+    private string? _userCode;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            // Check which files actually exist
-            var logos = await Service.GetBrandAssetsAsync();
-            
-            _brandAssets = new List<AssetItem>
-            {
-                new AssetItem 
-                { 
-                    Title = "Logos", 
-                    Description = "PNG and SVG formats, colour and mono",
-                    Icon = Icons.Material.Rounded.Image,
-                    HasView = false, HasDownload = true,
-                    Exists = logos.LogoExists,
-                    Path = logos.LogoPath
-                },
-                new AssetItem 
-                { 
-                    Title = "Brand Guidelines", 
-                    Description = "PDF with usage rules and examples",
-                    Icon = Icons.Material.Rounded.MenuBook,
-                    HasView = true, HasDownload = true,
-                    Exists = logos.GuidelinesExists,
-                    Path = logos.GuidelinesPath
-                },
-                new AssetItem 
-                { 
-                    Title = "Company Profile", 
-                    Description = "About Techlight for partners and press",
-                    Icon = Icons.Material.Rounded.Business,
-                    HasView = true, HasDownload = true,
-                    Exists = logos.ProfileExists,
-                    Path = logos.ProfilePath
-                },
-                new AssetItem 
-                { 
-                    Title = "Email Signature", 
-                    Description = "HTML template for Outlook/Gmail",
-                    Icon = Icons.Material.Rounded.AlternateEmail,
-                    HasView = false, HasDownload = true,
-                    Exists = logos.SignatureExists,
-                    Path = logos.SignaturePath
-                }
-            };
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            _userCode = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
 
-            _importantLinks = new List<ImportantLink>
-            {
-                new ImportantLink 
-                { 
-                    Title = "Help Centre", 
-                    Description = "Documentation and guides",
-                    Icon = Icons.Material.Rounded.Help,
-                    Url = "/help",
-                    Color = Color.Info
-                },
-                new ImportantLink 
-                { 
-                    Title = "Release Notes", 
-                    Description = "What's new in MyDesk",
-                    Icon = Icons.Material.Rounded.NewReleases,
-                    Url = "/release-notes",
-                    Color = Color.Success
-                },
-                new ImportantLink 
-                { 
-                    Title = "Techlight Website", 
-                    Description = "techlight.com.au",
-                    Icon = Icons.Material.Rounded.Public,
-                    Url = "https://techlight.com.au",
-                    Color = Color.Primary
-                },
-                new ImportantLink 
-                { 
-                    Title = "DR Website", 
-                    Description = "digitalresponse.com.au",
-                    Icon = Icons.Material.Rounded.Public,
-                    Url = "https://digitalresponse.com.au",
-                    Color = Color.Primary
-                },
-                new ImportantLink 
-                { 
-                    Title = "Google Analytics", 
-                    Description = "Marketing analytics dashboard",
-                    Icon = Icons.Material.Rounded.Analytics,
-                    Url = "https://analytics.google.com",
-                    Color = Color.Warning
-                },
-                new ImportantLink 
-                { 
-                    Title = "Meta Business Suite", 
-                    Description = "Facebook & Instagram management",
-                    Icon = Icons.Material.Rounded.Public,
-                    Url = "https://business.facebook.com",
-                    Color = Color.Info
-                }
-            };
+            await LoadDataAsync();
         }
         finally
         {
@@ -282,39 +228,111 @@ else
         }
     }
 
-    private void ViewAsset(AssetItem asset)
+    private async Task LoadDataAsync()
     {
-        if (!string.IsNullOrEmpty(asset.Path))
+        _brandAssets = await Task.Run(() => Service.GetAllAssets());
+        _importantLinks = await Task.Run(() => Service.GetImportantLinks());
+    }
+
+    private string GetIconForCategory(string category) => category.ToLower() switch
+    {
+        "logos" or "logo" => Icons.Material.Rounded.Image,
+        "guidelines" => Icons.Material.Rounded.MenuBook,
+        "profile" => Icons.Material.Rounded.Business,
+        "signature" => Icons.Material.Rounded.AlternateEmail,
+        "document" or "documents" => Icons.Material.Rounded.Description,
+        "image" or "images" => Icons.Material.Rounded.PhotoLibrary,
+        _ => Icons.Material.Rounded.AttachFile
+    };
+
+    private string GetIconForLink(string iconName) => iconName?.ToLower() switch
+    {
+        "analytics" => Icons.Material.Rounded.Analytics,
+        "facebook" => Icons.Custom.Brands.Facebook,
+        "language" or "web" or "website" => Icons.Material.Rounded.Public,
+        "help" => Icons.Material.Rounded.Help,
+        "releases" or "new" => Icons.Material.Rounded.NewReleases,
+        _ => Icons.Material.Rounded.Link
+    };
+
+    private string GetAssetUrl(BrandAssetFile asset)
+    {
+        return $"/brand-assets/{asset.FilePath}";
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024.0):F1} MB";
+    }
+
+    private async Task ShowUploadDialog()
+    {
+        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<UploadAssetDialog>("Upload Brand Asset", options);
+        var result = await dialog.Result;
+        if (!result.Canceled)
         {
-            Nav.NavigateTo(asset.Path);
+            await LoadDataAsync();
+            Snackbar.Add("Asset uploaded successfully!", Severity.Success);
         }
     }
 
-    private async Task DownloadAsset(AssetItem asset)
+    private async Task DeleteAsset(BrandAssetFile asset)
     {
-        if (!string.IsNullOrEmpty(asset.Path))
+        var parameters = new DialogParameters
         {
-            await JS.InvokeVoidAsync("window.open", asset.Path, "_blank");
+            { nameof(MudMessageBox.Message), $"Are you sure you want to delete '{asset.OriginalFileName}'?" },
+            { nameof(MudMessageBox.YesText), "Delete" },
+            { nameof(MudMessageBox.NoText), string.Empty },
+            { nameof(MudMessageBox.CancelText), "Cancel" }
+        };
+        var confirmResult = await DialogService.ShowAsync<MudMessageBox>("Confirm Delete", parameters);
+        var confirm = (await confirmResult.Result)?.Data is true;
+
+        if (confirm)
+        {
+            await Service.DeleteAsync(asset.Id, _userCode ?? "Unknown");
+            await LoadDataAsync();
+            Snackbar.Add("Asset deleted successfully!", Severity.Success);
         }
     }
 
-    private class AssetItem
+    private async Task ShowAddLinkDialog()
     {
-        public string Title { get; set; } = "";
-        public string Description { get; set; } = "";
-        public string Icon { get; set; } = "";
-        public bool HasView { get; set; }
-        public bool HasDownload { get; set; }
-        public bool Exists { get; set; }
-        public string Path { get; set; } = "";
+        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<AddEditLinkDialog>("Add Link", options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled)
+        {
+            await LoadDataAsync();
+            Snackbar.Add("Link added successfully!", Severity.Success);
+        }
     }
 
-    private class ImportantLink
+    private async Task DeleteLink(ImportantLink link)
     {
-        public string Title { get; set; } = "";
-        public string Description { get; set; } = "";
-        public string Icon { get; set; } = "";
-        public string Url { get; set; } = "";
-        public Color Color { get; set; }
+        var parameters = new DialogParameters
+        {
+            { nameof(MudMessageBox.Message), $"Are you sure you want to delete the link '{link.Title}'?" },
+            { nameof(MudMessageBox.YesText), "Delete" },
+            { nameof(MudMessageBox.NoText), string.Empty },
+            { nameof(MudMessageBox.CancelText), "Cancel" }
+        };
+        var confirmResult = await DialogService.ShowAsync<MudMessageBox>("Confirm Delete", parameters);
+        var confirm = (await confirmResult.Result)?.Data is true;
+
+        if (confirm == true)
+        {
+            // Remove link from settings
+            var links = Service.GetImportantLinks();
+            links.RemoveAll(l => l.Id == link.Id);
+            Service.SaveImportantLinks(links);
+            await LoadDataAsync();
+            Snackbar.Add("Link deleted successfully!", Severity.Success);
+        }
     }
 }
+
+

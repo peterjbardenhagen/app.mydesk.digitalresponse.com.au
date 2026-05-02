@@ -8,6 +8,7 @@ public class Expense
     public DateTime Date { get; set; } = DateTime.Today;
     public string Description { get; set; } = "";
     public decimal Amount { get; set; }
+    public decimal TaxAmount { get; set; }
     public decimal GST { get; set; }
     public decimal Total { get; set; }
     public int? SupplierId { get; set; }

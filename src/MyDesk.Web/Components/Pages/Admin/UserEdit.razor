@@ -3,8 +3,10 @@
 @attribute [Authorize]
 @inject UserService UserSvc
 @inject SystemService SystemSvc
+@inject PermissionService PermSvc
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
+@inject IHttpContextAccessor HttpContextAccessor
 
 <PageTitle>@(IsNew ? "New User" : $"Edit {_model.Name}") - MyDesk</PageTitle>
 
@@ -82,15 +84,40 @@
     private string _password = "";
     private List<UserType> _userTypes = new();
     private List<Division> _divisions = new();
+    private int _currentUserTypeId;
+    private bool _isDirectorCannotManageAdmin;
 
     protected override async Task OnParametersSetAsync()
     {
+        var httpContext = HttpContextAccessor.HttpContext;
+        if (httpContext?.User?.Identity?.IsAuthenticated == true)
+        {
+            var userTypeClaim = httpContext.User.FindFirst("UserTypeId")?.Value;
+            if (int.TryParse(userTypeClaim, out var utid))
+                _currentUserTypeId = utid;
+        }
+
         _userTypes = await UserSvc.GetUserTypesAsync();
+        
+        // Directors cannot see Administrator role in dropdown
+        if (_currentUserTypeId == 1)
+        {
+            _userTypes = _userTypes.Where(t => t.UserTypeId != 2).ToList();
+        }
+        
         _divisions = await SystemSvc.GetDivisionsAsync();
 
         if (!IsNew)
         {
             _model = await UserSvc.GetAsync(UserId!.Value) ?? new User();
+            
+            // Check if Director is trying to edit an Administrator
+            if (_currentUserTypeId == 1 && _model.UserTypeId == 2)
+            {
+                Snackbar.Add("Directors cannot manage Administrator users", Severity.Error);
+                Nav.NavigateTo("/admin/users");
+                return;
+            }
         }
     }
 
@@ -139,4 +166,6 @@
         }
     }
 }
+
+
 

@@ -1,109 +1,53 @@
 @using MyDesk.Shared.Models
-@inject ISnackbar Snackbar
+@using MudBlazor
 
-<MudDialog Options="new DialogOptions { CloseButton = true, CloseOnEscapeKey = true }">
+<MudDialog>
     <DialogContent>
-        <MudForm Model="_expense" @ref="_form" IsValidChanged="OnValidChanged">
-            <MudGrid>
-                <MudItem xs="12" sm="6">
-                    <MudDatePicker Label="Date" @bind-Date="_expenseDate" Required="true" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudSelect T="string" Label="Status" @bind-Value="_expense.Status" Required="true">
-                        <MudSelectItem Value="@("Pending")">Pending</MudSelectItem>
-                        <MudSelectItem Value="@("Approved")">Approved</MudSelectItem>
-                        <MudSelectItem Value="@("Rejected")">Rejected</MudSelectItem>
-                        <MudSelectItem Value="@("Paid")">Paid</MudSelectItem>
-                    </MudSelect>
-                </MudItem>
-                
-                <MudItem xs="12">
-                    <MudTextField Label="Supplier Name" @bind-Value="_expense.SupplierName" Required="true" />
-                </MudItem>
-                <MudItem xs="12">
-                    <MudTextField Label="Description" @bind-Value="_expense.Description" Required="true" Lines="2" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudSelect T="string" Label="Category" @bind-Value="_expense.Category" Required="true">
-                        <MudSelectItem Value="@("General")">General</MudSelectItem>
-                        <MudSelectItem Value="@("Meals")">Meals & Entertainment</MudSelectItem>
-                        <MudSelectItem Value="@("Travel")">Travel</MudSelectItem>
-                        <MudSelectItem Value="@("Office")">Office Supplies</MudSelectItem>
-                        <MudSelectItem Value="@("Software")">Software</MudSelectItem>
-                        <MudSelectItem Value="@("Marketing")">Marketing</MudSelectItem>
-                    </MudSelect>
-                </MudItem>
-                
-                <MudItem xs="12" sm="4">
-                    <MudNumericField Label="Amount" @bind-Value="_expense.Amount" Format="N2" Immediate="true" OnBlur="CalculateTotal" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.AttachMoney" />
-                </MudItem>
-                <MudItem xs="12" sm="4">
-                    <MudNumericField Label="GST" @bind-Value="_expense.GST" Format="N2" Immediate="true" OnBlur="CalculateTotal" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.AttachMoney" />
-                </MudItem>
-                <MudItem xs="12" sm="4">
-                    <MudNumericField Label="Total" @bind-Value="_expense.Total" Format="N2" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.AttachMoney" Disabled="false" />
-                </MudItem>
-            </MudGrid>
+        <MudForm @ref="_form">
+            <MudTextField T="string" @bind-Value="_expense.SupplierName" Label="Supplier" Required="true" RequiredError="Supplier is required" Variant="Variant.Outlined" FullWidth="true" Class="mb-4" />
+            <MudTextField T="string" @bind-Value="_expense.Description" Label="Description" Required="true" RequiredError="Description is required" Variant="Variant.Outlined" FullWidth="true" Class="mb-4" />
+            <MudTextField T="decimal" @bind-Value="_expense.Amount" Label="Amount (ex GST)" Variant="Variant.Outlined" FullWidth="true" Class="mb-4" Adornment="Adornment.Start" AdornmentText="$" />
+            <MudTextField T="decimal" @bind-Value="_expense.GST" Label="GST" Variant="Variant.Outlined" FullWidth="true" Class="mb-4" Adornment="Adornment.Start" AdornmentText="$" />
+            <MudSelect T="string" @bind-Value="_expense.Category" Label="Category" Variant="Variant.Outlined" FullWidth="true" Class="mb-4">
+                @foreach (var cat in _categories)
+                {
+                    <MudSelectItem Value="@cat">@cat</MudSelectItem>
+                }
+            </MudSelect>
+            <MudSelect T="string" @bind-Value="_expense.Status" Label="Status" Variant="Variant.Outlined" FullWidth="true" Class="mb-4">
+                @foreach (var status in _statuses)
+                {
+                    <MudSelectItem Value="@status">@status</MudSelectItem>
+                }
+            </MudSelect>
+            <MudTextField T="DateTime" @bind-Value="_expense.Date" Label="Date" Variant="Variant.Outlined" FullWidth="true" Class="mb-4" />
         </MudForm>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@(!_isValid)">Save</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Save</MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
-    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    [CascadingParameter] private MudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public Expense? Expense { get; set; }
 
-    [Parameter] public Expense Expense { get; set; } = new();
-    
-    private MudForm _form = default!;
+    private MudForm? _form;
     private Expense _expense = new();
-    private DateTime? _expenseDate = DateTime.Today;
-    private bool _isValid;
+    private readonly string[] _categories = { "General", "Software", "Hardware", "Office Supplies", "Travel", "Marketing", "Utilities", "Rent" };
+    private readonly string[] _statuses = { "Pending", "Approved", "Paid", "Rejected" };
 
     protected override void OnInitialized()
     {
-        _expense = new Expense
-        {
-            ExpenseId = Expense.ExpenseId,
-            Date = Expense.Date,
-            Description = Expense.Description,
-            Amount = Expense.Amount,
-            GST = Expense.GST,
-            Total = Expense.Total,
-            SupplierId = Expense.SupplierId,
-            SupplierName = Expense.SupplierName,
-            Category = Expense.Category,
-            Status = Expense.Status,
-            FileName = Expense.FileName,
-            FilePath = Expense.FilePath,
-            AIProcessingResult = Expense.AIProcessingResult,
-            CreatedBy = Expense.CreatedBy,
-            CreatedAt = Expense.CreatedAt
-        };
-        _expenseDate = _expense.Date;
-    }
-
-    private void OnValidChanged(bool isValid) => _isValid = isValid;
-
-    private void CalculateTotal()
-    {
-        _expense.Total = _expense.Amount + _expense.GST;
-    }
-
-    private async Task Submit()
-    {
-        await _form.Validate();
-        if (_form.IsValid)
-        {
-            if (_expenseDate.HasValue)
-            {
-                _expense.Date = _expenseDate.Value;
-            }
-            MudDialog.Close(DialogResult.Ok(_expense));
-        }
+        _expense = Expense ?? new Expense();
     }
 
     private void Cancel() => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        _expense.Total = _expense.Amount + _expense.GST;
+        MudDialog.Close(DialogResult.Ok(_expense));
+    }
 }

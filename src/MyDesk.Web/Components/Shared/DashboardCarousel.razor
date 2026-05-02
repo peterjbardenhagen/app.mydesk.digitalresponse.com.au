@@ -1529,7 +1529,12 @@
 
     private List<ChartSeries> GetRevenueSeries()
     {
-        return ChartSeries;
+        return new List<ChartSeries>
+        {
+            new ChartSeries { Name = "Quotes", Data = Metrics.MonthlyQuotesThisYear.Select(v => (double)v).ToArray() },
+            new ChartSeries { Name = "Invoices", Data = Metrics.MonthlyInvoicesThisYear.Select(v => (double)v).ToArray() },
+            new ChartSeries { Name = "Purchase Orders", Data = Metrics.MonthlyPOsThisYear.Select(v => (double)v).ToArray() },
+        };
     }
 
     private List<ChartSeries> GetComparisonSeries()
@@ -1637,3 +1642,7 @@
         _ => Icons.Material.Rounded.Lightbulb
     };
 }
+
+
+
+

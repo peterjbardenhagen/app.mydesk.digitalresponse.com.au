@@ -130,7 +130,7 @@ public class SupplierQuoteParseService
                 messages = new object[]
                 {
                     new { role = "system", content = "You are a document analysis assistant. Extract all text content from the provided PDF document. Return ONLY the raw extracted text without any formatting or explanations." },
-                    new { role = "user", content = new object[] { new { type = "input_image", image_url = new { url = $"data:application/pdf;base64,{base64}" } } } }
+                    new { role = "user", content = new object[] { new { type = "file", file_url = new { url = $"data:application/pdf;base64,{base64}" } } } }
                 }
             };
 
@@ -140,7 +140,8 @@ public class SupplierQuoteParseService
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Azure AI PDF extraction returned {Status}: {Body}", response.StatusCode, responseText);
+                var errorBody = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Azure AI PDF extraction failed. Status: {Status}, Body: {Body}", response.StatusCode, errorBody);
                 return string.Empty;
             }
 
@@ -178,7 +179,7 @@ public class SupplierQuoteParseService
                 messages = new object[]
                 {
                     new { role = "system", content = "You are a document analysis assistant. Extract all text content from the provided image of a quote or invoice. Return ONLY the raw extracted text without any formatting or explanations. Include all line items with descriptions, quantities, unit prices, and totals." },
-                    new { role = "user", content = new object[] { new { type = "input_image", image_url = new { url = $"data:{mimeType};base64,{base64}" } } } }
+                    new { role = "user", content = new object[] { new { type = "image_url", image_url = new { url = $"data:{mimeType};base64,{base64}" } } } }
                 }
             };
 

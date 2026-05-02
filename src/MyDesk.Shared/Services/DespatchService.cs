@@ -15,7 +15,7 @@ public class DespatchService
         var sql = $@"
             SELECT TOP {limit} d.DespatchId, d.DespatchDate, d.Carrier, d.CarrierRef AS TrackingNumber, d.PackageDetails AS Notes,
                    COALESCE(NULLIF(co.Company, ''), NULLIF(i.InvCompany, ''), NULLIF(i.DelCompany, ''), 'No Customer') AS CompanyName,
-                   i.InvoiceId, i.InvoiceNumber
+                   i.InvoiceId, ISNULL(i.InvoiceNumber, '') AS InvoiceNum
             FROM Despatch d
             LEFT JOIN Invoices i ON i.InvoiceId = d.InvoiceId
             LEFT JOIN Companies co ON co.CompanyId = i.CompanyId
@@ -27,7 +27,7 @@ public class DespatchService
             DespatchDate  = r["DespatchDate"] != DBNull.Value ? Convert.ToDateTime(r["DespatchDate"]) : (DateTime?)null,
             CompanyName   = r["CompanyName"]?.ToString() ?? "No Customer",
             InvoiceId     = r["InvoiceId"] == DBNull.Value ? null : Convert.ToInt32(r["InvoiceId"]),
-            InvoiceNumber = r["InvoiceNumber"] == DBNull.Value ? null : r["InvoiceNumber"]?.ToString(),
+            InvoiceNumber = r["InvoiceNum"] == DBNull.Value ? null : r["InvoiceNum"]?.ToString(),
             Carrier       = r["Carrier"]?.ToString() ?? "",
             TrackingNumber = r["TrackingNumber"]?.ToString() ?? "",
             Notes         = r["Notes"]?.ToString() ?? ""

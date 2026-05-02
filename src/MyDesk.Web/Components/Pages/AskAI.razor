@@ -10,7 +10,8 @@
 @using MyDesk.Shared.Services
 @using System.Security.Claims
 @using Microsoft.JSInterop
-@using System.Text.Json;
+@using System.Text.Json
+@inject FileLibraryService FileLibrarySvc
 
 <PageTitle>Ask AI - MyDesk</PageTitle>
 
@@ -88,8 +89,14 @@
 }
 
 <MudPaper Elevation="1" Class="pa-3">
+    <div class="d-flex align-center gap-2 mb-2">
+        <MudText Typo="Typo.caption" Style="color:var(--gray-500);">Add to context:</MudText>
+        <MudCheckBox @bind-Value="_includeMyDeskData" Size="Size.Small" Label="MyDesk Data" Color="Color.Primary" Dense="true" />
+        <MudCheckBox @bind-Value="_includeFilesLibrary" Size="Size.Small" Label="Files Library" Color="Color.Primary" Dense="true" />
+        <MudCheckBox @bind-Value="_includeIntegrations" Size="Size.Small" Label="Integrations" Color="Color.Primary" Dense="true" />
+    </div>
     <div class="d-flex gap-2 align-end">
-        <MudTextField @bind-Value="_input" Placeholder="Ask a question…" Variant="Variant.Outlined"
+        <MudTextField @bind-Value="_input" Placeholder="Ask a question." Variant="Variant.Outlined"
                       Lines="2" Immediate="true" OnKeyDown="OnKeyDown" Style="flex:1;"
                       Margin="Margin.Dense" Disabled="@_thinking" />
         <MudIconButton Icon="@(_listening ? Icons.Material.Rounded.MicOff : Icons.Material.Rounded.Mic)"
@@ -138,6 +145,13 @@
         "Show expenses this month"
     };
 
+    /// <summary>
+    /// File inclusion toggle flags
+    /// </summary>
+    private bool _includeMyDeskData = true;
+    private bool _includeFilesLibrary = true;
+    private bool _includeIntegrations = true;
+    
     [Inject] private PlatformSettingsService SettingsSvc { get; set; } = null!;
 
     protected override async Task OnInitializedAsync()
@@ -204,7 +218,7 @@ Be concise, practical, and focus on actionable business insights."));
             if (!_contextLoaded)
             {
                 var stats = await FuncExecutor.GetDashboardStatsAsync();
-                _apiMessages.Add(AzureChatMessage.System($"Current business stats: {JsonSerializer.Serialize(stats)}"));
+                _apiMessages.Add(AzureChatMessage.System($"Current business stats: {System.Text.Json.JsonSerializer.Serialize(stats)}"));
                 _contextLoaded = true;
             }
 
@@ -214,7 +228,7 @@ Be concise, practical, and focus on actionable business insights."));
             var functionResult = await TryExecuteFunctionAsync(question);
             if (functionResult != null)
             {
-                var resultJson = JsonSerializer.Serialize(functionResult, new JsonSerializerOptions { WriteIndented = true });
+                var resultJson = System.Text.Json.JsonSerializer.Serialize(functionResult, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
                 _apiMessages.Add(AzureChatMessage.System($"Function result: {resultJson}"));
                 
                 // Get AI to interpret the results
@@ -303,7 +317,8 @@ Be concise, practical, and focus on actionable business insights."));
         }
         
         // Check for dashboard/stats
-        if (lowerQuestion.Contains("summary") || lowerQuestion.Contains("stats") || lowerQuestion.Contains("brief me") || lowerQuestion.Contains("cash position"))
+        // Check for queries about summary or stats
+        if (lowerQuestion.Contains("summary") || lowerQuestion.Contains("stats") || lowerQuestion.Contains("brief me") || lowerQuestion.Contains("cash position") || lowerQuestion.Contains("how many"))
         {
             return await FuncExecutor.GetDashboardStatsAsync();
         }
@@ -364,4 +379,6 @@ Be concise, practical, and focus on actionable business insights."));
     }
 
 }
+
+
 

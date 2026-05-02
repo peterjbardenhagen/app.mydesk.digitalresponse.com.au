@@ -1,0 +1,316 @@
+@page "/admin/error-logs"
+@attribute [Authorize(Roles = "Admin,Director")]
+@inject ErrorLogService ErrorLogService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Error Logs - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <a href="/admin/setup">Admin</a><span class="sep">/</span>
+            <span>Error Logs</span>
+        </div>
+        <h1>Error Logs</h1>
+        <p class="tl-subtitle">Monitor and manage application errors</p>
+    </div>
+    <div class="d-flex gap-3">
+        <MudButton Variant="Variant.Outlined" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Rounded.DeleteSweep"
+                   OnClick="PurgeOldErrors"
+                   Class="rounded-lg">
+            Purge Old Errors
+        </MudButton>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Rounded.Refresh"
+                   OnClick="LoadErrors"
+                   Class="rounded-lg">
+            Refresh
+        </MudButton>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<MudGrid Spacing="3" Class="mb-6">
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Class="pa-4 tl-stat-card" Elevation="0" Outlined="true">
+            <div class="d-flex align-center gap-3">
+                <div class="tl-icon-box red">
+                    <MudIcon Icon="@Icons.Material.Rounded.Error" />
+                </div>
+                <div>
+                    <MudText Typo="Typo.h4">@_totalCount</MudText>
+                    <MudText Typo="Typo.caption" Class="opacity-60">Total Errors</MudText>
+                </div>
+            </div>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Class="pa-4 tl-stat-card" Elevation="0" Outlined="true">
+            <div class="d-flex align-center gap-3">
+                <div class="tl-icon-box orange">
+                    <MudIcon Icon="@Icons.Material.Rounded.Warning" />
+                </div>
+                <div>
+                    <MudText Typo="Typo.h4">@_unresolvedCount</MudText>
+                    <MudText Typo="Typo.caption" Class="opacity-60">Unresolved</MudText>
+                </div>
+            </div>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Class="pa-4 tl-stat-card" Elevation="0" Outlined="true">
+            <div class="d-flex align-center gap-3">
+                <div class="tl-icon-box green">
+                    <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" />
+                </div>
+                <div>
+                    <MudText Typo="Typo.h4">@_resolvedCount</MudText>
+                    <MudText Typo="Typo.caption" Class="opacity-60">Resolved</MudText>
+                </div>
+            </div>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Class="pa-4 tl-stat-card" Elevation="0" Outlined="true">
+            <div class="d-flex align-center gap-3">
+                <div class="tl-icon-box purple">
+                    <MudIcon Icon="@Icons.Material.Rounded.TrendingDown" />
+                </div>
+                <div>
+                    <MudText Typo="Typo.h4">@_todayCount</MudText>
+                    <MudText Typo="Typo.caption" Class="opacity-60">Today</MudText>
+                </div>
+            </div>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<!-- Filters -->
+<MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="4">
+            <MudSelect T="string?" Label="Severity" @bind-Value="_severityFilter" Variant="Variant.Outlined" Clearable="true" OnTextChanged="LoadErrors">
+                <MudSelectItem Value="@(null as string)">All Severities</MudSelectItem>
+                <MudSelectItem Value="@("Critical")">Critical</MudSelectItem>
+                <MudSelectItem Value="@("Error")">Error</MudSelectItem>
+                <MudSelectItem Value="@("Warning")">Warning</MudSelectItem>
+                <MudSelectItem Value="@("Info")">Info</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudSelect T="string?" Label="Status" @bind-Value="_statusFilter" Variant="Variant.Outlined" Clearable="true" OnTextChanged="LoadErrors">
+                <MudSelectItem Value="@(null as string)">All</MudSelectItem>
+                <MudSelectItem Value="@("Unresolved")">Unresolved</MudSelectItem>
+                <MudSelectItem Value="@("Resolved")">Resolved</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<!-- Error Logs Table -->
+@if (_loading)
+{
+    <div class="d-flex justify-center pa-6">
+        <MudProgressCircular Size="Size.Medium" Color="Color.Primary" Indeterminate="true" />
+    </div>
+}
+else if (_errorLogs.Any())
+{
+    <MudPaper Elevation="0" Outlined="true">
+        <MudTable Items="_errorLogs" Breakpoint="Breakpoint.Xs" Hover="true" Striped="true" Class="tl-error-table">
+            <HeaderContent>
+                <MudTh>Date/Time</MudTh>
+                <MudTh>Severity</MudTh>
+                <MudTh>Message</MudTh>
+                <MudTh>Source</MudTh>
+                <MudTh>User</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Date">@context.ErrorDate.ToString("dd/MM/yyyy HH:mm")</MudTd>
+                <MudTd DataLabel="Severity">
+                    <MudChip T="string" Size="Size.Small" Color="@GetSeverityColor(context.Severity)">
+                        @context.Severity
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Message">
+                    <div class="tl-error-message-cell">
+                        <MudText Typo="Typo.body2" Class="text-truncate-2">@context.Message</MudText>
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="Source">@context.Source</MudTd>
+                <MudTd DataLabel="User">
+                    @if (!string.IsNullOrEmpty(context.UserName))
+                    {
+                        <MudText Typo="Typo.body2">@context.UserName</MudText>
+                        <MudText Typo="Typo.caption" Class="opacity-60">@context.IPAddress</MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.caption" Class="opacity-60">Unknown</MudText>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Status">
+                    @if (context.IsResolved)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success">Resolved</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">Pending</MudChip>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudIconButton Icon="@Icons.Material.Rounded.Visibility" 
+                                   Size="Size.Small" 
+                                   OnClick="() => ViewErrorDetails(context)" />
+                    @if (!context.IsResolved)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Rounded.Check" 
+                                       Size="Size.Small" 
+                                       Color="Color.Success"
+                                       OnClick="() => MarkAsResolved(context)" />
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+}
+else
+{
+    <MudPaper Class="pa-10 text-center" Elevation="0" Outlined="true">
+        <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Size="Size.Large" Color="Color.Success" Class="mb-4" />
+        <MudText Typo="Typo.h6">No errors found</MudText>
+        <MudText Typo="Typo.body2" Class="opacity-60">Everything is running smoothly!</MudText>
+    </MudPaper>
+}
+
+<style>
+    .tl-page-header { 
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 24px; 
+    }
+    .tl-breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--gray-500); margin-bottom: 8px; }
+    .tl-breadcrumb a { color: var(--gray-500); text-decoration: none; }
+    .tl-breadcrumb a:hover { color: var(--tl-primary-500); }
+    .tl-breadcrumb .sep { opacity: 0.5; }
+    .tl-subtitle { color: var(--gray-500); margin: 0; }
+
+    .tl-stat-card { transition: all 0.2s ease; }
+    .tl-stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+
+    .tl-icon-box {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+    }
+    .tl-icon-box.red { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+    .tl-icon-box.orange { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
+    .tl-icon-box.green { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+    .tl-icon-box.purple { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
+
+    .tl-error-table .text-truncate-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+</style>
+
+@code {
+    private List<ErrorLog> _errorLogs = new();
+    private bool _loading = true;
+    private int _totalCount;
+    private int _unresolvedCount;
+    private int _resolvedCount;
+    private int _todayCount;
+    private string? _severityFilter;
+    private string? _statusFilter;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadErrors();
+    }
+
+    private async Task LoadErrors()
+    {
+        _loading = true;
+        try
+        {
+            _errorLogs = await ErrorLogService.GetErrorLogsAsync(
+                page: 1, 
+                pageSize: 50, 
+                severity: _severityFilter, 
+                isResolved: _statusFilter == "resolved" ? true : _statusFilter == "unresolved" ? false : null);
+            
+            _totalCount = await ErrorLogService.GetErrorCountAsync();
+            _unresolvedCount = await ErrorLogService.GetErrorCountAsync(isResolved: false);
+            _resolvedCount = await ErrorLogService.GetErrorCountAsync(isResolved: true);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading logs: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private Color GetSeverityColor(string severity)
+    {
+        return severity switch
+        {
+            "Critical" => Color.Error,
+            "Error" => Color.Warning,
+            "Warning" => Color.Info,
+            "Info" => Color.Default,
+            _ => Color.Default
+        };
+    }
+
+    private async Task ViewErrorDetails(ErrorLog errorLog)
+    {
+        var parameters = new DialogParameters
+        {
+            { nameof(ErrorDetailsDialog.ErrorLog), errorLog }
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true };
+        await DialogService.ShowAsync<ErrorDetailsDialog>("Error Details", parameters, options);
+    }
+
+    private async Task MarkAsResolved(ErrorLog errorLog)
+    {
+        await ErrorLogService.MarkAsResolvedAsync(errorLog.ErrorLogId, "Admin");
+        Snackbar.Add("Error marked as resolved", Severity.Success);
+        await LoadErrors();
+    }
+
+    private async Task PurgeOldErrors()
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Purge Old Errors",
+            "This will permanently delete all resolved errors older than 90 days. Are you sure?",
+            yesText: "Purge",
+            cancelText: "Cancel");
+        
+        if (result == true)
+        {
+            var count = await ErrorLogService.PurgeOldErrorsAsync(90);
+            Snackbar.Add($"Purged {count} old errors", Severity.Success);
+            await LoadErrors();
+        }
+    }
+}

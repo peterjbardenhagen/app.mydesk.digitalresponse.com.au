@@ -5,6 +5,44 @@
 
 ---
 
+## Version 3.1.0 — May 2026
+
+### Granular Permission System
+- **NEW**: Comprehensive permission system controlling access to every module and function
+- **NEW**: `RolePermissions` database table with automatic creation on startup
+- **NEW**: `PermissionService` with caching and CRUD operations
+- **NEW**: Visual permission matrix UI in Admin > User Roles & Permissions
+- **NEW**: 80+ granular permissions defined across all modules
+- **NEW**: Default permissions for Director, Administrator, Accounts, and Sales roles
+- **NEW**: Director restriction - cannot manage Administrator users (enforced at multiple levels)
+
+### Security Enhancements
+- **NEW**: `robots.txt` endpoint blocking all search engine crawlers
+- **NEW**: `X-Robots-Tag: noindex` middleware on all responses
+- **NEW**: Meta noindex tags for all major search engines and AI crawlers
+- **ENHANCED**: All future code must use PermissionService for authorization checks
+- **FIXED**: Directors cannot view, edit, add, or delete Administrator users
+
+### Navigation & UI Fixes
+- **FIXED**: Removed duplicate "Sales Projects" entries in NavMenu (was repeated 3 times)
+- **ENHANCED**: Added Platform Settings to Admin navigation group
+- **ENHANCED**: Added User Roles & Permissions link to Admin navigation
+- **ENHANCED**: Added complete Reference Data submenu with all admin pages:
+  - Divisions, Locations, Quote/Invoice/PO Status, Currency, Part Codes
+  - Activity Types, Parameters, Nav Menu, Setup Menu, Brand Assets, AI Audit Log
+
+### Documentation
+- **NEW**: PERMISSIONS.md - Complete permission system documentation
+- **NEW**: SECURITY.md - Security best practices and hardening guide
+- **UPDATED**: README.md - Version 3.1, added security & permissions section
+- **UPDATED**: CHANGELOG.md - This entry
+
+### Database
+- **NEW**: RolePermissions table (auto-created on startup)
+- **NEW**: Automatic default permission seeding
+
+---
+
 ## Changes Made
 
 ### 1. Eliminated Duplicates ✓

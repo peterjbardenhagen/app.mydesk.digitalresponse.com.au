@@ -128,7 +128,8 @@
     </MudItem>
 </MudGrid>
 
-<MudDialog @bind-Visible="_showSettingsDialog" MaxWidth="MaxWidth.Medium" FullWidth="true">
+<MudDialog @bind-Visible="_showSettingsDialog" MaxWidth="MaxWidth.Medium" FullWidth="true"
+         Options="new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true }">
     <TitleContent>
         <MudText Typo="Typo.h6">@(_selectedIntegration?.Name) Settings</MudText>
     </TitleContent>
@@ -534,3 +535,5 @@ public IntegrationStatusModel StatusDetails { get; set; } = new();
         public string? LastTestMessage { get; set; }
     }
 }
+
+

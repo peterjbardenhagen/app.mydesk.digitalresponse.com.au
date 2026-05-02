@@ -1,4 +1,5 @@
 @page "/purchase-orders"
+@page "/purchaseorders"
 @attribute [Authorize]
 @inject PurchaseOrderService POService
 @inject LookupService LookupService
@@ -180,9 +181,15 @@
 
     private async Task DeleteAsync(PurchaseOrder po)
     {
-        bool? ok = await Dialog.ShowMessageBox("Delete PO",
-            $"Delete PO for {po.SupplierName} ({po.Project})? This cannot be undone.",
-            yesText: "Delete", cancelText: "Cancel");
+        var parameters = new DialogParameters
+        {
+            { nameof(MudMessageBox.Message), $"Delete PO for {po.SupplierName} ({po.Project})? This cannot be undone." },
+            { nameof(MudMessageBox.YesText), "Delete" },
+            { nameof(MudMessageBox.NoText), string.Empty },
+            { nameof(MudMessageBox.CancelText), "Cancel" }
+        };
+        var result = await Dialog.ShowAsync<MudMessageBox>("Delete PO", parameters);
+        bool? ok = (await result.Result)?.Data as bool?;
         if (ok != true) return;
         try
         {
@@ -235,4 +242,6 @@
         await JsRuntime.InvokeVoidAsync("window.open", url, "_blank");
     }
 }
+
+
 

@@ -1,4 +1,5 @@
 @page "/products/new"
+@page "/products/create"
 @page "/products/{ProductId:int}/edit"
 @attribute [Authorize]
 @inject ProductService Svc
@@ -68,4 +69,6 @@
         catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
     }
 }
+
+
 

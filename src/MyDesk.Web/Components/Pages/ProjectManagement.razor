@@ -1,0 +1,339 @@
+@page "/project-management"
+@attribute [Authorize]
+@inject ProjectService ProjectSvc
+@inject StaffWhereaboutsService WhereaboutsSvc
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@using System.Security.Claims
+
+<PageTitle>Project Management - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <span>Project Management</span>
+        </div>
+        <h1>Project Management</h1>
+        <p class="tl-subtitle">Manage projects, sprints, tasks and capacity planning</p>
+    </div>
+    <div class="d-flex gap-3">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add" OnClick="CreateProject" Class="rounded-lg">New Project</MudButton>
+    </div>
+</div>
+
+<MudTabs Elevation="0" Rounded="true" PanelClass="pa-4 mt-4" Color="Color.Primary" Outlined="true">
+    <MudTabPanel Text="Projects" Icon="@Icons.Material.Rounded.WorkspacePremium">
+        @if (_loading)
+        {
+            <div class="d-flex justify-center pa-6"><MudProgressCircular Size="Size.Medium" Indeterminate="true" /></div>
+        }
+        else if (_projects.Any())
+        {
+            <MudGrid Spacing="3">
+                @foreach (var project in _projects)
+                {
+                    <MudItem xs="12" md="6" lg="4">
+                        <MudPaper Class="pa-4 tl-project-card" Elevation="0" Outlined="true" Style="cursor: pointer;" @onclick="() => OpenProject(project)">
+                            <div class="d-flex justify-space-between align-start mb-2">
+                                <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(project.Status)">@project.Status</MudChip>
+                                <MudChip T="string" Size="Size.Small" Color="@GetPriorityColor(project.Priority)">@project.Priority</MudChip>
+                            </div>
+                            <MudText Typo="Typo.h6" Class="mb-1">@project.Name</MudText>
+                            <MudText Typo="Typo.body2" Class="opacity-60 mb-2">@project.Description</MudText>
+                            <MudDivider Class="my-2" />
+                            <div class="d-flex justify-space-between align-center">
+                                <MudText Typo="Typo.caption">By @project.OwnerName</MudText>
+                                @if (project.StartDate.HasValue && project.EndDate.HasValue)
+                                {
+                                    <MudText Typo="Typo.caption" Class="opacity-60">@project.StartDate.Value.ToString("dd MMM") - @project.EndDate.Value.ToString("dd MMM yyyy")</MudText>
+                                }
+                            </div>
+                        </MudPaper>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+        else
+        {
+            <MudPaper Class="pa-10 text-center" Elevation="0" Outlined="true">
+                <MudIcon Icon="@Icons.Material.Rounded.FolderOpen" Size="Size.Large" Class="mb-4 opacity-60" />
+                <MudText Typo="Typo.h6">No projects yet</MudText>
+                <MudText Typo="Typo.body2" Class="opacity-60 mb-4">Create your first project to get started</MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateProject">Create Project</MudButton>
+            </MudPaper>
+        }
+    </MudTabPanel>
+
+    <MudTabPanel Text="Scrum Board" Icon="@Icons.Material.Rounded.ViewKanban">
+        @if (_selectedProject != null)
+        {
+            <div class="d-flex align-center justify-space-between mb-4">
+                <MudText Typo="Typo.h6">@_selectedProject.Name - Sprint Board</MudText>
+                <MudButton Variant="Variant.Filled" Size="Size.Small" StartIcon="@Icons.Material.Rounded.Add" OnClick="CreateTask">Add Task</MudButton>
+            </div>
+            <MudGrid Spacing="2">
+                @foreach (var status in _kanbanStatuses)
+                {
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Class="pa-3 tl-kanban-column" Elevation="0" Outlined="true">
+                            <div class="d-flex align-center gap-2 mb-3">
+                                <MudIcon Icon="@status.Icon" Size="Size.Small" Color="@status.Color" />
+                                <MudText Typo="Typo.subtitle2">@status.Name</MudText>
+                                <MudText Typo="Typo.caption" Class="opacity-60 ml-auto">(@_tasks.Count(t => t.Status == status.Value))</MudText>
+                            </div>
+                            @foreach (var task in _tasks.Where(t => t.Status == status.Value).OrderBy(t => t.OrderIndex))
+                            {
+                                <MudPaper Class="pa-3 mb-2 tl-task-card" Elevation="1" @onclick="() => OpenTask(task)" Style="cursor: pointer;">
+                                    <div class="d-flex justify-space-between align-start mb-1">
+                                        <MudChip T="string" Size="Size.Small" Color="@GetTaskTypeColor(task.TaskType)">@task.TaskType</MudChip>
+                                        @if (task.StoryPoints.HasValue)
+                                        {
+                                            <MudText Typo="Typo.caption" Class="fw-600">@task.StoryPoints pts</MudText>
+                                        }
+                                    </div>
+                                    <MudText Typo="Typo.body2" Class="fw-500 mb-1">@task.Title</MudText>
+                                    @if (!string.IsNullOrEmpty(task.AssigneeName))
+                                    {
+                                        <MudText Typo="Typo.caption" Class="opacity-60">@task.AssigneeName</MudText>
+                                    }
+                                    @if (task.Priority == "High" || task.Priority == "Critical")
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="@GetPriorityColor(task.Priority)" Class="mt-1">@task.Priority</MudChip>
+                                    }
+                                </MudPaper>
+                            }
+                        </MudPaper>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+        else
+        {
+            <MudPaper Class="pa-10 text-center" Elevation="0" Outlined="true">
+                <MudIcon Icon="@Icons.Material.Rounded.ViewKanban" Size="Size.Large" Class="mb-4 opacity-60" />
+                <MudText Typo="Typo.h6">Select a project to view the scrum board</MudText>
+            </MudPaper>
+        }
+    </MudTabPanel>
+
+    <MudTabPanel Text="All Tasks" Icon="@Icons.Material.Rounded.Task">
+        <MudTable Items="_tasks" Hover="true" Striped="true" Elevation="0" Outlined="true">
+            <HeaderContent>
+                <MudTh>Title</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Priority</MudTh>
+                <MudTh>Type</MudTh>
+                <MudTh>Assignee</MudTh>
+                <MudTh>Story Pts</MudTh>
+                <MudTh>Due</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Title">@context.Title</MudTd>
+                <MudTd DataLabel="Status"><MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@context.Status</MudChip></MudTd>
+                <MudTd DataLabel="Priority"><MudChip T="string" Size="Size.Small" Color="@GetPriorityColor(context.Priority)">@context.Priority</MudChip></MudTd>
+                <MudTd DataLabel="Type">@context.TaskType</MudTd>
+                <MudTd DataLabel="Assignee">@context.AssigneeName</MudTd>
+                <MudTd DataLabel="Story Pts">@context.StoryPoints</MudTd>
+                <MudTd DataLabel="Due">@context.DueDate?.ToString("dd/MM/yyyy")</MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" OnClick="() => EditTask(context)" />
+                    <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error" OnClick="() => DeleteTask(context)" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudTabPanel>
+
+    <MudTabPanel Text="Capacity Planning" Icon="@Icons.Material.Rounded.Groups">
+        <div class="d-flex align-center justify-space-between mb-4">
+            <div class="d-flex align-center gap-3">
+                <MudIconButton Icon="@Icons.Material.Rounded.ChevronLeft" OnClick="PrevCapacityWeek" Size="Size.Small" />
+                <MudText Typo="Typo.subtitle1">@_capacityWeek.ToString("dd MMM yyyy")</MudText>
+                <MudIconButton Icon="@Icons.Material.Rounded.ChevronRight" OnClick="NextCapacityWeek" Size="Size.Small" />
+            </div>
+            <MudButton Variant="Variant.Filled" Size="Size.Small" StartIcon="@Icons.Material.Rounded.Refresh" OnClick="LoadCapacity">Refresh</MudButton>
+        </div>
+        @if (_capacity.Any())
+        {
+            <MudPaper Elevation="0" Outlined="true" Class="overflow-x-auto">
+                <table class="tl-capacity-table">
+                    <thead>
+                        <tr>
+                            <th>Staff Member</th>
+                            <th>Available (hrs)</th>
+                            <th>Allocated (hrs)</th>
+                            <th>Leave (hrs)</th>
+                            <th>Utilization</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var cap in _capacity)
+                        {
+                            var utilization = cap.AvailableHours > 0 ? (cap.AllocatedHours / cap.AvailableHours) * 100 : 0;
+                            <tr>
+                                <td>@cap.UserName</td>
+                                <td><MudNumericField T="decimal" @bind-Value="cap.AvailableHours" Min="0" Max="168" Dense="true" Variant="Variant.Outlined" Size="Size.Small" Style="width: 80px;" OnChange="() => SaveCapacity(cap)" /></td>
+                                <td>@cap.AllocatedHours</td>
+                                <td><MudNumericField T="decimal" @bind-Value="cap.LeaveHours" Min="0" Max="168" Dense="true" Variant="Variant.Outlined" Size="Size.Small" Style="width: 80px;" OnChange="() => SaveCapacity(cap)" /></td>
+                                <td>
+                                    <MudLinearProgress Variant="MudBlazor.Components.LinearProgress.VariantType.Determinate" Value="@((int)utilization)" Color="@GetUtilizationColor(utilization)" Height="8" Class="rounded" />
+                                    <MudText Typo="Typo.caption">@utilization.ToString("F0")%</MudText>
+                                </td>
+                                <td><MudButton Size="Size.Small" OnClick="() => EditCapacity(cap)">Edit</MudButton></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </MudPaper>
+        }
+        else
+        {
+            <MudPaper Class="pa-10 text-center" Elevation="0" Outlined="true">
+                <MudIcon Icon="@Icons.Material.Rounded.Groups" Size="Size.Large" Class="mb-4 opacity-60" />
+                <MudText Typo="Typo.h6">No capacity data for this week</MudText>
+            </MudPaper>
+        }
+    </MudTabPanel>
+</MudTabs>
+
+<style>
+    .tl-page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+    .tl-breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--gray-500); margin-bottom: 8px; }
+    .tl-breadcrumb a { color: var(--gray-500); text-decoration: none; }
+    .tl-subtitle { color: var(--gray-500); margin: 0; }
+
+    .tl-project-card { transition: all 0.2s ease; }
+    .tl-project-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+
+    .tl-kanban-column { min-height: 400px; }
+    .tl-task-card { border-radius: 8px; transition: all 0.15s ease; }
+    .tl-task-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+
+    .tl-capacity-table { width: 100%; border-collapse: collapse; }
+    .tl-capacity-table th, .tl-capacity-table td { border: 1px solid #e2e8f0; padding: 8px; text-align: center; }
+    .tl-capacity-table th { background: #f8fafc; font-weight: 600; }
+</style>
+
+@code {
+    private List<Project> _projects = new();
+    private List<TaskItem> _tasks = new();
+    private List<CapacityPlanning> _capacity = new();
+    private Project? _selectedProject;
+    private bool _loading = true;
+    private int _currentUserId;
+    private string _currentUserName = "";
+    private DateTime _capacityWeek = GetMondayOfCurrentWeek();
+
+    private readonly (string Name, string Value, string Icon, Color Color)[] _kanbanStatuses = new[]
+    {
+        ("Backlog", "Backlog", Icons.Material.Rounded.FormatListBulleted, Color.Default),
+        ("To Do", "To Do", Icons.Material.Rounded.CheckBoxOutlineBlank, Color.Info),
+        ("In Progress", "In Progress", Icons.Material.Rounded.Pending, Color.Warning),
+        ("Done", "Done", Icons.Material.Rounded.CheckCircle, Color.Success)
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState.User.FindFirst("UserId")?.Value;
+        var nameClaim = authState.User.FindFirst(ClaimTypes.Name)?.Value;
+        if (int.TryParse(userIdClaim, out var userId))
+        {
+            _currentUserId = userId;
+            _currentUserName = nameClaim ?? "";
+        }
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        try
+        {
+            _projects = await ProjectSvc.GetProjectsAsync();
+            _tasks = await ProjectSvc.GetTasksAsync();
+            await LoadCapacity();
+        }
+        finally { _loading = false; }
+    }
+
+    private async Task LoadCapacity()
+    {
+        _capacity = await ProjectSvc.GetCapacityAsync(_capacityWeek);
+        if (!_capacity.Any())
+        {
+            var staff = await WhereaboutsSvc.GetAllStaffAsync();
+            foreach (var s in staff)
+            {
+                await ProjectSvc.UpdateCapacityAsync(new CapacityPlanning { UserId = s.UserId, UserName = s.Name, WeekStartDate = _capacityWeek, AvailableHours = 40, AllocatedHours = 0, LeaveHours = 0 });
+            }
+            _capacity = await ProjectSvc.GetCapacityAsync(_capacityWeek);
+        }
+    }
+
+    private static DateTime GetMondayOfCurrentWeek()
+    {
+        var today = DateTime.Today;
+        var daysToMonday = ((int)today.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+        return today.AddDays(-daysToMonday);
+    }
+
+    private Color GetStatusColor(string status) => status switch { "Active" => Color.Success, "On Hold" => Color.Warning, "Completed" => Color.Info, "Cancelled" => Color.Error, "Done" => Color.Success, "In Progress" => Color.Warning, "Backlog" => Color.Default, "To Do" => Color.Info, _ => Color.Default };
+    private Color GetPriorityColor(string priority) => priority switch { "Critical" => Color.Error, "High" => Color.Warning, "Medium" => Color.Info, "Low" => Color.Success, _ => Color.Default };
+    private Color GetTaskTypeColor(string type) => type switch { "Bug" => Color.Error, "Feature" => Color.Primary, "Epic" => Color.Secondary, "Story" => Color.Info, _ => Color.Default };
+    private Color GetUtilizationColor(decimal util) => util > 100 ? Color.Error : util > 80 ? Color.Warning : Color.Success;
+
+    private async Task CreateProject()
+    {
+        var result = await DialogService.ShowAsync<ProjectDialog>("Create Project");
+        if (result.Result != null && (bool)result.Result)
+        {
+            await LoadData();
+            Snackbar.Add("Project created", Severity.Success);
+        }
+    }
+
+    private async Task OpenProject(Project project)
+    {
+        _selectedProject = project;
+        _tasks = await ProjectSvc.GetTasksAsync(projectId: project.ProjectId);
+    }
+
+    private async Task CreateTask()
+    {
+        if (_selectedProject == null) return;
+        var result = await DialogService.ShowAsync<TaskDialog>("Create Task", new DialogParameters { { "ProjectId", _selectedProject.ProjectId } });
+        if (result.Result != null && (bool)result.Result)
+        {
+            _tasks = await ProjectSvc.GetTasksAsync(projectId: _selectedProject.ProjectId);
+            Snackbar.Add("Task created", Severity.Success);
+        }
+    }
+
+    private async Task EditTask(TaskItem task)
+    {
+        var result = await DialogService.ShowAsync<TaskDialog>("Edit Task", new DialogParameters { { "Task", task } });
+        if (result.Result != null && (bool)result.Result)
+        {
+            await LoadData();
+            Snackbar.Add("Task updated", Severity.Success);
+        }
+    }
+
+    private async Task DeleteTask(TaskItem task)
+    {
+        await ProjectSvc.DeleteTaskAsync(task.TaskId);
+        await LoadData();
+        Snackbar.Add("Task deleted", Severity.Success);
+    }
+
+    private async Task OpenTask(TaskItem task) => await EditTask(task);
+
+    private async Task PrevCapacityWeek() { _capacityWeek = _capacityWeek.AddDays(-7); await LoadCapacity(); }
+    private async Task NextCapacityWeek() { _capacityWeek = _capacityWeek.AddDays(7); await LoadCapacity(); }
+    private async Task SaveCapacity(CapacityPlanning cap) { await ProjectSvc.UpdateCapacityAsync(cap); }
+    private async Task EditCapacity(CapacityPlanning cap) => await SaveCapacity(cap);
+}
