@@ -1,0 +1,116 @@
+@page "/rfq/edit"
+@page "/rfq/edit/{id:int?}"
+@attribute [Authorize]
+@inject RfqService RfqSvc
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthState
+
+<PageTitle>RFQ Edit - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">MyDesk</a><span class="sep">/</span>
+            <a href="/rfq">RFQ</a><span class="sep">/</span>
+            <span>@(_rfq.Id == 0 ? "New" : _rfq.RfqNumber)</span>
+        </div>
+        <h1>@(_rfq.Id == 0 ? "New RFQ" : $"Edit {_rfq.RfqNumber}")</h1>
+        <p class="tl-subtitle">Define the request and the suppliers to invite.</p>
+    </div>
+</div>
+
+<MudPaper Class="pa-6" Elevation="1">
+    <MudGrid>
+        <MudItem xs="12" sm="8">
+            <MudTextField @bind-Value="_rfq.Title" Label="Title" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect T="RfqStatus" @bind-Value="_rfq.Status" Label="Status" Variant="Variant.Outlined" Margin="Margin.Dense">
+                @foreach (var s in Enum.GetValues<RfqStatus>())
+                {
+                    <MudSelectItem Value="s">@s</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudDatePicker @bind-Date="_requiredBy" Label="Required by" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_rfq.OwnerName" Label="Owner" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudTextField @bind-Value="_rfq.Description" Label="Description / scope of request" Lines="5" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudTextField @bind-Value="_supplierIdsCsv" Label="Supplier IDs (comma separated)" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          HelperText="Enter the IDs of suppliers to invite for this RFQ." />
+        </MudItem>
+    </MudGrid>
+
+    <div class="d-flex gap-2 mt-4 justify-end">
+        <MudButton Variant="Variant.Outlined" Href="/rfq">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Rounded.Save" OnClick="SaveAsync">Save</MudButton>
+    </div>
+</MudPaper>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private Rfq _rfq = new();
+    private DateTime? _requiredBy;
+    private string _supplierIdsCsv = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id.HasValue && Id.Value > 0)
+        {
+            var existing = await RfqSvc.GetByIdAsync(Id.Value);
+            if (existing != null)
+            {
+                _rfq = existing;
+                _requiredBy = existing.RequiredByDate;
+                _supplierIdsCsv = string.Join(",", existing.Suppliers);
+            }
+        }
+        else
+        {
+            var auth = await AuthState.GetAuthenticationStateAsync();
+            _rfq.OwnerUserCode = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            _rfq.OwnerName = auth.User.Identity?.Name;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_rfq.Title))
+        {
+            Snackbar.Add("Title is required", Severity.Warning);
+            return;
+        }
+        _rfq.RequiredByDate = _requiredBy;
+        _rfq.Suppliers = (_supplierIdsCsv ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => int.TryParse(s, out var i) ? i : 0)
+            .Where(i => i > 0)
+            .ToList();
+
+        try
+        {
+            if (_rfq.Id == 0)
+            {
+                var created = await RfqSvc.CreateAsync(_rfq);
+                Snackbar.Add($"RFQ {created.RfqNumber} created", Severity.Success);
+                Nav.NavigateTo($"/rfq/view/{created.Id}");
+            }
+            else
+            {
+                await RfqSvc.UpdateAsync(_rfq);
+                Snackbar.Add("RFQ updated", Severity.Success);
+                Nav.NavigateTo($"/rfq/view/{_rfq.Id}");
+            }
+        }
+        catch (Exception ex) { Snackbar.Add($"Save failed: {ex.Message}", Severity.Error); }
+    }
+}

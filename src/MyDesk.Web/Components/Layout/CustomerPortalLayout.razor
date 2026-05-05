@@ -1,9 +1,6 @@
 @inherits LayoutComponentBase
 
-<MudThemeProvider @bind-IsDarkMode="_isDark" />
-<MudPopoverProvider />
-<MudDialogProvider />
-<MudSnackbarProvider />
+@* Providers are configured globally in Routes.razor – do not duplicate them here. *@
 
 <MudLayout>
     <MudAppBar Elevation="0" Color="Color.Primary">

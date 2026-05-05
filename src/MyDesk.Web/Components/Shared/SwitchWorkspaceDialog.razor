@@ -1,0 +1,54 @@
+@using MudBlazor
+@inject NavigationManager Nav
+@inject TenantService TenantSvc
+@inject ICurrentTenantAccessor TenantAccessor
+@inject AuthenticationStateProvider AuthStateProvider
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Switch Workspace</MudText>
+        <MudList T="TenantMembership">
+            @foreach (var t in _workspaces)
+            {
+                <MudListItem T="TenantMembership" Item="t" OnClick="@(() => SwitchTo(t.TenantId))" Class="cursor-pointer pa-3 hover:bg-light">
+                    <MudListItemText>
+                        <MudText Typo="Typo.subtitle1">@t.TenantName</MudText>
+                        <MudText Typo="Typo.caption" Style="color:var(--gray-500);">@t.TenantSlug</MudText>
+                    </MudListItemText>
+                    @if (t.TenantId == _currentTenantId)
+                    {
+                        <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                    }
+                </MudListItem>
+            }
+        </MudList>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public MudDialogInstance? Dialog { get; set; }
+    private List<TenantMembership> _workspaces = new();
+    private Guid? _currentTenantId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _currentTenantId = TenantAccessor.TenantId;
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+        if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var userId))
+        {
+            _workspaces = await TenantSvc.GetUserTenantsAsync(userId);
+        }
+    }
+
+    private void SwitchTo(Guid tenantId)
+    {
+        Nav.NavigateTo($"/login/select-tenant?switchTo={tenantId}", forceLoad: true);
+        Dialog?.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => Dialog?.Cancel();
+}

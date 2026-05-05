@@ -21,7 +21,7 @@ public class AiAuditService
     {
         try
         {
-            await _db.ExecuteAsync(@"
+            await _db.ExecuteNonQueryAsync(@"
                 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'AiInteractionAudit')
                 CREATE TABLE AiInteractionAudit (
                     AuditId INT IDENTITY(1,1) PRIMARY KEY,

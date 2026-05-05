@@ -38,19 +38,32 @@
                     @{ var rowIndex = 0; }
                     @foreach (var group in GroupedFiltered)
                     {
-                        <div class="quick-nav-group-label">@group.Key</div>
-                        @foreach (var item in group)
+                        var isCollapsedAdmin = group is AdminCollapsedGroup;
+                        <div class="quick-nav-group-label @(isCollapsedAdmin ? "quick-nav-group-label-collapsible" : "")"
+                             @onclick="@(isCollapsedAdmin ? () => ToggleAdmin() : null)"
+                             style="@(isCollapsedAdmin ? "cursor:pointer; user-select:none;" : "")">
+                            @group.Key
+                            @if (isCollapsedAdmin)
+                            {
+                                <span class="quick-nav-admin-count">+@group.Count() items</span>
+                                <MudIcon Icon="@Icons.Material.Rounded.ExpandMore" Size="Size.Small" Style="margin-left:4px; vertical-align:middle;" />
+                            }
+                        </div>
+                        @if (!isCollapsedAdmin)
                         {
-                            var idx = rowIndex;
-                            <button class="quick-nav-row @(idx == _selected ? "selected" : "")"
-                                    @onclick="() => GoTo(item)"
-                                    @onmouseenter="() => _selected = idx"
-                                    role="option">
-                                <MudIcon Icon="@(item.Icon ?? Icons.Material.Rounded.ArrowForward)" Size="Size.Small" />
-                                <span class="quick-nav-row-title">@item.Title</span>
-                                <span class="quick-nav-row-href">@item.Href</span>
-                            </button>
-                            rowIndex++;
+                            @foreach (var item in group)
+                            {
+                                var idx = rowIndex;
+                                <button class="quick-nav-row @(idx == _selected ? "selected" : "")"
+                                        @onclick="() => GoTo(item)"
+                                        @onmouseenter="() => _selected = idx"
+                                        role="option">
+                                    <MudIcon Icon="@(item.Icon ?? Icons.Material.Rounded.ArrowForward)" Size="Size.Small" />
+                                    <span class="quick-nav-row-title">@item.Title</span>
+                                    <span class="quick-nav-row-href">@item.Href</span>
+                                </button>
+                                rowIndex++;
+                            }
                         }
                     }
                 </div>
@@ -93,6 +106,24 @@
         letter-spacing: .12em;
         text-transform: uppercase;
         color: var(--mud-palette-text-secondary);
+    }
+    .quick-nav-group-label-collapsible {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .quick-nav-group-label-collapsible:hover {
+        color: var(--mud-palette-primary);
+    }
+    .quick-nav-admin-count {
+        font-size: 10px;
+        font-weight: 600;
+        padding: 2px 8px;
+        background: var(--mud-palette-action-default-hover);
+        border-radius: 10px;
+        color: var(--mud-palette-text-secondary);
+        letter-spacing: 0;
+        text-transform: none;
     }
     .quick-nav-row {
         display: flex; align-items: center; gap: 12px;
@@ -149,6 +180,7 @@
     private int _selected = 0;
     private ElementReference _searchInput;
     private bool _firstRender = true;
+    private bool _adminExpanded = false;
 
     private List<QuickNavItem> Filtered =>
         string.IsNullOrWhiteSpace(_query)
@@ -162,8 +194,35 @@
                 .Select(x => x.i)
                 .ToList();
 
-    private IEnumerable<IGrouping<string, QuickNavItem>> GroupedFiltered =>
-        Filtered.GroupBy(i => string.IsNullOrWhiteSpace(i.Group) ? "Other" : i.Group!);
+    private IEnumerable<IGrouping<string, QuickNavItem>> GroupedFiltered
+    {
+        get
+        {
+            var groups = Filtered.GroupBy(i => string.IsNullOrWhiteSpace(i.Group) ? "Other" : i.Group!);
+            var hasAdminQuery = !string.IsNullOrWhiteSpace(_query) && _query.ToLowerInvariant().Contains("admin");
+            var showAdmin = _adminExpanded || hasAdminQuery;
+            return groups.Where(g => g.Key != "Admin" || showAdmin)
+                         .Concat(showAdmin ? [] : groups.Where(g => g.Key == "Admin").Take(1).Select(g => new AdminCollapsedGroup(g)));
+        }
+    }
+
+    private sealed class AdminCollapsedGroup : IGrouping<string, QuickNavItem>
+    {
+        private readonly IGrouping<string, QuickNavItem> _inner;
+        public AdminCollapsedGroup(IGrouping<string, QuickNavItem> inner) => _inner = inner;
+        public string Key => _inner.Key;
+        public IEnumerator<QuickNavItem> GetEnumerator()
+        {
+            yield return new QuickNavItem("Show all Admin items…", "#admin-expand", Icons.Material.Rounded.ExpandMore, "Admin");
+        }
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    private void ToggleAdmin()
+    {
+        _adminExpanded = !_adminExpanded;
+        _selected = 0;
+    }
 
     private static int Score(QuickNavItem item, string q)
     {
@@ -215,6 +274,11 @@
 
     private void GoTo(QuickNavItem item)
     {
+        if (item.Href == "#admin-expand")
+        {
+            ToggleAdmin();
+            return;
+        }
         MudDialog?.Close(DialogResult.Ok(item.Href));
         Nav.NavigateTo(item.Href);
     }

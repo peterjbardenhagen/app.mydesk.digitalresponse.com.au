@@ -27,7 +27,7 @@ public class LogService
                 );
                 CREATE INDEX IX_ApplicationLogs_Timestamp ON ApplicationLogs(Timestamp DESC);
             END";
-        await _db.ExecuteAsync(sql);
+        await _db.ExecuteNonQueryAsync(sql);
     }
 
     public async Task<List<LogEntry>> GetLogsAsync(LogType logType, LogLevel logLevel, string? searchTerm)
@@ -102,6 +102,6 @@ public class LogService
 
         if (string.IsNullOrEmpty(sql)) return 0;
 
-        return await _db.ExecuteAsync(sql, parameters);
+        return await _db.ExecuteNonQueryAsync(sql, parameters);
     }
 }

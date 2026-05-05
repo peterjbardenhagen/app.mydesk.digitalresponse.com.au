@@ -19,7 +19,7 @@ public class AuditService
     {
         try
         {
-            await _db.ExecuteAsync(@"
+            await _db.ExecuteNonQueryAsync(@"
                 INSERT INTO EntityAudit (EntityType, EntityId, Code, Action, Details, Timestamp)
                 VALUES (@Type, @Id, @User, @Action, @Details, GETDATE())",
                 new()

@@ -135,7 +135,7 @@ public class InvoiceService
     {
         var p = BuildParams(inv, userCode);
         p["InvoiceId"] = inv.InvoiceId;
-        await _db.ExecuteAsync(@"
+        await _db.ExecuteNonQueryAsync(@"
             UPDATE Invoices SET
                 Code = @Code, DivisionId = @DivisionId,
                 Qid = @Qid, CompanyId = @CompanyId,
@@ -146,7 +146,7 @@ public class InvoiceService
                 NettPriceTotal = @NettPriceTotal, GSTTotal = @GSTTotal
             WHERE InvoiceId = @InvoiceId", p);
 
-        await _db.ExecuteAsync("DELETE FROM InvoiceContents WHERE InvoiceId = @Id",
+        await _db.ExecuteNonQueryAsync("DELETE FROM InvoiceContents WHERE InvoiceId = @Id",
             new() { ["Id"] = inv.InvoiceId });
         foreach (var line in lines.Where(l => l.Quantity > 0))
             await InsertLineAsync(inv.InvoiceId, line);
@@ -158,7 +158,7 @@ public class InvoiceService
 
     public async Task UpdateStatusAsync(int invoiceId, int statusId, string userCode, string statusName)
     {
-        await _db.ExecuteAsync(
+        await _db.ExecuteNonQueryAsync(
             "UPDATE Invoices SET InvoiceStatusId = @S WHERE InvoiceId = @Id",
             new() { ["S"] = statusId, ["Id"] = invoiceId });
         await WriteAuditAsync(invoiceId, userCode, $"Status changed to {statusName}");
@@ -297,9 +297,9 @@ public class InvoiceService
 
     public async Task DeleteAsync(int invoiceId, string userCode)
     {
-        await _db.ExecuteAsync("DELETE FROM InvoiceContents WHERE InvoiceId = @Id",  new() { ["Id"] = invoiceId });
-        await _db.ExecuteAsync("DELETE FROM InvoiceAudit    WHERE InvoiceId = @Id",  new() { ["Id"] = invoiceId });
-        await _db.ExecuteAsync("DELETE FROM Invoices        WHERE InvoiceId = @Id",  new() { ["Id"] = invoiceId });
+        await _db.ExecuteNonQueryAsync("DELETE FROM InvoiceContents WHERE InvoiceId = @Id",  new() { ["Id"] = invoiceId });
+        await _db.ExecuteNonQueryAsync("DELETE FROM InvoiceAudit    WHERE InvoiceId = @Id",  new() { ["Id"] = invoiceId });
+        await _db.ExecuteNonQueryAsync("DELETE FROM Invoices        WHERE InvoiceId = @Id",  new() { ["Id"] = invoiceId });
     }
 
     // ── Audit ──────────────────────────────────────────────────────────────
@@ -347,7 +347,7 @@ public class InvoiceService
 
     public async Task SaveDespatchAsync(DespatchDetail d, string userCode)
     {
-        await _db.ExecuteAsync("DELETE FROM Despatch WHERE InvoiceId = @Id", new() { ["Id"] = d.InvoiceId });
+        await _db.ExecuteNonQueryAsync("DELETE FROM Despatch WHERE InvoiceId = @Id", new() { ["Id"] = d.InvoiceId });
         await _db.InsertAsync(@"
             INSERT INTO Despatch (InvoiceId, Code, DespatchDate, Carrier, CarrierRef, PackageDetails, InternalNotes)
             VALUES (@InvoiceId, @Code, @DespatchDate, @Carrier, @CarrierRef, @PackageDetails, @InternalNotes)",
@@ -402,7 +402,7 @@ public class InvoiceService
         int count = dt.Rows.Count;
         if (count > 0)
         {
-            await _db.ExecuteAsync(@"
+            await _db.ExecuteNonQueryAsync(@"
                 UPDATE Invoices SET ExportedToMYOB = 1, ExportedDate = @Now
                 WHERE InvoiceDate >= @F AND InvoiceDate <= @T AND InvoiceStatusId = 2",
                 new() { ["Now"] = DateTime.Now, ["F"] = dateFrom, ["T"] = dateTo });

@@ -43,7 +43,7 @@ public class FavouritesService
 
     public async Task AddFavouriteAsync(string userCode, string entityType, int entityId, string? entityName = null, string? notes = null)
     {
-        await _db.ExecuteAsync(@"
+        await _db.ExecuteNonQueryAsync(@"
             INSERT INTO Favourites (UserCode, EntityType, EntityId, EntityName, Notes)
             VALUES (@Code, @Type, @Id, @Name, @Notes)",
             new() { ["Code"] = userCode, ["Type"] = entityType, ["Id"] = entityId,
@@ -54,7 +54,7 @@ public class FavouritesService
 
     public async Task RemoveFavouriteAsync(string userCode, string entityType, int entityId)
     {
-        await _db.ExecuteAsync(@"
+        await _db.ExecuteNonQueryAsync(@"
             DELETE FROM Favourites
             WHERE UserCode = @Code AND EntityType = @Type AND EntityId = @Id",
             new() { ["Code"] = userCode, ["Type"] = entityType, ["Id"] = entityId });
@@ -64,7 +64,7 @@ public class FavouritesService
 
     public async Task RemoveFavouriteByIdAsync(int favourtieId, string userCode)
     {
-        await _db.ExecuteAsync(@"
+        await _db.ExecuteNonQueryAsync(@"
             DELETE FROM Favourites
             WHERE FavouriteId = @Id AND UserCode = @Code",
             new() { ["Id"] = favourtieId, ["Code"] = userCode });

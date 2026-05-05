@@ -1,6 +1,9 @@
 @page "/drm"
-@attribute [Authorize(Roles = "Admin,Director")]
+@page "/subscriptions"
+@attribute [Authorize(Roles = "Admin,Director,Administrator")]
 @inject DRMService DRMSvc
+@inject InvoiceService InvoiceSvc
+@inject CompanyService CompanySvc
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -46,6 +49,7 @@
                     <MudTd DataLabel="Status"><MudChip T="string" Size="Size.Small" Color="@GetSubStatusColor(context.Status)">@context.Status</MudChip></MudTd>
                     <MudTd DataLabel="Next Invoice">@context.NextInvoiceDate?.ToString("dd/MM/yyyy")</MudTd>
                     <MudTd DataLabel="Actions">
+                        <MudIconButton Icon="@Icons.Material.Rounded.Receipt" Size="Size.Small" Color="Color.Info" OnClick="() => RaiseInvoice(context)" Title="Raise Invoice" />
                         <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" OnClick="() => EditSubscription(context)" />
                         <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error" OnClick="() => DeleteSubscription(context)" />
                     </MudTd>
@@ -240,7 +244,7 @@
     // Subscription actions
     private async Task AddSubscription()
     {
-        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
         var dialog = await DialogService.ShowAsync<DRMSubscriptionDialog>("Add Subscription", options);
         var result = await dialog.Result;
         if (result != null && !result.Canceled && result.Data is DRMSubscription newSub)
@@ -252,7 +256,7 @@
     }
     private async Task EditSubscription(DRMSubscription sub)
     {
-        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
         var parameters = new DialogParameters { { "Subscription", sub } };
         var dialog = await DialogService.ShowAsync<DRMSubscriptionDialog>("Edit Subscription", parameters, options);
         var result = await dialog.Result;
@@ -264,6 +268,22 @@
         }
     }
     private async Task DeleteSubscription(DRMSubscription sub) { if (await DialogService.ShowMessageBox("Delete", $"Delete subscription for {sub.ClientName}?") == true) { await DRMSvc.DeleteSubscriptionAsync(sub.SubscriptionId); await LoadAll(); Snackbar.Add("Deleted", Severity.Success); } }
+
+    private async Task RaiseInvoice(DRMSubscription sub)
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userCode = authState.User.Identity?.Name ?? "system";
+            var invoiceId = await DRMSvc.RaiseInvoiceFromSubscriptionAsync(sub.SubscriptionId, userCode, InvoiceSvc, CompanySvc);
+            await LoadAll();
+            Snackbar.Add($"Invoice #{invoiceId} raised for {sub.ClientName}", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to raise invoice: {ex.Message}", Severity.Error);
+        }
+    }
 
     // Charge actions
     private async Task AddCharge() => await DialogService.ShowAsync<DRMChargeDialog>("Add Charge");

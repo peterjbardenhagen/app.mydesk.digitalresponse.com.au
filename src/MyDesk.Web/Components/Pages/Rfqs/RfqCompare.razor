@@ -1,0 +1,128 @@
+@page "/rfq/compare/{id:int}"
+@attribute [Authorize]
+@inject RfqService RfqSvc
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>RFQ Compare - MyDesk</PageTitle>
+
+@if (_rfq == null)
+{
+    <MudPaper Class="pa-6"><MudText>Loading…</MudText></MudPaper>
+}
+else
+{
+    <div class="tl-page-header">
+        <div>
+            <div class="tl-breadcrumb">
+                <a href="/">MyDesk</a><span class="sep">/</span>
+                <a href="/rfq">RFQ</a><span class="sep">/</span>
+                <a href="@($"/rfq/view/{_rfq.Id}")">@_rfq.RfqNumber</a><span class="sep">/</span>
+                <span>Compare</span>
+            </div>
+            <h1>Compare supplier quotes</h1>
+            <p class="tl-subtitle">@_rfq.Title</p>
+        </div>
+        <MudButton Href="@($"/rfq/view/{_rfq.Id}")" Variant="Variant.Outlined">Back to RFQ</MudButton>
+    </div>
+
+    @if (_rfq.Responses.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">No supplier responses to compare yet.</MudAlert>
+    }
+    else
+    {
+        var lowestPrice = _rfq.Responses.Min(r => r.QuotedPrice);
+        var fastestLead = _rfq.Responses.Min(r => r.LeadTimeDays);
+
+        <MudPaper Class="pa-0" Elevation="1">
+            <MudTable T="RfqResponse" Items="@_rfq.Responses.OrderBy(r => r.QuotedPrice)" Dense="true" Hover="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh>Rank</MudTh>
+                    <MudTh>Supplier</MudTh>
+                    <MudTh Style="text-align:right;">Quoted price</MudTh>
+                    <MudTh Style="text-align:right;">vs lowest</MudTh>
+                    <MudTh Style="text-align:right;">Lead time</MudTh>
+                    <MudTh>Notes</MudTh>
+                    <MudTh>Received</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        @{ var rank = _rfq.Responses.OrderBy(r => r.QuotedPrice).ToList().IndexOf(context) + 1; }
+                        <strong>#@rank</strong>
+                    </MudTd>
+                    <MudTd>
+                        @context.SupplierName
+                        @if (_rfq.WinningResponseId == context.Id)
+                        {
+                            <span class="tl-badge success ml-2">WINNER</span>
+                        }
+                    </MudTd>
+                    <MudTd Style="text-align:right;">
+                        <strong style="@(context.QuotedPrice == lowestPrice ? "color:var(--tl-success);" : "")">
+                            @context.QuotedPrice.ToString("C2")
+                        </strong>
+                    </MudTd>
+                    <MudTd Style="text-align:right;">
+                        @{ var diff = lowestPrice == 0 ? 0m : (context.QuotedPrice - lowestPrice) / lowestPrice * 100m; }
+                        @(diff == 0 ? "—" : $"+{diff:N1}%")
+                    </MudTd>
+                    <MudTd Style="text-align:right;">
+                        <span style="@(context.LeadTimeDays == fastestLead ? "color:var(--tl-success);font-weight:600;" : "")">
+                            @context.LeadTimeDays days
+                        </span>
+                    </MudTd>
+                    <MudTd>@context.Notes</MudTd>
+                    <MudTd>@context.ReceivedDate.ToString("dd/MM/yy")</MudTd>
+                    <MudTd>
+                        @if (_rfq.WinningResponseId != context.Id)
+                        {
+                            <MudButton Size="Size.Small" Color="Color.Success" Variant="Variant.Filled"
+                                       OnClick="@(() => SelectWinner(context.Id))">Award</MudButton>
+                        }
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudPaper>
+
+        <MudGrid Class="mt-4">
+            <MudItem xs="12" sm="4">
+                <MudPaper Class="pa-4 text-center" Elevation="1">
+                    <MudText Typo="Typo.caption" Style="color:var(--gray-500);">Lowest price</MudText>
+                    <MudText Typo="Typo.h5" Style="color:var(--tl-success);">@lowestPrice.ToString("C2")</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudPaper Class="pa-4 text-center" Elevation="1">
+                    <MudText Typo="Typo.caption" Style="color:var(--gray-500);">Fastest lead time</MudText>
+                    <MudText Typo="Typo.h5">@fastestLead days</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudPaper Class="pa-4 text-center" Elevation="1">
+                    <MudText Typo="Typo.caption" Style="color:var(--gray-500);">Average price</MudText>
+                    <MudText Typo="Typo.h5">@_rfq.Responses.Average(r => r.QuotedPrice).ToString("C2")</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Rfq? _rfq;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _rfq = await RfqSvc.GetByIdAsync(Id);
+    }
+
+    private async Task SelectWinner(int responseId)
+    {
+        if (_rfq == null) return;
+        await RfqSvc.SelectWinnerAsync(_rfq.Id, responseId);
+        _rfq = await RfqSvc.GetByIdAsync(Id);
+        Snackbar.Add("Winner selected — RFQ awarded", Severity.Success);
+    }
+}

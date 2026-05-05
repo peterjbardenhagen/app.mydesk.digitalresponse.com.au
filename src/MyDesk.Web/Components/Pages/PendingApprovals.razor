@@ -1,0 +1,218 @@
+@page "/approvals/pending"
+@attribute [Authorize]
+@inject QuoteService QuoteSvc
+@inject PurchaseOrderService PoSvc
+@inject ApprovalService ApprovalSvc
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthState
+
+<PageTitle>Pending Approvals - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">MyDesk</a><span class="sep">/</span>
+            <span>Pending Approvals</span>
+        </div>
+        <h1>Pending Approvals</h1>
+        <p class="tl-subtitle">Quotes and purchase orders waiting on your sign-off in the approval chain.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Refresh"
+                   OnClick="LoadAsync">Refresh</MudButton>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+
+<MudGrid Spacing="3">
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="1">
+            <div class="d-flex align-center justify-space-between mb-3">
+                <MudText Typo="Typo.h6"><MudIcon Icon="@Icons.Material.Rounded.Description" Class="mr-2" />Quotes (@_quotes.Count)</MudText>
+            </div>
+            @if (_quotes.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Style="color:var(--gray-500);">No pending quote approvals for you.</MudText>
+            }
+            else
+            {
+                <MudDataGrid T="Quote" Items="@_quotes" Dense="true" Hover="true" Elevation="0" Filterable="false">
+                    <Columns>
+                        <PropertyColumn Property="x => x.Qid" Title="#" CellStyle="width:60px;" />
+                        <PropertyColumn Property="x => x.CompanyName" Title="Customer" />
+                        <PropertyColumn Property="x => x.Reference" Title="Reference" />
+                        <PropertyColumn Property="x => x.NettPriceTotal" Title="Amount" Format="C0" CellStyle="text-align:right;" />
+                        <TemplateColumn Title="" CellStyle="width:200px;" Sortable="false">
+                            <CellTemplate>
+                                <div class="d-flex gap-1">
+                                    <MudIconButton Icon="@Icons.Material.Rounded.Visibility" Size="Size.Small" Color="Color.Info"
+                                                   Href="@($"/quotes/{context.Item.Qid}")" title="View" />
+                                    <MudButton Size="Size.Small" Color="Color.Success" Variant="Variant.Filled"
+                                               StartIcon="@Icons.Material.Rounded.Check"
+                                               OnClick="@(() => ApproveQuoteAsync(context.Item.Qid))">Approve</MudButton>
+                                    <MudButton Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined"
+                                               StartIcon="@Icons.Material.Rounded.Close"
+                                               OnClick="@(() => DeclineQuoteAsync(context.Item.Qid))">Decline</MudButton>
+                                </div>
+                            </CellTemplate>
+                        </TemplateColumn>
+                    </Columns>
+                </MudDataGrid>
+            }
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="1">
+            <div class="d-flex align-center justify-space-between mb-3">
+                <MudText Typo="Typo.h6"><MudIcon Icon="@Icons.Material.Rounded.ShoppingBasket" Class="mr-2" />Purchase Orders (@_pos.Count)</MudText>
+            </div>
+            @if (_pos.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Style="color:var(--gray-500);">No pending PO approvals for you.</MudText>
+            }
+            else
+            {
+                <MudDataGrid T="PurchaseOrder" Items="@_pos" Dense="true" Hover="true" Elevation="0" Filterable="false">
+                    <Columns>
+                        <PropertyColumn Property="x => x.POid" Title="#" CellStyle="width:60px;" />
+                        <PropertyColumn Property="x => x.SupplierName" Title="Supplier" />
+                        <PropertyColumn Property="x => x.Project" Title="Project" />
+                        <PropertyColumn Property="x => x.PriceExTotal" Title="Amount" Format="C0" CellStyle="text-align:right;" />
+                        <TemplateColumn Title="CapEx" CellStyle="width:70px;">
+                            <CellTemplate>
+                                @if (context.Item.HasCapEx || context.Item.PriceExTotal > 5000m)
+                                {
+                                    <span class="tl-badge warning">CapEx</span>
+                                }
+                            </CellTemplate>
+                        </TemplateColumn>
+                        <TemplateColumn Title="" CellStyle="width:200px;" Sortable="false">
+                            <CellTemplate>
+                                <div class="d-flex gap-1">
+                                    <MudIconButton Icon="@Icons.Material.Rounded.Visibility" Size="Size.Small" Color="Color.Info"
+                                                   Href="@($"/purchase-orders/{context.Item.POid}")" title="View" />
+                                    <MudButton Size="Size.Small" Color="Color.Success" Variant="Variant.Filled"
+                                               StartIcon="@Icons.Material.Rounded.Check"
+                                               OnClick="@(() => ApprovePoAsync(context.Item.POid))">Approve</MudButton>
+                                    <MudButton Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined"
+                                               StartIcon="@Icons.Material.Rounded.Close"
+                                               OnClick="@(() => DeclinePoAsync(context.Item.POid))">Decline</MudButton>
+                                </div>
+                            </CellTemplate>
+                        </TemplateColumn>
+                    </Columns>
+                </MudDataGrid>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private bool _loading;
+    private string? _userCode;
+    private List<Quote> _quotes = new();
+    private List<PurchaseOrder> _pos = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        _userCode = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                    ?? auth.User.Identity?.Name;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        if (string.IsNullOrEmpty(_userCode)) return;
+        _loading = true;
+        try
+        {
+            var pending = ApprovalSvc.PendingFor(_userCode);
+
+            // Always include items in their respective "pending" status — even if they
+            // have no chain history yet (the originator submitted them).
+            var allQuotes = await QuoteSvc.GetPendingApprovalQuotesAsync();
+            var allPos    = await PoSvc.GetPendingApprovalPosAsync();
+
+            var quoteIds = pending.Where(p => p.EntityType == "Quote").Select(p => p.EntityId).ToHashSet();
+            var poIds    = pending.Where(p => p.EntityType == "PurchaseOrder").Select(p => p.EntityId).ToHashSet();
+
+            _quotes = allQuotes
+                .Where(q => quoteIds.Contains(q.Qid)
+                            || (!ApprovalSvc.GetEntries("Quote", q.Qid).Any()
+                                && DirectReport(q.Code)))
+                .ToList();
+
+            _pos = allPos
+                .Where(p => poIds.Contains(p.POid)
+                            || (!ApprovalSvc.GetEntries("PurchaseOrder", p.POid).Any()
+                                && DirectReport(p.Code)))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Load failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private bool DirectReport(string originatorCode)
+    {
+        if (string.IsNullOrEmpty(originatorCode) || string.IsNullOrEmpty(_userCode)) return false;
+        var s = ApprovalSvc.GetSettings(originatorCode);
+        return string.Equals(s.LineManagerCode, _userCode, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task ApproveQuoteAsync(int id)
+    {
+        try
+        {
+            await QuoteSvc.ApproveAsync(id, _userCode ?? "", isDirectorOrFinalApprover: false);
+            Snackbar.Add($"Quote #{id} approved.", Severity.Success);
+            await LoadAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Approve failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task DeclineQuoteAsync(int id)
+    {
+        try
+        {
+            await QuoteSvc.DeclineAsync(id, _userCode ?? "");
+            Snackbar.Add($"Quote #{id} declined.", Severity.Info);
+            await LoadAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Decline failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task ApprovePoAsync(int id)
+    {
+        try
+        {
+            await PoSvc.ApproveAsync(id, _userCode ?? "");
+            Snackbar.Add($"PO #{id} approved.", Severity.Success);
+            await LoadAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Approve failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task DeclinePoAsync(int id)
+    {
+        try
+        {
+            await PoSvc.DeclineAsync(id, _userCode ?? "");
+            Snackbar.Add($"PO #{id} declined.", Severity.Info);
+            await LoadAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Decline failed: {ex.Message}", Severity.Error); }
+    }
+}

@@ -1,0 +1,85 @@
+@inject ContactService ContactService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Rounded.CloudDownload" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">Import from Invoices</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        @if (_loading)
+        {
+            <div class="d-flex justify-center pa-4"><MudProgressCircular Indeterminate="true" /></div>
+        }
+        else if (_preview is null)
+        {
+            <MudText Color="Color.Error">Unable to load preview.</MudText>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Class="mb-3">
+                Scan existing invoices to find companies and contacts that aren't yet in your CRM.
+            </MudText>
+            <MudGrid>
+                <MudItem xs="6">
+                    <MudPaper Class="pa-4 text-center" Elevation="0" Outlined="true">
+                        <MudText Typo="Typo.h4" Color="Color.Primary">@_preview.NewCompanies</MudText>
+                        <MudText Typo="Typo.body2">New companies</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudPaper Class="pa-4 text-center" Elevation="0" Outlined="true">
+                        <MudText Typo="Typo.h4" Color="Color.Secondary">@_preview.NewContacts</MudText>
+                        <MudText Typo="Typo.body2">New contacts</MudText>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+            @if (_imported is not null)
+            {
+                <MudAlert Severity="Severity.Success" Class="mt-3">
+                    Imported @_imported.CompaniesImported companies and @_imported.ContactsImported contacts.
+                </MudAlert>
+            }
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Close</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   Disabled="@(_loading || _preview is null || _importing)"
+                   OnClick="DoImport">
+            @(_importing ? "Importing..." : "Import Now")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudDialogInstance MudDialog { get; set; } = default!;
+
+    private bool _loading = true;
+    private bool _importing;
+    private ContactService.ImportPreviewResult? _preview;
+    private ContactService.ImportResult? _imported;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _preview = await ContactService.PreviewImportFromInvoicesAsync(); }
+        catch (Exception ex) { Snackbar.Add($"Preview failed: {ex.Message}", Severity.Error); }
+        finally { _loading = false; }
+    }
+
+    private async Task DoImport()
+    {
+        _importing = true;
+        try
+        {
+            _imported = await ContactService.ImportFromInvoicesAsync();
+            Snackbar.Add($"Imported {_imported.CompaniesImported} companies, {_imported.ContactsImported} contacts", Severity.Success);
+        }
+        catch (Exception ex) { Snackbar.Add($"Import failed: {ex.Message}", Severity.Error); }
+        finally { _importing = false; }
+    }
+
+    private void Cancel() => MudDialog.Close(DialogResult.Ok(_imported is not null));
+}

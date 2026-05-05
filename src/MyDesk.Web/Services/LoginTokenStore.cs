@@ -28,6 +28,13 @@ public class LoginTokenStore
         return token;
     }
 
+    public (int UserId, string UserCode, bool RememberMe)? PeekToken(string token)
+    {
+        if (_tokens.TryGetValue(token, out var entry) && entry.Expiry > DateTime.UtcNow)
+            return (entry.UserId, entry.UserCode, entry.RememberMe);
+        return null;
+    }
+
     /// <summary>Consumes (removes) a token. Returns null if expired or not found.</summary>
     public (int UserId, string UserCode, bool RememberMe)? ConsumeToken(string token)
     {

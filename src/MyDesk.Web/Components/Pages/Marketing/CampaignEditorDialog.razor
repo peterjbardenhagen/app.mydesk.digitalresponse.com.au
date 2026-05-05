@@ -1,0 +1,41 @@
+@using MyDesk.Shared.Models
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="_campaign.Name" Label="Campaign Name" Variant="Variant.Outlined" Required="true" Margin="Margin.Dense" Class="mb-2" />
+        <MudTextField @bind-Value="_campaign.Subject" Label="Subject Line" Variant="Variant.Outlined" Required="true" Margin="Margin.Dense" Class="mb-2" />
+        <MudTextField @bind-Value="_campaign.FromName" Label="From Name" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2" />
+        <MudTextField @bind-Value="_campaign.FromAddress" Label="From Email" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2" />
+        <MudSelect T="string" @bind-Value="_campaign.Audience" Label="Audience" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2">
+            @foreach (var opt in _audienceOptions)
+            {
+                <MudSelectItem Value="@opt">@opt</MudSelectItem>
+            }
+        </MudSelect>
+        <MudTextField @bind-Value="_campaign.BodyHtml" Label="Body HTML" Variant="Variant.Outlined" Lines="5" Margin="Margin.Dense" Class="mb-2" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public MudDialogInstance? Dialog { get; set; }
+    [Parameter] public EmailCampaign? Campaign { get; set; }
+    [Parameter] public string[]? AudienceOptions { get; set; }
+
+    private EmailCampaign _campaign = new();
+    private string[] _audienceOptions = Array.Empty<string>();
+
+    protected override void OnInitialized()
+    {
+        _audienceOptions = AudienceOptions ?? new[] { "All Customers", "Custom Segment" };
+        if (Campaign != null)
+            _campaign = Campaign;
+    }
+
+    private void Submit() => Dialog?.Close(DialogResult.Ok(_campaign));
+    private void Cancel() => Dialog?.Cancel();
+}

@@ -13,6 +13,7 @@ public class EmailService
     private readonly IConfiguration _config;
     private readonly ILogger<EmailService> _logger;
     private readonly PlatformSettings? _platformSettings;
+    private readonly ICurrentTenantAccessor? _tenantAccessor;
 
     public EmailService(DatabaseService db, ActivityService activity,
         IConfiguration config, ILogger<EmailService> logger)
@@ -33,6 +34,38 @@ public class EmailService
         _platformSettings  = platformSettings;
     }
 
+    public EmailService(DatabaseService db, ActivityService activity,
+        IConfiguration config, ILogger<EmailService> logger,
+        PlatformSettings platformSettings, ICurrentTenantAccessor tenantAccessor)
+    {
+        _db               = db;
+        _activity         = activity;
+        _config           = config;
+        _logger           = logger;
+        _platformSettings = platformSettings;
+        _tenantAccessor   = tenantAccessor;
+    }
+
+    /// <summary>
+    /// Returns the redirect address if outbound email must be diverted, otherwise null.
+    /// Triggers:
+    ///   * The current tenant is the Demo MyDesk sandbox (always redirects).
+    ///   * <c>Email:RedirectAllTo</c> is set in configuration (overrides everything).
+    ///   * <c>Email:RedirectInDevelopment</c> is true and we're in Development.
+    /// </summary>
+    private string? GetEmailRedirectTarget()
+    {
+        // Explicit config override always wins (used by test runs / staging).
+        var redirectAll = _config["Email:RedirectAllTo"];
+        if (!string.IsNullOrWhiteSpace(redirectAll)) return redirectAll;
+
+        // Demo tenant always redirects to peter@bardenhagen.xyz.
+        if (_tenantAccessor?.TenantId == TenantConstants.DemoTenantId)
+            return "peter@bardenhagen.xyz";
+
+        return null;
+    }
+
     private string GetPlatformName() => _platformSettings?.CompanyName ?? _config["PlatformSettings:CompanyName"] ?? "MyDesk";
     
     private string GetFromDomain()
@@ -45,7 +78,7 @@ public class EmailService
     {
         try
         {
-            await _db.ExecuteAsync(@"
+            await _db.ExecuteNonQueryAsync(@"
                 IF OBJECT_ID(N'EmailLog', N'U') IS NULL
                 BEGIN
                     CREATE TABLE EmailLog (
@@ -119,20 +152,135 @@ public class EmailService
         string firstName, string originator, string platformName)
     {
         var host = _config["App:BaseUrl"] ?? "https://mydesk.digitalresponse.com.au";
+        var approveLink = $"{host}/quotes/{quoteId}/action/approve";
+        var declineLink = $"{host}/quotes/{quoteId}/action/decline";
+        
+        var signature = BuildEmailSignature(originator);
         
         return $"""
-        <p>Dear {(string.IsNullOrEmpty(firstName) ? "Sir/Madam" : firstName)},</p>
-        <p>Please find attached your quote from <strong>{platformName}</strong>.</p>
-        <p><strong>Quote Reference:</strong> {reference}</p>
-        
-        <div style="margin: 20px 0;">
-            <a href="{host}/quotes/{quoteId}/action/approve" style="background:#28a745;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;margin-right:10px;">Approve Quote</a>
-            <a href="{host}/quotes/{quoteId}/action/decline" style="background:#dc3545;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;">Decline Quote</a>
-        </div>
+        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.5;color:#0f172a;">
+            <p>Dear {(string.IsNullOrEmpty(firstName) ? "Sir/Madam" : firstName)},</p>
+            <p>Thank you for your enquiry. Please find attached your quote from <strong>{platformName}</strong>.</p>
+            <p><strong>Quote Reference:</strong> {reference}</p>
+            <p><strong>Company:</strong> {company}</p>
+            
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:24px 0;">
+                <p style="margin:0 0 12px;font-weight:600;color:#475569;">Please review and respond:</p>
+                <a href="{approveLink}" style="display:inline-block;background:#00a0a0;color:#ffffff;padding:10px 24px;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px;margin-right:12px;">&#10003; Accept Quote</a>
+                <a href="{declineLink}" style="display:inline-block;background:#ef4444;color:#ffffff;padding:10px 24px;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px;">&#10007; Decline Quote</a>
+            </div>
 
-        <p>If you have any questions, please don't hesitate to contact us.</p>
-        <p>Kind regards,<br/>{originator}</p>
-        <p style="color:#999;font-size:12px;">Sent via {platformName} MyDesk.</p>
+            <p>If you have any questions or would like to discuss this quote, please don't hesitate to contact us.</p>
+            
+            <p>Kind regards,<br/>{originator}</p>
+            
+            {signature}
+        </div>
+        """;
+    }
+
+    private string BuildEmailSignature(string senderName)
+    {
+        var domain = GetFromDomain();
+        var phone = _config["Email:SignaturePhone"] ?? "";
+        var email = _config["Email:SignatureEmail"] ?? "";
+        var address = _config["Email:SignatureAddress"] ?? "";
+        var website = $"https://{domain}";
+        var logoUrl = _config["Email:SignatureLogoUrl"] ?? $"https://{domain}/images/logo.png";
+        var tagline = _config["Email:SignatureTagline"] ?? "";
+        var senderTitle = _config["Email:SignatureTitle"] ?? "";
+        
+        var titleRow = !string.IsNullOrEmpty(senderTitle) ? $"""
+                        <tr>
+                            <td style="padding-bottom:8px;">
+                                <span style="font-size:9px;font-weight:700;color:#00a0a0;text-transform:uppercase;letter-spacing:0.1em;">{senderTitle}</span>
+                            </td>
+                        </tr>
+        """ : "";
+        
+        var phoneRow = !string.IsNullOrEmpty(phone) ? $"""
+                        <tr>
+                            <td style="font-size:10px;font-weight:500;color:#475569;padding-bottom:3px;">
+                                <a href="tel:{phone.Replace(" ", "")}" style="color:#475569;text-decoration:none;">{phone}</a>
+                            </td>
+                        </tr>
+        """ : "";
+        
+        var emailRow = !string.IsNullOrEmpty(email) ? $"""
+                        <tr>
+                            <td style="font-size:10px;font-weight:500;color:#475569;padding-bottom:3px;">
+                                <a href="mailto:{email}" style="color:#475569;text-decoration:none;">{email}</a>
+                            </td>
+                        </tr>
+        """ : "";
+        
+        var addressRow = !string.IsNullOrEmpty(address) ? $"""
+                        <tr>
+                            <td style="font-size:10px;font-weight:500;color:#64748b;padding-bottom:3px;">{address}</td>
+                        </tr>
+        """ : "";
+        
+        var taglineBlock = !string.IsNullOrEmpty(tagline) ? $"""
+                    <table cellpadding="0" cellspacing="0" border="0" style="margin-top:10px;max-width:340px;">
+                        <tr>
+                            <td style="padding-top:8px;border-top:1px solid #e2e8f0;">
+                                <span style="font-size:9px;font-style:italic;font-weight:500;color:#334155;">"{tagline}"</span>
+                            </td>
+                        </tr>
+                    </table>
+        """ : "";
+        
+        return $"""
+        <table cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.4;margin-top:20px;">
+            <tr>
+                <td style="padding:0;">
+                    <table cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                            <td style="padding-bottom:8px;">
+                                <a href="{website}" style="text-decoration:none;display:block;">
+                                    <img src="{logoUrl}" alt="{domain}" width="44" height="44" style="display:block;border:0;" />
+                                </a>
+                            </td>
+                        </tr>
+                    </table>
+                    <table cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                            <td style="padding-bottom:1px;">
+                                <span style="font-size:15px;font-weight:800;color:#0f172a;letter-spacing:-0.02em;">{senderName}</span>
+                            </td>
+                        </tr>
+                        {titleRow}
+                    </table>
+                    <table cellpadding="0" cellspacing="0" border="0" style="width:100%;">
+                        <tr>
+                            <td style="height:1px;background:linear-gradient(90deg,#00a0a0 0%,transparent 100%);padding:0;"></td>
+                        </tr>
+                    </table>
+                    <table cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;">
+                        {phoneRow}
+                        {emailRow}
+                        {addressRow}
+                    </table>
+                    <table cellpadding="0" cellspacing="0" border="0" style="margin-top:6px;">
+                        <tr>
+                            <td style="font-size:10px;font-weight:500;color:#475569;padding-bottom:3px;">
+                                <a href="{website}" style="color:#00a0a0;text-decoration:none;font-weight:600;">{domain}</a>
+                            </td>
+                        </tr>
+                    </table>
+                    {taglineBlock}
+                </td>
+            </tr>
+        </table>
+        <table cellpadding="0" cellspacing="0" border="0" style="margin-top:10px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+            <tr>
+                <td>
+                    <span style="font-size:8px;color:#94a3b8;line-height:1.3;display:block;max-width:340px;">
+                        <strong style="color:#64748b;">Disclaimer:</strong> This email and any attachments may be confidential. If received in error, please delete and inform the sender by return email.
+                    </span>
+                </td>
+            </tr>
+        </table>
         """;
     }
 
@@ -166,11 +314,13 @@ public class EmailService
             var platformName = GetPlatformName();
             var emailSubject = subject ?? $"Invoice — {invNum}";
             var emailBody    = message ?? $"""
-                <p>Dear {(string.IsNullOrEmpty(firstName) ? "Sir/Madam" : firstName)},</p>
-                <p>Please find attached Invoice <strong>{invNum}</strong> from {platformName}.</p>
-                <p>If you have any questions, please don't hesitate to contact us.</p>
-                <p>Kind regards,<br/>{originator}</p>
-                <p style="color:#999;font-size:12px;">Sent via {platformName} MyDesk.</p>
+                <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.5;color:#0f172a;">
+                    <p>Dear {(string.IsNullOrEmpty(firstName) ? "Sir/Madam" : firstName)},</p>
+                    <p>Please find attached Invoice <strong>{invNum}</strong> from {platformName}.</p>
+                    <p>If you have any questions, please don't hesitate to contact us.</p>
+                    <p>Kind regards,<br/>{originator}</p>
+                    {BuildEmailSignature(originator)}
+                </div>
                 """;
 
             await SendAsync(toEmail, emailSubject, emailBody,
@@ -221,10 +371,12 @@ public class EmailService
             var platformName = GetPlatformName();
             var emailSubject = subject ?? $"Purchase Order — {poNum}";
             var emailBody    = message ?? $"""
-                <p>Dear {supplier},</p>
-                <p>Please find attached Purchase Order <strong>{poNum}</strong> from {platformName}.</p>
-                <p>Kind regards,<br/>{originator}</p>
-                <p style="color:#999;font-size:12px;">Sent via {platformName} MyDesk.</p>
+                <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.5;color:#0f172a;">
+                    <p>Dear {supplier},</p>
+                    <p>Please find attached Purchase Order <strong>{poNum}</strong> from {platformName}.</p>
+                    <p>Kind regards,<br/>{originator}</p>
+                    {BuildEmailSignature(originator)}
+                </div>
                 """;
 
             await SendAsync(toEmail, emailSubject, emailBody,
@@ -269,6 +421,30 @@ public class EmailService
         string? bcc = null)
     {
         if (!IsOutboundEnabled) return;
+
+        // ── Redirect guard ──────────────────────────────────────────────────
+        // If we're in the Demo tenant (or Email:RedirectAllTo is configured), every
+        // recipient is replaced with the safe address and the original recipients
+        // are noted in the subject + body so the test reader can see what would have
+        // happened in production.
+        var redirectTarget = GetEmailRedirectTarget();
+        if (!string.IsNullOrWhiteSpace(redirectTarget))
+        {
+            _logger.LogInformation(
+                "Email redirected: original to={OriginalTo} bcc={OriginalBcc} -> {RedirectTo} (tenant={Tenant})",
+                to, bcc ?? "-", redirectTarget, _tenantAccessor?.TenantName ?? "n/a");
+
+            subject = $"[REDIRECTED:{to}] {subject}";
+            htmlBody =
+                $"<div style='background:#fde68a;color:#78350f;padding:10px;border-radius:6px;margin-bottom:14px;font-family:sans-serif;'>" +
+                $"<strong>This email was redirected.</strong><br/>" +
+                $"Original To: <code>{System.Net.WebUtility.HtmlEncode(to)}</code><br/>" +
+                (string.IsNullOrWhiteSpace(bcc) ? "" : $"Original Bcc: <code>{System.Net.WebUtility.HtmlEncode(bcc)}</code><br/>") +
+                $"Tenant: <code>{System.Net.WebUtility.HtmlEncode(_tenantAccessor?.TenantName ?? "n/a")}</code>" +
+                $"</div>" + htmlBody;
+            to  = redirectTarget;
+            bcc = null;
+        }
 
         var platformName = GetPlatformName();
         var smtpHost    = _config["Email:SmtpHost"] ?? "localhost";
@@ -318,7 +494,7 @@ public class EmailService
     {
         try
         {
-            await _db.ExecuteAsync(
+            await _db.ExecuteNonQueryAsync(
                 @"INSERT INTO EmailLog (EntityType, EntityId, ToEmail, Subject, SentBy, SentDate, Status)
                   VALUES (@Type, @Id, @To, @Subject, @By, GETDATE(), @Status)",
                 new()
@@ -342,14 +518,16 @@ public class EmailService
         var platformName = GetPlatformName();
         var subject = $"Password Reset - {platformName} MyDesk";
         var body = $"""
-            <p>Dear User,</p>
-            <p>You have requested a password reset for your {platformName} MyDesk account.</p>
-            <p>Please click the link below to reset your password:</p>
-            <p><a href="{resetLink}">Reset Password</a></p>
-            <p>If you did not request this password reset, please ignore this email.</p>
-            <p>This link will expire in 24 hours.</p>
-            <p>Kind regards,<br/>{platformName} MyDesk Team</p>
-            <p style="color:#999;font-size:12px;">Sent via {platformName} MyDesk.</p>
+            <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.5;color:#0f172a;">
+                <p>Dear User,</p>
+                <p>You have requested a password reset for your {platformName} MyDesk account.</p>
+                <p>Please click the link below to reset your password:</p>
+                <p><a href="{resetLink}" style="display:inline-block;background:#00a0a0;color:#ffffff;padding:10px 24px;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px;margin:12px 0;">Reset Password</a></p>
+                <p>If you did not request this password reset, please ignore this email.</p>
+                <p>This link will expire in 24 hours.</p>
+                <p>Kind regards,<br/>{platformName} MyDesk Team</p>
+                {BuildEmailSignature($"{platformName} MyDesk Team")}
+            </div>
             """;
 
         await SendAsync(email, subject, body);

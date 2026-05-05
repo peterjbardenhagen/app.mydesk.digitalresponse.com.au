@@ -430,7 +430,7 @@ public class MarketingDataService
         if (string.IsNullOrEmpty(campaign.Id) || campaign.Id == "0")
         {
             // Insert new campaign
-            await _db.ExecuteAsync(@"
+            await _db.ExecuteNonQueryAsync(@"
                 INSERT INTO EmailCampaigns (Name, Subject, Audience, Status, RecipientCount, HtmlContent, TextContent, ScheduledAt, CreatedBy)
                 VALUES (@Name, @Subject, @Audience, @Status, @Recipients, @Html, @Text, @Scheduled, @CreatedBy)",
                 new() { 
@@ -441,14 +441,14 @@ public class MarketingDataService
                     ["Recipients"] = campaign.RecipientCount,
                     ["Html"] = campaign.BodyHtml ?? "",
                     ["Text"] = "",
-                    ["Scheduled"] = (object)campaign.ScheduledAt ?? DBNull.Value,
+                    ["Scheduled"] = (object?)campaign.ScheduledAt ?? DBNull.Value,
                     ["CreatedBy"] = campaign.CreatedBy ?? ""
                 });
         }
         else
         {
             // Update existing campaign
-            await _db.ExecuteAsync(@"
+            await _db.ExecuteNonQueryAsync(@"
                 UPDATE EmailCampaigns 
                 SET Name = @Name, Subject = @Subject, Audience = @Audience, Status = @Status, 
                     RecipientCount = @Recipients, HtmlContent = @Html, TextContent = @Text, 
@@ -463,7 +463,7 @@ public class MarketingDataService
                     ["Recipients"] = campaign.RecipientCount,
                     ["Html"] = campaign.BodyHtml ?? "",
                     ["Text"] = "",
-                    ["Scheduled"] = (object)campaign.ScheduledAt ?? DBNull.Value
+                    ["Scheduled"] = (object?)campaign.ScheduledAt ?? DBNull.Value
                 });
         }
         _logger.LogInformation("Campaign saved: {Name}", campaign.Name);
@@ -472,7 +472,7 @@ public class MarketingDataService
     public async Task SendCampaignAsync(string campaignId)
     {
         // Update status to 'Sent'
-        await _db.ExecuteAsync(@"
+        await _db.ExecuteNonQueryAsync(@"
             UPDATE EmailCampaigns 
             SET Status = 'Sent', SentAt = GETDATE(), SentCount = RecipientCount
             WHERE CampaignId = @Id",
@@ -483,7 +483,7 @@ public class MarketingDataService
 
     public async Task CancelCampaignAsync(string campaignId)
     {
-        await _db.ExecuteAsync(@"
+        await _db.ExecuteNonQueryAsync(@"
             UPDATE EmailCampaigns 
             SET Status = 'Cancelled', UpdatedAt = GETDATE()
             WHERE CampaignId = @Id",
@@ -549,7 +549,7 @@ public class MarketingDataService
     {
         if (strategy.Id == 0)
         {
-            await _db.ExecuteAsync(@"
+            await _db.ExecuteNonQueryAsync(@"
                 INSERT INTO MarketingStrategy 
                 (IcpIndustries, IcpCompanySize, IcpPainPoints, IcpBuyingTriggers, ValueProposition, 
                  Differentiators, PositioningStatement, Q1Initiatives, Q2Initiatives, Q3Initiatives, 
@@ -578,7 +578,7 @@ public class MarketingDataService
         }
         else
         {
-            await _db.ExecuteAsync(@"
+            await _db.ExecuteNonQueryAsync(@"
                 UPDATE MarketingStrategy 
                 SET IcpIndustries = @Industries, IcpCompanySize = @Size, IcpPainPoints = @PainPoints, 
                     IcpBuyingTriggers = @Triggers, ValueProposition = @ValueProp, Differentiators = @Diff, 

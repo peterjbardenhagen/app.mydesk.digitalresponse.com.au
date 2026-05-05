@@ -18,6 +18,7 @@ public class NavMenuService
         new("dashboard",       "Dashboard",       "/",                "QuickAccess"),
         new("activity",        "Latest Activity", "/activity",        "QuickAccess"),
         new("favourites",      "Favourites",      "/favourites",      "QuickAccess"),
+        new("emails",          "Emails",          "/emails",          "QuickAccess"),
         
         // CRM
         new("contacts",        "Contacts",         "/contacts",        "CRM"),
@@ -39,6 +40,7 @@ public class NavMenuService
         new("job-orders",      "Job Orders",       "/job-orders",      "Operations"),
         new("products",        "Products",         "/products",        "Operations"),
         new("timeshets",       "Timeshets",        "/timeshets",       "Operations"),
+        new("financial-extraction", "Financial Extraction", "/financial-extraction", "Operations"),
         
         // Insights
         new("reports",         "Reports",          "/reports",         "Insights"),
@@ -46,6 +48,9 @@ public class NavMenuService
         
         // Marketing
         new("marketing",       "Marketing Hub",    "/marketing",       "Marketing"),
+        
+        // Planning
+        new("calendar",        "Calendar",         "/calendar",        "Planning"),
         
         // Support
         new("ask-ai",          "Ask AI",           "/ask-ai",          "Support"),

@@ -1,0 +1,22 @@
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="_name" Label="Task Name" Variant="Variant.Outlined" Required="true" Margin="Margin.Dense" Class="mb-2" />
+        <MudDatePicker @bind-Date="_date" Label="Schedule Date" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2" />
+        <MudTimePicker @bind-Value="_time" Label="Schedule Time" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Schedule</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public MudDialogInstance? Dialog { get; set; }
+    private string _name = "";
+    private DateTime? _date = DateTime.Today;
+    private TimeSpan? _time = new(9, 0, 0);
+    private void Submit() => Dialog?.Close(DialogResult.Ok(new { Name = _name, Date = _date, Time = _time }));
+    private void Cancel() => Dialog?.Cancel();
+}

@@ -13,7 +13,7 @@ public class DRMService
 
     public async Task EnsureTablesAsync()
     {
-        await _db.ExecuteAsync(@"
+        await _db.ExecuteNonQueryAsync(@"
             IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Subscriptions')
             BEGIN
                 CREATE TABLE Subscriptions (SubscriptionId INT IDENTITY(1,1) PRIMARY KEY, ClientName NVARCHAR(200) NOT NULL, Description NVARCHAR(500) NOT NULL, Category NVARCHAR(100) NOT NULL DEFAULT 'Hosting', Schedule NVARCHAR(50) NOT NULL DEFAULT 'Monthly', AmountInclGST DECIMAL(18,2) NOT NULL DEFAULT 0, AmountExGST DECIMAL(18,2) NOT NULL DEFAULT 0, StartDate DATE NOT NULL, NextInvoiceDate DATE NULL, Status NVARCHAR(50) NOT NULL DEFAULT 'Active', Notes NVARCHAR(1000) NULL, ApproxCost DECIMAL(18,2) NULL, LoginDetails NVARCHAR(500) NULL, InvoiceLink NVARCHAR(500) NULL, CreatedBy INT NULL, CreatedByName NVARCHAR(100) NULL, CreatedAt DATETIME NOT NULL DEFAULT GETDATE(), UpdatedAt DATETIME NOT NULL DEFAULT GETDATE());
@@ -81,6 +81,110 @@ public class DRMService
         return (await _db.QueryAsync<DRMSubscription>(
             "SELECT * FROM Subscriptions WHERE Status = 'Active' AND (NextInvoiceDate IS NULL OR NextInvoiceDate <= @AsOfDate) ORDER BY NextInvoiceDate",
             new { AsOfDate = asOfDate.Date })).ToList();
+    }
+
+    /// <summary>
+    /// Subscriptions whose next renewal falls within the given window (default 30 days).
+    /// Used by the dashboard "upcoming renewals" reminder.
+    /// </summary>
+    public async Task<List<DRMSubscription>> GetUpcomingRenewalsAsync(int daysAhead = 30)
+    {
+        var until = DateTime.Today.AddDays(daysAhead);
+        return (await _db.QueryAsync<DRMSubscription>(
+            "SELECT * FROM Subscriptions WHERE Status = 'Active' AND NextInvoiceDate IS NOT NULL AND NextInvoiceDate <= @Until ORDER BY NextInvoiceDate",
+            new { Until = until })).ToList();
+    }
+
+    /// <summary>
+    /// Returns the next invoice date based on the current next date and the schedule cadence.
+    /// </summary>
+    public static DateTime AdvanceSchedule(DateTime current, string schedule)
+    {
+        return schedule?.ToLower() switch
+        {
+            "weekly"      => current.AddDays(7),
+            "fortnightly" => current.AddDays(14),
+            "monthly"     => current.AddMonths(1),
+            "quarterly"   => current.AddMonths(3),
+            "half-yearly" => current.AddMonths(6),
+            "halfyearly"  => current.AddMonths(6),
+            "biannual"    => current.AddMonths(6),
+            "yearly"      => current.AddYears(1),
+            "annual"      => current.AddYears(1),
+            "biennial"    => current.AddYears(2),
+            "bi-annual"   => current.AddYears(2),
+            _              => current.AddMonths(1),
+        };
+    }
+
+    /// <summary>
+    /// Raise a real Invoice from a Subscription, log the SubscriptionInvoice, and
+    /// roll the subscription's NextInvoiceDate forward according to its schedule.
+    /// </summary>
+    public async Task<int> RaiseInvoiceFromSubscriptionAsync(int subscriptionId, string userCode, InvoiceService invoiceSvc, CompanyService companySvc)
+    {
+        var sub = await GetSubscriptionAsync(subscriptionId)
+                  ?? throw new InvalidOperationException($"Subscription {subscriptionId} not found.");
+
+        // Try to match the client to an existing customer company. If none, create a stub.
+        var companies = await companySvc.GetCompaniesAsync();
+        var company = companies.FirstOrDefault(c =>
+            string.Equals(c.CompanyName?.Trim(), sub.ClientName?.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (company == null)
+        {
+            company = new Company { CompanyName = sub.ClientName, IsCustomer = true };
+            company.CompanyId = await companySvc.SaveCompanyAsync(company);
+        }
+
+        var periodStart = sub.NextInvoiceDate ?? DateTime.Today;
+        var periodEnd   = AdvanceSchedule(periodStart, sub.Schedule).AddDays(-1);
+        var description = $"{sub.Description} ({periodStart:dd/MM/yyyy} – {periodEnd:dd/MM/yyyy})";
+
+        var invoice = new Invoice
+        {
+            InvoiceDate     = DateTime.Today,
+            Code            = $"SUB-{sub.SubscriptionId}",
+            CompanyId       = company.CompanyId,
+            InvCompany      = sub.ClientName,
+            CustomerNotes   = $"Subscription renewal: {sub.Category} – {sub.Schedule}",
+            InternalNotes   = sub.Notes,
+            NettPriceTotal  = sub.AmountExGST,
+            GSTTotal        = sub.AmountInclGST - sub.AmountExGST,
+        };
+        var lines = new List<InvoiceLineItem>
+        {
+            new InvoiceLineItem
+            {
+                ProductCode  = sub.Category,
+                Description  = description,
+                Quantity     = 1,
+                NettPrice    = sub.AmountExGST,
+                ExtNettPrice = sub.AmountExGST,
+            }
+        };
+
+        var invoiceId = await invoiceSvc.CreateInvoiceAsync(invoice, lines, userCode);
+
+        await CreateSubscriptionInvoiceAsync(new SubscriptionInvoice
+        {
+            SubscriptionId = sub.SubscriptionId,
+            InvoiceNumber  = invoiceId.ToString(),
+            InvoiceDate    = DateTime.Today,
+            PeriodStart    = periodStart,
+            PeriodEnd      = periodEnd,
+            AmountExGST    = sub.AmountExGST,
+            AmountInclGST  = sub.AmountInclGST,
+            GSTAmount      = sub.AmountInclGST - sub.AmountExGST,
+            Notes          = $"Auto-generated from subscription {sub.SubscriptionId}",
+        });
+
+        // Advance the subscription's next invoice date.
+        var newNext = AdvanceSchedule(periodStart, sub.Schedule);
+        await _db.ExecuteObjAsync(
+            "UPDATE Subscriptions SET NextInvoiceDate = @Next, UpdatedAt = GETDATE() WHERE SubscriptionId = @Id",
+            new { Next = newNext, Id = sub.SubscriptionId });
+
+        return invoiceId;
     }
 
     // ==================== SUBSCRIPTION INVOICES ====================

@@ -1,33 +1,71 @@
 @using MyDesk.Shared.Models
-@inject ISnackbar Snackbar
 
-<MudDialog>
-    <TitleContent>
-        <MudText Typo="Typo.h6">@(_task.TaskId == 0 ? "Create Task" : "Edit Task")</MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudTextField T="string" Label="Title" @bind-Value="_task.Title" Required="true" />
-        <MudTextField T="string" Label="Description" @bind-Value="_task.Description" Lines="2" Class="mt-3" />
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Save</MudButton>
-    </DialogActions>
-</MudDialog>
+<MudForm @ref="_form">
+    <MudDialog>
+        <TitleContent>
+            <MudText Typo="Typo.h6">Task</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Title" @bind-Value="_task.Title" Required="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Description" @bind-Value="_task.Description" Lines="3" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Status" @bind-Value="_task.Status">
+                        <MudSelectItem Value="@("Backlog")">Backlog</MudSelectItem>
+                        <MudSelectItem Value="@("To Do")">To Do</MudSelectItem>
+                        <MudSelectItem Value="@("In Progress")">In Progress</MudSelectItem>
+                        <MudSelectItem Value="@("Review")">Review</MudSelectItem>
+                        <MudSelectItem Value="@("Done")">Done</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Priority" @bind-Value="_task.Priority">
+                        <MudSelectItem Value="@("Low")">Low</MudSelectItem>
+                        <MudSelectItem Value="@("Medium")">Medium</MudSelectItem>
+                        <MudSelectItem Value="@("High")">High</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Assignee Name" @bind-Value="_task.AssigneeName" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int?" Label="Story Points" @bind-Value="_task.StoryPoints" Min="0" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal?" Label="Estimated Hours" @bind-Value="_task.EstimatedHours" Min="0" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="Due Date" @bind-Date="_task.DueDate" />
+                </MudItem>
+            </MudGrid>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="Cancel">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Save</MudButton>
+        </DialogActions>
+    </MudDialog>
+</MudForm>
 
 @code {
     [CascadingParameter] private MudDialogInstance MudDialog { get; set; } = default!;
-    [Parameter] public int ProjectId { get; set; }
-    [Parameter] public TaskItem? Task { get; set; }
+    [Parameter] public TaskItem TaskItem { get; set; } = new();
 
+    private MudForm _form = default!;
     private TaskItem _task = new();
 
     protected override void OnInitialized()
     {
-        _task = Task ?? new TaskItem();
-        if (ProjectId > 0) _task.ProjectId = ProjectId;
+        _task = TaskItem ?? new TaskItem();
     }
 
     private void Cancel() => MudDialog.Cancel();
-    private void Submit() => MudDialog.Close(_task);
+
+    private void Submit()
+    {
+        MudDialog.Close(_task);
+    }
 }

@@ -82,27 +82,27 @@ else
         <MudText Typo="Typo.h6" Class="mb-3">Aged Receivables</MudText>
         <MudGrid Spacing="2">
             <MudItem xs="6" md="3">
-                <div style="padding:12px; border-radius:8px; background:#f0fdf4;">
+                <div class="tl-aged-card tl-aged-card--current">
                     <MudText Typo="Typo.caption">Current (0-30 days)</MudText>
-                    <MudText Typo="Typo.h6" Style="color:#166534;">@Aged.Current.ToString("C")</MudText>
+                    <MudText Typo="Typo.h6" Class="tl-aged-value">@Aged.Current.ToString("C")</MudText>
                 </div>
             </MudItem>
             <MudItem xs="6" md="3">
-                <div style="padding:12px; border-radius:8px; background:#fefce8;">
+                <div class="tl-aged-card tl-aged-card--mid">
                     <MudText Typo="Typo.caption">31-60 days</MudText>
-                    <MudText Typo="Typo.h6" Style="color:#854d0e;">@Aged.Days31_60.ToString("C")</MudText>
+                    <MudText Typo="Typo.h6" Class="tl-aged-value">@Aged.Days31_60.ToString("C")</MudText>
                 </div>
             </MudItem>
             <MudItem xs="6" md="3">
-                <div style="padding:12px; border-radius:8px; background:#fff7ed;">
+                <div class="tl-aged-card tl-aged-card--late">
                     <MudText Typo="Typo.caption">61-90 days</MudText>
-                    <MudText Typo="Typo.h6" Style="color:#9a3412;">@Aged.Days61_90.ToString("C")</MudText>
+                    <MudText Typo="Typo.h6" Class="tl-aged-value">@Aged.Days61_90.ToString("C")</MudText>
                 </div>
             </MudItem>
             <MudItem xs="6" md="3">
-                <div style="padding:12px; border-radius:8px; background:#fef2f2;">
+                <div class="tl-aged-card tl-aged-card--overdue">
                     <MudText Typo="Typo.caption">Over 90 days</MudText>
-                    <MudText Typo="Typo.h6" Style="color:#991b1b;">@Aged.Over90.ToString("C")</MudText>
+                    <MudText Typo="Typo.h6" Class="tl-aged-value">@Aged.Over90.ToString("C")</MudText>
                 </div>
             </MudItem>
         </MudGrid>
@@ -166,6 +166,19 @@ else
             </MudAlert>
         }
     </MudPaper>
+
+<style>
+    .tl-aged-card { padding:12px; border-radius:8px; border:1px solid transparent; }
+    .tl-aged-card--current { background:#f0fdf4; border-color:#bbf7d0; color:#166534; }
+    .tl-aged-card--mid { background:#fefce8; border-color:#fde68a; color:#854d0e; }
+    .tl-aged-card--late { background:#fff7ed; border-color:#fdba74; color:#9a3412; }
+    .tl-aged-card--overdue { background:#fef2f2; border-color:#fca5a5; color:#991b1b; }
+    .tl-aged-value { color: inherit !important; }
+    body.mud-dark-mode .tl-aged-card--current { background: rgba(34,197,94,.10); border-color: rgba(34,197,94,.22); color:#86efac; }
+    body.mud-dark-mode .tl-aged-card--mid { background: rgba(251,191,36,.10); border-color: rgba(251,191,36,.22); color:#fde68a; }
+    body.mud-dark-mode .tl-aged-card--late { background: rgba(249,115,22,.10); border-color: rgba(249,115,22,.22); color:#fdba74; }
+    body.mud-dark-mode .tl-aged-card--overdue { background: rgba(248,113,113,.10); border-color: rgba(248,113,113,.22); color:#fca5a5; }
+</style>
 }
 
 @code {

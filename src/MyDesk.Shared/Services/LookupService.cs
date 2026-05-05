@@ -207,4 +207,21 @@ public class LookupService
         "General Road Freight", "Express Overnight", "Customer Pickup", "Local Delivery", 
         "Toll", "TNT / FedEx", "StarTrack", "Australia Post", "Courier" 
     };
+
+    /// <summary>
+    /// Gets open follow-ups for calendar display
+    /// </summary>
+    public async Task<DataTable> GetFollowUpsAsync(string userCode)
+    {
+        var sql = @"
+            SELECT cr.Id, cr.Summary, cr.FollowUpDate, cr.CompanyId, c.CompanyName
+            FROM CallReports cr
+            LEFT JOIN Companies c ON cr.CompanyId = c.CompanyId
+            WHERE cr.FollowUpDate IS NOT NULL 
+              AND ISNULL(cr.FollowUpComplete, 0) = 0
+              AND cr.FollowUpDate >= DATEADD(month, -1, GETDATE())
+            ORDER BY cr.FollowUpDate";
+        
+        return await _db.QueryAsync(sql);
+    }
 }

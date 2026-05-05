@@ -1,0 +1,26 @@
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-2">Import Progress</MudText>
+        <MudProgressLinear Color="Color.Primary" Value="@_progress" Striped="true" Buffer="true" Class="mb-2" />
+        <MudText Typo="Typo.body2">@_message</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="@(_progress < 100)">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public MudDialogInstance? Dialog { get; set; }
+    private int _progress = 0;
+    private string _message = "Processing...";
+    public async Task UpdateProgressAsync(int progress, string message)
+    {
+        _progress = progress;
+        _message = message;
+        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
+    }
+    private void Cancel() => Dialog?.Close(DialogResult.Ok(true));
+}

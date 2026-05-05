@@ -1,11 +1,11 @@
 @page "/staff-whereabouts"
 @attribute [Authorize]
+@using System.Security.Claims
 @inject StaffWhereaboutsService WhereaboutsService
 @inject UserService UserService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ISnackbar Snackbar
 @using MyDesk.Shared.Models
-@using System.Security.Claims
 
 <PageTitle>Staff Whereabouts - @PlatformSettings.GetBrandingName()</PageTitle>
 
@@ -147,6 +147,12 @@ else
 
     .status-empty { min-height: 28px; background: #f8fafc; border-radius: 4px; }
     .current-slot { background: #fef08a; }
+    body.mud-dark-mode .tl-whereabouts-table th, body.mud-dark-mode .tl-whereabouts-table td { border-color: var(--gray-300); }
+    body.mud-dark-mode .tl-whereabouts-table th { background: var(--gray-100); }
+    body.mud-dark-mode .tl-whereabouts-table .sticky-col { background: var(--surface); }
+    body.mud-dark-mode .tl-whereabouts-table thead .sticky-col { background: var(--gray-100); }
+    body.mud-dark-mode .status-empty { background: var(--gray-100); }
+    body.mud-dark-mode .current-slot { background: rgba(251,191,36,.18); }
 </style>
 
 @code {
@@ -231,7 +237,7 @@ else
 
     private string GetTimeLabel(int slot) => $"{slot + 8}:00";
 
-    private StaffWhereabouts? GetWhereabouts(int userId, int day, int slot) =>
+    private MyDesk.Shared.Models.StaffWhereabouts? GetWhereabouts(int userId, int day, int slot) =>
         _whereabouts.FirstOrDefault(w => w.UserId == userId && w.DayOfWeek == day && w.TimeSlot == slot);
 
     private bool IsCurrentSlot(int day, int slot)

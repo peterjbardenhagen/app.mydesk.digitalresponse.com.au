@@ -60,7 +60,7 @@ public class DocumentService
     public async Task DeleteFileAsync(int documentId)
     {
         var sql = "DELETE FROM Documents WHERE DocumentId = @Id";
-        await _db.ExecuteAsync(sql, new() { ["Id"] = documentId });
+        await _db.ExecuteNonQueryAsync(sql, new() { ["Id"] = documentId });
     }
 
     private static CustomerFile MapCustomerFile(DataRow r) => new()

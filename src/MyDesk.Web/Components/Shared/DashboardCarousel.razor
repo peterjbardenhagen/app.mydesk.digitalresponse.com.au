@@ -1,5 +1,8 @@
+@using MudBlazor
 @using MyDesk.Shared.Models
 @inject IDialogService DialogService
+@inject MyDesk.Shared.Services.ExpenseService ExpenseService
+@inject MyDesk.Shared.Services.BankingService BankingService
 
 <div class="tl-dashboard-carousel">
     <div class="tl-carousel-header">
@@ -64,6 +67,12 @@
             case "comparative":
                 @ComparativeView
                 break;
+            case "expenses-insights":
+                @ExpensesInsightsView
+                break;
+            case "banking-overview":
+                @BankingOverviewView
+                break;
             case "customer-supplier-intel":
                 @CustomerSupplierIntelligenceView
                 break;
@@ -84,6 +93,9 @@
     private int CurrentIndex { get; set; } = 0;
     private List<CarouselView> Views { get; set; } = new();
     private CustomerSupplierView _customerSupplierView = CustomerSupplierView.Customers;
+    private List<Expense> _expenses = new();
+    private BankingSummary? _bankingSummary;
+    private List<BankTransaction> _bankTransactions = new();
 
     private CarouselView CurrentView => Views[CurrentIndex];
 
@@ -148,6 +160,20 @@
                 Title = "Comparative Analysis",
                 Subtitle = "Year-over-year & month-over-month insights",
                 Icon = Icons.Material.Rounded.CompareArrows
+            },
+            new()
+            {
+                Id = "expenses-insights",
+                Title = "Expenses Insights",
+                Subtitle = "Monthly spend, category mix & foreign-currency outgoings",
+                Icon = Icons.Material.Rounded.ReceiptLong
+            },
+            new()
+            {
+                Id = "banking-overview",
+                Title = "Banking Overview",
+                Subtitle = "Debits, credits, reconciliation progress & cash movement",
+                Icon = Icons.Material.Rounded.AccountBalance
             }
         };
 
@@ -155,6 +181,23 @@
         if (!IsDirector)
         {
             Views = Views.Where(v => !v.DirectorOnly && v.Id != "team-leaderboard").ToList();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Load only once per component lifetime; data is tenant-scoped by RLS.
+        if (_expenses.Count == 0)
+        {
+            try { _expenses = await ExpenseService.GetExpensesAsync(); } catch { }
+        }
+        if (_bankingSummary is null)
+        {
+            try { _bankingSummary = await BankingService.GetSummaryAsync(); } catch { }
+        }
+        if (_bankTransactions.Count == 0)
+        {
+            try { _bankTransactions = await BankingService.GetAllTransactionsAsync(); } catch { }
         }
     }
 
@@ -191,12 +234,111 @@
         Suppliers
     }
 
+    private RenderFragment ExpensesInsightsView => __builder => {
+        var labels = GetLastNMonthLabels(6);
+        var spend  = GetExpenseMonthlyAudSeries(6);
+        var foreign = _expenses.Where(e => !string.Equals(e.Currency, "AUD", StringComparison.OrdinalIgnoreCase)).ToList();
+        var mtd = _expenses.Where(e => e.Date.Month == DateTime.Today.Month && e.Date.Year == DateTime.Today.Year).ToList();
+        var topCats = _expenses
+            .GroupBy(e => e.Category ?? "General")
+            .Select(g => new { Cat = g.Key, Aud = g.Sum(x => x.AmountAud > 0 ? x.AmountAud : x.Total) })
+            .OrderByDescending(x => x.Aud)
+            .Take(4)
+            .ToList();
+    <div class="tl-view-content">
+        <MudGrid Spacing="3">
+            <MudItem xs="12" md="8">
+                <MudPaper Class="pa-4 tl-chart-surface" Elevation="0">
+                    <MudChart ChartType="ChartType.Bar"
+                              ChartSeries="@(new List<ChartSeries> { new() { Name = "AUD Spend", Data = spend } })"
+                              XAxisLabels="@labels"
+                              Width="100%" Height="300px"
+                              ChartOptions="@RevenueChartOptions" />
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <div class="tl-kpi-mini-grid">
+                    <div class="tl-kpi-mini-card teal">
+                        <div class="tl-kpi-mini-value">@Fmt(mtd.Sum(e => e.AmountAud > 0 ? e.AmountAud : e.Total))</div>
+                        <div class="tl-kpi-mini-label">Spend (MTD)</div>
+                        <div class="tl-kpi-mini-delta neutral">@mtd.Count expenses</div>
+                    </div>
+                    <div class="tl-kpi-mini-card gold">
+                        <div class="tl-kpi-mini-value">@foreign.Count</div>
+                        <div class="tl-kpi-mini-label">Foreign currency</div>
+                        <div class="tl-kpi-mini-delta neutral">@Fmt(foreign.Sum(e => e.AmountAud)) AUD equivalent</div>
+                    </div>
+                    <div class="tl-kpi-mini-card dark">
+                        <div class="tl-kpi-mini-value">@(topCats.FirstOrDefault()?.Cat ?? "—")</div>
+                        <div class="tl-kpi-mini-label">Top category</div>
+                        <div class="tl-kpi-mini-delta neutral">@Fmt(topCats.FirstOrDefault()?.Aud ?? 0)</div>
+                    </div>
+                </div>
+                @if (topCats.Any())
+                {
+                    <div class="tl-mini-list mt-3">
+                        @foreach (var c in topCats)
+                        {
+                            <div class="tl-mini-row">
+                                <span>@c.Cat</span>
+                                <strong>@Fmt(c.Aud)</strong>
+                            </div>
+                        }
+                    </div>
+                }
+            </MudItem>
+        </MudGrid>
+    </div>
+    ;};
+
+    private RenderFragment BankingOverviewView => __builder => {
+        var labels  = GetLastNMonthLabels(6);
+        var debits  = GetBankMonthlySeries(6, isCredit: false);
+        var credits = GetBankMonthlySeries(6, isCredit: true);
+        var sum = _bankingSummary ?? new BankingSummary(0,0,0,0,0,0);
+    <div class="tl-view-content">
+        <MudGrid Spacing="3">
+            <MudItem xs="12" md="8">
+                <MudPaper Class="pa-4 tl-chart-surface" Elevation="0">
+                    <MudChart ChartType="ChartType.Line"
+                              ChartSeries="@(new List<ChartSeries> {
+                                  new() { Name = "Credits", Data = credits },
+                                  new() { Name = "Debits",  Data = debits }
+                              })"
+                              XAxisLabels="@labels"
+                              Width="100%" Height="300px"
+                              ChartOptions="@RevenueChartOptions" />
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <div class="tl-kpi-mini-grid">
+                    <div class="tl-kpi-mini-card teal">
+                        <div class="tl-kpi-mini-value">@sum.StatementCount</div>
+                        <div class="tl-kpi-mini-label">Statements</div>
+                        <div class="tl-kpi-mini-delta neutral">@sum.TransactionCount transactions</div>
+                    </div>
+                    <div class="tl-kpi-mini-card gold">
+                        <div class="tl-kpi-mini-value">@sum.UnreconciledCount</div>
+                        <div class="tl-kpi-mini-label">Unreconciled</div>
+                        <div class="tl-kpi-mini-delta neutral">@sum.ReconciledCount reconciled</div>
+                    </div>
+                    <div class="tl-kpi-mini-card dark">
+                        <div class="tl-kpi-mini-value">@Fmt(sum.TotalCreditsAud - sum.TotalDebitsAud)</div>
+                        <div class="tl-kpi-mini-label">Net movement</div>
+                        <div class="tl-kpi-mini-delta neutral">Credits @Fmt(sum.TotalCreditsAud) · Debits @Fmt(sum.TotalDebitsAud)</div>
+                    </div>
+                </div>
+            </MudItem>
+        </MudGrid>
+    </div>
+    ;};
+
     private RenderFragment RevenueTrendsView => __builder => {
         if (Metrics != null) {
     <div class="tl-view-content">
         <MudGrid Spacing="3">
             <MudItem xs="12" md="8">
-                <MudPaper Class="pa-4" Elevation="0" Style="background: var(--gray-50); border-radius: 12px;">
+                <MudPaper Class="pa-4 tl-chart-surface" Elevation="0">
                     <MudChart ChartType="ChartType.Line" 
                               ChartSeries="@GetRevenueSeries()" 
                               XAxisLabels="@GetMonthLabels()"
@@ -239,7 +381,7 @@
     <div class="tl-view-content">
         <MudGrid Spacing="3">
             <MudItem xs="12" md="6">
-                <MudPaper Class="pa-4" Elevation="0" Style="background: var(--gray-50); border-radius: 12px;">
+                <MudPaper Class="pa-4 tl-chart-surface" Elevation="0">
                     <div class="tl-profit-ring">
                         <div class="tl-profit-ring-inner">
                             <div class="tl-profit-value">@(Metrics.GrossProfitMargin == 0 && Metrics.ThisMonthQuotesValue == 0 ? "-.-%" : $"{Metrics.GrossProfitMargin:N1}%")</div>
@@ -629,7 +771,7 @@
             {
                 <MudGrid Spacing="3" Class="mt-4">
                     <MudItem xs="12" md="6">
-                        <MudPaper Class="pa-4" Elevation="0" Style="background: linear-gradient(135deg, var(--success-50) 0%, white 100%); border-radius: 12px; border: 1px solid var(--success-200);">
+                        <MudPaper Class="pa-4 tl-cs-surface success" Elevation="0">
                             <div class="tl-cs-header success">
                                 <MudIcon Icon="@Icons.Material.Rounded.TrendingUp" Size="Size.Medium" />
                                 <div>
@@ -652,7 +794,7 @@
                         </MudPaper>
                     </MudItem>
                     <MudItem xs="12" md="6">
-                        <MudPaper Class="pa-4" Elevation="0" Style="background: linear-gradient(135deg, var(--error-50) 0%, white 100%); border-radius: 12px; border: 1px solid var(--error-200);">
+                        <MudPaper Class="pa-4 tl-cs-surface error" Elevation="0">
                             <div class="tl-cs-header error">
                                 <MudIcon Icon="@Icons.Material.Rounded.TrendingDown" Size="Size.Medium" />
                                 <div>
@@ -684,7 +826,7 @@
             {
                 <MudGrid Spacing="3" Class="mt-4">
                     <MudItem xs="12" md="6">
-                        <MudPaper Class="pa-4" Elevation="0" Style="background: linear-gradient(135deg, var(--success-50) 0%, white 100%); border-radius: 12px; border: 1px solid var(--success-200);">
+                        <MudPaper Class="pa-4 tl-cs-surface success" Elevation="0">
                             <div class="tl-cs-header success">
                                 <MudIcon Icon="@Icons.Material.Rounded.LocalShipping" Size="Size.Medium" />
                                 <div>
@@ -707,7 +849,7 @@
                         </MudPaper>
                     </MudItem>
                     <MudItem xs="12" md="6">
-                        <MudPaper Class="pa-4" Elevation="0" Style="background: linear-gradient(135deg, var(--error-50) 0%, white 100%); border-radius: 12px; border: 1px solid var(--error-200);">
+                        <MudPaper Class="pa-4 tl-cs-surface error" Elevation="0">
                             <div class="tl-cs-header error">
                                 <MudIcon Icon="@Icons.Material.Rounded.Warning" Size="Size.Medium" />
                                 <div>
@@ -811,7 +953,7 @@
 <style>
     /* Carousel Container */
     .tl-dashboard-carousel {
-        background: white;
+        background: var(--surface, white);
         border: 1px solid var(--gray-200);
         border-radius: 20px;
         overflow: hidden;
@@ -824,7 +966,7 @@
         align-items: center;
         padding: 20px 24px;
         border-bottom: 1px solid var(--gray-200);
-        background: linear-gradient(135deg, var(--gray-50) 0%, white 100%);
+        background: linear-gradient(135deg, var(--gray-50) 0%, var(--surface, white) 100%);
     }
     
     .tl-carousel-title-section {
@@ -901,6 +1043,11 @@
     .tl-carousel-content {
         padding: 24px;
     }
+    .tl-chart-surface {
+        background: var(--gray-50);
+        border-radius: 12px;
+        border: 1px solid var(--gray-200);
+    }
     
     /* KPI Mini Cards */
     .tl-kpi-mini-grid {
@@ -916,12 +1063,12 @@
     }
     
     .tl-kpi-mini-card.teal {
-        background: linear-gradient(135deg, var(--tl-primary-50) 0%, white 100%);
+        background: linear-gradient(135deg, var(--tl-primary-50) 0%, var(--surface, white) 100%);
         border-color: var(--tl-primary-200);
     }
     
     .tl-kpi-mini-card.gold {
-        background: linear-gradient(135deg, rgba(204, 160, 90, 0.1) 0%, white 100%);
+        background: linear-gradient(135deg, rgba(204, 160, 90, 0.1) 0%, var(--surface, white) 100%);
         border-color: var(--tl-accent);
     }
     
@@ -1012,7 +1159,7 @@
         align-items: center;
         gap: 16px;
         padding: 16px;
-        background: white;
+        background: var(--surface, white);
         border: 1px solid var(--gray-200);
         border-radius: 12px;
     }
@@ -1193,7 +1340,7 @@
     
     /* Health Breakdown */
     .tl-health-breakdown {
-        background: white;
+        background: var(--surface, white);
         border: 1px solid var(--gray-200);
         border-radius: 16px;
         padding: 24px;
@@ -1274,7 +1421,7 @@
     
     /* Health Section */
     .tl-health-section {
-        background: white;
+        background: var(--surface, white);
         border: 1px solid var(--gray-200);
         border-radius: 16px;
         padding: 20px;
@@ -1507,6 +1654,65 @@
     .tl-cs-header.error {
         color: var(--error-600);
     }
+    .tl-cs-surface {
+        border-radius: 12px;
+        border: 1px solid var(--gray-200);
+    }
+    .tl-cs-surface.success {
+        background: linear-gradient(135deg, var(--success-50) 0%, var(--surface, white) 100%);
+        border-color: var(--success-200);
+    }
+    .tl-cs-surface.error {
+        background: linear-gradient(135deg, var(--error-50) 0%, var(--surface, white) 100%);
+        border-color: var(--error-200);
+    }
+
+    .tl-mini-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .tl-mini-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: var(--gray-50);
+        border: 1px solid var(--gray-100);
+        font-size: 13px;
+    }
+
+    .tl-kpi-mini-delta.neutral {
+        color: var(--gray-500);
+    }
+    body.mud-dark-mode .tl-dashboard-carousel {
+        background: var(--surface) !important;
+        border-color: var(--gray-300) !important;
+    }
+    body.mud-dark-mode .tl-carousel-header {
+        background: linear-gradient(135deg, var(--gray-100) 0%, var(--surface) 100%) !important;
+        border-bottom-color: var(--gray-300) !important;
+    }
+    body.mud-dark-mode .tl-chart-surface,
+    body.mud-dark-mode .tl-profit-metric,
+    body.mud-dark-mode .tl-health-breakdown,
+    body.mud-dark-mode .tl-health-section,
+    body.mud-dark-mode .tl-mini-row {
+        background: var(--gray-100) !important;
+        border-color: var(--gray-300) !important;
+    }
+    body.mud-dark-mode .tl-kpi-mini-card.teal { background: linear-gradient(135deg, rgba(34,197,94,.12) 0%, var(--surface) 100%) !important; border-color: rgba(34,197,94,.28) !important; }
+    body.mud-dark-mode .tl-kpi-mini-card.gold { background: linear-gradient(135deg, rgba(251,191,36,.12) 0%, var(--surface) 100%) !important; border-color: rgba(251,191,36,.28) !important; }
+    body.mud-dark-mode .tl-kpi-mini-card.dark { background: linear-gradient(135deg, #111827 0%, #020617 100%) !important; border-color: #0f172a !important; }
+    body.mud-dark-mode .tl-cs-surface.success { background: linear-gradient(135deg, rgba(34,197,94,.12) 0%, var(--surface) 100%) !important; border-color: rgba(34,197,94,.28) !important; }
+    body.mud-dark-mode .tl-cs-surface.error { background: linear-gradient(135deg, rgba(248,113,113,.12) 0%, var(--surface) 100%) !important; border-color: rgba(248,113,113,.28) !important; }
+    body.mud-dark-mode .tl-warning-card { background: var(--gray-100) !important; }
+    body.mud-dark-mode .tl-warning-card.critical { background: rgba(248,113,113,.10) !important; }
+    body.mud-dark-mode .tl-warning-card.warning { background: rgba(251,191,36,.10) !important; }
+    body.mud-dark-mode .tl-recommendation-card { background: rgba(34,197,94,.10) !important; }
+    body.mud-dark-mode .tl-health-status-badge { background: rgba(255,255,255,.12) !important; }
 </style>
 
 @code {
@@ -1550,6 +1756,42 @@
     private string[] GetMonthLabels()
     {
         return XAxisLabels;
+    }
+
+    private string[] GetLastNMonthLabels(int months)
+    {
+        var start = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-(months - 1));
+        return Enumerable.Range(0, months)
+            .Select(i => start.AddMonths(i).ToString("MMM yy"))
+            .ToArray();
+    }
+
+    private double[] GetExpenseMonthlyAudSeries(int months)
+    {
+        var start = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-(months - 1));
+        return Enumerable.Range(0, months)
+            .Select(i =>
+            {
+                var m = start.AddMonths(i);
+                return (double)_expenses
+                    .Where(e => e.Date.Year == m.Year && e.Date.Month == m.Month)
+                    .Sum(e => e.AmountAud > 0 ? e.AmountAud : e.Total);
+            })
+            .ToArray();
+    }
+
+    private double[] GetBankMonthlySeries(int months, bool isCredit)
+    {
+        var start = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-(months - 1));
+        return Enumerable.Range(0, months)
+            .Select(i =>
+            {
+                var m = start.AddMonths(i);
+                return (double)_bankTransactions
+                    .Where(t => t.TransactionDate.Year == m.Year && t.TransactionDate.Month == m.Month)
+                    .Sum(t => isCredit ? t.Credit : t.Debit);
+            })
+            .ToArray();
     }
 
     private static string Fmt(decimal v) => "$" + v.ToString("#,##0");

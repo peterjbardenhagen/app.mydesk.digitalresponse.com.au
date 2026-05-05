@@ -1,5 +1,4 @@
 using MyDesk.Shared.Models;
-using Dapper;
 
 namespace MyDesk.Shared.Services;
 
@@ -35,7 +34,26 @@ public class ProjectService
             BEGIN
                 CREATE TABLE TaskComments (CommentId INT IDENTITY(1,1) PRIMARY KEY, TaskId INT NOT NULL, UserId INT NOT NULL, UserName NVARCHAR(100) NOT NULL, Comment NVARCHAR(1000) NOT NULL, CreatedAt DATETIME NOT NULL DEFAULT GETDATE());
             END";
-        await _db.ExecuteAsync(sql);
+        await _db.ExecuteNonQueryAsync(sql);
+
+        // Migrate: add CreatedAt / UpdatedAt if the Projects table was created without them
+        const string migrate = @"
+            IF EXISTS (SELECT * FROM sys.tables WHERE name = 'Projects')
+            BEGIN
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Projects') AND name = 'CreatedAt')
+                    ALTER TABLE Projects ADD CreatedAt DATETIME NOT NULL DEFAULT GETDATE();
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Projects') AND name = 'UpdatedAt')
+                    ALTER TABLE Projects ADD UpdatedAt DATETIME NOT NULL DEFAULT GETDATE();
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Projects') AND name = 'OwnerName')
+                    ALTER TABLE Projects ADD OwnerName NVARCHAR(100) NOT NULL DEFAULT '';
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Projects') AND name = 'Priority')
+                    ALTER TABLE Projects ADD Priority NVARCHAR(50) NOT NULL DEFAULT 'Medium';
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Projects') AND name = 'StartDate')
+                    ALTER TABLE Projects ADD StartDate DATE NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Projects') AND name = 'EndDate')
+                    ALTER TABLE Projects ADD EndDate DATE NULL;
+            END";
+        await _db.ExecuteNonQueryAsync(migrate);
     }
 
     // Projects

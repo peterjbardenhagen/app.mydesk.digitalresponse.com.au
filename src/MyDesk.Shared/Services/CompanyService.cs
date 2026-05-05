@@ -105,7 +105,7 @@ public class CompanyService
                     ["delState"]=(object?)c.DelState   ?? DBNull.Value,
                     ["delPC"] = (object?)c.DelPostCode ?? DBNull.Value,
                 });
-        await _db.ExecuteAsync(
+        await _db.ExecuteNonQueryAsync(
             @"UPDATE Companies SET Company=@n, Address1=@a1, Address2=@a2, Suburb=@sub,
               State=@state, PostCode=@pc, Phone=@ph, Fax=@fax, Email=@email, Website=@web, ABN=@abn,
               CustomerCode=@custCode, SupplierCode=@suppCode, IsCustomer=@isCust, IsSupplier=@isSupp, Notes=@notes,
@@ -146,7 +146,7 @@ public class CompanyService
     }
 
     public async Task DeleteCompanyAsync(int id) =>
-        await _db.ExecuteAsync("DELETE FROM Companies WHERE CompanyId = @id", new() { ["id"] = id });
+        await _db.ExecuteNonQueryAsync("DELETE FROM Companies WHERE CompanyId = @id", new() { ["id"] = id });
 
     public async Task NormaliseAndDedupeAsync()
     {
@@ -157,7 +157,7 @@ public class CompanyService
             var normalised = NormaliseCompanyName(c.CompanyName);
             if (normalised != c.CompanyName)
             {
-                await _db.ExecuteAsync("UPDATE Companies SET Company = @n WHERE CompanyId = @id",
+                await _db.ExecuteNonQueryAsync("UPDATE Companies SET Company = @n WHERE CompanyId = @id",
                     new() { ["n"] = normalised, ["id"] = c.CompanyId });
             }
         }
@@ -181,10 +181,8 @@ public class CompanyService
 
             foreach (var dup in duplicates)
             {
-                // Update invoices/shipments referencing duplicate to point to kept company
-                await _db.ExecuteAsync("UPDATE Invoices SET InvCompany = @name WHERE InvCompany = @dupName",
-                    new() { ["name"] = keep.CompanyName, ["dupName"] = dup.CompanyName });
-                await _db.ExecuteAsync("UPDATE Shipments SET Company = @name WHERE Company = @dupName",
+                // Update invoices referencing duplicate to point to kept company
+                await _db.ExecuteNonQueryAsync("UPDATE Invoices SET InvCompany = @name WHERE InvCompany = @dupName",
                     new() { ["name"] = keep.CompanyName, ["dupName"] = dup.CompanyName });
                 
                 // Delete duplicate
@@ -284,7 +282,7 @@ public class CompanyService
         var addressParts = ParseAddress(item.InvAddress);
         var delAddressParts = ParseAddress(item.DelAddress);
 
-        await _db.ExecuteAsync(@"
+        await _db.ExecuteNonQueryAsync(@"
             UPDATE Companies SET 
                 Phone = COALESCE(NULLIF(Phone, ''), @ph),
                 Email = COALESCE(NULLIF(Email, ''), @email),

@@ -28,6 +28,41 @@ public class AzureAIOptions
     public int OpenAIEmbeddingDimensions { get; set; } = 1536;
 
     /// <summary>
+    /// Optional dedicated endpoint for Azure Document Intelligence.
+    /// Falls back to <see cref="OpenAIEndpoint"/> when the same multi-service Cognitive Services
+    /// resource is used.
+    /// </summary>
+    public string DocumentIntelligenceEndpoint { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Optional dedicated key for Azure Document Intelligence. Falls back to <see cref="OpenAIApiKey"/>.
+    /// </summary>
+    public string DocumentIntelligenceApiKey { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Document Intelligence REST API version. Defaults to a stable GA version.
+    /// </summary>
+    public string DocumentIntelligenceApiVersion { get; set; } = "2024-11-30";
+
+    /// <summary>The endpoint that should be used for Document Intelligence calls.</summary>
+    public string EffectiveDocIntelEndpoint =>
+        string.IsNullOrWhiteSpace(DocumentIntelligenceEndpoint) ? OpenAIEndpoint : DocumentIntelligenceEndpoint;
+
+    /// <summary>The key that should be used for Document Intelligence calls.</summary>
+    public string EffectiveDocIntelKey =>
+        string.IsNullOrWhiteSpace(DocumentIntelligenceApiKey) ? OpenAIApiKey : DocumentIntelligenceApiKey;
+
+    /// <summary>
+    /// Full URL to start a layout analysis on the prebuilt-layout model.
+    /// </summary>
+    public string DocIntelLayoutAnalyzeUrl =>
+        $"{EffectiveDocIntelEndpoint.TrimEnd('/')}/documentintelligence/documentModels/prebuilt-layout:analyze?api-version={DocumentIntelligenceApiVersion}";
+
+    /// <summary>True when Document Intelligence calls have a chance of succeeding.</summary>
+    public bool IsDocIntelConfigured =>
+        !string.IsNullOrEmpty(EffectiveDocIntelEndpoint) && !string.IsNullOrEmpty(EffectiveDocIntelKey);
+
+    /// <summary>
     /// Builds the full chat completions URL from the component parts.
     /// Format: {endpoint}/openai/deployments/{model}/chat/completions?api-version={version}
     /// </summary>

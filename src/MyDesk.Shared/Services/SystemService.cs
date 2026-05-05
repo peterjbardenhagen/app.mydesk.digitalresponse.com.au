@@ -34,17 +34,17 @@ public class SystemService
         if (d.DivisionId == 0)
         {
             var nextId = await _db.ScalarAsync<int>("SELECT ISNULL(MAX(DivisionId), 0) + 1 FROM Divisions");
-            await _db.ExecuteAsync("INSERT INTO Divisions (DivisionId, Division) VALUES (@id, @n)",
+            await _db.ExecuteNonQueryAsync("INSERT INTO Divisions (DivisionId, Division) VALUES (@id, @n)",
                 new() { ["id"] = nextId, ["n"] = d.DivisionName });
             return nextId;
         }
-        await _db.ExecuteAsync("UPDATE Divisions SET Division = @n WHERE DivisionId = @id",
+        await _db.ExecuteNonQueryAsync("UPDATE Divisions SET Division = @n WHERE DivisionId = @id",
             new() { ["n"] = d.DivisionName, ["id"] = d.DivisionId });
         return d.DivisionId;
     }
 
     public async Task DeleteDivisionAsync(int id) =>
-        await _db.ExecuteAsync("DELETE FROM Divisions WHERE DivisionId = @id", new() { ["id"] = id });
+        await _db.ExecuteNonQueryAsync("DELETE FROM Divisions WHERE DivisionId = @id", new() { ["id"] = id });
 
     // ---------- Locations ----------
     public async Task<List<Location>> GetLocationsAsync()
@@ -62,17 +62,17 @@ public class SystemService
         if (l.LocationId == 0)
         {
             var nextId = await _db.ScalarAsync<int>("SELECT ISNULL(MAX(LocationId), 0) + 1 FROM Locations");
-            await _db.ExecuteAsync("INSERT INTO Locations (LocationId, Company) VALUES (@id, @n)",
+            await _db.ExecuteNonQueryAsync("INSERT INTO Locations (LocationId, Company) VALUES (@id, @n)",
                 new() { ["id"] = nextId, ["n"] = l.LocationName });
             return nextId;
         }
-        await _db.ExecuteAsync("UPDATE Locations SET Company = @n WHERE LocationId = @id",
+        await _db.ExecuteNonQueryAsync("UPDATE Locations SET Company = @n WHERE LocationId = @id",
             new() { ["n"] = l.LocationName, ["id"] = l.LocationId });
         return l.LocationId;
     }
 
     public async Task DeleteLocationAsync(int id) =>
-        await _db.ExecuteAsync("DELETE FROM Locations WHERE LocationId = @id", new() { ["id"] = id });
+        await _db.ExecuteNonQueryAsync("DELETE FROM Locations WHERE LocationId = @id", new() { ["id"] = id });
 
     // ---------- Parameters (key/value system settings) ----------
     public async Task<Dictionary<string, string?>> GetParametersAsync()
@@ -131,12 +131,12 @@ public class SystemService
         if (s.QuoteStatusId == 0)
             await _db.InsertAsync("INSERT INTO QuoteStatus (QuoteStatus) VALUES (@n)", new() { ["n"] = s.StatusName });
         else
-            await _db.ExecuteAsync("UPDATE QuoteStatus SET QuoteStatus = @n WHERE QuoteStatusId = @id",
+            await _db.ExecuteNonQueryAsync("UPDATE QuoteStatus SET QuoteStatus = @n WHERE QuoteStatusId = @id",
                 new() { ["n"] = s.StatusName, ["id"] = s.QuoteStatusId });
     }
 
     public async Task DeleteQuoteStatusAsync(int id) =>
-        await _db.ExecuteAsync("DELETE FROM QuoteStatus WHERE QuoteStatusId = @id", new() { ["id"] = id });
+        await _db.ExecuteNonQueryAsync("DELETE FROM QuoteStatus WHERE QuoteStatusId = @id", new() { ["id"] = id });
 
     // ---------- Invoice Status ----------
     public async Task<List<InvoiceStatus>> GetInvoiceStatusesAdminAsync()
@@ -154,12 +154,12 @@ public class SystemService
         if (s.InvoiceStatusId == 0)
             await _db.InsertAsync("INSERT INTO InvoiceStatus (InvoiceStatus) VALUES (@n)", new() { ["n"] = s.StatusName });
         else
-            await _db.ExecuteAsync("UPDATE InvoiceStatus SET InvoiceStatus = @n WHERE InvoiceStatusId = @id",
+            await _db.ExecuteNonQueryAsync("UPDATE InvoiceStatus SET InvoiceStatus = @n WHERE InvoiceStatusId = @id",
                 new() { ["n"] = s.StatusName, ["id"] = s.InvoiceStatusId });
     }
 
     public async Task DeleteInvoiceStatusAsync(int id) =>
-        await _db.ExecuteAsync("DELETE FROM InvoiceStatus WHERE InvoiceStatusId = @id", new() { ["id"] = id });
+        await _db.ExecuteNonQueryAsync("DELETE FROM InvoiceStatus WHERE InvoiceStatusId = @id", new() { ["id"] = id });
 
     // ---------- PO Status ----------
     public async Task<List<POStatus>> GetPOStatusesAdminAsync()
@@ -177,15 +177,15 @@ public class SystemService
         if (s.POStatusId == 0)
         {
             var nextId = await _db.ScalarAsync<int>("SELECT ISNULL(MAX(POStatusId), 0) + 1 FROM PurchaseOrderStatus");
-            await _db.ExecuteAsync("INSERT INTO PurchaseOrderStatus (POStatusId, POStatus) VALUES (@id, @n)", new() { ["id"] = nextId, ["n"] = s.StatusName });
+            await _db.ExecuteNonQueryAsync("INSERT INTO PurchaseOrderStatus (POStatusId, POStatus) VALUES (@id, @n)", new() { ["id"] = nextId, ["n"] = s.StatusName });
         }
         else
-            await _db.ExecuteAsync("UPDATE PurchaseOrderStatus SET POStatus = @n WHERE POStatusId = @id",
+            await _db.ExecuteNonQueryAsync("UPDATE PurchaseOrderStatus SET POStatus = @n WHERE POStatusId = @id",
                 new() { ["n"] = s.StatusName, ["id"] = s.POStatusId });
     }
 
     public async Task DeletePOStatusAsync(int id) =>
-        await _db.ExecuteAsync("DELETE FROM PurchaseOrderStatus WHERE POStatusId = @id", new() { ["id"] = id });
+        await _db.ExecuteNonQueryAsync("DELETE FROM PurchaseOrderStatus WHERE POStatusId = @id", new() { ["id"] = id });
 
     // ---------- User Roles (Save + Delete) ----------
     public async Task SaveUserRoleAsync(UserRole r)
@@ -193,12 +193,12 @@ public class SystemService
         if (r.UserRoleId == 0)
             await _db.InsertAsync("INSERT INTO UserRoles (UserRole) VALUES (@n)", new() { ["n"] = r.RoleName });
         else
-            await _db.ExecuteAsync("UPDATE UserRoles SET UserRole = @n WHERE UserRoleId = @id",
+            await _db.ExecuteNonQueryAsync("UPDATE UserRoles SET UserRole = @n WHERE UserRoleId = @id",
                 new() { ["n"] = r.RoleName, ["id"] = r.UserRoleId });
     }
 
     public async Task DeleteUserRoleAsync(int id) =>
-        await _db.ExecuteAsync("DELETE FROM UserRoles WHERE UserRoleId = @id", new() { ["id"] = id });
+        await _db.ExecuteNonQueryAsync("DELETE FROM UserRoles WHERE UserRoleId = @id", new() { ["id"] = id });
 
     // ---------- Activity Types ----------
     public async Task<List<ActivityType>> GetActivityTypesAsync()
@@ -216,12 +216,12 @@ public class SystemService
         if (a.ActivityTypeId == 0)
             await _db.InsertAsync("INSERT INTO ActivityTypes (ActivityType) VALUES (@n)", new() { ["n"] = a.ActivityTypeName });
         else
-            await _db.ExecuteAsync("UPDATE ActivityTypes SET ActivityType = @n WHERE ActivityTypeId = @id",
+            await _db.ExecuteNonQueryAsync("UPDATE ActivityTypes SET ActivityType = @n WHERE ActivityTypeId = @id",
                 new() { ["n"] = a.ActivityTypeName, ["id"] = a.ActivityTypeId });
     }
 
     public async Task DeleteActivityTypeAsync(int id) =>
-        await _db.ExecuteAsync("DELETE FROM ActivityTypes WHERE ActivityTypeId = @id", new() { ["id"] = id });
+        await _db.ExecuteNonQueryAsync("DELETE FROM ActivityTypes WHERE ActivityTypeId = @id", new() { ["id"] = id });
 
     // ---------- Job Order Status ----------
     public async Task<List<JobOrderStatus>> GetJobOrderStatusesAsync()
@@ -239,12 +239,12 @@ public class SystemService
         if (s.JobOrderStatusId == 0)
             await _db.InsertAsync("INSERT INTO JobOrderStatus (JobOrderStatus) VALUES (@n)", new() { ["n"] = s.StatusName });
         else
-            await _db.ExecuteAsync("UPDATE JobOrderStatus SET JobOrderStatus = @n WHERE JobOrderStatusId = @id",
+            await _db.ExecuteNonQueryAsync("UPDATE JobOrderStatus SET JobOrderStatus = @n WHERE JobOrderStatusId = @id",
                 new() { ["n"] = s.StatusName, ["id"] = s.JobOrderStatusId });
     }
 
     public async Task DeleteJobOrderStatusAsync(int id) =>
-        await _db.ExecuteAsync("DELETE FROM JobOrderStatus WHERE JobOrderStatusId = @id", new() { ["id"] = id });
+        await _db.ExecuteNonQueryAsync("DELETE FROM JobOrderStatus WHERE JobOrderStatusId = @id", new() { ["id"] = id });
 
     // ---------- Part Codes ----------
     public async Task<List<PartCode>> GetPartCodesAsync()
@@ -263,12 +263,12 @@ public class SystemService
             await _db.InsertAsync("INSERT INTO PartCodes (PartCode) VALUES (@n)",
                 new() { ["n"] = p.PartCodeName });
         else
-            await _db.ExecuteAsync("UPDATE PartCodes SET PartCode = @n WHERE PartCodeId = @id",
+            await _db.ExecuteNonQueryAsync("UPDATE PartCodes SET PartCode = @n WHERE PartCodeId = @id",
                 new() { ["n"] = p.PartCodeName, ["id"] = p.PartCodeId });
     }
 
     public async Task DeletePartCodeAsync(int id) =>
-        await _db.ExecuteAsync("DELETE FROM PartCodes WHERE PartCodeId = @id", new() { ["id"] = id });
+        await _db.ExecuteNonQueryAsync("DELETE FROM PartCodes WHERE PartCodeId = @id", new() { ["id"] = id });
 
     // ---------- Currency Rates ----------
     public async Task<List<CurrencyRate>> GetCurrencyRatesAsync()
@@ -289,12 +289,12 @@ public class SystemService
             await _db.InsertAsync("INSERT INTO Currency (Currency, CurrencyName, CurrencyRate) VALUES (@code, @name, @rate)",
                 new() { ["code"] = c.Code, ["name"] = c.Name, ["rate"] = c.Rate });
         else
-            await _db.ExecuteAsync("UPDATE Currency SET Currency = @code, CurrencyName = @name, CurrencyRate = @rate WHERE CurrencyId = @id",
+            await _db.ExecuteNonQueryAsync("UPDATE Currency SET Currency = @code, CurrencyName = @name, CurrencyRate = @rate WHERE CurrencyId = @id",
                 new() { ["code"] = c.Code, ["name"] = c.Name, ["rate"] = c.Rate, ["id"] = c.CurrencyId });
     }
 
     public async Task DeleteCurrencyRateAsync(int id) =>
-        await _db.ExecuteAsync("DELETE FROM Currency WHERE CurrencyId = @id", new() { ["id"] = id });
+        await _db.ExecuteNonQueryAsync("DELETE FROM Currency WHERE CurrencyId = @id", new() { ["id"] = id });
 
     // ---------- System Parameters (single-row settings) ----------
     public async Task<SystemParameters?> GetSystemParametersAsync()
@@ -316,7 +316,7 @@ public class SystemService
             await _db.InsertAsync("INSERT INTO Parameters (UploadFrom, MinimumValue) VALUES (@u, @m)",
                 new() { ["u"] = (object?)p.UploadFrom ?? DBNull.Value, ["m"] = p.MinimumValue });
         else
-            await _db.ExecuteAsync("UPDATE Parameters SET UploadFrom = @u, MinimumValue = @m WHERE ParameterId = @id",
+            await _db.ExecuteNonQueryAsync("UPDATE Parameters SET UploadFrom = @u, MinimumValue = @m WHERE ParameterId = @id",
                 new() { ["u"] = (object?)p.UploadFrom ?? DBNull.Value, ["m"] = p.MinimumValue, ["id"] = p.ParameterId });
     }
 

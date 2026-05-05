@@ -15,344 +15,354 @@
             </MudText>
         </div>
 
-<!-- Version 3.0 - Current Release -->
+        @* ── v3.2 – Current ── *@
         <MudPaper Elevation="0" Class="release-card current-release mb-6">
             <div class="release-header">
                 <div class="d-flex align-center gap-3">
-                    <MudChip T="string" Color="Color.Primary" Size="Size.Small" Variant="Variant.Filled">v3.0</MudChip>
-                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Text">Current</MudChip>
-                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Released 28 April 2026</MudText>
+                    <MudChip T="string" Color="Color.Primary"  Size="Size.Small" Variant="Variant.Filled">v3.2</MudChip>
+                    <MudChip T="string" Color="Color.Success"  Size="Size.Small" Variant="Variant.Text">Current</MudChip>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Released May 2026</MudText>
                 </div>
-                <MudText Typo="Typo.h4" Class="mt-3">🚀 MyDesk 3.0 - Complete Platform Transformation</MudText>
+                <MudText Typo="Typo.h4" Class="mt-3">🏢 MyDesk 3.2 – Multi-Tenancy, Super Admin & Login Overhaul</MudText>
                 <MudText Typo="Typo.body1" Class="mt-2 mud-text-secondary">
-                    Our biggest release yet! MyDesk has been re-platformed as a modern SaaS solution with stunning new Techlight brand, AI-powered insights, and multi-tenant architecture.
+                    Full multi-tenant architecture goes live for all users. Introduces the Super Administrator role, Tenant Settings management, a fully working login flow, dark-mode support, keyboard-navigable carousels, and a comprehensive round of database migration hardening.
                 </MudText>
             </div>
 
             <div class="release-body">
                 <div class="release-section">
                     <MudText Typo="Typo.h6" Class="release-category">
-                        <MudIcon Icon="@Icons.Material.Rounded.Palette" Color="Color.Primary" /> Brand & Design
+                        <MudIcon Icon="@Icons.Material.Rounded.Domain" Color="Color.Primary" /> Multi-Tenancy — Live
                     </MudText>
                     <ul class="release-list">
-                        <li><strong>New Techlight Brand:</strong> Bold new visual identity with signature teal (#00c8c8) and dark navy (#08121a) palette</li>
-                        <li><strong>Modern UI Refresh:</strong> Redesigned dashboard, login page, and all major screens with contemporary Australian SaaS styling</li>
-                        <li><strong>MyDesk Logo:</strong> Distinctive logo and brand mark for the platform</li>
-                        <li><strong>Responsive Design:</strong> Polished experience across desktop, tablet, and mobile</li>
-                        <li><strong>Custom Typography:</strong> Inter font family for improved readability</li>
+                        <li><strong>Tenants table live:</strong> Every organisation is now a first-class tenant with its own isolated workspace (TenantId, Name, Slug, Plan, MaxUsers).</li>
+                        <li><strong>Platform Settings per tenant:</strong> Branding (logo, colours, heading, tagline) is stored in <code>PlatformSettingsEntities</code> per tenant — no more shared config.</li>
+                        <li><strong>Tenant selection at login:</strong> Users who belong to multiple workspaces see a clean "Select your workspace" screen before entering the platform.</li>
+                        <li><strong>Seeded tenants:</strong> Techlight (<code>11111111...</code>) and Techlight UAT (<code>22222222...</code>) are seeded on first run.</li>
+                        <li><strong>DB schema migration:</strong> Legacy <code>INT</code> TenantId automatically migrated to <code>UNIQUEIDENTIFIER</code>; missing columns back-filled; legacy unique constraints dropped.</li>
+                        <li><strong>UserTenants:</strong> All existing users auto-assigned to the Techlight tenant on startup.</li>
                     </ul>
                 </div>
 
                 <div class="release-section">
                     <MudText Typo="Typo.h6" Class="release-category">
-                        <MudIcon Icon="@Icons.Material.Rounded.SmartToy" Color="Color.Primary" /> Ask AI - Intelligent Assistant
+                        <MudIcon Icon="@Icons.Material.Rounded.AdminPanelSettings" Color="Color.Primary" /> Super Administrator Role
                     </MudText>
                     <ul class="release-list">
-                        <li><strong>Natural Language Queries:</strong> Ask questions about your business in plain English</li>
-                        <li><strong>Smart Data Insights:</strong> Get instant answers about sales, customers, and operations</li>
-                        <li><strong>Context-Aware Responses:</strong> AI understands your division, permissions, and history</li>
-                        <li><strong>Report Generation:</strong> "Show me last month's top 10 customers" - AI delivers instantly</li>
-                        <li><strong>Navigation Help:</strong> Ask "How do I create a PO?" and get step-by-step guidance</li>
+                        <li><strong>New UserType:</strong> "Super Administrator" (UserTypeId = 5) added — superset of Administrator with Tenant management capability.</li>
+                        <li><strong>Claims issued:</strong> Super Admins receive <code>SuperAdministrator</code>, <code>Administrator</code>, and <code>Director</code> role claims — full access to everything plus the new Tenant Settings page.</li>
+                        <li><strong>Tenant Settings page:</strong> <code>/admin/tenants</code> — list, create and edit tenants. Gated exclusively to SuperAdministrator role.</li>
+                        <li><strong>Quick Nav shortcut:</strong> "Tenant Settings" appears in Quick Access (with divider and amber highlight) only for Super Admins.</li>
+                        <li><strong>Admin nav:</strong> Tenant Settings also appears in the Admin section nav above Platform Settings for Super Admins.</li>
                     </ul>
                 </div>
 
                 <div class="release-section">
                     <MudText Typo="Typo.h6" Class="release-category">
-                        <MudIcon Icon="@Icons.Material.Rounded.ContentCopy" Color="Color.Primary" /> Copy Supplier Quote
+                        <MudIcon Icon="@Icons.Material.Rounded.Login" Color="Color.Primary" /> Login Page Overhaul
                     </MudText>
                     <ul class="release-list">
-                        <li><strong>AI-Powered Extraction:</strong> Upload supplier quotes (PDF or images) and extract line items automatically</li>
-                        <li><strong>Azure OpenAI Vision:</strong> Uses GPT-4o with vision to parse documents</li>
-                        <li><strong>Automatic Markup:</strong> Applies 30% default gross profit margin to supplier pricing</li>
-                        <li><strong>Direct to Quote:</strong> Creates draft quote ready for review and editing</li>
-                        <li><strong>Drag & Drop Upload:</strong> Support for PDF, PNG, JPG file formats</li>
+                        <li><strong>Correct Techlight logo:</strong> Hero panel now displays the real Techlight SVG logo downloaded directly from <code>techlight.com.au</code>.</li>
+                        <li><strong>Dark mode toggle:</strong> The moon/sun icon button now actually works — switches a full set of dark-mode CSS variables covering the card, inputs, labels, MudBlazor components and icon colours.</li>
+                        <li><strong>Dark mode persisted:</strong> Preference stored in <code>localStorage</code> under <code>mydesk_dark_mode</code> and restored on next page load via <code>OnAfterRenderAsync</code>.</li>
+                        <li><strong>Login fixed end-to-end:</strong> Resolved tenant JOIN returning empty (Tenants rows missing), unique-constraint violations on nullable columns, and wrong UserTypeId mappings in AuthService.</li>
+                        <li><strong>UserType mapping corrected:</strong> AuthService now maps DB values correctly (3=Director, 4=Administrator, 5=SuperAdministrator) instead of the legacy 1/2 hardcode.</li>
+                        <li><strong>UserTypeId claim:</strong> Raw <code>UserTypeId</code> is now included as a claim for downstream use.</li>
                     </ul>
                 </div>
 
                 <div class="release-section">
                     <MudText Typo="Typo.h6" Class="release-category">
-                        <MudIcon Icon="@Icons.Material.Rounded.Download" Color="Color.Primary" /> CSV Export
+                        <MudIcon Icon="@Icons.Material.Rounded.Keyboard" Color="Color.Primary" /> Keyboard Navigation & UX
                     </MudText>
                     <ul class="release-list">
-                        <li><strong>Export Quotes:</strong> Download all quotes with full details to CSV</li>
-                        <li><strong>Export Invoices:</strong> Download invoice data including amounts and status</li>
-                        <li><strong>Export Purchase Orders:</strong> Export PO data for supplier management</li>
-                        <li><strong>Export Contacts:</strong> Download contact directory</li>
-                        <li><strong>Export Companies:</strong> Download company records</li>
-                        <li><strong>Export Job Orders:</strong> Export job order list for reporting</li>
+                        <li><strong>Arrow key carousel:</strong> Project detail popups on <code>/projects</code> now respond to <kbd>←</kbd> and <kbd>→</kbd> keys to navigate the image carousel — in addition to existing click buttons.</li>
+                        <li><strong>Keyboard hint shown:</strong> A subtle <kbd>←</kbd> <kbd>→</kbd> "keyboard to browse images" hint appears in the dialog panel when a carousel has more than one image.</li>
+                        <li><strong>Index reset on open:</strong> Each time a project dialog opens the carousel resets to image 0.</li>
                     </ul>
                 </div>
 
                 <div class="release-section">
                     <MudText Typo="Typo.h6" Class="release-category">
-                        <MudIcon Icon="@Icons.Material.Rounded.Business" Color="Color.Primary" /> Customer Portal
+                        <MudIcon Icon="@Icons.Material.Rounded.BugReport" Color="Color.Primary" /> Stability & Migration Fixes
                     </MudText>
                     <ul class="release-list">
-                        <li><strong>Self-Service Portal:</strong> Customers can view their quotes, invoices, and orders</li>
-                        <li><strong>Secure Login:</strong> Username/password authentication per contact</li>
-                        <li><strong>Dashboard View:</strong> Overview of account activity and quick actions</li>
-                        <li><strong>Access Control:</strong> Per-contact portal enablement with expiry dates</li>
-                        <li><strong>Portal Credentials:</strong> Admins can set/reset customer portal access</li>
+                        <li><strong>PermissionService DI fixed:</strong> Singleton consuming a scoped <code>DatabaseService</code> caused a fatal startup crash — resolved by injecting <code>IServiceScopeFactory</code> and creating scopes on demand.</li>
+                        <li><strong>018_MultiTenant.sql hardened:</strong> <code>Slug</code>, <code>IsAdmin</code>, <code>UserRole</code> column errors and duplicate-cursor errors fixed; user-role assignment now uses <code>UserTypeId</code> (correct column) via dynamic SQL.</li>
+                        <li><strong>Tenants schema back-fill:</strong> <code>AddMissingColumnsAsync</code> adds <code>Country</code>, <code>MaxUsers</code>, <code>StorageLimitMB</code>, <code>SubscriptionPlan</code>, <code>Slug</code>, <code>Name</code> etc. idempotently to legacy tables.</li>
+                        <li><strong>FK constraint resilience:</strong> PlatformSettingsEntities foreign key creation wrapped in <code>BEGIN TRY / END CATCH</code> so startup never fails on type mismatch.</li>
+                        <li><strong>Port-in-use errors:</strong> Run.bat option 4 kills any process already on port 5237 before launching Kestrel.</li>
+                        <li><strong>Zero build warnings:</strong> All compiler and MudBlazor analyzer warnings resolved.</li>
                     </ul>
                 </div>
 
                 <div class="release-section">
                     <MudText Typo="Typo.h6" Class="release-category">
-                        <MudIcon Icon="@Icons.Material.Rounded.People" Color="Color.Primary" /> CRM Enhancements
+                        <MudIcon Icon="@Icons.Material.Rounded.Book" Color="Color.Primary" /> Documentation & Developer Experience
                     </MudText>
                     <ul class="release-list">
-                        <li><strong>Invoice Contact Selection:</strong> Autocomplete dropdown for invoice contact assignment</li>
-                        <li><strong>Payment Terms:</strong> Dropdown selection for common payment terms</li>
-                        <li><strong>Quote Download Tracking:</strong> Audit log for PDF downloads</li>
-                        <li><strong>Quote Email Tracking:</strong> Audit log for quote email sends</li>
-                        <li><strong>Quote Status Workflow:</strong> Updated status handling with approval states</li>
-                    </ul>
-                </div>
-
-                <div class="release-section">
-                    <MudText Typo="Typo.h6" Class="release-category">
-                        <MudIcon Icon="@Icons.Material.Rounded.Insights" Color="Color.Primary" /> Business Intelligence
-                    </MudText>
-                    <ul class="release-list">
-                        <li><strong>Executive Dashboard:</strong> Revenue, quotes, profit margin, and health score at a glance</li>
-                        <li><strong>Interactive Carousel:</strong> 6 business intelligence views with drill-down capabilities</li>
-                        <li><strong>Team Leaderboard:</strong> Performance tracking for directors and administrators</li>
-                        <li><strong>Personal KPIs:</strong> Every user sees their own performance metrics</li>
-                        <li><strong>Smart Warnings:</strong> Automated alerts for overdue invoices, stalled quotes, and approval queues</li>
-                        <li><strong>Recommendations Engine:</strong> AI-powered suggestions for actions that drive revenue</li>
-                    </ul>
-                </div>
-
-                <div class="release-section">
-                    <MudText Typo="Typo.h6" Class="release-category">
-                        <MudIcon Icon="@Icons.Material.Rounded.Cloud" Color="Color.Primary" /> SaaS Platform
-                    </MudText>
-                    <ul class="release-list">
-                        <li><strong>Multi-Tenancy:</strong> Platform now supports multiple customer organisations</li>
-                        <li><strong>Tenant Isolation:</strong> Each customer gets their own isolated data space</li>
-                        <li><strong>Custom Branding:</strong> Enterprise tier supports logo and color customisation</li>
-                        <li><strong>Domain-Based Routing:</strong> Access via <code>yourcompany.mydesk.digitalresponse.com.au</code></li>
-                        <li><strong>Feature Flags:</strong> Per-tenant feature enablement</li>
-                        <li><strong>Platform Settings:</strong> Centralised configuration for all branding and features</li>
-                    </ul>
-                </div>
-
-                <div class="release-section">
-                    <MudText Typo="Typo.h6" Class="release-category">
-                        <MudIcon Icon="@Icons.Material.Rounded.AccountTree" Color="Color.Primary" /> Accounting Integration
-                    </MudText>
-                    <ul class="release-list">
-                        <li><strong>MYOB Sync:</strong> Bi-directional sync for invoices and payments</li>
-                        <li><strong>Reconciliation Dashboard:</strong> Visual matching of MYOB vs MyDesk records</li>
-                        <li><strong>Automated Invoice Export:</strong> Scheduled sync with conflict resolution</li>
-                        <li><strong>Payment Tracking:</strong> Real-time payment status updates from accounting</li>
-                    </ul>
-                </div>
-
-                <div class="release-section">
-                    <MudText Typo="Typo.h6" Class="release-category">
-                        <MudIcon Icon="@Icons.Material.Rounded.Security" Color="Color.Primary" /> Security & Compliance
-                    </MudText>
-                    <ul class="release-list">
-                        <li><strong>Australian Privacy Compliance:</strong> Full alignment with Privacy Act 1988 (Cth)</li>
-                        <li><strong>Privacy Policy:</strong> Comprehensive privacy policy at <code>/privacy-policy</code></li>
-                        <li><strong>Terms & Conditions:</strong> Updated SaaS terms at <code>/terms-and-conditions</code></li>
-                        <li><strong>Notifiable Data Breach Scheme:</strong> Proper breach notification procedures</li>
-                        <li><strong>Enhanced Authentication:</strong> Improved login security and session management</li>
-                    </ul>
-                </div>
-
-                <div class="release-section">
-                    <MudText Typo="Typo.h6" Class="release-category">
-                        <MudIcon Icon="@Icons.Material.Rounded.Speed" Color="Color.Primary" /> Performance
-                    </MudText>
-                    <ul class="release-list">
-                        <li><strong>.NET 8 Upgrade:</strong> Latest framework for improved performance and security</li>
-                        <li><strong>MudBlazor 8.x:</strong> Modern component library for consistent UI</li>
-                        <li><strong>Optimised Queries:</strong> Faster data loading across all modules</li>
-                        <li><strong>Serilog Logging:</strong> Better diagnostics and troubleshooting</li>
-                    </ul>
-                </div>
-
-                <div class="release-section">
-                    <MudText Typo="Typo.h6" Class="release-category">
-                        <MudIcon Icon="@Icons.Material.Rounded.BugReport" Color="Color.Primary" /> Quality Assurance
-                    </MudText>
-                    <ul class="release-list">
-                        <li><strong>Playwright Test Suite:</strong> 72+ automated end-to-end tests</li>
-                        <li><strong>CI/CD Pipeline:</strong> Automated testing on every deployment</li>
-                        <li><strong>Accessibility:</strong> WCAG 2.1 AA compliance improvements</li>
-                        <li><strong>Browser Coverage:</strong> Tested on Chrome, Firefox, Edge, Safari</li>
+                        <li><strong>AGENTS.md rewritten:</strong> Comprehensive autonomous developer guide — login credentials, tenant GUIDs, DB fix scripts, Kestrel startup procedure, common error→fix lookup table, and file location reference all in one place.</li>
+                        <li><strong>Run.bat option [0]:</strong> Opens AGENTS.md directly from the launcher menu.</li>
+                        <li><strong>Self-healing upgraded to Gemini 2.5 Flash:</strong> AI-powered error fixing in <code>Run.ps1 -SelfHealing</code> now uses Google's latest model.</li>
+                        <li><strong>Release Notes &amp; Help Centre refreshed:</strong> This document, plus the Help Centre quick-start cards and FAQs, updated to reflect v3.2 features.</li>
                     </ul>
                 </div>
             </div>
         </MudPaper>
 
-        <!-- Version 2.x - Previous -->
-        <MudPaper Elevation="0" Class="release-card mb-4">
-            <div class="release-header-compact">
+        @* ── v3.1 ── *@
+        <MudPaper Elevation="0" Class="release-card mb-6">
+            <div class="release-header">
                 <div class="d-flex align-center gap-3">
-                    <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Outlined">v2.5</MudChip>
-                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Released March 2025</MudText>
+                    <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Outlined">v3.1</MudChip>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Released 3 May 2026</MudText>
                 </div>
-                <MudText Typo="Typo.h5" Class="mt-2">Job Orders Enhancement</MudText>
+                <MudText Typo="Typo.h4" Class="mt-3">✨ MyDesk 3.1 – Subscriptions, Stability & Coverage</MudText>
+                <MudText Typo="Typo.body1" Class="mt-2 mud-text-secondary">
+                    Focused release closing long-standing usability bugs, adding a proper recurring-revenue module, and ensuring every page in the platform is reachable from the side navigation.
+                </MudText>
             </div>
             <div class="release-body">
-                <ul class="release-list">
-                    <li>Added picking slip generation for warehouse fulfilment</li>
-                    <li>Third-party supply tracking for outsourced work</li>
-                    <li>Job order status workflow with customisable states</li>
-                    <li>Improved PDF generation performance</li>
-                </ul>
+                <div class="release-section">
+                    <MudText Typo="Typo.h6" Class="release-category">
+                        <MudIcon Icon="@Icons.Material.Rounded.Subscriptions" Color="Color.Primary" /> Subscription Management
+                    </MudText>
+                    <ul class="release-list">
+                        <li><strong>Renamed from DRM:</strong> "DRM" → "Subscriptions" – recurring services like hosting, Office 365, domains, support contracts.</li>
+                        <li><strong>One-click invoice raising:</strong> Raise Invoice instantly creates a customer invoice and rolls the renewal date forward.</li>
+                        <li><strong>Multiple cadences:</strong> Weekly, fortnightly, monthly, quarterly, half-yearly, annual and biennial schedules.</li>
+                        <li><strong>Upcoming renewals widget:</strong> Dashboard surfaces subscriptions due in the next 30 days.</li>
+                    </ul>
+                </div>
+                <div class="release-section">
+                    <MudText Typo="Typo.h6" Class="release-category">
+                        <MudIcon Icon="@Icons.Material.Rounded.BugReport" Color="Color.Primary" /> Stability Fixes
+                    </MudText>
+                    <ul class="release-list">
+                        <li><strong>Dialog close fixed:</strong> Duplicated <code>MudDialogProvider</code> in layout removed — X, Close and click-outside now reliably close every popup.</li>
+                        <li><strong>Build clean:</strong> All CS0246, CS4033, CS0105 warnings resolved.</li>
+                        <li><strong>SQL migration 015 fixed:</strong> Duplicate <code>ExportedDate</code> column no longer breaks fresh deployments.</li>
+                    </ul>
+                </div>
+                <div class="release-section">
+                    <MudText Typo="Typo.h6" Class="release-category">
+                        <MudIcon Icon="@Icons.Material.Rounded.Menu" Color="Color.Primary" /> Navigation
+                    </MudText>
+                    <ul class="release-list">
+                        <li><strong>Comprehensive Quick Nav:</strong> Timesheets, Staff Whereabouts, Projects, Subscriptions, Calendar, Call Reports, Help Centre, Release Notes and Roadmap all added.</li>
+                        <li><strong>Sitemap page:</strong> <code>/sitemap</code> lists every route in the platform.</li>
+                        <li><strong>Accounts hub:</strong> <code>/accounts</code> links Reconciliation, Aged Payables, MYOB Sync and Banking.</li>
+                    </ul>
+                </div>
+                <div class="release-section">
+                    <MudText Typo="Typo.h6" Class="release-category">
+                        <MudIcon Icon="@Icons.Material.Rounded.Lock" Color="Color.Primary" /> Security & Permissions
+                    </MudText>
+                    <ul class="release-list">
+                        <li><strong>Granular permission system:</strong> 80+ permissions across all modules, role-based defaults, UI-configurable permission matrix.</li>
+                        <li><strong>Director restriction:</strong> Directors cannot view or edit Administrator accounts.</li>
+                        <li><strong>robots.txt + X-Robots-Tag:</strong> All crawlers blocked across the entire platform.</li>
+                    </ul>
+                </div>
             </div>
         </MudPaper>
 
-        <MudPaper Elevation="0" Class="release-card mb-4">
-            <div class="release-header-compact">
+        @* ── v3.0 ── *@
+        <MudPaper Elevation="0" Class="release-card mb-6">
+            <div class="release-header">
                 <div class="d-flex align-center gap-3">
-                    <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Outlined">v2.4</MudChip>
-                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Released January 2025</MudText>
+                    <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Outlined">v3.0</MudChip>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Released 28 April 2026</MudText>
                 </div>
-                <MudText Typo="Typo.h5" Class="mt-2">Purchase Order Workflow</MudText>
+                <MudText Typo="Typo.h4" Class="mt-3">🚀 MyDesk 3.0 – Complete Platform Transformation</MudText>
+                <MudText Typo="Typo.body1" Class="mt-2 mud-text-secondary">
+                    Re-platformed as a modern SaaS solution: new Techlight brand, AI-powered insights, multi-tenant architecture, .NET 10, and 72+ automated tests.
+                </MudText>
             </div>
             <div class="release-body">
-                <ul class="release-list">
-                    <li>Multi-level approval hierarchy based on user roles</li>
-                    <li>PO approval limits with automatic escalation</li>
-                    <li>Email notifications for approvers and requesters</li>
-                    <li>Audit trail for all PO state changes</li>
-                    <li>CapEx (Capital Expenditure) flagging</li>
-                </ul>
+                <MudGrid>
+                    <MudItem xs="12" sm="6">
+                        <div class="release-section">
+                            <MudText Typo="Typo.h6" Class="release-category"><MudIcon Icon="@Icons.Material.Rounded.Palette" Color="Color.Primary" /> Brand &amp; Design</MudText>
+                            <ul class="release-list">
+                                <li>New Techlight brand — teal (#00c8c8) &amp; dark navy (#08121a)</li>
+                                <li>Modern UI: dashboard, login, all major screens redesigned</li>
+                                <li>Responsive across desktop, tablet and mobile</li>
+                            </ul>
+                        </div>
+                        <div class="release-section">
+                            <MudText Typo="Typo.h6" Class="release-category"><MudIcon Icon="@Icons.Material.Rounded.SmartToy" Color="Color.Primary" /> Ask AI Assistant</MudText>
+                            <ul class="release-list">
+                                <li>Natural language queries against live business data</li>
+                                <li>Context-aware: respects division, permissions, history</li>
+                                <li>Powered by Azure OpenAI GPT</li>
+                            </ul>
+                        </div>
+                        <div class="release-section">
+                            <MudText Typo="Typo.h6" Class="release-category"><MudIcon Icon="@Icons.Material.Rounded.ContentCopy" Color="Color.Primary" /> Copy Supplier Quote</MudText>
+                            <ul class="release-list">
+                                <li>AI extracts line items from supplier PDF/image</li>
+                                <li>30% gross profit margin applied automatically</li>
+                                <li>Draft quote ready for review in one step</li>
+                            </ul>
+                        </div>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <div class="release-section">
+                            <MudText Typo="Typo.h6" Class="release-category"><MudIcon Icon="@Icons.Material.Rounded.Business" Color="Color.Primary" /> Customer &amp; Supplier Portals</MudText>
+                            <ul class="release-list">
+                                <li>Self-service portals for customers and suppliers</li>
+                                <li>Per-contact portal enablement with expiry dates</li>
+                            </ul>
+                        </div>
+                        <div class="release-section">
+                            <MudText Typo="Typo.h6" Class="release-category"><MudIcon Icon="@Icons.Material.Rounded.AccountTree" Color="Color.Primary" /> Accounting Integration</MudText>
+                            <ul class="release-list">
+                                <li>MYOB bi-directional sync for invoices &amp; payments</li>
+                                <li>Reconciliation dashboard with conflict resolution</li>
+                            </ul>
+                        </div>
+                        <div class="release-section">
+                            <MudText Typo="Typo.h6" Class="release-category"><MudIcon Icon="@Icons.Material.Rounded.Speed" Color="Color.Primary" /> Platform</MudText>
+                            <ul class="release-list">
+                                <li>.NET 10 + MudBlazor 7.x — latest, fastest stack</li>
+                                <li>Serilog structured logging to rolling daily files</li>
+                                <li>72+ Playwright E2E tests, CI/CD pipeline</li>
+                            </ul>
+                        </div>
+                    </MudItem>
+                </MudGrid>
             </div>
         </MudPaper>
 
-        <MudPaper Elevation="0" Class="release-card mb-4">
-            <div class="release-header-compact">
-                <div class="d-flex align-center gap-3">
-                    <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Outlined">v2.3</MudChip>
-                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Released November 2024</MudText>
-                </div>
-                <MudText Typo="Typo.h5" Class="mt-2">CRM & Contacts Refresh</MudText>
-            </div>
-            <div class="release-body">
-                <ul class="release-list">
-                    <li>Redesigned contact and company management screens</li>
-                    <li>Address book with delivery and invoice addresses</li>
-                    <li>Activity history tracking per contact</li>
-                    <li>Improved search with type-ahead suggestions</li>
-                </ul>
-            </div>
-        </MudPaper>
+        @* ── Previous releases ── *@
+        <MudGrid>
+            @foreach (var rel in _previousReleases)
+            {
+                <MudItem xs="12" sm="6" md="4">
+                    <MudPaper Elevation="0" Class="release-card mb-4" Style="height:100%;">
+                        <div class="release-header-compact">
+                            <div class="d-flex align-center gap-2">
+                                <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Outlined">@rel.Version</MudChip>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">@rel.Date</MudText>
+                            </div>
+                            <MudText Typo="Typo.h6" Class="mt-2">@rel.Title</MudText>
+                        </div>
+                        <div class="release-body" Style="padding: 16px 20px;">
+                            <ul class="release-list">
+                                @foreach (var item in rel.Items)
+                                {
+                                    <li>@item</li>
+                                }
+                            </ul>
+                        </div>
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
 
-        <MudPaper Elevation="0" Class="release-card mb-4">
-            <div class="release-header-compact">
-                <div class="d-flex align-center gap-3">
-                    <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Outlined">v2.2</MudChip>
-                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Released September 2024</MudText>
-                </div>
-                <MudText Typo="Typo.h5" Class="mt-2">Dashboard Carousel</MudText>
-            </div>
-            <div class="release-body">
-                <ul class="release-list">
-                    <li>Interactive dashboard with 6 business intelligence views</li>
-                    <li>Real-time KPI tracking</li>
-                    <li>Team performance leaderboard</li>
-                    <li>Custom widgets per user role</li>
-                </ul>
-            </div>
-        </MudPaper>
-
-        <!-- Upcoming -->
+        @* ── Coming Soon ── *@
         <MudPaper Elevation="0" Class="release-card upcoming-card mt-6">
             <div class="release-header-compact">
                 <div class="d-flex align-center gap-3">
                     <MudChip T="string" Color="Color.Warning" Size="Size.Small" Variant="Variant.Filled">Coming Soon</MudChip>
-                    <MudText Typo="Typo.body2" Class="mud-text-secondary">v3.1 - Q3 2026</MudText>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">v3.3 – Q3 2026</MudText>
                 </div>
                 <MudText Typo="Typo.h5" Class="mt-2">🔮 What's Next</MudText>
             </div>
             <div class="release-body">
-                <ul class="release-list">
-                    <li><strong>Mobile App:</strong> Native iOS and Android apps for field sales</li>
-                    <li><strong>Telegram Bot:</strong> Quote approvals and notifications via Telegram</li>
-                    <li><strong>Xero Integration:</strong> Add Xero accounting alongside MYOB</li>
-                    <li><strong>Advanced Analytics:</strong> Machine learning-powered forecasting</li>
-                    <li><strong>SSO Support:</strong> Single sign-on with Microsoft Entra ID and Google Workspace</li>
-                    <li><strong>API Platform:</strong> Public REST API for third-party integrations</li>
-                </ul>
+                <MudGrid>
+                    <MudItem xs="12" sm="6">
+                        <ul class="release-list">
+                            <li><strong>Mobile App:</strong> Native iOS &amp; Android for field sales</li>
+                            <li><strong>Xero Integration:</strong> Add Xero alongside MYOB</li>
+                            <li><strong>SSO:</strong> Microsoft Entra ID &amp; Google Workspace</li>
+                            <li><strong>API Platform:</strong> Public REST API for integrations</li>
+                        </ul>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <ul class="release-list">
+                            <li><strong>STP Phase 2:</strong> Single Touch Payroll payroll integration</li>
+                            <li><strong>BAS / GST:</strong> Automated BAS preparation</li>
+                            <li><strong>Advanced Analytics:</strong> ML-powered revenue forecasting</li>
+                            <li><strong>Telegram Bot:</strong> Quote approvals via Telegram</li>
+                        </ul>
+                    </MudItem>
+                </MudGrid>
             </div>
         </MudPaper>
 
-        <!-- Footer note -->
         <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-6 mud-text-secondary">
-            Have feedback or feature requests? Email us at <MudLink Href="@($"mailto:{PlatformSettings.Current.SupportEmail}")">@PlatformSettings.Current.SupportEmail</MudLink>
+            Have feedback or feature requests? Email us at
+            <MudLink Href="@($"mailto:{PlatformSettings.Current.SupportEmail}")">@PlatformSettings.Current.SupportEmail</MudLink>
         </MudText>
     </MudContainer>
 </div>
 
 <style>
-    .release-notes-page {
-        min-height: calc(100vh - 120px);
-        background: #f8fafc;
-    }
-    .release-card {
-        background: white;
-        border-radius: 12px;
-        overflow: hidden;
-        border: 1px solid rgba(0,0,0,0.06);
-    }
-    .current-release {
-        border: 2px solid var(--tl-primary, #00c8c8);
-        box-shadow: 0 8px 32px rgba(0, 200, 200, 0.15);
-    }
-    .upcoming-card {
-        background: linear-gradient(135deg, #fff9e6 0%, #ffffff 100%);
-        border: 1px dashed #f59e0b;
-    }
-    .release-header {
-        padding: 24px 32px;
-        background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 100%);
-        border-bottom: 1px solid rgba(0,0,0,0.06);
-    }
-    .release-header-compact {
-        padding: 20px 24px;
-        border-bottom: 1px solid rgba(0,0,0,0.04);
-    }
-    .release-body {
-        padding: 24px 32px;
-    }
-    .release-section {
-        margin-bottom: 24px;
-    }
-    .release-section:last-child {
-        margin-bottom: 0;
-    }
-    .release-category {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 12px;
-        color: var(--tl-dark, #08121a);
-    }
-    .release-list {
-        margin: 0;
-        padding-left: 20px;
-    }
-    .release-list li {
-        margin-bottom: 8px;
-        line-height: 1.6;
-        color: #4b5563;
-    }
-    .release-list li strong {
-        color: #111827;
-    }
-    code {
-        background: #f3f4f6;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-size: 0.85em;
-        font-family: 'Consolas', 'Monaco', monospace;
-    }
+    .release-notes-page { min-height: calc(100vh - 120px); }
+    .release-card { background: white; border-radius: 12px; overflow: hidden; border: 1px solid rgba(0,0,0,0.06); }
+    .current-release { border: 2px solid var(--tl-primary, #00c8c8); box-shadow: 0 8px 32px rgba(0,200,200,0.15); }
+    .upcoming-card { background: linear-gradient(135deg, #fff9e6 0%, #ffffff 100%); border: 1px dashed #f59e0b; }
+    .release-header { padding: 24px 32px; background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 100%); border-bottom: 1px solid rgba(0,0,0,0.06); }
+    .release-header-compact { padding: 20px 24px; border-bottom: 1px solid rgba(0,0,0,0.04); }
+    .release-body { padding: 24px 32px; }
+    .release-section { margin-bottom: 24px; }
+    .release-section:last-child { margin-bottom: 0; }
+    .release-category { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: var(--tl-dark, #08121a); }
+    .release-list { margin: 0; padding-left: 20px; }
+    .release-list li { margin-bottom: 8px; line-height: 1.6; color: #4b5563; }
+    .release-list li strong { color: #111827; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 0.85em; font-family: 'Consolas', 'Monaco', monospace; }
+    kbd { display: inline-flex; align-items: center; border: 1px solid #d1d5db; border-radius: 4px; padding: 1px 6px; font-size: 0.8em; font-family: monospace; background: #f9fafb; color: #374151; }
 </style>
 
+@code {
+    private record PreviousRelease(string Version, string Date, string Title, string[] Items);
 
+    private readonly PreviousRelease[] _previousReleases =
+    [
+        new("v2.5", "March 2025", "Job Orders Enhancement",
+        [
+            "Picking slip generation for warehouse fulfilment",
+            "Third-party supply tracking for outsourced work",
+            "Job order status workflow with customisable states",
+            "Improved PDF generation performance"
+        ]),
+        new("v2.4", "January 2025", "Purchase Order Workflow",
+        [
+            "Multi-level approval hierarchy based on user roles",
+            "PO approval limits with automatic escalation",
+            "Email notifications for approvers and requesters",
+            "CapEx (Capital Expenditure) flagging and audit trail"
+        ]),
+        new("v2.3", "November 2024", "CRM & Contacts Refresh",
+        [
+            "Redesigned contact and company management screens",
+            "Address book with delivery and invoice addresses",
+            "Activity history tracking per contact",
+            "Improved search with type-ahead suggestions"
+        ]),
+        new("v2.2", "September 2024", "Dashboard Carousel",
+        [
+            "Interactive dashboard with 6 BI views",
+            "Real-time KPI tracking and team leaderboard",
+            "Personal performance metrics per user role",
+            "Smart warnings for overdue invoices and stalled quotes"
+        ]),
+        new("v2.1", "July 2024", "PDF & Email Engine",
+        [
+            "QuestPDF-powered quote and invoice PDFs",
+            "One-click email quote / invoice to customer",
+            "Custom PDF branding (logo, colours, contact details)",
+            "Branded email templates per tenant"
+        ]),
+        new("v2.0", "May 2024", "Platform Foundation",
+        [
+            "Full .NET 8 → .NET 10 migration path started",
+            "MudBlazor component library adoption",
+            "Serilog structured logging introduced",
+            "Cookie-based auth with BCrypt password hashing"
+        ]),
+    ];
+}

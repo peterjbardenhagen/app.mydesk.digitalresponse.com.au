@@ -1,0 +1,183 @@
+@page "/financial-extraction/upload"
+@attribute [Authorize]
+@using MyDesk.Shared.Services.Extraction
+@inject DocumentExtractionService ExtractionService
+@inject FinancialExtractionService FinancialService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Upload Document - Financial Extraction - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">MyDesk</a><span class="sep">/</span>
+            <a href="/financial-extraction">Financial Extraction</a><span class="sep">/</span>
+            <span>Upload</span>
+        </div>
+        <h1>Upload Financial Document</h1>
+        <p class="text-slate-500 text-sm mt-1">Drag & drop or browse to upload a quote, invoice, receipt, or purchase order.</p>
+    </div>
+    <MudButton href="/financial-extraction" Variant="Variant.Outlined" Color="Color.Default">
+        Back to List
+    </MudButton>
+</div>
+
+<MudPaper Class="p-6 max-w-2xl mx-auto" Elevation="0">
+    <MudFileUpload T="IReadOnlyList<IBrowserFile>" OnFilesChanged="OnFilesChanged" Accept=".pdf,.jpg,.jpeg,.png" Class="mb-4"
+                  @ondragenter="@(() => _dragClass = "tl-upload-zone-active")"
+                  @ondragleave="@(() => _dragClass = "")">
+        <ButtonTemplate>
+            <div class="d-flex flex-column align-center pa-8 @_dragClass" 
+                 style="border: 2px dashed var(--mud-palette-lines-default); background: var(--mud-palette-background-grey); min-height: 180px; border-radius: 12px; width: 100%;">
+                @if (_selectedFile is null)
+                {
+                    <MudIcon Icon="@Icons.Material.Rounded.CloudUpload" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                    <MudText Typo="Typo.h6" Class="mt-2">Drag & drop files here</MudText>
+                    <MudText Typo="Typo.body2">or click to browse</MudText>
+                    <MudText Typo="Typo.caption" Class="mt-2" Style="color: var(--gray-400);">Supports PDF, JPEG, PNG (max 10MB)</MudText>
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Rounded.Description" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                    <MudText Typo="Typo.h6" Class="mt-2">@_selectedFile.Name</MudText>
+                    <MudText Typo="Typo.body2">@(_selectedFile.Size / 1024) KB</MudText>
+                }
+            </div>
+        </ButtonTemplate>
+    </MudFileUpload>
+
+    @if (_selectedFile != null)
+    {
+        <MudButton FullWidth="true" Variant="Variant.Filled" Color="Color.Primary"
+                   OnClick="@ProcessFileAsync" Disabled="@_processing" Class="mt-4">
+            @if (_processing)
+            {
+                <MudProgressCircular Class="mr-2" Size="Size.Small" Indeterminate="true" />
+                <text>Processing...</text>
+            }
+            else
+            {
+                <text>Extract Data</text>
+            }
+        </MudButton>
+    }
+</MudPaper>
+
+@if (_result != null)
+{
+    <MudPaper Class="p-6 max-w-2xl mx-auto mt-6" Elevation="0">
+        <MudAlert Severity="@(_result.AuditPassed ? Severity.Success : Severity.Warning)" Class="mb-4">
+            @if (_result.AuditPassed && _result.Confidence >= 0.90)
+            {
+                <text>Extraction successful! Data verified and reconciled.</text>
+            }
+            else if (!_result.AuditPassed)
+            {
+                <text>Extraction completed with discrepancies. Please review below.</text>
+            }
+            else
+            {
+                <text>Extraction completed. Confidence: @(_result.Confidence.ToString("P0"))</text>
+            }
+        </MudAlert>
+
+        <h3 class="text-lg font-semibold mb-4">Extracted Data</h3>
+        <div class="grid grid-cols-2 gap-4 mb-4">
+            <MudTextField Label="Document Type" Value="@_result.DocumentType" Disabled="true" />
+            <MudTextField Label="Reference" Value="@_result.ReferenceNumber" Disabled="true" />
+            <MudTextField Label="Supplier" Value="@_result.SupplierName" Disabled="true" />
+            <MudTextField Label="ABN" Value="@_result.SupplierAbn" Disabled="true" />
+            <MudTextField Label="Date" Value="@(_result.DocumentDate?.ToString("d"))" Disabled="true" />
+            <MudTextField Label="Method" Value="@_result.StrategyUsed" Disabled="true" />
+            <MudTextField Label="Subtotal" Value="@_result.Subtotal?.ToString("C")" Disabled="true" />
+            <MudTextField Label="GST" Value="@_result.GstAmount?.ToString("C")" Disabled="true" />
+            <MudTextField Label="Total" Value="@_result.TotalAmount?.ToString("C")" Disabled="true" Class="col-span-2" />
+        </div>
+
+        @if (_result.LineItems.Count > 0)
+        {
+            <h4 class="font-semibold mb-2">Line Items (@_result.LineItems.Count)</h4>
+            <MudTable Items="@_result.LineItems" Class="compact-table">
+                <HeaderContent>
+                    <MudTh>Description</MudTh>
+                    <MudTh>Qty</MudTh>
+                    <MudTh>Unit Price</MudTh>
+                    <MudTh>Line Total</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Description</MudTd>
+                    <MudTd>@context.Quantity</MudTd>
+                    <MudTd>@context.UnitPrice?.ToString("C")</MudTd>
+                    <MudTd>@context.LineTotal?.ToString("C")</MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+
+        <div class="flex gap-3 mt-6">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       href="@($"/financial-extraction/{_savedDocId}")">
+                View Full Details
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Default"
+                       OnClick="@(() => { _result = null; _selectedFile = null; })">
+                Upload Another
+            </MudButton>
+        </div>
+    </MudPaper>
+}
+
+@code {
+    private IBrowserFile? _selectedFile;
+    private bool _processing = false;
+    private string _dragClass = "";
+    private ExtractedDocument? _result;
+    private Guid _savedDocId;
+
+    private void OnFilesChanged(InputFileChangeEventArgs e)
+    {
+        _selectedFile = e.GetMultipleFiles().FirstOrDefault();
+        _result = null;
+    }
+
+    private async Task ProcessFileAsync()
+    {
+        if (_selectedFile == null) return;
+
+        _processing = true;
+        try
+        {
+            await using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            _result = await ExtractionService.ProcessAsync(stream, _selectedFile.ContentType, _selectedFile.Name);
+
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userName = authState.User.Identity?.Name ?? "Unknown";
+
+            _savedDocId = await FinancialService.SaveExtractionAsync(
+                _result,
+                GetTenantId(),
+                userName,
+                $"/uploads/financial/{_selectedFile.Name}");
+
+            Snackbar.Add("Document processed and saved successfully!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error processing document: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _processing = false;
+        }
+    }
+
+    private Guid GetTenantId()
+    {
+        var authState = AuthStateProvider.GetAuthenticationStateAsync().GetAwaiter().GetResult();
+        var tenantClaim = authState.User.FindFirst(MyDesk.Shared.Models.TenantConstants.TenantIdClaim);
+        if (tenantClaim != null && Guid.TryParse(tenantClaim.Value, out var tid))
+            return tid;
+        return Guid.Empty;
+    }
+}

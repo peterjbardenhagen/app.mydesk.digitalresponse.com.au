@@ -1,332 +1,295 @@
-# ============================================================================
-#  DR MyDesk - Self-Healing Launcher with AI
-#  Version 4.0 - April 2026
-# ============================================================================
-
+[CmdletBinding()]
 param(
-    [switch]$SelfHealing = $false,
-    [switch]$NoSelfHealing = $false
+    [string]$Command = ''
 )
 
-$ErrorActionPreference = "Stop"
-$Root = Split-Path -Parent $PSScriptRoot
-$Src = "$Root\src"
-$Web = "$Src\MyDesk.Web"
-$LogsDir = "$Web\Logs"
+$ErrorActionPreference = 'Continue'
 
-# ============================================================================
-#  AI Self-Healing Module
-# ============================================================================
+# ── Paths ──────────────────────────────────────────────────────────
+$Root   = $PSScriptRoot
+$Sln    = Join-Path $Root 'MyDesk.slnx'
+$Src    = Join-Path $Root 'src'
+$Web    = Join-Path $Src 'MyDesk.Web'
+$Shared = Join-Path $Src 'MyDesk.Shared'
+$Tests  = Join-Path $Root 'tests\MyDesk.PlaywrightTests'
+$Deploy = Join-Path $Src 'Deployment'
+$Publish = Join-Path $Root 'publish'
+$Logs   = Join-Path $Web 'Logs'
+$Docs   = Join-Path $Root 'docs'
+$Migrations = Join-Path $Deploy 'Migration'
+$Port   = 5237
+$Url    = "http://localhost:$Port"
 
-class SelfHealingAI {
-    [string]$ApiKey
-    [string]$Endpoint = "https://api.openai.com/v1/chat/completions"
-    [string]$Model = "gpt-5.4-scan"
-    
-    SelfHealingAI([string]$apiKey) {
-        $this.ApiKey = $apiKey
-    }
-    
-    [PSCustomObject] AnalyzeError([string]$errorLog, [string]$sourceCode) {
-        $headers = @{
-            "Content-Type" = "application/json"
-            "Authorization" = "Bearer $($this.ApiKey)"
-        }
-        
-        $prompt = @"
-You are an expert .NET and Blazor developer specializing in error diagnosis and automatic fixes.
-
-ERROR LOG:
-$errorLog
-
-SOURCE CODE (relevant file):
-$sourceCode
-
-Analyze this error and provide:
-1. Root cause analysis
-2. Specific fix (exact code changes needed)
-3. File path to modify
-4. Line numbers to change
-
-Format your response as JSON:
-{
-    "rootCause": "brief explanation",
-    "fixType": "compilation|runtime|database|configuration",
-    "filePath": "relative path from project root",
-    "lineNumber": 123,
-    "originalCode": "exact code to replace",
-    "fixedCode": "exact replacement code",
-    "confidence": 0.95,
-    "explanation": "brief explanation"
+# ── Helpers ────────────────────────────────────────────────────────
+function Write-Banner {
+    Write-Host ''
+    Write-Host '  MyDesk' -ForegroundColor Cyan
+    Write-Host '  Business Management Platform' -ForegroundColor DarkGray
 }
 
-Only provide fixes for the actual error. If you cannot confidently fix it, set confidence < 0.5.
-"@
-        
-        $body = @{
-            model = $this.Model
-            messages = @(
-                @{ role = "system"; content = "You are a .NET expert that diagnoses and fixes errors. Always respond with valid JSON." }
-                @{ role = "user"; content = $prompt }
-            )
-            temperature = 0.1
-            response_format = @{ type = "json_object" }
-        } | ConvertTo-Json -Depth 10
-        
+function Write-Section($Label) {
+    Write-Host '  ---------------------------------------------------------------' -ForegroundColor DarkGray
+    Write-Host "  $Label" -ForegroundColor Yellow
+    Write-Host '  ---------------------------------------------------------------' -ForegroundColor DarkGray
+}
+
+function Stop-MyDeskInstances {
+    Write-Host 'Stopping existing MyDesk instances ...'
+    Stop-PortProcess -Port $Port
+    $procIds = Get-CimInstance Win32_Process -Filter "Name = 'dotnet.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -match 'MyDesk\.Web' } |
+        Select-Object -ExpandProperty ProcessId -Unique
+    foreach ($procId in $procIds) {
+        Write-Host "  - Killing MyDesk dotnet PID $procId"
+        Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Stop-PortProcess {
+    param([int]$Port)
+    Write-Host "Checking for processes on port $Port ..."
+    $conns = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue |
+        Select-Object -ExpandProperty OwningProcess -Unique
+    foreach ($procId in $conns) {
+        Write-Host "  - Killing PID $procId"
+        Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Wait-ForServer {
+    param([int]$TimeoutSeconds = 60)
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    while ($sw.ElapsedMilliseconds -lt ($TimeoutSeconds * 1000)) {
         try {
-            $response = Invoke-RestMethod -Uri $this.Endpoint -Method Post -Headers $headers -Body $body -TimeoutSec 30
-            $content = $response.choices[0].message.content | ConvertFrom-Json
-            return $content
-        }
-        catch {
-            Write-Warning "AI analysis failed: $_"
-            return $null
-        }
-    }
-    
-    [bool] ApplyFix([PSCustomObject]$fix) {
-        if ($fix.confidence -lt 0.7) {
-            Write-Warning "AI confidence too low ($($fix.confidence)). Fix not applied."
-            return $false
-        }
-        
-        $filePath = Join-Path $Root $fix.filePath
-        if (-not (Test-Path $filePath)) {
-            Write-Warning "File not found: $filePath"
-            return $false
-        }
-        
-        $content = Get-Content $filePath -Raw -Encoding UTF8
-        if ($content -notmatch [regex]::Escape($fix.originalCode)) {
-            Write-Warning "Original code not found in file. Fix not applied."
-            return $false
-        }
-        
-        $newContent = $content -replace [regex]::Escape($fix.originalCode), $fix.fixedCode
-        Set-Content $filePath $newContent -Encoding UTF8 -NoNewline
-        
-        Write-Host "✓ Fix applied to $($fix.filePath):$($fix.lineNumber)" -ForegroundColor Green
-        Write-Host "  $($fix.explanation)" -ForegroundColor Cyan
-        return $true
-    }
-}
-
-# ============================================================================
-#  Console Error Capture
-# ============================================================================
-
-function Start-BlazorServerWithCapture {
-    param(
-        [string]$Url = "http://localhost:5235"
-    )
-    
-    $logFile = "$LogsDir\console-capture-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
-    $errorPattern = "(ERR|ERROR|Exception|Failed)"
-    
-    Write-Host "Starting Blazor Server with error capture..." -ForegroundColor Cyan
-    Write-Host "Log file: $logFile" -ForegroundColor Gray
-    
-    $process = Start-Process -FilePath "dotnet" -ArgumentList "run --urls $Url" -WorkingDirectory $Web -NoNewWindow -RedirectStandardOutput $logFile -RedirectStandardError $logFile -PassThru
-    
-    # Monitor for errors
-    $startTime = Get-Date
-    $errorsFound = @()
-    
-    while (-not $process.HasExited) {
+            $r = Invoke-WebRequest -Uri "$Url/login" -UseBasicParsing -TimeoutSec 2
+            if ($r.StatusCode -eq 200) {
+                Write-Host '[+] Server is ready.'
+                return $true
+            }
+        } catch { }
         Start-Sleep -Seconds 2
-        
-        if (Test-Path $logFile) {
-            $newContent = Get-Content $logFile -Tail 50 -ErrorAction SilentlyContinue
-            foreach ($line in $newContent) {
-                if ($line -match $errorPattern) {
-                    $errorsFound += $line
-                }
-            }
-        }
-        
-        # Stop monitoring after 30 seconds of startup
-        if ((Get-Date) - $startTime -gt [TimeSpan]::FromSeconds(30)) {
-            break
-        }
     }
-    
-    return @{
-        Process = $process
-        LogFile = $logFile
-        Errors = $errorsFound
-    }
+    Write-Host '[!] Server did not become ready within timeout.'
+    return $false
 }
 
-function Invoke-SelfHealing {
-    param(
-        [string[]]$Errors,
-        [string]$LogFile
-    )
-    
-    Write-Host "`n=== SELF-HEALING AI ACTIVATED ===" -ForegroundColor Yellow
-    
-    # Load configuration
-    $configPath = "$Web\appsettings.json"
-    $config = Get-Content $configPath | ConvertFrom-Json
-    
-    if (-not $config.SelfHealing.ApiKey) {
-        Write-Warning "Self-healing API key not configured in appsettings.json"
-        Write-Host "Add 'SelfHealing.ApiKey' to appsettings.json to enable AI fixes" -ForegroundColor Gray
-        return $false
+# ── Menu options ───────────────────────────────────────────────────
+
+function Opt-Database {
+    Write-Section 'Database Migrations'
+    Write-Host "Applying SQL migrations from $Migrations..."
+    if (-not (Test-Path $Migrations)) {
+        Write-Host "[!] Migrations folder not found: $Migrations" -ForegroundColor Red
+        return
     }
-    
-    $ai = [SelfHealingAI]::new($config.SelfHealing.ApiKey)
-    
-    foreach ($errorMsg in $Errors) {
-        Write-Host "`nAnalyzing error: $errorMsg" -ForegroundColor Cyan
-        
-        # Try to extract file path from error
-        if ($errorMsg -match "at (.+\.razor|.+\.cs):line (\d+)") {
-            $filePath = $matches[1]
-            
-            $fullPath = Get-ChildItem -Path $Root -Recurse -Filter $filePath | Select-Object -First 1
-            if ($fullPath) {
-                $sourceCode = Get-Content $fullPath.FullName -Raw -Encoding UTF8
-                
-                $fix = $ai.AnalyzeError($errorMsg, $sourceCode)
-                if ($fix) {
-                    $ai.ApplyFix($fix)
-                }
-            }
+    if (-not (Get-Command sqlcmd -ErrorAction SilentlyContinue)) {
+        Write-Host '[!] sqlcmd not found in PATH. Install SQL Server command-line tools.' -ForegroundColor Red
+        return
+    }
+    $DbServer = Read-Host 'Server [(localdb)\MSSQLLocalDB]'
+    if (-not $DbServer) { $DbServer = '(localdb)\MSSQLLocalDB' }
+    $DbName = Read-Host 'Database [Techlight_MyDesk]'
+    if (-not $DbName) { $DbName = 'Techlight_MyDesk' }
+
+    Get-ChildItem "$Migrations\*.sql" | Sort-Object Name | ForEach-Object {
+        Write-Host "  - Running $($_.Name)"
+        sqlcmd -S $DbServer -d $DbName -i $_.FullName -b
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[!] Migration $($_.Name) FAILED" -ForegroundColor Red
+            return
         }
     }
-    
-    Write-Host "`n=== SELF-HEALING COMPLETE ===" -ForegroundColor Yellow
-    return $true
+    Write-Host '[+] All migrations applied successfully.' -ForegroundColor Green
 }
 
-# ============================================================================
-#  Main Menu
-# ============================================================================
-
-function Show-Menu {
-    Clear-Host
-    Write-Host ""
-    Write-Host " ==============================================================="
-    Write-Host ""
-    Write-Host "         DR MyDesk - Self-Healing Launcher"
-    Write-Host "            Version 4.0  -  .NET 8 Blazor Server"
-    Write-Host ""
-    Write-Host " ==============================================================="
-    Write-Host ""
-    
-    $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-    
-    if ($isAdmin) {
-        Write-Host "   [OK]   Administrator        Full access to all options"
+function Opt-IIS {
+    Write-Section 'IIS Deployment'
+    Stop-MyDeskInstances
+    $installer = Join-Path $Deploy 'install.ps1'
+    if (-not (Test-Path $installer)) {
+        Write-Host "[!] IIS installer script not found: $installer" -ForegroundColor Red
+        return
     }
-    else {
-        Write-Host "   [ !]   Standard User        Options 1, 2, 3 will request elevation"
+    Write-Host 'Deploying to local IIS on port 80...'
+    Write-Host '  Site:     MyDesk'
+    Write-Host '  AppPool:  MyDesk'
+    Write-Host '  Path:     C:\inetpub\wwwroot\MyDesk'
+    Write-Host '  URL:      http://localhost'
+    Write-Host ''
+    & $installer
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host '[!] IIS deployment FAILED' -ForegroundColor Red
+        return
     }
-    
-    if ($SelfHealing -and -not $NoSelfHealing) {
-        Write-Host "   [AI]   Self-Healing ENABLED  AI-powered error fixing"
-    }
-    
-    Write-Host ""
-    Write-Host " ---------------------------------------------------------------"
-    Write-Host ""
-    Write-Host "   SETUP  (run once, in order)"
-    Write-Host ""
-    Write-Host "     [1]  Database      Migrate Access DB to SQL Server"
-    Write-Host "     [2]  IIS Deploy    Build and publish to local IIS"
-    Write-Host "     [3]  Run Tests     Playwright E2E tests (72+)"
-    Write-Host ""
-    Write-Host "   RUN THE APP"
-    Write-Host ""
-    Write-Host "     [4]  Launch        Standalone (Kestrel) or IIS"
-    Write-Host ""
-    Write-Host "   INFO"
-    Write-Host ""
-    Write-Host "     [5]  Status        Check IIS site, ports, processes"
-    Write-Host "     [6]  Open Docs     README.md / TESTING.md"
-    Write-Host ""
-    Write-Host "     [Q]  Quit"
-    Write-Host ""
-    Write-Host " ---------------------------------------------------------------"
-    Write-Host ""
+    Write-Host '[+] IIS deployment completed.' -ForegroundColor Green
 }
 
-# ============================================================================
-#  Main Execution
-# ============================================================================
-
-if ($SelfHealing -and -not $NoSelfHealing) {
-    Write-Host "Self-healing mode enabled. AI will attempt to fix errors automatically." -ForegroundColor Yellow
-    Write-Host ""
+function Opt-CleanBuild {
+    Write-Section 'Clean and Build'
+    Write-Host 'Cleaning bin/obj folders...'
+    Get-ChildItem -Path $Root -Directory -Recurse -Include bin,obj |
+        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Write-Host 'Restoring + Building solution...'
+    dotnet build $Sln --nologo
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host '[!] Build FAILED' -ForegroundColor Red
+        return
+    }
+    Write-Host '[+] Build succeeded.' -ForegroundColor Green
 }
 
+function Opt-Run {
+    Write-Section 'Launch Kestrel'
+    Stop-MyDeskInstances
+    Start-Sleep -Seconds 3
+    Write-Host "Starting Kestrel server on $Url ..."
+    Write-Host '(Press Ctrl+C in this window to stop)'
+    Write-Host ''
+    dotnet run --project "$Web\MyDesk.Web.csproj" --no-launch-profile --urls $Url
+}
+
+function Opt-Tests {
+    Write-Section 'Playwright Tests'
+    Stop-PortProcess -Port $Port
+    Write-Host 'Starting Kestrel server in background for tests...'
+    $job = Start-Job -ScriptBlock {
+        param($WebProj, $Url)
+        dotnet run --project $WebProj --no-launch-profile --urls $Url
+    } -ArgumentList "$Web\MyDesk.Web.csproj", $Url
+
+    if (-not (Wait-ForServer -TimeoutSeconds 60)) {
+        Stop-Job $job -ErrorAction SilentlyContinue
+        Remove-Job $job -Force -ErrorAction SilentlyContinue
+        Stop-PortProcess -Port $Port
+        Write-Host '[!] Server startup failed, aborting tests.' -ForegroundColor Red
+        return
+    }
+
+    Write-Host 'Running Playwright tests...'
+    Push-Location $Tests
+    dotnet test --nologo --logger 'console;verbosity=normal'
+    $testExit = $LASTEXITCODE
+    Pop-Location
+
+    Write-Host ''
+    Write-Host 'Stopping background test server...'
+    Stop-Job $job -ErrorAction SilentlyContinue
+    Remove-Job $job -Force -ErrorAction SilentlyContinue
+    Stop-PortProcess -Port $Port
+
+    if ($testExit -ne 0) {
+        Write-Host "[!] One or more tests FAILED. Exit code $testExit." -ForegroundColor Red
+    } else {
+        Write-Host '[+] All tests passed.' -ForegroundColor Green
+    }
+}
+
+function Opt-Status {
+    Write-Section 'System Status'
+    Write-Host "== Server Port ($Port) =="
+    netstat -ano | Select-String ":$Port"
+    Write-Host ''
+    Write-Host '== .NET SDKs =='
+    dotnet --list-sdks
+    Write-Host ''
+    Write-Host '== Solution health =='
+    if (Test-Path $Sln) { Write-Host '  [OK] MyDesk.slnx' -ForegroundColor Green }
+    else { Write-Host '  [!!] MyDesk.slnx missing' -ForegroundColor Red }
+    if (Test-Path "$Web\MyDesk.Web.csproj") { Write-Host '  [OK] Web project' -ForegroundColor Green }
+    else { Write-Host '  [!!] Web project missing' -ForegroundColor Red }
+    if (Test-Path "$Tests\MyDesk.PlaywrightTests.csproj") { Write-Host '  [OK] Tests project' -ForegroundColor Green }
+    else { Write-Host '  [!!] Tests project missing' -ForegroundColor Red }
+    Write-Host ''
+}
+
+function Opt-Logs {
+    Write-Section 'Open Logs'
+    if (-not (Test-Path $Logs)) { New-Item -ItemType Directory -Path $Logs -Force | Out-Null }
+    explorer.exe $Logs
+}
+
+function Opt-Docs {
+    Write-Section 'Open Docs'
+    if (-not (Test-Path $Docs)) { New-Item -ItemType Directory -Path $Docs -Force | Out-Null }
+    explorer.exe $Docs
+}
+
+function Opt-Agents {
+    Write-Section 'Open Agent Guide'
+    Write-Host 'Opening AGENTS.md (autonomous developer guide)...'
+    Start-Process "$Root\AGENTS.md"
+}
+
+function Opt-Stop {
+    Write-Section 'Stop Kestrel'
+    Stop-MyDeskInstances
+    Write-Host '[+] Server stopped.' -ForegroundColor Green
+}
+
+# ── Dispatch ───────────────────────────────────────────────────────
+$dispatch = @{
+    '1' = 'Opt-Database'
+    '2' = 'Opt-IIS'
+    '3' = 'Opt-CleanBuild'
+    '4' = 'Opt-Run'
+    '5' = 'Opt-Tests'
+    '6' = 'Opt-Status'
+    '7' = 'Opt-Logs'
+    '8' = 'Opt-Docs'
+    '9' = 'Opt-Stop'
+    '0' = 'Opt-Agents'
+}
+
+if ($Command -and $dispatch.ContainsKey($Command)) {
+    & $dispatch[$Command]
+    if ($Command -eq '4') { return }
+    return
+}
+if ($Command -eq 'Q') { return }
+
+# ── Interactive menu ───────────────────────────────────────────────
 while ($true) {
-    Show-Menu
-    $choice = Read-Host "   Choose an option"
-    
-    switch ($choice) {
-        "1" { 
-            Write-Host "Running database migration..." -ForegroundColor Cyan
-            & "$Src\Deployment\Migration\Install.ps1"
-        }
-        "2" {
-            Write-Host "Running IIS deployment..." -ForegroundColor Cyan
-            & "$Src\Deployment\Deploy.ps1"
-        }
-        "3" {
-            Write-Host "Running Playwright tests..." -ForegroundColor Cyan
-            Push-Location "$Root\tests\MyDesk.PlaywrightTests"
-            dotnet test --logger "console;verbosity=normal" --logger "trx;LogFileName=test-results.trx" --logger "html;LogFileName=test-results.html"
-            Pop-Location
-        }
-        "4" {
-            Write-Host ""
-            Write-Host "   [1]  Standalone (Kestrel)    Quick dev server"
-            Write-Host "        URL: http://localhost:5235"
-            Write-Host ""
-            Write-Host "   [2]  Local IIS               Production-like"
-            Write-Host ""
-            $runChoice = Read-Host "   Choose"
-            
-            if ($runChoice -eq "1") {
-                if ($SelfHealing -and -not $NoSelfHealing) {
-                    $result = Start-BlazorServerWithCapture
-                    if ($result.Errors.Count -gt 0) {
-                        Invoke-SelfHealing -Errors $result.Errors -LogFile $result.LogFile
-                    }
-                }
-                else {
-                    Push-Location $Web
-                    dotnet run --urls "http://localhost:5235"
-                    Pop-Location
-                }
-            }
-            elseif ($runChoice -eq "2") {
-                Write-Host "Starting IIS..." -ForegroundColor Cyan
-                Start-Process "http://localhost"
-            }
-        }
-        "5" {
-            Write-Host "System status..." -ForegroundColor Cyan
-            netstat -ano | Select-String ":5235"
-            netstat -ano | Select-String ":80"
-        }
-        "6" {
-            Start-Process "$Root\README.md"
-        }
-        "Q" {
-            Write-Host "Goodbye!"
-            exit
-        }
-        default {
-            Write-Host "Invalid choice." -ForegroundColor Red
-            Start-Sleep -Seconds 2
-        }
+    Clear-Host
+    Write-Banner
+    Write-Host ''
+    Write-Host '  Environment'
+    Write-Host '  -----------'
+    Write-Host "    Root:   $Root"
+    Write-Host "    Web:    $Web"
+    Write-Host "    URL:    $Url"
+    Write-Host '    SQL:    Dev=(localdb)\MSSQLLocalDB  IIS=(localdb)\.\MyDeskShared'
+    Write-Host ''
+    Write-Host '  Build & Deploy'
+    Write-Host '  --------------'
+    Write-Host '    [1]  Database      Apply one-shot SQL migrations from src\Deployment\Migration'
+    Write-Host '    [2]  IIS Deploy    Publish and deploy to local IIS (http://localhost, port 80)'
+    Write-Host '    [3]  Clean & Build Clean bin/obj and rebuild solution'
+    Write-Host "    [4]  Launch        Run Kestrel locally at $Url"
+    Write-Host '    [5]  Playwright    Run E2E tests (auto-starts Kestrel)'
+    Write-Host ''
+    Write-Host '  Tools'
+    Write-Host '  -----'
+    Write-Host '    [6]  Status        Show ports, SDKs, and solution health'
+    Write-Host '    [7]  Logs          Open log folder'
+    Write-Host '    [8]  Docs          Open documentation folder'
+    Write-Host "    [9]  Stop          Stop server on port $Port"
+    Write-Host '    [0]  Agent Guide   Open AGENTS.md'
+    Write-Host ''
+    Write-Host '  Exit'
+    Write-Host '  ----'
+    Write-Host '    [Q]  Return to shell (do not close this window)'
+    Write-Host ''
+    Write-Host '  Tip: You can also run directly, e.g.  Run.bat 4   or   Run.bat 5'
+    Write-Host ''
+
+    $choice = Read-Host '   Choose an option'
+
+    if ($dispatch.ContainsKey($choice)) {
+        & $dispatch[$choice]
+        if ($choice -eq '4') { return }
+        $null = Read-Host '`n  Press Enter to continue'
     }
-    
-    if ($choice -ne "Q") {
-        Write-Host "`nPress Enter to continue..."
-        Read-Host
+    elseif ($choice -eq 'Q') {
+        return
     }
 }

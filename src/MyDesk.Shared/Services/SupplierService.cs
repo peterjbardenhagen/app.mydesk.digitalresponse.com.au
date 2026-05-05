@@ -90,7 +90,7 @@ public class SupplierService
     public async Task UpdatePortalLoginAsync(int supplierId)
     {
         var sql = "UPDATE Companies SET PortalLastLogin = GETDATE() WHERE CompanyId = @SupplierId";
-        await _db.ExecuteAsync(sql, new() { ["SupplierId"] = supplierId });
+        await _db.ExecuteNonQueryAsync(sql, new() { ["SupplierId"] = supplierId });
     }
 
     public async Task<List<SupplierScore>> GetSupplierScoresAsync()

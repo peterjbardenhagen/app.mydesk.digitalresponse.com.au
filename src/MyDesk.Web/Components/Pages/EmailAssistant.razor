@@ -1,0 +1,187 @@
+@page "/emails"
+@page "/email-assistant"
+@attribute [Authorize]
+@inject PlatformSettingsService PlatformSettingsSvc
+@inject OutlookInboxService OutlookInboxSvc
+@inject ISnackbar Snackbar
+
+<PageTitle>Emails - @PlatformSettingsSvc.GetBrandingName()</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <span>Emails</span>
+        </div>
+        <h1>Emails</h1>
+        <p class="tl-subtitle">Review your Outlook inbox, see an AI summary of unread emails, and prioritise urgent replies.</p>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <MudPaper Class="pa-6 mb-4" Elevation="1">
+        <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
+        <MudText Typo="Typo.body2" Class="mt-3">Loading inbox...</MudText>
+    </MudPaper>
+}
+else if (!_snapshot.IsConnected)
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-4">
+        No Outlook integration is connected. Configure <MudLink Href="/integrations" Underline="Underline.Hover" Color="Color.Inherit">My Outlook</MudLink> or <MudLink Href="/integrations" Underline="Underline.Hover" Color="Color.Inherit">Shared Outlook Mailbox</MudLink> in Integrations to get started.
+    </MudAlert>
+}
+else
+{
+    @if (!string.IsNullOrWhiteSpace(_snapshot.StatusMessage))
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4">@_snapshot.StatusMessage</MudAlert>
+    }
+
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Mailbox</MudText>
+                <MudText Typo="Typo.h6">@(_snapshot.MailboxName ?? "Outlook")</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Inbox Emails</MudText>
+                <MudText Typo="Typo.h6">@_snapshot.Messages.Count</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">High Priority Unread</MudText>
+                <MudText Typo="Typo.h6">@_snapshot.Recommendations.Count</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Class="pa-4 mb-4" Elevation="1">
+        <MudText Typo="Typo.h6" Class="mb-3">AI Summary of Unread Emails</MudText>
+        <MudText Typo="Typo.body2" Style="white-space: pre-line;">@_snapshot.Summary</MudText>
+    </MudPaper>
+
+    <MudPaper Class="pa-4 mb-4" Elevation="1">
+        <div class="d-flex justify-space-between align-center mb-3">
+            <MudText Typo="Typo.h6">Recommended Priority Responses</MudText>
+            <MudChip T="string" Color="Color.Error" Variant="Variant.Text">@_snapshot.Recommendations.Count high priority</MudChip>
+        </div>
+
+        @if (_snapshot.Recommendations.Any())
+        {
+            @foreach (var rec in _snapshot.Recommendations)
+            {
+                <MudPaper Class="pa-3 mb-3" Outlined="true">
+                    <div class="d-flex justify-space-between align-start gap-3">
+                        <div class="flex-grow-1">
+                            <MudText Typo="Typo.subtitle2" Style="font-weight:600;">@rec.Subject</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">From @rec.From</MudText>
+                            <MudText Typo="Typo.body2" Class="mt-2">@rec.Recommendation</MudText>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(rec.WebLink))
+                        {
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small" Href="@rec.WebLink" Target="_blank">Open</MudButton>
+                        }
+                    </div>
+                </MudPaper>
+            }
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary">No unread high-priority emails need a recommendation right now.</MudText>
+        }
+    </MudPaper>
+
+    <MudPaper Elevation="1">
+        <MudDataGrid T="OutlookInboxMessage" Items="_snapshot.Messages" Dense="true" Hover="true" Filterable="true" QuickFilter="QuickFilter">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">Inbox</MudText>
+                <MudSpacer />
+                <MudTextField @bind-Value="_searchString" Placeholder="Search from, subject, preview..."
+                              Adornment="Adornment.Start" Immediate="true"
+                              AdornmentIcon="@Icons.Material.Rounded.Search" IconSize="Size.Medium" Class="mt-0" />
+            </ToolBarContent>
+            <Columns>
+                <PropertyColumn Property="x => x.From" Title="From" />
+                <PropertyColumn Property="x => x.Subject" Title="Subject" />
+                <PropertyColumn Property="x => x.ReceivedAt" Title="Received" Format="dd MMM yyyy HH:mm" />
+                <TemplateColumn Title="Priority">
+                    <CellTemplate>
+                        <MudChip T="string" Size="Size.Small" Color="@GetImportanceColor(context.Item.Importance)" Variant="Variant.Text">
+                            @context.Item.Importance
+                        </MudChip>
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Status">
+                    <CellTemplate>
+                        <MudChip T="string" Size="Size.Small" Color="@(context.Item.IsRead ? Color.Success : Color.Warning)" Variant="Variant.Text">
+                            @(context.Item.IsRead ? "Read" : "Unread")
+                        </MudChip>
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Attachments">
+                    <CellTemplate>
+                        @if (context.Item.HasAttachments)
+                        {
+                            <MudIcon Icon="@Icons.Material.Rounded.AttachFile" Color="Color.Primary" />
+                        }
+                    </CellTemplate>
+                </TemplateColumn>
+                <PropertyColumn Property="x => x.BodyPreview" Title="Preview" />
+                <TemplateColumn Title="Open" Sortable="false">
+                    <CellTemplate>
+                        @if (!string.IsNullOrWhiteSpace(context.Item.WebLink))
+                        {
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Href="@context.Item.WebLink" Target="_blank">Open</MudButton>
+                        }
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager T="OutlookInboxMessage" />
+            </PagerContent>
+        </MudDataGrid>
+    </MudPaper>
+}
+
+@code {
+    private bool _loading = true;
+    private string _searchString = "";
+    private OutlookInboxSnapshot _snapshot = new(false, null, null, Array.Empty<OutlookInboxMessage>(), Array.Empty<OutlookEmailRecommendation>(), "");
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _snapshot = await OutlookInboxSvc.GetSnapshotAsync(PlatformSettingsSvc.Current);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load emails: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private bool QuickFilter(OutlookInboxMessage message)
+    {
+        if (string.IsNullOrWhiteSpace(_searchString)) return true;
+
+        return (message.From?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (message.Subject?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (message.BodyPreview?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    private static Color GetImportanceColor(string importance) => importance.ToLowerInvariant() switch
+    {
+        "high" => Color.Error,
+        "normal" => Color.Info,
+        "low" => Color.Success,
+        _ => Color.Default
+    };
+}

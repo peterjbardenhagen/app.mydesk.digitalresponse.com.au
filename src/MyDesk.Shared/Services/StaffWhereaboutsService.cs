@@ -31,7 +31,7 @@ public class StaffWhereaboutsService
                 CREATE UNIQUE INDEX IX_StaffWhereabouts_UserWeekDayTime ON StaffWhereabouts(UserId, WeekStartDate, DayOfWeek, TimeSlot);
                 CREATE INDEX IX_StaffWhereabouts_WeekStartDate ON StaffWhereabouts(WeekStartDate DESC);
             END";
-        await _db.ExecuteAsync(sql);
+        await _db.ExecuteNonQueryAsync(sql);
     }
 
     public async Task SetWhereaboutsAsync(int userId, string userName, DateTime weekStartDate, int dayOfWeek, int timeSlot, string status, string? location, string? notes)
@@ -49,17 +49,7 @@ public class StaffWhereaboutsService
                 VALUES (@UserId, @UserName, @WeekStartDate, @DayOfWeek, @TimeSlot, @Status, @Location, @Notes, GETDATE());
             END";
 
-        await _db.ExecuteObjAsync(sql, new
-        {
-            UserId = userId,
-            UserName = userName,
-            WeekStartDate = weekStartDate.Date,
-            DayOfWeek = dayOfWeek,
-            TimeSlot = timeSlot,
-            Status = status,
-            Location = location,
-            Notes = notes
-        });
+        await _db.ExecuteObjAsync(sql, new { UserId = userId, UserName = userName, WeekStartDate = weekStartDate.Date, DayOfWeek = dayOfWeek, TimeSlot = timeSlot, Status = status, Location = location, Notes = notes });
     }
 
     public async Task<List<StaffWhereabouts>> GetWeekWhereaboutsAsync(DateTime weekStartDate, int? userId = null)
@@ -73,11 +63,7 @@ public class StaffWhereaboutsService
         
         sql += " ORDER BY UserId, DayOfWeek, TimeSlot";
 
-        return (await _db.QueryAsync<StaffWhereabouts>(sql, new
-        {
-            WeekStartDate = weekStartDate.Date,
-            UserId = userId
-        })).ToList();
+        return (await _db.QueryAsync<StaffWhereabouts>(sql, userId.HasValue ? new { WeekStartDate = weekStartDate.Date, UserId = userId.Value } : new { WeekStartDate = weekStartDate.Date, UserId = (int?)null })).ToList();
     }
 
     public async Task<List<StaffWhereabouts>> GetUserWhereaboutsAsync(int userId, DateTime weekStartDate)
@@ -87,16 +73,33 @@ public class StaffWhereaboutsService
             WHERE UserId = @UserId AND WeekStartDate = @WeekStartDate
             ORDER BY DayOfWeek, TimeSlot";
 
-        return (await _db.QueryAsync<StaffWhereabouts>(sql, new
-        {
-            UserId = userId,
-            WeekStartDate = weekStartDate.Date
-        })).ToList();
+        return (await _db.QueryAsync<StaffWhereabouts>(sql, new { UserId = userId, WeekStartDate = weekStartDate.Date })).ToList();
     }
 
     public async Task<List<User>> GetAllStaffAsync()
     {
         const string sql = "SELECT UserId, Name, Code, Email FROM Users WHERE Active = 1 ORDER BY Name";
         return (await _db.QueryAsync<User>(sql, new { })).ToList();
+    }
+
+    public static DateTime GetMonday(DateTime date)
+    {
+        var daysToMonday = ((int)date.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+        return date.AddDays(-daysToMonday);
+    }
+
+    public async Task<string?> GetCurrentStatusForSlot(int userId, DateTime weekStart)
+    {
+        var dayOfWeek = ((int)DateTime.Today.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7 + 1;
+        var currentHour = DateTime.Now.Hour;
+        var timeSlot = currentHour - 8; // 8am = slot 0
+
+        if (timeSlot < 0 || timeSlot > 10) return null;
+
+        const string sql = @"
+            SELECT Status FROM StaffWhereabouts 
+            WHERE UserId = @UserId AND WeekStartDate = @WeekStart AND DayOfWeek = @DayOfWeek AND TimeSlot = @TimeSlot";
+        
+        return await _db.ExecuteScalarAsync<string?>(sql, new { UserId = userId, WeekStart = weekStart, DayOfWeek = dayOfWeek, TimeSlot = timeSlot });
     }
 }

@@ -82,8 +82,19 @@
         transition: all 0.2s ease;
     }
     .tl-upload-zone:hover {
-        border-color: #6366f1; /* Using hex instead of var to ensure visibility in hover */
-        background: white;
+        border-color: var(--tl-primary-400, #6366f1);
+        background: var(--surface-hover, #f8fafc);
+    }
+    body.mud-dark-mode .tl-upload-zone {
+        border-color: var(--gray-300);
+        background: var(--gray-100);
+    }
+    body.mud-dark-mode .tl-upload-zone:hover {
+        background: var(--gray-200);
+    }
+    body.mud-dark-mode .tl-file-item {
+        border-color: var(--gray-300) !important;
+        background: var(--gray-100) !important;
     }
 </style>
 

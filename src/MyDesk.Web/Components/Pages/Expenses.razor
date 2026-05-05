@@ -2,12 +2,12 @@
 @attribute [Authorize]
 @using MyDesk.Shared.Models
 @using MyDesk.Shared.Services
+@using MyDesk.Shared.Services.Extraction
 @using MyDesk.Web.Services
 @using MudBlazor
 @inject ExpenseService ExpenseService
 @inject CompanyService CompanyService
-@inject IHttpClientFactory HttpFactory
-@inject Microsoft.Extensions.Options.IOptions<AzureAIOptions> AzureOptions
+@inject DocumentExtractionService ExtractionService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
@@ -67,8 +67,18 @@
 </MudGrid>
 
 <MudPaper Elevation="1">
-    <MudDataGrid T="Expense" Items="_expenses" Dense="true" Hover="true" Bordered="false" Striped="true" 
-                 Filterable="true" QuickFilter="@QuickFilter" Class="tl-data-grid">
+    @if (_expenses.Count == 0 && !_uploading)
+    {
+        <div class="tl-empty-state pa-8">
+            <MudIcon Icon="@Icons.Material.Rounded.ReceiptLong" Size="Size.Large" Color="Color.Default" />
+            <MudText Typo="Typo.h6" Class="mt-4">No expenses yet</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Default" Class="mt-2">Upload a receipt using the form above, or click "New Expense" to add one manually.</MudText>
+        </div>
+    }
+    else
+    {
+        <MudDataGrid T="Expense" Items="_expenses" Dense="true" Hover="true" Bordered="false" Striped="true"
+                     Filterable="true" QuickFilter="@QuickFilter" Class="tl-data-grid">
         <ToolBarContent>
             <MudText Typo="Typo.h6">Expense Records</MudText>
             <MudSpacer />
@@ -110,7 +120,8 @@
         <PagerContent>
             <MudDataGridPager T="Expense" />
         </PagerContent>
-    </MudDataGrid>
+        </MudDataGrid>
+    }
 </MudPaper>
 
 @code {
@@ -158,37 +169,51 @@
         {
             foreach (var file in e.GetMultipleFiles())
             {
-                // 1. Save file
                 var uploadsPath = Path.Combine("wwwroot", "uploads", "expenses");
                 if (!Directory.Exists(uploadsPath)) Directory.CreateDirectory(uploadsPath);
-                
+
                 var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
                 var filePath = Path.Combine(uploadsPath, fileName);
-                
+
                 using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
                 using var fs = new FileStream(filePath, FileMode.Create);
                 await stream.CopyToAsync(fs);
 
-                // 2. Process with AI
-                var text = await ExtractTextFromPdfAsync(filePath);
-                
-                var expenseInfo = await ParseExpenseInfoAsync(text);
-                
+                await using var readStream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+                var extracted = await ExtractionService.ProcessAsync(readStream, file.ContentType, file.Name);
+
+                var totalAmount = extracted.TotalAmount ?? 0;
                 var expense = new Expense
                 {
-                    Date = expenseInfo.Date ?? DateTime.Today,
-                    Description = expenseInfo.Description ?? $"AI Processed: {file.Name}",
-                    SupplierName = expenseInfo.SupplierName,
-                    Total = expenseInfo.Total ?? 0,
-                    TaxAmount = expenseInfo.TaxAmount ?? 0,
+                    Date = extracted.DocumentDate ?? DateTime.Today,
+                    Description = extracted.LineItems.Count > 0
+                        ? string.Join("; ", extracted.LineItems.Take(3).Select(li => li.Description))
+                        : $"AI Processed: {file.Name}",
+                    Amount = totalAmount,
+                    Total = totalAmount,
+                    TaxAmount = extracted.GstAmount ?? 0,
+                    SupplierName = extracted.SupplierName,
                     FileName = file.Name,
                     FilePath = $"/uploads/expenses/{fileName}",
                     Status = "Pending",
-                    Category = expenseInfo.Category ?? "General"
+                    Category = extracted.DocumentType ?? "General"
                 };
 
+                if (!extracted.AuditPassed && extracted.Discrepancies.Count > 0)
+                {
+                    Snackbar.Add($"Extraction warnings: {string.Join("; ", extracted.Discrepancies.Take(2))}", Severity.Warning);
+                }
+
+                // Duplicate detection — for PDF upload we use a non-blocking confirm dialog.
+                // Cancel = skip this file (the receipt remains uploaded but no Expense row is created).
+                if (!await ConfirmNotDuplicateAsync(expense, $"AI-extracted from {file.Name}"))
+                {
+                    Snackbar.Add($"Skipped {file.Name} (duplicate)", Severity.Info);
+                    continue;
+                }
+
                 await ExpenseService.SaveExpenseAsync(expense);
-                Snackbar.Add($"Processed {file.Name}", Severity.Success);
+                Snackbar.Add($"Processed {file.Name} (confidence: {extracted.Confidence:P0})", Severity.Success);
             }
             await LoadExpenses();
         }
@@ -202,106 +227,6 @@
         }
     }
 
-    public class ExtractedExpenseInfo
-    {
-        public DateTime? Date { get; set; }
-        public string? Description { get; set; }
-        public string? SupplierName { get; set; }
-        public decimal? Total { get; set; }
-        public decimal? TaxAmount { get; set; }
-        public string? Category { get; set; }
-    }
-
-    private async Task<string> ExtractTextFromPdfAsync(string filePath)
-    {
-        try
-        {
-            var bytes = await File.ReadAllBytesAsync(filePath);
-            var base64 = Convert.ToBase64String(bytes);
-
-            var client = HttpFactory.CreateClient("AzureAI");
-            client.DefaultRequestHeaders.Remove("api-key");
-            client.DefaultRequestHeaders.Add("api-key", AzureOptions.Value.OpenAIApiKey);
-
-            var payload = new
-            {
-                model = AzureOptions.Value.OpenAIModel,
-                messages = new object[]
-                {
-                    new { role = "system", content = "You are a document analysis assistant. Extract all text content from the provided PDF document. Return ONLY the raw extracted text without any formatting or explanations." },
-                    new { role = "user", content = new object[] { new { type = "file", file_url = new { url = $"data:application/pdf;base64,{base64}" } } } }
-                }
-            };
-
-            var body = new StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
-            var response = await client.PostAsync(AzureOptions.Value.ChatCompletionsUrl, body);
-            var responseText = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                return string.Empty;
-            }
-
-            using var doc = System.Text.Json.JsonDocument.Parse(responseText);
-            return doc.RootElement
-                .GetProperty("choices")[0]
-                .GetProperty("message")
-                .GetProperty("content")
-                .GetString() ?? string.Empty;
-        }
-        catch (Exception ex)
-        {
-            return string.Empty;
-        }
-    }
-
-    private async Task<ExtractedExpenseInfo> ParseExpenseInfoAsync(string extractedText)
-    {
-        if (string.IsNullOrWhiteSpace(extractedText)) return new ExtractedExpenseInfo();
-
-        try
-        {
-            var client = HttpFactory.CreateClient("AzureAI");
-            client.DefaultRequestHeaders.Remove("api-key");
-            client.DefaultRequestHeaders.Add("api-key", AzureOptions.Value.OpenAIApiKey);
-
-            var systemPrompt = @"You are an expense parsing assistant. Extract details from the provided text of a receipt or invoice.
-Return ONLY a JSON object with: Date (string YYYY-MM-DD), Description (string), SupplierName (string), Total (decimal), TaxAmount (decimal), Category (string).";
-
-            var payload = new
-            {
-                messages = new[]
-                {
-                    new { role = "system", content = systemPrompt },
-                    new { role = "user", content = $"Extract details from this text:\n\n{extractedText}" }
-                },
-                temperature = 0.2
-            };
-
-            var body = new StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
-            var response = await client.PostAsync(AzureOptions.Value.ChatCompletionsUrl, body);
-            var responseText = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode) return new ExtractedExpenseInfo();
-
-            using var doc = System.Text.Json.JsonDocument.Parse(responseText);
-            var content = doc.RootElement
-                .GetProperty("choices")[0]
-                .GetProperty("message")
-                .GetProperty("content")
-                .GetString() ?? "{}";
-
-            // clean up markdown block
-            content = content.Replace("```json", "").Replace("```", "").Trim();
-
-            return System.Text.Json.JsonSerializer.Deserialize<ExtractedExpenseInfo>(content, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new ExtractedExpenseInfo();
-        }
-        catch
-        {
-            return new ExtractedExpenseInfo();
-        }
-    }
-
     private async Task OnAddExpense()
     {
         var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
@@ -310,9 +235,67 @@ Return ONLY a JSON object with: Date (string YYYY-MM-DD), Description (string), 
 
         if (result != null && !result.Canceled && result.Data is Expense newExpense)
         {
+            if (!await ConfirmNotDuplicateAsync(newExpense, "Manual entry"))
+            {
+                Snackbar.Add("Cancelled — looked like a duplicate.", Severity.Info);
+                return;
+            }
             await ExpenseService.SaveExpenseAsync(newExpense);
             await LoadExpenses();
             Snackbar.Add("Expense added successfully", Severity.Success);
+        }
+    }
+
+    /// <summary>
+    /// Runs duplicate detection. If matches are found, opens DuplicateExpenseDialog
+    /// and returns:
+    ///   * <c>true</c> to proceed with the save (no matches OR user chose "Save anyway")
+    ///   * <c>false</c> to skip (user chose "Cancel" or "Open existing")
+    /// In the "Open existing" case the user is navigated to the matched row.
+    /// </summary>
+    private async Task<bool> ConfirmNotDuplicateAsync(Expense candidate, string sourceLabel)
+    {
+        try
+        {
+            var matches = await ExpenseService.FindPotentialDuplicatesAsync(candidate);
+            if (matches.Count == 0) return true;
+
+            var parameters = new DialogParameters<Shared.DuplicateExpenseDialog>
+            {
+                { x => x.Candidate, candidate },
+                { x => x.Existing,  matches },
+            };
+            var dialog = await DialogService.ShowAsync<Shared.DuplicateExpenseDialog>(
+                $"Possible duplicate ({sourceLabel})",
+                parameters,
+                new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Medium, FullWidth = true });
+            var result = await dialog.Result;
+            if (result is null || result.Canceled) return false;
+
+            if (result.Data is Shared.DuplicateExpenseDialog.DuplicateAction action)
+            {
+                switch (action)
+                {
+                    case Shared.DuplicateExpenseDialog.DuplicateAction.SaveAnyway:    return true;
+                    case Shared.DuplicateExpenseDialog.DuplicateAction.OpenExisting:
+                        // We can't currently open an inline detail page (Expenses is list+dialog).
+                        // Open the edit dialog for the first match.
+                        var existing = matches.First();
+                        var editParams = new DialogParameters<Shared.ExpenseDialog> { { "Expense", existing } };
+                        await DialogService.ShowAsync<Shared.ExpenseDialog>("Existing expense", editParams,
+                            new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+                        return false;
+                    case Shared.DuplicateExpenseDialog.DuplicateAction.Cancel:
+                    default:                                                          return false;
+                }
+            }
+            return false;
+        }
+        catch (Exception ex)
+        {
+            // Don't block the user if the detection itself fails — log and proceed.
+            Snackbar.Add($"Duplicate check failed ({ex.Message}); proceeding with save.", Severity.Warning);
+            return true;
         }
     }
 

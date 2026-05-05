@@ -1,0 +1,152 @@
+@page "/404"
+@layout EmptyLayout
+@inject IJSRuntime JS
+@inject PlatformSettingsService PlatformSettings
+
+<PageTitle>Page Not Found - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-404-root">
+    <div class="tl-404-bg"></div>
+    <div class="tl-404-orb tl-404-orb-1"></div>
+    <div class="tl-404-orb tl-404-orb-2"></div>
+
+    <main class="tl-404-content">
+        <div class="tl-404-code">404</div>
+        <div class="tl-404-glow"></div>
+        <h1>Page not found</h1>
+        <p class="tl-404-subtitle">The page you're looking for doesn't exist or has been moved.</p>
+
+        <div class="tl-404-actions">
+            <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" Class="tl-404-btn"
+                       StartIcon="@Icons.Material.Rounded.Home">
+                Return to Dashboard
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Size="Size.Large" Class="tl-404-btn"
+                       StartIcon="@Icons.Material.Rounded.ArrowBack"
+                       OnClick="@(async () => await JS.InvokeVoidAsync("history.back"))">
+                Go Back
+            </MudButton>
+        </div>
+
+        <div class="tl-404-help">
+            <MudText Typo="Typo.body2" Style="color:var(--gray-500);">
+                Need help? <a href="mailto:support@digitalresponse.com.au" class="tl-404-link">Contact support</a>
+            </MudText>
+        </div>
+    </main>
+</div>
+
+<style>
+    .tl-404-root {
+        position: relative;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(165deg, #0b1220 0%, #0f1a2a 40%, #0d1520 100%);
+        overflow: hidden;
+        padding: 40px 24px;
+    }
+
+    .tl-404-bg {
+        position: absolute; inset: 0;
+        background:
+            radial-gradient(800px 500px at 30% 0%, rgba(0, 200, 200, 0.08), transparent 60%),
+            radial-gradient(600px 400px at 80% 20%, rgba(14, 165, 233, 0.06), transparent 50%);
+        pointer-events: none;
+    }
+
+    .tl-404-orb {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        pointer-events: none;
+        animation: tl-404-float 20s ease-in-out infinite;
+    }
+    .tl-404-orb-1 {
+        width: 400px; height: 400px;
+        top: -10%; left: -5%;
+        background: radial-gradient(closest-side, rgba(0, 200, 200, 0.25), transparent);
+    }
+    .tl-404-orb-2 {
+        width: 300px; height: 300px;
+        bottom: 5%; right: -3%;
+        background: radial-gradient(closest-side, rgba(99, 102, 241, 0.2), transparent);
+        animation-delay: -10s;
+    }
+    @@keyframes tl-404-float {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        33% { transform: translate(20px, -15px) scale(1.05); }
+        66% { transform: translate(-10px, 10px) scale(0.95); }
+    }
+
+    .tl-404-content {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+        max-width: 520px;
+        animation: tl-404-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @@keyframes tl-404-rise {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .tl-404-code {
+        font-size: 120px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        line-height: 1;
+        background: linear-gradient(135deg, #00c8c8 0%, #0ea5e9 50%, #a855f7 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        position: relative;
+    }
+
+    .tl-404-glow {
+        position: absolute;
+        top: 50%; left: 50%;
+        width: 300px; height: 300px;
+        transform: translate(-50%, -60%);
+        background: radial-gradient(circle, rgba(0, 200, 200, 0.15), transparent 70%);
+        filter: blur(40px);
+        pointer-events: none;
+        z-index: -1;
+    }
+
+    .tl-404-content h1 {
+        font-size: 32px;
+        font-weight: 700;
+        color: #e2e8f0;
+        margin: 24px 0 12px;
+        letter-spacing: -0.02em;
+    }
+
+    .tl-404-subtitle {
+        font-size: 16px;
+        color: #94a3b8;
+        margin: 0 0 32px;
+    }
+
+    .tl-404-actions {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-bottom: 32px;
+    }
+
+    .tl-404-help {
+        opacity: 0.7;
+    }
+
+    .tl-404-link {
+        color: #00c8c8;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    .tl-404-link:hover {
+        text-decoration: underline;
+    }
+</style>

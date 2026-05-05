@@ -188,7 +188,7 @@
                         <MudSwitch @bind-Value="_selectedIntegration.Settings.AutoExportInvoices" Label="Auto-Export" Color="Color.Primary" Margin="Margin.Dense" />
                     </MudItem>
                 }
-                else if (_selectedIntegration.Key == "Outlook")
+                else if (_selectedIntegration.Key == "Outlook" || _selectedIntegration.Key == "MyOutlook")
                 {
                     <MudItem xs="6" sm="3">
                         <MudSwitch @bind-Value="_selectedIntegration.Settings.SyncCalendar" Label="Calendar" Color="Color.Primary" Margin="Margin.Dense" />
@@ -198,6 +198,19 @@
                     </MudItem>
                     <MudItem xs="6" sm="3">
                         <MudSwitch @bind-Value="_selectedIntegration.Settings.SyncEmail" Label="Email" Color="Color.Primary" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudDivider Class="my-2" />
+                        <MudText Typo="Typo.subtitle2" Class="mb-2" Style="font-weight:600;">AI Assistant Settings</MudText>
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudCheckBox T="bool" @bind-Value="_selectedIntegration.Settings.AutoCategorise" Label="Auto-categorise emails" Color="Color.Primary" />
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudCheckBox T="bool" @bind-Value="_selectedIntegration.Settings.AutoDraftReplies" Label="Prepare Draft emails automatically" Color="Color.Primary" />
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudCheckBox T="bool" @bind-Value="_selectedIntegration.Settings.MoveToCompanyFolder" Label="Move to Company folder if read &amp; 1 day elapsed" Color="Color.Primary" />
                     </MudItem>
                 }
                 else if (_selectedIntegration.Key == "Google")
@@ -338,7 +351,7 @@
                     Status = s.QuickBooks.Status?.ToString()
                 }
             },
-            new ("Outlook", "Email & Calendar (Microsoft 365)", Icons.Material.Rounded.Email, "#0078D4", "Outlook")
+            new ("Shared Outlook Mailbox", "Shared company mailbox (Microsoft 365)", Icons.Material.Rounded.Business, "#0078D4", "Outlook")
             {
                 Connected = s.Outlook.Enabled,
                 Settings = new IntegrationSettingsModel
@@ -350,8 +363,27 @@
                     SyncCalendar = s.Outlook.SyncCalendar,
                     SyncContacts = s.Outlook.SyncContacts,
                     SyncEmail = s.Outlook.SyncEmail,
+                    AutoCategorise = s.OutlookAutoCategorise,
+                    AutoDraftReplies = s.OutlookAutoDraftReplies,
+                    MoveToCompanyFolder = s.OutlookMoveToCompanyFolder,
                     LastSyncTime = s.Outlook.LastSyncTime,
                     Status = s.Outlook.Status?.ToString()
+                }
+            },
+            new ("My Outlook", "Personal email & calendar (uses your profile email)", Icons.Material.Rounded.Mail, "#00B4D8", "MyOutlook")
+            {
+                Connected = s.MyOutlook.Enabled,
+                Settings = new IntegrationSettingsModel
+                {
+                    ClientId = s.MyOutlook.ClientId,
+                    ClientSecret = s.MyOutlook.ClientSecret,
+                    RedirectUri = s.MyOutlook.RedirectUri,
+                    AuthEndpoint = s.MyOutlook.AuthEndpoint,
+                    SyncCalendar = s.MyOutlook.SyncCalendar,
+                    SyncContacts = s.MyOutlook.SyncContacts,
+                    SyncEmail = s.MyOutlook.SyncEmail,
+                    LastSyncTime = s.MyOutlook.LastSyncTime,
+                    Status = s.MyOutlook.Status?.ToString()
                 }
             },
             new ("Google Cloud", "Drive, Gmail & Docs", Icons.Material.Rounded.Cloud, "#4285F4", "Google")
@@ -453,6 +485,18 @@
                 s.Outlook.SyncCalendar = _selectedIntegration.Settings.SyncCalendar;
                 s.Outlook.SyncContacts = _selectedIntegration.Settings.SyncContacts;
                 s.Outlook.SyncEmail = _selectedIntegration.Settings.SyncEmail;
+                s.OutlookAutoCategorise = _selectedIntegration.Settings.AutoCategorise;
+                s.OutlookAutoDraftReplies = _selectedIntegration.Settings.AutoDraftReplies;
+                s.OutlookMoveToCompanyFolder = _selectedIntegration.Settings.MoveToCompanyFolder;
+                break;
+            case "MyOutlook":
+                s.MyOutlook.Enabled = _selectedIntegration.Connected;
+                s.MyOutlook.ClientId = _selectedIntegration.Settings.ClientId;
+                s.MyOutlook.ClientSecret = _selectedIntegration.Settings.ClientSecret;
+                s.MyOutlook.RedirectUri = _selectedIntegration.Settings.RedirectUri;
+                s.MyOutlook.SyncCalendar = _selectedIntegration.Settings.SyncCalendar;
+                s.MyOutlook.SyncContacts = _selectedIntegration.Settings.SyncContacts;
+                s.MyOutlook.SyncEmail = _selectedIntegration.Settings.SyncEmail;
                 break;
             case "Google":
                 s.Google.Enabled = _selectedIntegration.Connected;
@@ -481,6 +525,7 @@
             case "Xero": s.Xero.Enabled = false; break;
             case "QuickBooks": s.QuickBooks.Enabled = false; break;
             case "Outlook": s.Outlook.Enabled = false; break;
+            case "MyOutlook": s.MyOutlook.Enabled = false; break;
             case "Google": s.Google.Enabled = false; break;
         }
         
@@ -523,6 +568,9 @@
         public bool SyncEmail { get; set; }
         public bool SyncDrive { get; set; }
         public bool SyncGmail { get; set; }
+        public bool AutoCategorise { get; set; } = true;
+        public bool AutoDraftReplies { get; set; }
+        public bool MoveToCompanyFolder { get; set; } = true;
         public DateTime? LastSyncTime { get; set; }
         public string? Status { get; set; }
 public IntegrationStatusModel StatusDetails { get; set; } = new();

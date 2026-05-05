@@ -188,17 +188,22 @@
             }
         }
 
-        // Add sample follow-ups
+        // Load follow-ups from database
         if (_showFollowUps)
         {
-            _allEvents.Add(new CalendarEvent
+            var dt = await LookupService.GetFollowUpsAsync(userCode);
+            foreach (DataRow row in dt.Rows)
             {
-                Title = "Call client re: Project X",
-                Date = DateTime.Today.AddDays(1),
-                Description = "Discuss project timeline and deliverables",
-                CssClass = "followup",
-                Type = "Follow-up"
-            });
+                _allEvents.Add(new CalendarEvent
+                {
+                    Title = $"Follow-up: {row["Summary"]}",
+                    Date = row["FollowUpDate"] != DBNull.Value ? Convert.ToDateTime(row["FollowUpDate"]) : DateTime.Today,
+                    Description = $"Company: {row["CompanyName"]}",
+                    CssClass = "followup",
+                    Link = $"/call-reports/{row["Id"]}",
+                    Type = "Follow-up"
+                });
+            }
         }
     }
 
@@ -321,6 +326,38 @@
     .calendar-event.quote { background: rgba(156, 39, 176, 0.1); color: #7B1FA2; }
     .calendar-event.followup { background: rgba(76, 175, 80, 0.1); color: #388E3C; }
     .calendar-event.po { background: rgba(255, 152, 0, 0.1); color: #F57C00; }
+    
+    body.mud-dark-mode .calendar-container {
+        background: #1a1d23 !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
+    }
+    
+    body.mud-dark-mode .calendar-day-header {
+        color: rgba(255, 255, 255, 0.7) !important;
+    }
+    
+    body.mud-dark-mode .calendar-day {
+        background: #25282f !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+    }
+    
+    body.mud-dark-mode .calendar-day.other-month {
+        opacity: 0.3 !important;
+    }
+    
+    body.mud-dark-mode .calendar-day.today {
+        background: rgba(33, 150, 243, 0.15) !important;
+        border-color: #2196F3 !important;
+    }
+    
+    body.mud-dark-mode .day-number {
+        color: rgba(255, 255, 255, 0.9) !important;
+    }
+    
+    body.mud-dark-mode .calendar-event.invoice { background: rgba(33, 150, 243, 0.2); color: #64B5F6; }
+    body.mud-dark-mode .calendar-event.quote { background: rgba(156, 39, 176, 0.2); color: #CE93D8; }
+    body.mud-dark-mode .calendar-event.followup { background: rgba(76, 175, 80, 0.2); color: #81C784; }
+    body.mud-dark-mode .calendar-event.po { background: rgba(255, 152, 0, 0.2); color: #FFB74D; }
 </style>
 
 

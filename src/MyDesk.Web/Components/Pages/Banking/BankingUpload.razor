@@ -1,0 +1,151 @@
+@page "/banking/upload"
+@attribute [Authorize]
+@using MyDesk.Shared.Services
+@inject BankingService BankingSvc
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject PlatformSettingsService PlatformSettings
+
+<PageTitle>Upload Statement - Banking - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">MyDesk</a><span class="sep">/</span>
+            <a href="/banking">Banking</a><span class="sep">/</span>
+            <span style="color:var(--gray-700);font-weight:500;">Upload Statement</span>
+        </div>
+        <h1>Upload Bank Statement</h1>
+        <p class="tl-subtitle">Import a CSV exported from your bank. The parser handles the standard Date / Description / Debit / Credit / Balance format used by CBA, ANZ, NAB and Westpac.</p>
+    </div>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ArrowBack" Href="/banking">Back to Banking</MudButton>
+</div>
+
+<MudPaper Class="pa-6" Elevation="0" Style="border:1px solid var(--gray-200);border-radius:16px;max-width:720px;">
+        <MudGrid Spacing="2">
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_accountName" Label="Account name" Required
+                              Variant="Variant.Outlined" Placeholder="e.g. CBA Business Account" />
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudTextField @bind-Value="_bsb" Label="BSB" Variant="Variant.Outlined" Placeholder="000-000" />
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudTextField @bind-Value="_accountNumber" Label="Account number" Variant="Variant.Outlined" Placeholder="last 4 digits" />
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudFileUpload T="IBrowserFile" FilesChanged="OnFile" MaximumFileCount="1" Accept=".csv,text/csv">
+                    <ActivatorContent>
+                        <MudButton HtmlTag="label" Variant="Variant.Filled" Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.UploadFile">
+                            Choose CSV file
+                        </MudButton>
+                    </ActivatorContent>
+                </MudFileUpload>
+                @if (!string.IsNullOrEmpty(_fileName))
+                {
+                    <MudText Typo="Typo.caption" Class="mt-2">Selected: <strong>@_fileName</strong></MudText>
+                }
+            </MudItem>
+
+            <MudItem xs="12">
+                <div class="d-flex gap-2 justify-end">
+                    <MudButton Variant="Variant.Outlined" OnClick="@(() => Nav.NavigateTo("/banking"))">Cancel</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               Disabled="@(_busy || string.IsNullOrWhiteSpace(_accountName) || _csvText is null)"
+                               OnClick="ImportAsync">
+                        @(_busy ? "Importing…" : "Import")
+                    </MudButton>
+                </div>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    @if (_preview.Count > 0)
+    {
+        <MudPaper Class="mt-4 pa-4" Elevation="0" Style="border:1px solid var(--gray-200);border-radius:16px;max-width:720px;">
+            <MudText Typo="Typo.subtitle2" Class="mb-3" Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Preview (first 10 rows)</MudText>
+        <MudTable Items="_preview" Bordered Dense Hover>
+            <HeaderContent>
+                <MudTh>Date</MudTh>
+                <MudTh>Description</MudTh>
+                <MudTh Class="text-right">Debit</MudTh>
+                <MudTh Class="text-right">Credit</MudTh>
+                <MudTh Class="text-right">Balance</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.date</MudTd>
+                <MudTd>@context.desc</MudTd>
+                <MudTd Class="text-right">@(context.debit > 0 ? context.debit.ToString("C") : "")</MudTd>
+                <MudTd Class="text-right">@(context.credit > 0 ? context.credit.ToString("C") : "")</MudTd>
+                <MudTd Class="text-right">@context.balance.ToString("C")</MudTd>
+            </RowTemplate>
+        </MudTable>
+        </MudPaper>
+    }
+
+@code {
+    private string _accountName = "";
+    private string _bsb = "";
+    private string _accountNumber = "";
+    private string? _csvText;
+    private string? _fileName;
+    private bool _busy;
+
+    private List<(string date, string desc, decimal debit, decimal credit, decimal balance)> _preview = new();
+
+    private async Task OnFile(IBrowserFile? file)
+    {
+        if (file is null) return;
+        _fileName = file.Name;
+        try
+        {
+            using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            using var reader = new StreamReader(stream);
+            _csvText = await reader.ReadToEndAsync();
+            BuildPreview();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Could not read file: {ex.Message}", Severity.Error);
+            _csvText = null;
+        }
+    }
+
+    private void BuildPreview()
+    {
+        _preview.Clear();
+        if (string.IsNullOrEmpty(_csvText)) return;
+        var lines = _csvText.Replace("\r\n", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        // Skip header if it looks like one.
+        var startAt = lines.Length > 0 && lines[0].ToLowerInvariant().Contains("date") ? 1 : 0;
+        var sample = lines.Skip(startAt).Take(10);
+        foreach (var line in sample)
+        {
+            var parts = line.Split(',');
+            if (parts.Length < 5) continue;
+            decimal.TryParse(parts[2].Replace("\"", "").Replace("$", "").Replace(",",""), out var dr);
+            decimal.TryParse(parts[3].Replace("\"", "").Replace("$", "").Replace(",",""), out var cr);
+            decimal.TryParse(parts[4].Replace("\"", "").Replace("$", "").Replace(",",""), out var bal);
+            _preview.Add((parts[0].Trim('"'), parts[1].Trim('"'), dr, cr, bal));
+        }
+    }
+
+    private async Task ImportAsync()
+    {
+        if (_csvText is null) return;
+        _busy = true;
+        try
+        {
+            var (id, count) = await BankingSvc.ImportCsvAsync(_csvText, _accountName, _bsb, _accountNumber, _fileName ?? "upload.csv");
+            Snackbar.Add($"Imported {count} transactions.", Severity.Success);
+            Nav.NavigateTo($"/banking/statement/{id}");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Import failed: {ex.Message}", Severity.Error);
+        }
+        _busy = false;
+    }
+}

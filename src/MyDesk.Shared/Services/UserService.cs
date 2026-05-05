@@ -217,13 +217,13 @@ public class UserService
             ["UserRoleId"] = (int)user.Role,
         };
         if (!string.IsNullOrEmpty(newPassword)) p["PW"] = HashPassword(newPassword);
-        await _db.ExecuteAsync(sql, p);
+        await _db.ExecuteNonQueryAsync(sql, p);
         _logger.LogInformation("Updated user {Id} ({Code})", user.UserId, user.Code);
     }
 
     public async Task SetActiveAsync(int userId, bool active)
     {
-        await _db.ExecuteAsync(
+        await _db.ExecuteNonQueryAsync(
             "UPDATE Users SET Active = @a WHERE UserId = @id",
             new() { ["a"] = active ? 1 : 0, ["id"] = userId });
         _logger.LogInformation("User {Id} Active={Active}", userId, active);
@@ -231,7 +231,7 @@ public class UserService
 
     public async Task SoftDeleteAsync(int userId)
     {
-        await _db.ExecuteAsync(
+        await _db.ExecuteNonQueryAsync(
             "UPDATE Users SET Deleted = 1, Active = 0 WHERE UserId = @id",
             new() { ["id"] = userId });
         _logger.LogInformation("Soft-deleted user {Id}", userId);
@@ -299,7 +299,7 @@ public class UserService
         var rng        = new Random();
         var newPassword = $"{adjectives[rng.Next(adjectives.Length)]}{nouns[rng.Next(nouns.Length)]}{rng.Next(100, 999)}!";
 
-        await _db.ExecuteAsync(
+        await _db.ExecuteNonQueryAsync(
             "UPDATE Users SET PW = @PW, DatePasswordChanged = GETDATE() WHERE UserId = @UserId",
             new() { ["PW"] = HashPassword(newPassword), ["UserId"] = user.UserId });
 
@@ -319,7 +319,7 @@ public class UserService
         if (!VerifyPassword(currentPassword, storedPw))
             return false;
 
-        await _db.ExecuteAsync(
+        await _db.ExecuteNonQueryAsync(
             "UPDATE Users SET PW = @PW, DatePasswordChanged = GETDATE() WHERE Code = @Code",
             new() { ["PW"] = HashPassword(newPassword), ["Code"] = userCode });
 
@@ -329,7 +329,7 @@ public class UserService
 
     public async Task ResetPasswordAsync(string userCode, string newPassword)
     {
-        await _db.ExecuteAsync(
+        await _db.ExecuteNonQueryAsync(
             "UPDATE Users SET PW = @PW, DatePasswordChanged = GETDATE() WHERE Code = @Code",
             new() { ["PW"] = HashPassword(newPassword), ["Code"] = userCode });
         _logger.LogInformation("Password reset for user {Code}", userCode);

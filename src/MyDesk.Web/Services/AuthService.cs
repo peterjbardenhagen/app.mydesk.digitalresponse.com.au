@@ -31,7 +31,7 @@ public class AuthService
         }
     }
 
-    public async Task SignInAsync(HttpContext context, User user, bool rememberMe = false)
+    public async Task SignInAsync(HttpContext context, User user, TenantMembership tenant, bool rememberMe = false)
     {
         var claims = new List<Claim>
         {
@@ -39,11 +39,29 @@ public class AuthService
             new(ClaimTypes.NameIdentifier, user.Code),
             new("UserId", user.UserId.ToString()),
             new("UserTypeId", user.UserTypeId.ToString()),
+            new(TenantConstants.TenantIdClaim, tenant.TenantId.ToString()),
+            new(TenantConstants.TenantNameClaim, tenant.TenantName),
+            new("tenant_slug", tenant.TenantSlug),
         };
 
-        // Standardize Roles: 1=Director, 2=Administrator
-        if (user.UserTypeId == 1) claims.Add(new Claim(ClaimTypes.Role, "Director"));
-        if (user.UserTypeId == 2) claims.Add(new Claim(ClaimTypes.Role, "Administrator"));
+        // Map UserTypeId → Role claims
+        // DB: 1=Staff, 2=Manager, 3=Director, 4=Administrator, 5=Super Administrator
+        switch (user.UserTypeId)
+        {
+            case 3: // Director
+                claims.Add(new Claim(ClaimTypes.Role, "Director"));
+                claims.Add(new Claim(ClaimTypes.Role, "Administrator")); // Directors have admin access
+                break;
+            case 4: // Administrator
+                claims.Add(new Claim(ClaimTypes.Role, "Administrator"));
+                break;
+            case 5: // Super Administrator — all of Admin + Tenant management
+                claims.Add(new Claim(ClaimTypes.Role, "SuperAdministrator"));
+                claims.Add(new Claim(ClaimTypes.Role, "Administrator"));
+                claims.Add(new Claim(ClaimTypes.Role, "Director"));
+                break;
+        }
+        claims.Add(new Claim("UserTypeId", user.UserTypeId.ToString()));
 
         // Legacy compatibility
         if (user.IsAdmin)

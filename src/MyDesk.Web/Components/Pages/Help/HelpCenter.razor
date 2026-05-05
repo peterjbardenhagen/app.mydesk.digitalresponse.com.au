@@ -1,4 +1,5 @@
 @page "/help-center"
+@page "/help"
 @inject PlatformSettingsService PlatformSettings
 
 @inject NavigationManager Nav
@@ -73,7 +74,43 @@
                         <MudCardContent>
                             <MudIcon Icon="@Icons.Material.Rounded.Map" Color="Color.Info" />
                             <MudText Typo="Typo.h6" Class="mt-2">Product Roadmap</MudText>
-                            <MudText Typo="Typo.body2" Class="mt-1 mud-text-secondary">Explore the strategic direction and future features of the platform.</MudText>
+                            <MudText Typo="Typo.body2" Class="mt-1 mud-text-secondary">50+ features planned for Australian SMBs across 10 delivery phases.</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudCard Elevation="0" Class="help-card" @onclick='() => Nav.NavigateTo("/subscriptions")'>
+                        <MudCardContent>
+                            <MudIcon Icon="@Icons.Material.Rounded.Subscriptions" Color="Color.Primary" />
+                            <MudText Typo="Typo.h6" Class="mt-2">Subscriptions & Renewals</MudText>
+                            <MudText Typo="Typo.body2" Class="mt-1 mud-text-secondary">Track recurring revenue (hosting, O365, domains) and raise renewal invoices in one click.</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudCard Elevation="0" Class="help-card" @onclick='() => Nav.NavigateTo("/accounts")'>
+                        <MudCardContent>
+                            <MudIcon Icon="@Icons.Material.Rounded.AccountBalance" Color="Color.Secondary" />
+                            <MudText Typo="Typo.h6" Class="mt-2">Accounts Hub</MudText>
+                            <MudText Typo="Typo.body2" Class="mt-1 mud-text-secondary">One landing page for Reconciliation, Aged Payables, MYOB Sync and Banking.</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudCard Elevation="0" Class="help-card" @onclick='() => Nav.NavigateTo("/release-notes")'>
+                        <MudCardContent>
+                            <MudIcon Icon="@Icons.Material.Rounded.NewReleases" Color="Color.Success" />
+                            <MudText Typo="Typo.h6" Class="mt-2">What's New (v3.1)</MudText>
+                            <MudText Typo="Typo.body2" Class="mt-1 mud-text-secondary">Subscription Manager, dialog fixes, comprehensive Quick Nav and more.</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudCard Elevation="0" Class="help-card" @onclick='() => Nav.NavigateTo("/sitemap")'>
+                        <MudCardContent>
+                            <MudIcon Icon="@Icons.Material.Rounded.Schema" Color="Color.Tertiary" />
+                            <MudText Typo="Typo.h6" Class="mt-2">Site Map</MudText>
+                            <MudText Typo="Typo.body2" Class="mt-1 mud-text-secondary">Every page in MyDesk listed in one searchable index.</MudText>
                         </MudCardContent>
                     </MudCard>
                 </MudItem>

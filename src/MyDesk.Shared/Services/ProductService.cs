@@ -60,7 +60,7 @@ public class ProductService
                 });
         }
 
-        await _db.ExecuteAsync(
+        await _db.ExecuteNonQueryAsync(
             @"UPDATE Products SET ProductName=@Name, ProductDesc=@Desc, UnitCost=@Cost, MinNettPrice=@Price
               WHERE ProductId = @Id",
             new()
@@ -75,5 +75,5 @@ public class ProductService
     }
 
     public async Task DeleteAsync(int id) =>
-        await _db.ExecuteAsync("DELETE FROM Products WHERE ProductId = @id", new() { ["id"] = id });
+        await _db.ExecuteNonQueryAsync("DELETE FROM Products WHERE ProductId = @id", new() { ["id"] = id });
 }

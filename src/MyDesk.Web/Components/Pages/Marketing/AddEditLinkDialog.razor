@@ -1,0 +1,21 @@
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="_link.Name" Label="Link Name" Variant="Variant.Outlined" Required="true" Margin="Margin.Dense" Class="mb-2" />
+        <MudTextField @bind-Value="_link.Url" Label="URL" Variant="Variant.Outlined" Required="true" Margin="Margin.Dense" Class="mb-2" />
+        <MudTextField @bind-Value="_link.Description" Label="Description" Variant="Variant.Outlined" Lines="2" Margin="Margin.Dense" Class="mb-2" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public MudDialogInstance? Dialog { get; set; }
+    private BrandLink _link = new();
+    private void Submit() => Dialog?.Close(DialogResult.Ok(_link));
+    private void Cancel() => Dialog?.Cancel();
+    public class BrandLink { public string Name { get; set; } = ""; public string Url { get; set; } = ""; public string Description { get; set; } = ""; }
+}

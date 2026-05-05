@@ -1,0 +1,205 @@
+@page "/po-request"
+@attribute [Authorize]
+@using PoRequestModel = MyDesk.Shared.Models.PoRequest
+@inject PoRequestService PoSvc
+@inject AuthenticationStateProvider AuthState
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>PO Request - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">MyDesk</a><span class="sep">/</span>
+            <span>PO Request</span>
+        </div>
+        <h1>Vehicle Maintenance PO Request</h1>
+        <p class="tl-subtitle">Submit a request for vehicle servicing, tyres, repairs or other fleet expenditure.
+            The request is routed to the relevant fleet inbox by division / state.</p>
+    </div>
+</div>
+
+<MudGrid>
+    <MudItem xs="12" md="8">
+        <MudPaper Class="pa-6" Elevation="1">
+            <MudForm @ref="_form" Model="@_request">
+                <MudGrid>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="string" @bind-Value="_request.Division" Label="Division / State" Required="true"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense"
+                                   HelperText="@HelperFor(_request.Division)">
+                            @foreach (var d in _divisions)
+                            {
+                                <MudSelectItem Value="@d">@d</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_request.VehicleRegistration" Label="Vehicle registration"
+                                      Required="true" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Placeholder="e.g. ABC123" />
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_request.VehicleDescription" Label="Vehicle description"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Placeholder="e.g. Toyota Hilux 2022" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="string" @bind-Value="_request.MaintenanceType" Label="Maintenance type"
+                                   Required="true" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            @foreach (var t in _maintenanceTypes)
+                            {
+                                <MudSelectItem Value="@t">@t</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_request.Supplier" Label="Supplier"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Placeholder="e.g. Bob's Tyres" />
+                    </MudItem>
+                    <MudItem xs="12" sm="3">
+                        <MudNumericField T="decimal" @bind-Value="_request.EstimatedAmount"
+                                         Label="Est. amount" Format="N2"
+                                         Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="3">
+                        <MudDatePicker @bind-Date="_requiredBy" Label="Required by"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_request.Description" Label="Description / details"
+                                      Lines="5" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Placeholder="What needs doing? Any important context?" />
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_request.RequesterName" Label="Your name"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_request.RequesterEmail" Label="Your email"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                </MudGrid>
+
+                <div class="d-flex gap-2 mt-4 justify-end">
+                    <MudButton Variant="Variant.Outlined" Href="/">Cancel</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Rounded.Send"
+                               OnClick="SubmitAsync" Disabled="@_submitting">
+                        @(_submitting ? "Sending…" : "Submit PO Request")
+                    </MudButton>
+                </div>
+            </MudForm>
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudText Typo="Typo.h6" Class="mb-3">Where does this go?</MudText>
+            <MudText Typo="Typo.body2" Style="color:var(--gray-600);" Class="mb-3">
+                Submitted requests are emailed to the relevant fleet inbox based on the
+                <strong>Division / State</strong> selected.
+            </MudText>
+            <MudList T="string" Dense="true">
+                @foreach (var kv in _routing)
+                {
+                    <MudListItem T="string" Icon="@Icons.Material.Rounded.Email">
+                        <strong>@kv.Key</strong> &rarr;&nbsp;
+                        <span style="color:var(--gray-600);">@kv.Value</span>
+                    </MudListItem>
+                }
+            </MudList>
+        </MudPaper>
+
+        @if (_lastSubmission != null)
+        {
+            <MudPaper Class="pa-4 mt-3" Elevation="1" Style="border-left:4px solid var(--tl-success);">
+                <MudText Typo="Typo.subtitle2">Last submission</MudText>
+                <MudText Typo="Typo.caption" Style="color:var(--gray-600);">
+                    Request #@_lastSubmission.Id submitted at @_lastSubmission.SubmittedAt.ToString("dd MMM HH:mm")
+                </MudText>
+                <MudText Typo="Typo.body2" Class="mt-2">
+                    Routed to <strong>@_lastSubmission.RoutedToEmail</strong>
+                </MudText>
+            </MudPaper>
+        }
+    </MudItem>
+</MudGrid>
+
+@code {
+    private MudForm? _form;
+    private PoRequestModel _request = new();
+    private DateTime? _requiredBy;
+    private bool _submitting;
+    private PoRequestModel? _lastSubmission;
+
+    private IReadOnlyDictionary<string, string> _routing = new Dictionary<string, string>();
+    private List<string> _divisions = new();
+
+    private static readonly string[] _maintenanceTypes =
+        { "Service", "Tyres", "Repair", "Inspection", "Other" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _routing = PoSvc.GetRouting();
+        _divisions = _routing.Keys.ToList();
+        if (string.IsNullOrEmpty(_request.Division) && _divisions.Count > 0)
+            _request.Division = _divisions[0];
+
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        _request.RequesterUserCode = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        _request.RequesterName = auth.User.Identity?.Name;
+    }
+
+    private string HelperFor(string division) =>
+        _routing.TryGetValue(division ?? string.Empty, out var email)
+            ? $"Routed to {email}"
+            : "Routed to the default Traffic Mgmt inbox.";
+
+    private async Task SubmitAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_request.VehicleRegistration))
+        {
+            Snackbar.Add("Vehicle registration is required.", Severity.Warning);
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_request.MaintenanceType))
+        {
+            Snackbar.Add("Maintenance type is required.", Severity.Warning);
+            return;
+        }
+
+        _submitting = true;
+        try
+        {
+            _request.RequiredByDate = _requiredBy;
+            var saved = await PoSvc.SubmitAsync(_request);
+            _lastSubmission = saved;
+            Snackbar.Add($"PO Request submitted — routed to {saved.RoutedToEmail}", Severity.Success);
+
+            // Reset for next submission, retain requester info.
+            _request = new PoRequestModel
+            {
+                Division = saved.Division,
+                RequesterUserCode = saved.RequesterUserCode,
+                RequesterName = saved.RequesterName,
+                RequesterEmail = saved.RequesterEmail
+            };
+            _requiredBy = null;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Submit failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+}

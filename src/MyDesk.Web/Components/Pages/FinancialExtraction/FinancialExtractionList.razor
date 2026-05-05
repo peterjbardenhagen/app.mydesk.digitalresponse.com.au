@@ -1,0 +1,170 @@
+@page "/financial-extraction"
+@attribute [Authorize]
+@inject FinancialExtractionService ExtractionService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Financial Extraction - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">MyDesk</a><span class="sep">/</span>
+            <span>Financial Extraction</span>
+        </div>
+        <h1>Financial Extraction</h1>
+        <p class="text-slate-500 text-sm mt-1">Upload quotes, invoices, and receipts for automated data extraction.</p>
+    </div>
+    <MudButton href="/financial-extraction/upload" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.CloudUpload">
+        Upload Document
+    </MudButton>
+</div>
+
+<MudPaper Class="p-4 mb-6" Elevation="0">
+    <div class="flex flex-wrap gap-4 items-center">
+        <MudTextField @bind-Value="@_search" Placeholder="Search supplier or reference..." Variant="Variant.Outlined" Class="max-w-xs" Immediate="true" />
+        <MudSelect @bind-Value="@_filterStatus" Label="Status" Variant="Variant.Outlined" Style="min-width: 150px">
+            <MudSelectItem Value="-1">All Statuses</MudSelectItem>
+            <MudSelectItem Value="0">Draft</MudSelectItem>
+            <MudSelectItem Value="1">Verified</MudSelectItem>
+            <MudSelectItem Value="2">Processed</MudSelectItem>
+            <MudSelectItem Value="3">Requires Correction</MudSelectItem>
+        </MudSelect>
+        <MudSelect @bind-Value="@_filterType" Label="Document Type" Variant="Variant.Outlined" Style="min-width: 150px">
+            <MudSelectItem Value="-1">All Types</MudSelectItem>
+            <MudSelectItem Value="0">Quote</MudSelectItem>
+            <MudSelectItem Value="1">Invoice</MudSelectItem>
+            <MudSelectItem Value="2">Receipt</MudSelectItem>
+            <MudSelectItem Value="3">Purchase Order</MudSelectItem>
+        </MudSelect>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ApplyFilters">Filter</MudButton>
+    </div>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+}
+else if (_documents.Count == 0)
+{
+    <MudPaper Class="p-8 text-center" Elevation="0">
+        <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Large" Color="Color.Default" Class="mb-4" />
+        <h3 class="text-slate-600 mb-2">No documents yet</h3>
+        <p class="text-slate-500 mb-4">Upload your first financial document to get started with automated extraction.</p>
+        <MudButton href="/financial-extraction/upload" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.CloudUpload">
+            Upload Document
+        </MudButton>
+    </MudPaper>
+}
+else
+{
+    <MudPaper Elevation="0">
+        <MudTable Items="@_documents" Hover="true" Striped="true" Class="compact-grid">
+            <HeaderContent>
+                <MudTh>Reference</MudTh>
+                <MudTh>Supplier</MudTh>
+                <MudTh>Type</MudTh>
+                <MudTh>Total</MudTh>
+                <MudTh>Confidence</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Method</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.ReferenceNumber</MudTd>
+                <MudTd>@context.SupplierName</MudTd>
+                <MudTd>@context.DocumentTypeName</MudTd>
+                <MudTd>@context.TotalAmountFormatted</MudTd>
+                <MudTd>@context.ConfidenceFormatted</MudTd>
+                <MudTd>
+                    <span class="@context.StatusClass">@context.StatusName</span>
+                </MudTd>
+                <MudTd>@context.ExtractionMethod</MudTd>
+                <MudTd>
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => Nav.NavigateTo($"/financial-extraction/{context.Id}"))">
+                        View
+                    </MudButton>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+}
+
+@code {
+    private List<DocumentDisplay> _documents = new();
+    private bool _loading = true;
+    private string? _search;
+    private string _filterStatus = "-1";
+    private string _filterType = "-1";
+    private Guid _tenantId = Guid.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var tenantClaim = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+        if (tenantClaim != null) Guid.TryParse(tenantClaim.Value, out _tenantId);
+
+        await LoadDocuments();
+    }
+
+    private async Task LoadDocuments()
+    {
+        _loading = true;
+        try
+        {
+            var docs = await ExtractionService.GetDocumentsAsync(
+                _tenantId,
+                _filterStatus != "-1" ? int.Parse(_filterStatus) : null,
+                _filterType != "-1" ? int.Parse(_filterType) : null,
+                _search);
+            _documents = docs.Select(d => new DocumentDisplay(d)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading documents: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ApplyFilters()
+    {
+        await LoadDocuments();
+    }
+
+    public class DocumentDisplay
+    {
+        public Guid Id { get; set; }
+        public string? ReferenceNumber { get; set; }
+        public string? SupplierName { get; set; }
+        public string DocumentTypeName { get; set; } = "";
+        public string TotalAmountFormatted { get; set; } = "";
+        public string ConfidenceFormatted { get; set; } = "";
+        public string StatusName { get; set; } = "";
+        public string StatusClass { get; set; } = "";
+        public string? ExtractionMethod { get; set; }
+
+        public DocumentDisplay(FinancialDocument doc)
+        {
+            Id = doc.Id;
+            ReferenceNumber = doc.ReferenceNumber ?? "";
+            SupplierName = doc.SupplierName ?? "";
+            DocumentTypeName = FinancialDocumentTypes.ToString(doc.DocumentType);
+            TotalAmountFormatted = doc.TotalAmount > 0 ? $"${doc.TotalAmount:N2}" : "$0.00";
+            ConfidenceFormatted = $"{doc.ConfidenceScore:P0}";
+            StatusName = FinancialDocumentStatus.ToString(doc.Status);
+            StatusClass = doc.Status switch
+            {
+                1 => "text-green-600",
+                2 => "text-blue-600",
+                3 => "text-amber-600",
+                _ => "text-slate-600"
+            };
+            ExtractionMethod = doc.ExtractionMethod;
+        }
+    }
+}

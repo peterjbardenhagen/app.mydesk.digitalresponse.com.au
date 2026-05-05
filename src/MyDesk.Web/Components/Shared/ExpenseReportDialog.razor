@@ -1,14 +1,59 @@
 @using MyDesk.Shared.Models
-@inject ISnackbar Snackbar
 
-<MudDialog>
-    <TitleContent><MudText Typo="Typo.h6">Expense Report</MudText></TitleContent>
-    <DialogContent><MudText>Expense report dialog stub</MudText></DialogContent>
-    <DialogActions><MudButton OnClick="Cancel">Close</MudButton></DialogActions>
-</MudDialog>
+<MudForm @ref="_form">
+    <MudDialog>
+        <TitleContent>
+            <MudText Typo="Typo.h6">Expense Report</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="Report Period" Date="_report.ReportPeriod" DateChanged="(d) => { if (d.HasValue) _report.ReportPeriod = d.Value; }" Required="true" OpenTo="OpenTo.Month" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Owner Type" @bind-Value="_report.OwnerType">
+                        <MudSelectItem Value="@("DR")">DR</MudSelectItem>
+                        <MudSelectItem Value="@("PB")">PB</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.subtitle2">Totals</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="decimal" Label="Total Ex GST" @bind-Value="_report.TotalExGST" Min="0" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="decimal" Label="Total GST" @bind-Value="_report.TotalGST" Min="0" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="decimal" Label="Total Incl GST" @bind-Value="_report.TotalInclGST" Min="0" />
+                </MudItem>
+            </MudGrid>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="Cancel">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Save</MudButton>
+        </DialogActions>
+    </MudDialog>
+</MudForm>
 
 @code {
     [CascadingParameter] private MudDialogInstance MudDialog { get; set; } = default!;
-    [Parameter] public ExpenseReport? Report { get; set; }
+    [Parameter] public ExpenseReport Report { get; set; } = new();
+
+    private MudForm _form = default!;
+    private ExpenseReport _report = new();
+
+    protected override void OnInitialized()
+    {
+        _report = Report ?? new ExpenseReport();
+    }
+
     private void Cancel() => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        MudDialog.Close(_report);
+    }
 }

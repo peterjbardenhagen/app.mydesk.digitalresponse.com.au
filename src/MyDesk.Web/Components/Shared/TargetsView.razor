@@ -1,6 +1,82 @@
 @using MyDesk.Shared.Models
 @inject MyDesk.Shared.Services.IntelligenceService Intel
 
+<style>
+    .tl-view-content { padding: 24px; }
+    .tl-section-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+    .tl-section-title { font-weight:700; }
+    .tl-muted { color:var(--gray-500); }
+    .tl-target-list { display:flex; flex-direction:column; }
+    .tl-target-card {
+        padding: 18px;
+        border-radius: 16px;
+        border: 1px solid var(--gray-200);
+        min-height: 198px;
+    }
+    .tl-target-card.teal { background: linear-gradient(135deg, rgba(0,168,176,.10) 0%, #f3fbfc 100%); }
+    .tl-target-card.gold { background: linear-gradient(135deg, rgba(245,158,11,.12) 0%, #fffaf0 100%); }
+    .tl-target-card.dark { background: linear-gradient(135deg, #1f2937 0%, #0f172a 100%); color: white; border-color: #111827; }
+    .tl-target-card-header, .tl-target-card-values, .tl-target-card-meta { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .tl-target-card-header { margin-bottom: 14px; }
+    .tl-target-card-period { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: var(--gray-500); }
+    .tl-target-card.dark .tl-target-card-period { color: rgba(255,255,255,.72); }
+    .tl-target-card-badge { padding: 4px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+    .tl-target-card-badge.on-track { background: rgba(16,185,129,.12); color: #047857; }
+    .tl-target-card-badge.at-risk { background: rgba(245,158,11,.14); color: #b45309; }
+    .tl-target-card-badge.behind { background: rgba(239,68,68,.12); color: #b91c1c; }
+    .tl-target-card-actual { font-size: 24px; font-weight: 800; line-height: 1.1; }
+    .tl-target-card-target { color: var(--gray-500); font-size: 13px; }
+    .tl-target-card.dark .tl-target-card-target { color: rgba(255,255,255,.72); }
+    .tl-target-card-bar { margin: 16px 0 12px; }
+    .tl-target-card-bar-track { position: relative; height: 8px; border-radius: 999px; background: rgba(148,163,184,.22); overflow: hidden; }
+    .tl-target-card-bar-expected { position: absolute; inset: 0 auto 0 0; background: repeating-linear-gradient(135deg, rgba(15,23,42,.10), rgba(15,23,42,.10) 4px, rgba(15,23,42,0) 4px, rgba(15,23,42,0) 8px); }
+    .tl-target-card-bar-actual { position: absolute; inset: 0 auto 0 0; border-radius: 999px; }
+    .tl-target-card-bar-actual.on-track { background: linear-gradient(90deg, #16a34a, #22c55e); }
+    .tl-target-card-bar-actual.at-risk { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .tl-target-card-bar-actual.behind { background: linear-gradient(90deg, #ef4444, #f87171); }
+    .tl-target-card-meta { font-size: 12px; color: var(--gray-600); }
+    .tl-target-card.dark .tl-target-card-meta { color: rgba(255,255,255,.75); }
+    .tl-target-card-bar-labels { display:flex; justify-content:space-between; font-size:10px; color:var(--gray-400); margin-top:4px; }
+    .tl-target-card.dark .tl-target-card-bar-labels { color:rgba(255,255,255,.55); }
+    .tl-target-card-card { padding:14px; border-radius:12px; background:var(--gray-50); }
+    .tl-target-card-card-title { font-size:11px; text-transform:uppercase; letter-spacing:.06em; font-weight:700; color:var(--gray-500); }
+    .tl-target-card-card-value { font-size:16px; font-weight:800; margin-top:2px; }
+    .tl-target-card-card-value.positive { color:#047857; }
+    .tl-target-card-card-value.negative { color:#b91c1c; }
+    body.mud-dark-mode .tl-target-card-card { background:var(--gray-100); }
+    body.mud-dark-mode .tl-target-card-card-value.positive { color:#34d399; }
+    body.mud-dark-mode .tl-target-card-card-value.negative { color:#f87171; }
+    .tl-target-card.dark .tl-target-card-card { background:rgba(255,255,255,.06); }
+    .tl-target-card.dark .tl-target-card-card-title { color:rgba(255,255,255,.55); }
+    .tl-target-card.dark .tl-target-card-card-value { color:#fff; }
+    .tl-targets-leaderboard { padding:18px; border-radius:16px; border:1px solid var(--gray-200); background:var(--gray-50); }
+    .tl-targets-leaderboard .tl-target-row { display:flex; align-items:center; gap:12px; padding:8px 0; border-bottom:1px solid var(--gray-200); }
+    .tl-targets-leaderboard .tl-target-row:last-child { border-bottom:none; }
+    .tl-targets-leaderboard .tl-target-row-name { min-width:140px; font-weight:600; font-size:14px; }
+    .tl-targets-leaderboard .tl-target-row-bar { flex:1; }
+    .tl-target-row-values { display:flex; gap:8px; align-items:baseline; min-width:180px; justify-content:flex-end; }
+    .tl-target-actual { font-weight:700; color:var(--gray-800); }
+    .tl-target-target { color:var(--gray-500); font-size:13px; }
+    .tl-target-pct { font-size:12px; font-weight:700; min-width:44px; text-align:right; }
+    .tl-target-pct.on-track { color:#047857; }
+    .tl-target-pct.at-risk { color:#b45309; }
+    .tl-target-pct.behind { color:#b91c1c; }
+    body.mud-dark-mode .tl-targets-leaderboard { background:var(--gray-100); border-color:var(--gray-300); }
+    body.mud-dark-mode .tl-target-actual { color:var(--gray-100); }
+    body.mud-dark-mode .tl-target-target { color:var(--gray-400); }
+    body.mud-dark-mode .tl-target-pct.on-track { color:#34d399; }
+    body.mud-dark-mode .tl-target-pct.at-risk { color:#fbbf24; }
+    body.mud-dark-mode .tl-target-pct.behind { color:#fca5a5; }
+    body.mud-dark-mode .tl-target-card-badge.at-risk { color:#fde68a; }
+    body.mud-dark-mode .tl-target-card-badge.behind { color:#fca5a5; }
+    body.mud-dark-mode .tl-target-rank { background: var(--gray-200); color: var(--gray-800); }
+    body.mud-dark-mode .tl-target-bar-track, body.mud-dark-mode .tl-target-card-bar-track { background: var(--gray-200); }
+    body.mud-dark-mode .tl-target-card-bar-expected { background: repeating-linear-gradient(135deg, rgba(229,229,229,.12), rgba(229,229,229,.12) 4px, rgba(229,229,229,0) 4px, rgba(229,229,229,0) 8px); }
+    body.mud-dark-mode .tl-targets-leaderboard { background: var(--gray-100); border-color: var(--gray-300); }
+    .tl-target-card-forecast { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--gray-600); margin-top:10px; }
+    .tl-target-card.dark .tl-target-card-forecast { color:rgba(255,255,255,.65); }
+</style>
+
 @if (_targets == null)
 {
     <div class="tl-view-content">
@@ -132,5 +208,3 @@ else
         v >= 1_000_000 ? $"${v / 1_000_000:N2}M" :
         v >= 1_000 ? $"${v / 1_000:N1}K" : $"${v:N0}";
 }
-
-

@@ -1,0 +1,164 @@
+@page "/call-reports"
+@attribute [Authorize]
+@inject CallReportService Svc
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Call Reports - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">MyDesk</a><span class="sep">/</span>
+            <span>Call Reports</span>
+        </div>
+        <h1>Call Reports</h1>
+        <p class="tl-subtitle">Log customer interactions and follow-ups.</p>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Rounded.Add" Href="/call-reports/edit">New Call Report</MudButton>
+</div>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudGrid Spacing="2">
+        <MudItem xs="12" sm="3">
+            <MudTextField @bind-Value="_keyword" Label="Keyword" Placeholder="Subject, contact, notes…"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="6" sm="2">
+            <MudSelect T="CallType?" @bind-Value="_typeFilter" Label="Call type"
+                       Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                <MudSelectItem T="CallType?" Value="null">All</MudSelectItem>
+                @foreach (var t in Enum.GetValues<CallType>())
+                {
+                    <MudSelectItem T="CallType?" Value="t">@t</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="6" sm="2">
+            <MudDatePicker @bind-Date="_dateFrom" Label="From" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="6" sm="2">
+            <MudDatePicker @bind-Date="_dateTo" Label="To" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="6" sm="3" Class="d-flex align-center gap-2">
+            <MudSwitch T="bool" @bind-Value="_openOnly" Color="Color.Primary" Label="Open follow-ups only" />
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+
+<MudPaper Class="pa-0" Elevation="1">
+    <MudDataGrid T="CallReport" Items="@Filtered" Dense="true" Hover="true" Elevation="0"
+                 SortMode="SortMode.Multiple" Filterable="false">
+        <Columns>
+            <PropertyColumn Property="x => x.CallDate" Title="Date" Format="dd/MM/yyyy" CellStyle="width:110px;" />
+            <TemplateColumn Title="Type" CellStyle="width:90px;">
+                <CellTemplate>
+                    <MudIcon Icon="@TypeIcon(context.Item.CallType)" Size="Size.Small" Class="mr-1" />
+                    @context.Item.CallType
+                </CellTemplate>
+            </TemplateColumn>
+            <PropertyColumn Property="x => x.Subject" Title="Subject" CellStyle="font-weight:600;" />
+            <PropertyColumn Property="x => x.ContactName" Title="Contact" />
+            <PropertyColumn Property="x => x.CompanyName" Title="Company" />
+            <PropertyColumn Property="x => x.OwnerName" Title="Owner" CellStyle="width:120px;" />
+            <TemplateColumn Title="Follow-up" CellStyle="width:140px;">
+                <CellTemplate>
+                    @if (context.Item.FollowUpDate.HasValue)
+                    {
+                        var d = context.Item.FollowUpDate.Value.Date;
+                        var today = DateTime.Today;
+                        var tone = context.Item.FollowUpComplete ? "success"
+                            : d < today ? "error"
+                            : d <= today.AddDays(1) ? "warning"
+                            : "info";
+                        <span class="tl-badge @tone">
+                            @(context.Item.FollowUpComplete ? "Done" : d.ToString("dd/MM/yy"))
+                        </span>
+                    }
+                    else
+                    {
+                        <span style="color:var(--gray-500);">—</span>
+                    }
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="" CellStyle="width:140px;" Sortable="false">
+                <CellTemplate>
+                    <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" Color="Color.Primary"
+                                   Href="@($"/call-reports/edit/{context.Item.Id}")" title="Edit" />
+                    @if (context.Item.FollowUpDate.HasValue && !context.Item.FollowUpComplete)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Rounded.CheckCircle" Size="Size.Small" Color="Color.Success"
+                                       OnClick="@(() => MarkComplete(context.Item))" title="Mark follow-up complete" />
+                    }
+                    <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => DeleteAsync(context.Item))" title="Delete" />
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <PagerContent><MudDataGridPager T="CallReport" /></PagerContent>
+        <NoRecordsContent>
+            <MudText Class="pa-6" Style="color:var(--gray-500);">No call reports match the current filter.</MudText>
+        </NoRecordsContent>
+    </MudDataGrid>
+</MudPaper>
+
+@code {
+    private List<CallReport> _items = new();
+    private bool _loading;
+    private string? _keyword;
+    private CallType? _typeFilter;
+    private DateTime? _dateFrom;
+    private DateTime? _dateTo;
+    private bool _openOnly;
+
+    private IEnumerable<CallReport> Filtered => _items.Where(c =>
+        (string.IsNullOrWhiteSpace(_keyword)
+            || (c.Subject?.Contains(_keyword, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (c.Notes?.Contains(_keyword, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (c.ContactName?.Contains(_keyword, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (c.CompanyName?.Contains(_keyword, StringComparison.OrdinalIgnoreCase) ?? false))
+        && (!_typeFilter.HasValue || c.CallType == _typeFilter.Value)
+        && (!_dateFrom.HasValue || c.CallDate.Date >= _dateFrom.Value.Date)
+        && (!_dateTo.HasValue || c.CallDate.Date <= _dateTo.Value.Date)
+        && (!_openOnly || (c.FollowUpDate.HasValue && !c.FollowUpComplete)));
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try { _items = await Svc.GetAllAsync(); }
+        catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
+        finally { _loading = false; }
+    }
+
+    private async Task DeleteAsync(CallReport c)
+    {
+        await Svc.DeleteAsync(c.Id);
+        _items.Remove(c);
+        Snackbar.Add("Call report deleted", Severity.Info);
+    }
+
+    private async Task MarkComplete(CallReport c)
+    {
+        c.FollowUpComplete = true;
+        await Svc.UpdateAsync(c);
+        Snackbar.Add("Follow-up marked complete", Severity.Success);
+    }
+
+    private static string TypeIcon(CallType t) => t switch
+    {
+        CallType.Phone   => Icons.Material.Rounded.Phone,
+        CallType.Visit   => Icons.Material.Rounded.DirectionsCar,
+        CallType.Email   => Icons.Material.Rounded.Email,
+        CallType.Meeting => Icons.Material.Rounded.Groups,
+        CallType.Video   => Icons.Material.Rounded.Videocam,
+        _                => Icons.Material.Rounded.Phone
+    };
+}

@@ -1,0 +1,173 @@
+@page "/rfq/view/{id:int}"
+@attribute [Authorize]
+@inject RfqService RfqSvc
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>RFQ View - MyDesk</PageTitle>
+
+@if (_rfq == null)
+{
+    <MudPaper Class="pa-6"><MudText>Loading…</MudText></MudPaper>
+}
+else
+{
+    <div class="tl-page-header">
+        <div>
+            <div class="tl-breadcrumb">
+                <a href="/">MyDesk</a><span class="sep">/</span>
+                <a href="/rfq">RFQ</a><span class="sep">/</span>
+                <span>@_rfq.RfqNumber</span>
+            </div>
+            <h1>@_rfq.Title</h1>
+            <p class="tl-subtitle">@_rfq.RfqNumber — created @_rfq.CreatedDate.ToString("dd MMM yyyy")</p>
+        </div>
+        <div class="d-flex gap-2">
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Edit"
+                       Href="@($"/rfq/edit/{_rfq.Id}")">Edit</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary"
+                       StartIcon="@Icons.Material.Rounded.Compare"
+                       Disabled="@(_rfq.Responses.Count == 0)"
+                       Href="@($"/rfq/compare/{_rfq.Id}")">Compare</MudButton>
+        </div>
+    </div>
+
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudText Typo="Typo.h6" Class="mb-3">Details</MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string"><strong>Status:</strong>&nbsp;<span class="tl-badge @StatusTone(_rfq.Status)">@_rfq.Status</span></MudListItem>
+                    <MudListItem T="string"><strong>Required by:</strong>&nbsp;@(_rfq.RequiredByDate?.ToString("dd MMM yyyy") ?? "—")</MudListItem>
+                    <MudListItem T="string"><strong>Owner:</strong>&nbsp;@(_rfq.OwnerName ?? "—")</MudListItem>
+                    <MudListItem T="string"><strong>Suppliers invited:</strong>&nbsp;@_rfq.Suppliers.Count</MudListItem>
+                    @if (_rfq.Qid.HasValue)
+                    {
+                        <MudListItem T="string"><strong>Linked Quote:</strong>&nbsp;<a href="@($"/quotes/{_rfq.Qid}")">#@_rfq.Qid</a></MudListItem>
+                    }
+                </MudList>
+                @if (!string.IsNullOrWhiteSpace(_rfq.Description))
+                {
+                    <MudDivider Class="my-3" />
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Description</MudText>
+                    <MudText Typo="Typo.body2" Style="white-space:pre-line;">@_rfq.Description</MudText>
+                }
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudText Typo="Typo.h6" Class="mb-3">Add supplier response</MudText>
+                <MudGrid>
+                    <MudItem xs="6"><MudNumericField T="int" @bind-Value="_newSupplierId" Label="Supplier ID" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+                    <MudItem xs="6"><MudTextField @bind-Value="_newSupplierName" Label="Supplier Name" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+                    <MudItem xs="6"><MudNumericField T="decimal" @bind-Value="_newPrice" Label="Quoted price" Format="N2" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+                    <MudItem xs="6"><MudNumericField T="int" @bind-Value="_newLeadTime" Label="Lead time (days)" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+                    <MudItem xs="12"><MudTextField @bind-Value="_newNotes" Label="Notes" Lines="2" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+                </MudGrid>
+                <div class="d-flex justify-end mt-3">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Rounded.Add"
+                               OnClick="AddResponseAsync">Add Response</MudButton>
+                </div>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Class="mt-4 pa-0" Elevation="1">
+        <MudText Typo="Typo.h6" Class="pa-4 pb-0">Supplier responses (@_rfq.Responses.Count)</MudText>
+        <MudTable T="RfqResponse" Items="@_rfq.Responses" Dense="true" Hover="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>Supplier</MudTh>
+                <MudTh Style="text-align:right;">Price</MudTh>
+                <MudTh Style="text-align:right;">Lead time</MudTh>
+                <MudTh>Received</MudTh>
+                <MudTh>Notes</MudTh>
+                <MudTh Style="text-align:center;">Winner?</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.SupplierName <MudText Typo="Typo.caption" Style="color:var(--gray-500);">(#@context.SupplierId)</MudText></MudTd>
+                <MudTd Style="text-align:right;">@context.QuotedPrice.ToString("C2")</MudTd>
+                <MudTd Style="text-align:right;">@context.LeadTimeDays days</MudTd>
+                <MudTd>@context.ReceivedDate.ToString("dd/MM/yy")</MudTd>
+                <MudTd>@context.Notes</MudTd>
+                <MudTd Style="text-align:center;">
+                    @if (_rfq.WinningResponseId == context.Id)
+                    {
+                        <span class="tl-badge success">WINNER</span>
+                    }
+                </MudTd>
+                <MudTd>
+                    @if (_rfq.WinningResponseId != context.Id)
+                    {
+                        <MudButton Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined"
+                                   OnClick="@(() => SelectWinner(context.Id))">Award</MudButton>
+                    }
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText Class="pa-4" Style="color:var(--gray-500);">No responses yet.</MudText>
+            </NoRecordsContent>
+        </MudTable>
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Rfq? _rfq;
+
+    private int _newSupplierId;
+    private string _newSupplierName = string.Empty;
+    private decimal _newPrice;
+    private int _newLeadTime;
+    private string? _newNotes;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _rfq = await RfqSvc.GetByIdAsync(Id);
+    }
+
+    private async Task AddResponseAsync()
+    {
+        if (_rfq == null) return;
+        if (string.IsNullOrWhiteSpace(_newSupplierName))
+        {
+            Snackbar.Add("Supplier name is required", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            await RfqSvc.AddSupplierResponseAsync(_rfq.Id, new RfqResponse
+            {
+                SupplierId = _newSupplierId,
+                SupplierName = _newSupplierName,
+                QuotedPrice = _newPrice,
+                LeadTimeDays = _newLeadTime,
+                Notes = _newNotes
+            });
+            _newSupplierId = 0; _newSupplierName = string.Empty; _newPrice = 0; _newLeadTime = 0; _newNotes = null;
+            _rfq = await RfqSvc.GetByIdAsync(Id);
+            Snackbar.Add("Response added", Severity.Success);
+        }
+        catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task SelectWinner(int responseId)
+    {
+        if (_rfq == null) return;
+        await RfqSvc.SelectWinnerAsync(_rfq.Id, responseId);
+        _rfq = await RfqSvc.GetByIdAsync(Id);
+        Snackbar.Add("Winner selected — RFQ awarded", Severity.Success);
+    }
+
+    private static string StatusTone(RfqStatus s) => s switch
+    {
+        RfqStatus.Draft     => "info",
+        RfqStatus.Sent      => "primary",
+        RfqStatus.Responded => "warning",
+        RfqStatus.Awarded   => "success",
+        RfqStatus.Cancelled => "error",
+        _                   => "info"
+    };
+}

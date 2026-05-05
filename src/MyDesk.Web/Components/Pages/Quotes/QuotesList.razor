@@ -34,6 +34,15 @@
             <MudTextField @bind-Value="_customer" Label="Customer" Placeholder="Search company..." Variant="Variant.Outlined"
                           Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Search" Margin="Margin.Dense" />
         </MudItem>
+        <MudItem xs="12" sm="3">
+            <MudSelect T="int?" @bind-Value="_contactId" Label="Contact" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                <MudSelectItem T="int?" Value="null">All Contacts</MudSelectItem>
+                @foreach (var contact in _contactsWithQuotes)
+                {
+                    <MudSelectItem T="int?" Value="contact.ContactId">@contact.CompanyName — @contact.FullName</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
         <MudItem xs="12" sm="2">
             <MudTextField @bind-Value="_keyword" Label="Keyword" Placeholder="Reference, notes…" Variant="Variant.Outlined" Margin="Margin.Dense" />
         </MudItem>
@@ -149,7 +158,9 @@
     private DateTime? _dateFrom = null;
     private DateTime? _dateTo   = null;
     private int _statusId = 555;
+    private int? _contactId = null;
     private string? _userCode;
+    private List<Contact> _contactsWithQuotes = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -167,8 +178,14 @@
             _dateTo   = today;
             _statusId = 0;
         }
+        await LoadContactsWithQuotesAsync();
         await LoadFavouritesAsync();
         await LoadAsync();
+    }
+
+    private async Task LoadContactsWithQuotesAsync()
+    {
+        _contactsWithQuotes = await QuoteService.GetContactsWithQuotesAsync();
     }
 
     private async Task LoadFavouritesAsync()
@@ -218,7 +235,7 @@
         {
             _quotes = await QuoteService.GetQuotesAsync(
                 dateFrom: _dateFrom, dateTo: _dateTo,
-                customerName: _customer, statusId: _statusId,
+                customerName: _customer, contactId: _contactId, statusId: _statusId,
                 keyword: _keyword);
         }
         catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
@@ -227,7 +244,7 @@
 
     private async Task ResetFilter()
     {
-        _customer = null; _keyword = null; _statusId = 555;
+        _customer = null; _keyword = null; _statusId = 555; _contactId = null;
         _dateFrom = null;
         _dateTo   = null;
         await LoadAsync();

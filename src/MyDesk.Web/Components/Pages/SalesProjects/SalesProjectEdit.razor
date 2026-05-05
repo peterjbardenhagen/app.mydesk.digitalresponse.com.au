@@ -1,0 +1,138 @@
+@page "/sales-projects/edit"
+@page "/sales-projects/edit/{id:int?}"
+@attribute [Authorize]
+@inject SalesProjectService Svc
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthState
+
+<PageTitle>Sales Project Edit - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">MyDesk</a><span class="sep">/</span>
+            <a href="/sales-projects">Sales Projects</a><span class="sep">/</span>
+            <span>@(_p.Id == 0 ? "New" : _p.ProjectName)</span>
+        </div>
+        <h1>@(_p.Id == 0 ? "New Sales Project" : "Edit Sales Project")</h1>
+    </div>
+</div>
+
+<MudPaper Class="pa-6" Elevation="1">
+    <MudGrid>
+        <MudItem xs="12" sm="8">
+            <MudTextField @bind-Value="_p.ProjectName" Label="Project name" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect T="SalesStage" @bind-Value="_p.Stage" Label="Stage" Variant="Variant.Outlined" Margin="Margin.Dense">
+                @foreach (var s in Enum.GetValues<SalesStage>())
+                {
+                    <MudSelectItem Value="s">@s</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_p.Customer" Label="Customer" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_p.OwnerName" Label="Owner" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudNumericField T="decimal" @bind-Value="_p.EstimatedValue" Label="Est. value" Format="N0" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudNumericField T="int" @bind-Value="_p.ProbabilityPercent" Label="Probability %" Min="0" Max="100" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudDatePicker @bind-Date="_expected" Label="Expected close" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudDatePicker @bind-Date="_actual" Label="Actual close" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudTextField @bind-Value="_p.Notes" Label="Notes" Lines="4" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudTextField @bind-Value="_quoteIdsCsv" Label="Linked Quote IDs (CSV)" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudTextField @bind-Value="_invoiceIdsCsv" Label="Linked Invoice IDs (CSV)" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudTextField @bind-Value="_poIdsCsv" Label="Linked PO IDs (CSV)" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+    </MudGrid>
+
+    <div class="d-flex gap-2 mt-4 justify-end">
+        <MudButton Variant="Variant.Outlined" Href="/sales-projects">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Save" OnClick="SaveAsync">Save</MudButton>
+    </div>
+</MudPaper>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private SalesProject _p = new();
+    private DateTime? _expected;
+    private DateTime? _actual;
+    private string _quoteIdsCsv = string.Empty;
+    private string _invoiceIdsCsv = string.Empty;
+    private string _poIdsCsv = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id.HasValue && Id.Value > 0)
+        {
+            var existing = await Svc.GetByIdAsync(Id.Value);
+            if (existing != null)
+            {
+                _p = existing;
+                _expected = existing.ExpectedCloseDate;
+                _actual = existing.ActualCloseDate;
+                _quoteIdsCsv = string.Join(",", existing.LinkedQuoteIds);
+                _invoiceIdsCsv = string.Join(",", existing.LinkedInvoiceIds);
+                _poIdsCsv = string.Join(",", existing.LinkedPoIds);
+            }
+        }
+        else
+        {
+            var auth = await AuthState.GetAuthenticationStateAsync();
+            _p.OwnerUserCode = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            _p.OwnerName = auth.User.Identity?.Name;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_p.ProjectName))
+        {
+            Snackbar.Add("Project name is required", Severity.Warning);
+            return;
+        }
+        _p.ExpectedCloseDate = _expected;
+        _p.ActualCloseDate = _actual;
+        _p.LinkedQuoteIds = Parse(_quoteIdsCsv);
+        _p.LinkedInvoiceIds = Parse(_invoiceIdsCsv);
+        _p.LinkedPoIds = Parse(_poIdsCsv);
+
+        if (_p.Id == 0)
+        {
+            var created = await Svc.CreateAsync(_p);
+            Snackbar.Add("Project created", Severity.Success);
+            Nav.NavigateTo($"/sales-projects/view/{created.Id}");
+        }
+        else
+        {
+            await Svc.UpdateAsync(_p);
+            Snackbar.Add("Project saved", Severity.Success);
+            Nav.NavigateTo($"/sales-projects/view/{_p.Id}");
+        }
+    }
+
+    private static List<int> Parse(string csv) => (csv ?? "")
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Select(s => int.TryParse(s, out var i) ? i : 0)
+        .Where(i => i > 0)
+        .ToList();
+}

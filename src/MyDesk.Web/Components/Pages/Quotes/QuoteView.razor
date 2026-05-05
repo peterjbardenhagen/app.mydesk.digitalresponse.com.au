@@ -55,12 +55,18 @@ else
             <FavouriteButton EntityType="Quote" EntityId="@Id" EntityName="@_q.Reference" />
             <MudDivider Vertical="true" FlexItem="true" Class="mx-2 my-1" />
             @* Workflow Actions *@
-            @if (CanApproveDecline)
+            @if (CanManagerApprove)
             {
                 <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Rounded.ThumbUp"
-                           OnClick="ApproveAsync" Size="Size.Small">Approve</MudButton>
+                           OnClick="ManagerApproveAsync" Size="Size.Small">Manager Approve</MudButton>
                 <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Rounded.ThumbDown"
-                           OnClick="DeclineAsync" Size="Size.Small">Decline</MudButton>
+                           OnClick="ManagerDeclineAsync" Size="Size.Small">Manager Decline</MudButton>
+            }
+            
+            @if (CanSendToClient)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Send"
+                           OnClick="@(() => { _showEmailPanel = true; _showStatusPanel = false; })" Size="Size.Small">Send to Client</MudButton>
             }
             
             <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.SwapVert" Color="Color.Info"
@@ -315,8 +321,9 @@ else
     private bool   _emailSending;
     private bool   _converting;
 
-    private bool CanApproveDecline => _q?.QuoteStatusId is 1 or 9;
-    private bool CanIssue          => _q?.QuoteStatusId is 2 or 3 or 4 or 7 or 10;
+    private bool CanManagerApprove => _q?.QuoteStatusId is 1 or 7; // Draft (Internal) or Pending Manager Approval
+    private bool CanSendToClient   => _q?.QuoteStatusId is 8 or 2; // Manager Approved or Issued to Client
+    private bool CanIssue          => _q?.QuoteStatusId is 8 or 3 or 4; // Manager Approved, Revised, or Client Accepted
     private bool CanDelete         => _q?.QuoteStatusId == 1 || _isAdmin;
 
     protected override async Task OnInitializedAsync()
@@ -389,25 +396,27 @@ else
         catch (Exception ex) { Snackbar.Add($"Copy failed: {ex.Message}", Severity.Error); }
     }
 
-    private async Task ApproveAsync()
+    private async Task ManagerApproveAsync()
     {
         try
         {
-            await Svc.ApproveAsync(Id, _userCode, isDirectorOrFinalApprover: _isAdmin);
-            await ActivitySvc.LogAsync(_userCode, "Quote", Id, "Approved quote", _q?.Reference);
-            Snackbar.Add("Quote approved.", Severity.Success);
+            // Set status to "Manager Approved" (ID 8)
+            await Svc.UpdateStatusAsync(Id, 8, "Manager Approved", _userCode);
+            await ActivitySvc.LogAsync(_userCode, "Quote", Id, "Manager approved quote", _q?.Reference);
+            Snackbar.Add("Quote approved by manager. Ready to send to client.", Severity.Success);
             _q = await Svc.GetQuoteAsync(Id);
         }
         catch (Exception ex) { Snackbar.Add($"Approve failed: {ex.Message}", Severity.Error); }
     }
 
-    private async Task DeclineAsync()
+    private async Task ManagerDeclineAsync()
     {
         try
         {
-            await Svc.DeclineAsync(Id, _userCode);
-            await ActivitySvc.LogAsync(_userCode, "Quote", Id, "Declined quote", _q?.Reference);
-            Snackbar.Add("Quote declined.", Severity.Info);
+            // Set status to "Manager Declined" (ID 9)
+            await Svc.UpdateStatusAsync(Id, 9, "Manager Declined", _userCode);
+            await ActivitySvc.LogAsync(_userCode, "Quote", Id, "Manager declined quote", _q?.Reference);
+            Snackbar.Add("Quote declined by manager.", Severity.Info);
             _q = await Svc.GetQuoteAsync(Id);
         }
         catch (Exception ex) { Snackbar.Add($"Decline failed: {ex.Message}", Severity.Error); }

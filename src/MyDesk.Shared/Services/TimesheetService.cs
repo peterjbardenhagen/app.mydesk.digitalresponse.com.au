@@ -9,6 +9,10 @@ public class TimesheetService
     private readonly DatabaseService _db;
     private readonly ILogger<TimesheetService> _logger;
 
+    // In-memory line-level approvals — no schema change.
+    private static readonly object _lineLock = new();
+    private static readonly List<TimesheetLineApproval> _lineApprovals = new();
+
     public TimesheetService(DatabaseService db, ILogger<TimesheetService> logger)
     {
         _db = db;
@@ -55,7 +59,7 @@ public class TimesheetService
                 CREATE INDEX IX_TimesheetEntries_TimesheetId ON TimesheetEntries(TimesheetId);
                 CREATE INDEX IX_TimesheetEntries_EntryDate ON TimesheetEntries(EntryDate);
             END";
-        await _db.ExecuteAsync(sql);
+        await _db.ExecuteNonQueryAsync(sql);
     }
 
     public async Task<List<TimesheetSummary>> GetTimesheetsAsync(int? userId = null, string? status = null, int page = 1, int pageSize = 20)
@@ -191,7 +195,7 @@ public class TimesheetService
         else
         {
             // Update
-            await _db.ExecuteAsync(@"
+            await _db.ExecuteNonQueryAsync(@"
                 UPDATE Timesheets 
                 SET Status = @Status, ManagerNotes = @ManagerNotes, ModifiedAt = GETDATE()
                 WHERE TimesheetId = @Id",
@@ -210,7 +214,7 @@ public class TimesheetService
     {
         if (entry.TimesheetEntryId == 0)
         {
-            await _db.ExecuteAsync(@"
+            await _db.ExecuteNonQueryAsync(@"
                 INSERT INTO TimesheetEntries (TimesheetId, EntryDate, Hours, Minutes, TimeType, CompanyId, ProjectId, Description, TaskName)
                 VALUES (@TimesheetId, @EntryDate, @Hours, @Minutes, @TimeType, @CompanyId, @ProjectId, @Description, @TaskName)",
                 new()
@@ -228,7 +232,7 @@ public class TimesheetService
         }
         else
         {
-            await _db.ExecuteAsync(@"
+            await _db.ExecuteNonQueryAsync(@"
                 UPDATE TimesheetEntries
                 SET EntryDate = @EntryDate, Hours = @Hours, Minutes = @Minutes, TimeType = @TimeType,
                     CompanyId = @CompanyId, ProjectId = @ProjectId, Description = @Description, TaskName = @TaskName
@@ -250,7 +254,7 @@ public class TimesheetService
 
     public async Task SubmitTimesheetAsync(int timesheetId, string submittedTo)
     {
-        await _db.ExecuteAsync(@"
+        await _db.ExecuteNonQueryAsync(@"
             UPDATE Timesheets
             SET Status = 'Submitted', SubmittedAt = GETDATE(), SubmittedTo = @SubmittedTo, ModifiedAt = GETDATE()
             WHERE TimesheetId = @Id",
@@ -259,7 +263,7 @@ public class TimesheetService
 
     public async Task DeleteEntryAsync(int entryId)
     {
-        await _db.ExecuteAsync("DELETE FROM TimesheetEntries WHERE TimesheetEntryId = @Id",
+        await _db.ExecuteNonQueryAsync("DELETE FROM TimesheetEntries WHERE TimesheetEntryId = @Id",
             new() { ["Id"] = entryId });
     }
 
@@ -267,5 +271,142 @@ public class TimesheetService
     {
         var daysToMonday = ((int)date.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
         return date.AddDays(-daysToMonday);
+    }
+
+    // ── Line-level approval (in-memory) ──────────────────────────────────────
+    public Task ApproveLineAsync(int timesheetId, int lineId, string approverCode, bool approved = true)
+    {
+        lock (_lineLock)
+        {
+            var existing = _lineApprovals.FirstOrDefault(x =>
+                x.TimesheetId == timesheetId && x.LineId == lineId);
+            if (existing != null)
+            {
+                existing.ApproverCode = approverCode;
+                existing.Approved     = approved;
+                existing.ApprovedAt   = DateTime.Now;
+            }
+            else
+            {
+                _lineApprovals.Add(new TimesheetLineApproval
+                {
+                    TimesheetId  = timesheetId,
+                    LineId       = lineId,
+                    ApproverCode = approverCode,
+                    Approved     = approved,
+                    ApprovedAt   = DateTime.Now,
+                });
+            }
+        }
+        _logger.LogInformation("Timesheet line approval: TS#{Ts} L#{Line} by {Code} = {Approved}",
+            timesheetId, lineId, approverCode, approved);
+        return Task.CompletedTask;
+    }
+
+    public List<TimesheetLineApproval> GetLineApprovals(int timesheetId)
+    {
+        lock (_lineLock)
+        {
+            return _lineApprovals.Where(x => x.TimesheetId == timesheetId).ToList();
+        }
+    }
+
+    /// <summary>
+    /// Returns active users who do NOT have a Submitted/Approved timesheet for the
+    /// week ending on <paramref name="weekEnding"/> (week start = Monday before).
+    /// </summary>
+    public async Task<List<TimesheetMissingDto>> GetMissingTimesheetsAsync(DateTime weekEnding)
+    {
+        var weekStart = GetMonday(weekEnding);
+        var sql = @"
+            SELECT u.Code AS UserCode, u.Name AS UserName, u.Email,
+                   u.DivisionId, ISNULL(d.Division, '') AS DivisionName
+            FROM Users u
+            LEFT JOIN Divisions d ON u.DivisionId = d.DivisionId
+            WHERE ISNULL(u.Deleted, 0) = 0
+              AND ISNULL(u.Active, 1) = 1
+              AND NOT EXISTS (
+                  SELECT 1 FROM Timesheets t
+                  WHERE t.UserId = u.UserId
+                    AND t.WeekStartDate = @WeekStart
+                    AND t.Status IN ('Submitted', 'Approved')
+              )
+            ORDER BY u.Name";
+        try
+        {
+            var dt = await _db.QueryAsync(sql, new() { ["WeekStart"] = weekStart });
+            return dt.Map(r => new TimesheetMissingDto
+            {
+                UserCode     = r["UserCode"]?.ToString() ?? "",
+                UserName     = r["UserName"]?.ToString() ?? "",
+                Email        = r["Email"]?.ToString(),
+                DivisionId   = r["DivisionId"] == DBNull.Value ? null : Convert.ToInt32(r["DivisionId"]),
+                DivisionName = r["DivisionName"]?.ToString(),
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "GetMissingTimesheetsAsync failed (Timesheets table may be missing)");
+            return new List<TimesheetMissingDto>();
+        }
+    }
+
+    /// <summary>
+    /// Submitted timesheets whose user reports to <paramref name="managerCode"/> via the
+    /// in-memory ApprovalService chain. Used by /timesheets/approve.
+    /// </summary>
+    public async Task<List<TimesheetSummary>> GetSubmittedForManagerAsync(
+        ApprovalService approvals, string managerCode, DateTime? weekEnding = null)
+    {
+        var direct = approvals.AllSettings()
+            .Where(s => string.Equals(s.LineManagerCode, managerCode, StringComparison.OrdinalIgnoreCase))
+            .Select(s => s.UserCode)
+            .ToList();
+
+        if (direct.Count == 0) return new List<TimesheetSummary>();
+
+        var sql = @"
+            SELECT t.TimesheetId, t.UserName, t.WeekStartDate, t.Status, t.SubmittedAt,
+                   ISNULL(SUM(te.Hours * 60 + te.Minutes), 0) AS TotalMinutes,
+                   ISNULL(SUM(CASE WHEN te.TimeType = 'Billable' THEN te.Hours * 60 + te.Minutes ELSE 0 END), 0) AS BillableMinutes,
+                   ISNULL(SUM(CASE WHEN te.TimeType = 'Non-Billable' THEN te.Hours * 60 + te.Minutes ELSE 0 END), 0) AS NonBillableMinutes
+            FROM Timesheets t
+            LEFT JOIN TimesheetEntries te ON t.TimesheetId = te.TimesheetId
+            LEFT JOIN Users u ON u.UserId = t.UserId
+            WHERE t.Status = 'Submitted'
+              AND u.Code IN (" + string.Join(",", direct.Select((c, i) => $"@C{i}")) + ")";
+
+        var p = new Dictionary<string, object?>();
+        for (int i = 0; i < direct.Count; i++) p[$"C{i}"] = direct[i];
+
+        if (weekEnding.HasValue)
+        {
+            sql += " AND t.WeekStartDate = @W";
+            p["W"] = GetMonday(weekEnding.Value);
+        }
+
+        sql += @" GROUP BY t.TimesheetId, t.UserName, t.WeekStartDate, t.Status, t.SubmittedAt
+                  ORDER BY t.WeekStartDate DESC, t.UserName";
+
+        try
+        {
+            var dt = await _db.QueryAsync(sql, p);
+            return dt.Map(r => new TimesheetSummary
+            {
+                TimesheetId   = Convert.ToInt32(r["TimesheetId"]),
+                UserName      = r["UserName"]?.ToString() ?? "",
+                WeekStartDate = Convert.ToDateTime(r["WeekStartDate"]),
+                Status        = r["Status"]?.ToString() ?? "Submitted",
+                SubmittedAt   = r["SubmittedAt"] == DBNull.Value ? null : Convert.ToDateTime(r["SubmittedAt"]),
+                TotalHours    = Convert.ToInt32(r["TotalMinutes"]) / 60,
+                BillableHours = Convert.ToInt32(r["BillableMinutes"]) / 60,
+                NonBillableHours = Convert.ToInt32(r["NonBillableMinutes"]) / 60,
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "GetSubmittedForManagerAsync failed");
+            return new List<TimesheetSummary>();
+        }
     }
 }

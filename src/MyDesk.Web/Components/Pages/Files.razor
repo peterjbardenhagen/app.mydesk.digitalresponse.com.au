@@ -49,10 +49,18 @@
      </div>
 </div>
 
-@if (_folders == null)
-{
-    <MudProgressCircular Indeterminate="true" Class="mx-auto my-8 d-block" />
-}
+    @if (_folders == null)
+    {
+        <MudProgressCircular Indeterminate="true" Class="mx-auto my-8 d-block" />
+    }
+    else if (_folders.Count == 0)
+    {
+        <div class="tl-empty-state pa-8 text-center">
+            <MudIcon Icon="@Icons.Material.Rounded.FolderOpen" Size="Size.Large" Color="Color.Default" />
+            <MudText Typo="Typo.h6" Class="mt-4">This folder is empty</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Default" Class="mt-2">Upload files or create a new folder to get started.</MudText>
+        </div>
+    }
 else
 {
     @* Breadcrumb *@

@@ -71,7 +71,7 @@ public class BulkOperationService
         {
             try
             {
-                await _db.ExecuteAsync(@"
+                await _db.ExecuteNonQueryAsync(@"
                     UPDATE Invoices SET InvoiceStatusId = @StatusId, DateModified = GETDATE()
                     WHERE InvoiceId = @Id",
                     new() { ["StatusId"] = newStatusId, ["Id"] = id });

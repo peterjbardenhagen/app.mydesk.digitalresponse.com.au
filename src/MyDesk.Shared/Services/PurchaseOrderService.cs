@@ -8,11 +8,14 @@ public class PurchaseOrderService
 {
     private readonly DatabaseService _db;
     private readonly ILogger<PurchaseOrderService> _logger;
+    private readonly ApprovalService? _approvals;
 
-    public PurchaseOrderService(DatabaseService db, ILogger<PurchaseOrderService> logger)
+    public PurchaseOrderService(DatabaseService db, ILogger<PurchaseOrderService> logger,
+        ApprovalService? approvals = null)
     {
-        _db     = db;
-        _logger = logger;
+        _db        = db;
+        _logger    = logger;
+        _approvals = approvals;
     }
 
     // ── Shared SELECT fragment ──────────────────────────────────────────────
@@ -150,7 +153,7 @@ public class PurchaseOrderService
     {
         var p = BuildParams(po, userCode);
         p["POid"] = po.POid;
-        await _db.ExecuteAsync(@"
+        await _db.ExecuteNonQueryAsync(@"
             UPDATE PurchaseOrders SET
                 Project = @Project, ContactId = @ContactId, DivisionId = @DivisionId,
                 GST = @GST, POPaymentTypeId = @POPaymentTypeId,
@@ -161,7 +164,7 @@ public class PurchaseOrderService
                 Qid = @Qid, HasCapEx = @HasCapEx
             WHERE POid = @POid", p);
 
-        await _db.ExecuteAsync("DELETE FROM PurchaseOrderContents WHERE POid = @Id", new() { ["Id"] = po.POid });
+        await _db.ExecuteNonQueryAsync("DELETE FROM PurchaseOrderContents WHERE POid = @Id", new() { ["Id"] = po.POid });
         foreach (var line in lines.Where(l => l.Quantity > 0))
             await InsertLineAsync(po.POid, line);
 
@@ -172,7 +175,7 @@ public class PurchaseOrderService
 
     public async Task UpdateStatusAsync(int poId, int statusId, string userCode, string statusName)
     {
-        await _db.ExecuteAsync(
+        await _db.ExecuteNonQueryAsync(
             "UPDATE PurchaseOrders SET POStatusId = @S WHERE POid = @Id",
             new() { ["S"] = statusId, ["Id"] = poId });
         await WriteAuditAsync(poId, userCode, $"Status changed to {statusName}");
@@ -180,7 +183,29 @@ public class PurchaseOrderService
 
     public async Task ApproveAsync(int poId, string userCode)
     {
-        await _db.ExecuteAsync(
+        if (_approvals != null)
+        {
+            var level    = _approvals.CompletedLevels("PurchaseOrder", poId) + 1;
+            _approvals.RecordApproval("PurchaseOrder", poId, level, userCode, null, "Approved");
+
+            if (await IsPoFullyApprovedAsync(poId))
+            {
+                await _db.ExecuteNonQueryAsync(
+                    "UPDATE PurchaseOrders SET POStatusId = 3 WHERE POid = @Id",
+                    new() { ["Id"] = poId });
+                await WriteAuditAsync(poId, userCode, "PO fully approved");
+            }
+            else
+            {
+                await _db.ExecuteNonQueryAsync(
+                    "UPDATE PurchaseOrders SET POStatusId = 2 WHERE POid = @Id",
+                    new() { ["Id"] = poId });
+                await WriteAuditAsync(poId, userCode, "PO approved (next level pending)");
+            }
+            return;
+        }
+
+        await _db.ExecuteNonQueryAsync(
             "UPDATE PurchaseOrders SET POStatusId = 3 WHERE POid = @Id",
             new() { ["Id"] = poId });
         await WriteAuditAsync(poId, userCode, "PO approved");
@@ -188,19 +213,102 @@ public class PurchaseOrderService
 
     public async Task DeclineAsync(int poId, string userCode)
     {
-        await _db.ExecuteAsync(
+        if (_approvals != null)
+        {
+            var level = _approvals.CompletedLevels("PurchaseOrder", poId) + 1;
+            _approvals.RecordApproval("PurchaseOrder", poId, level, userCode, null, "Declined");
+        }
+        await _db.ExecuteNonQueryAsync(
             "UPDATE PurchaseOrders SET POStatusId = 5 WHERE POid = @Id",
             new() { ["Id"] = poId });
         await WriteAuditAsync(poId, userCode, "PO declined");
+    }
+
+    /// <summary>
+    /// Walks LineManagerCode chain from <paramref name="currentUserCode"/>. If the PO has
+    /// CapEx (total &gt; $5,000 OR a CapEx-flagged line item) the chain must include a
+    /// user with IsCapExApprover = true before it is considered complete.
+    /// </summary>
+    public async Task<string?> GetNextPoApproverAsync(int poId, string currentUserCode, bool hasCapEx)
+    {
+        if (_approvals == null) return null;
+
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var cursor  = currentUserCode;
+        while (!string.IsNullOrEmpty(cursor) && visited.Add(cursor))
+        {
+            var next = _approvals.NextLineManager(cursor);
+            if (!string.IsNullOrEmpty(next)
+                && !_approvals.HasApproval("PurchaseOrder", poId, next))
+                return next;
+            if (string.IsNullOrEmpty(next)) break;
+            cursor = next;
+        }
+
+        if (hasCapEx)
+        {
+            var capExApprover = _approvals.FindCapExApprover();
+            if (!string.IsNullOrEmpty(capExApprover) &&
+                !_approvals.HasApproval("PurchaseOrder", poId, capExApprover))
+                return capExApprover;
+        }
+
+        await Task.CompletedTask;
+        return null;
+    }
+
+    /// <summary>
+    /// Computes whether a PO has any CapEx exposure: total &gt; threshold OR a line flagged CapEx.
+    /// </summary>
+    public async Task<bool> IsCapExAsync(int poId)
+    {
+        var po = await GetPurchaseOrderAsync(poId);
+        if (po == null) return false;
+        if (po.PriceExTotal > ApprovalService.CapExThreshold) return true;
+        if (po.HasCapEx) return true;
+        var lines = await GetLineItemsAsync(poId);
+        return lines.Any(l => l.IsCapEx);
+    }
+
+    /// <summary>True when every required approval level has signed off (incl. CapEx).</summary>
+    public async Task<bool> IsPoFullyApprovedAsync(int poId)
+    {
+        if (_approvals == null) return false;
+        var last = _approvals.LastApproval("PurchaseOrder", poId);
+        if (last == null) return false;
+
+        var hasCapEx = await IsCapExAsync(poId);
+        var nextManager = _approvals.NextLineManager(last.ApproverCode);
+        if (!string.IsNullOrEmpty(nextManager) &&
+            !_approvals.HasApproval("PurchaseOrder", poId, nextManager))
+            return false;
+
+        if (hasCapEx)
+        {
+            var capExApprover = _approvals.FindCapExApprover();
+            if (!string.IsNullOrEmpty(capExApprover) &&
+                !_approvals.HasApproval("PurchaseOrder", poId, capExApprover))
+                return false;
+        }
+        return true;
+    }
+
+    public List<ApprovalEntry> GetApprovalHistory(int poId) =>
+        _approvals?.GetEntries("PurchaseOrder", poId) ?? new List<ApprovalEntry>();
+
+    /// <summary>POs awaiting approval (status = 2 = Pending Approval in legacy).</summary>
+    public async Task<List<PurchaseOrder>> GetPendingApprovalPosAsync()
+    {
+        return await GetPurchaseOrdersAsync(pendingApprovalOnly: true);
     }
 
     // ── Delete ─────────────────────────────────────────────────────────────
 
     public async Task DeleteAsync(int poId)
     {
-        await _db.ExecuteAsync("DELETE FROM PurchaseOrderContents WHERE POid = @Id", new() { ["Id"] = poId });
-        await _db.ExecuteAsync("DELETE FROM PurchaseOrderAudit    WHERE POid = @Id", new() { ["Id"] = poId });
-        await _db.ExecuteAsync("DELETE FROM PurchaseOrders        WHERE POid = @Id", new() { ["Id"] = poId });
+        await _db.ExecuteNonQueryAsync("DELETE FROM PurchaseOrderContents WHERE POid = @Id", new() { ["Id"] = poId });
+        await _db.ExecuteNonQueryAsync("DELETE FROM PurchaseOrderAudit    WHERE POid = @Id", new() { ["Id"] = poId });
+        await _db.ExecuteNonQueryAsync("DELETE FROM PurchaseOrders        WHERE POid = @Id", new() { ["Id"] = poId });
     }
 
     public async Task<int> CopyPOAsync(int poId, string userCode)
@@ -316,7 +424,7 @@ public class PurchaseOrderService
     public async Task SaveInvoiceEntriesAsync(int poId, List<POInvoiceEntry> entries, string userCode)
     {
         // Ensure table exists
-        await _db.ExecuteAsync(@"
+        await _db.ExecuteNonQueryAsync(@"
             IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'PurchaseOrderInvoices')
             CREATE TABLE PurchaseOrderInvoices (
                 PurchaseOrderInvoiceId INT IDENTITY(1,1) PRIMARY KEY,
@@ -329,7 +437,7 @@ public class PurchaseOrderService
             )");
 
         // Delete existing and re-insert (matches legacy _Proc behaviour)
-        await _db.ExecuteAsync("DELETE FROM PurchaseOrderInvoices WHERE POid = @Id", new() { ["Id"] = poId });
+        await _db.ExecuteNonQueryAsync("DELETE FROM PurchaseOrderInvoices WHERE POid = @Id", new() { ["Id"] = poId });
 
         foreach (var e in entries)
         {

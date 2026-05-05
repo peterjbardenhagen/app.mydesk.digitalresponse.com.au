@@ -1,0 +1,87 @@
+@using MyDesk.Shared.Models
+
+<MudDialog>
+    <DialogContent>
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mb-3">
+            <MudText Typo="Typo.subtitle2">This looks like a duplicate</MudText>
+            <MudText Typo="Typo.body2">
+                We found @Existing.Count existing expense@(Existing.Count == 1 ? "" : "s")
+                with a very similar supplier, date and amount. Please confirm before saving.
+            </MudText>
+        </MudAlert>
+
+        @if (Candidate is not null)
+        {
+            <MudText Typo="Typo.overline" Class="mb-1" Style="opacity:.6;">You are about to save</MudText>
+            @RenderRow(Candidate, isCandidate: true)
+        }
+
+        <MudDivider Class="my-3" />
+        <MudText Typo="Typo.overline" Class="mb-2" Style="opacity:.6;">Existing matches</MudText>
+        @foreach (var ex in Existing)
+        {
+            @RenderRow(ex, isCandidate: false)
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => MudDialog?.Close(DialogResult.Ok(DuplicateAction.Cancel)))">
+            Cancel
+        </MudButton>
+        <MudButton Color="Color.Secondary" Variant="Variant.Outlined"
+                   OnClick="@(() => MudDialog?.Close(DialogResult.Ok(DuplicateAction.OpenExisting)))"
+                   Disabled="@(Existing.Count != 1)">
+            Open existing
+        </MudButton>
+        <MudButton Color="Color.Warning" Variant="Variant.Filled"
+                   StartIcon="@Icons.Material.Filled.ContentCopy"
+                   OnClick="@(() => MudDialog?.Close(DialogResult.Ok(DuplicateAction.SaveAnyway)))">
+            Save anyway
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudDialogInstance? MudDialog { get; set; }
+
+    /// <summary>The expense the user is trying to create / upload.</summary>
+    [Parameter] public Expense? Candidate { get; set; }
+
+    /// <summary>Existing rows that look like duplicates, ranked by best match first.</summary>
+    [Parameter, EditorRequired] public List<Expense> Existing { get; set; } = new();
+
+    public enum DuplicateAction
+    {
+        Cancel,
+        SaveAnyway,
+        OpenExisting,
+    }
+
+    private static string FormatAmount(Expense e) =>
+        e.Currency == "AUD"
+            ? e.Amount.ToString("C")
+            : $"{e.Amount.ToString("N2")} {e.Currency} ({e.AmountAud:C} AUD)";
+
+    private RenderFragment RenderRow(Expense e, bool isCandidate) => @<MudPaper Elevation="0" Class="pa-3 mb-2"
+        Style="@($"border:1px solid {(isCandidate ? "var(--mud-palette-primary)" : "var(--mud-palette-lines-default)")}; border-radius:10px; background:{(isCandidate ? "var(--mud-palette-primary-lighten)" : "transparent")};")">
+        <div class="d-flex justify-space-between align-center">
+            <div>
+                <MudText Typo="Typo.subtitle2">@(string.IsNullOrWhiteSpace(e.SupplierName) ? "(no supplier)" : e.SupplierName)</MudText>
+                <MudText Typo="Typo.caption" Style="opacity:.7;">
+                    @e.Date.ToString("d MMM yyyy") · @e.Category · @e.Status
+                    @if (e.ExpenseId > 0) { <span> · #@e.ExpenseId</span> }
+                </MudText>
+                @if (!string.IsNullOrWhiteSpace(e.Description))
+                {
+                    <MudText Typo="Typo.body2" Class="mt-1">@e.Description</MudText>
+                }
+            </div>
+            <div class="text-right">
+                <MudText Typo="Typo.h6">@FormatAmount(e)</MudText>
+                @if (e.HasGst && e.Gst > 0)
+                {
+                    <MudText Typo="Typo.caption" Style="opacity:.6;">GST @e.Gst.ToString("C")</MudText>
+                }
+            </div>
+        </div>
+    </MudPaper>;
+}

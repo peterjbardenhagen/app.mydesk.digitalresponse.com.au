@@ -4,6 +4,7 @@
 @inject NavigationManager Nav
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
+@inject IJSRuntime JS
 
 <PageTitle>Customer Data Platform - DR MyDesk</PageTitle>
 
@@ -240,8 +241,29 @@ else
 
     private async Task ExportCsv()
     {
-        // TODO: Implement CSV export
-        Snackbar.Add("Export feature coming soon", Severity.Info);
+        if (_cdp == null) return;
+
+        var csvLines = new List<string>
+        {
+            "Rank,Company,Segment,Score,YTD Revenue,Growth %,Days Since Last Activity,Rating"
+        };
+
+        var ranked = _cdp.All.OrderBy(c => c.Rank).ToList();
+        foreach (var c in ranked)
+        {
+            csvLines.Add($"{c.Rank},\"{c.CompanyName.Replace("\"", "\"\"")}\",{c.Segment},{c.TotalScore},{c.YtdRevenue:N0},{c.GrowthPercent},{c.DaysSinceLastActivity},\"{c.Rating?.Replace("\"", "\"\"")}\"");
+        }
+
+        var csvContent = string.Join("\n", csvLines);
+        var base64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(csvContent));
+
+        await JS.InvokeVoidAsync("eval", $@"
+            const a = document.createElement('a');
+            a.href = 'data:text/csv;base64,{base64}';
+            a.download = 'customer-data-platform.csv';
+            a.click();
+        ");
+        Snackbar.Add($"Exported {ranked.Count} customers to CSV", Severity.Success);
     }
 }
 

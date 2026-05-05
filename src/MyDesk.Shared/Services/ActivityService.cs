@@ -24,7 +24,7 @@ public class ActivityService
     {
         try
         {
-            await _db.ExecuteAsync(@"
+            await _db.ExecuteNonQueryAsync(@"
                 IF OBJECT_ID(N'UserActivity', N'U') IS NULL
                 BEGIN
                     CREATE TABLE UserActivity (
@@ -54,7 +54,7 @@ public class ActivityService
         try
         {
             // Log to new EntityAudit table (Unified Audit)
-            await _db.ExecuteAsync(
+            await _db.ExecuteNonQueryAsync(
                 @"INSERT INTO EntityAudit (EntityType, EntityId, Code, Action, Details, Timestamp)
                   VALUES (@Type, @EId, @Code, @Action, @Ref, GETDATE())",
                 new()
@@ -67,7 +67,7 @@ public class ActivityService
                 });
 
             // Keep legacy UserActivity for now to avoid breaking existing queries
-            await _db.ExecuteAsync(
+            await _db.ExecuteNonQueryAsync(
                 @"INSERT INTO UserActivity (UserCode, EntityType, EntityId, EntityRef, Action, ActivityDate)
                   VALUES (@Code, @Type, @EId, @Ref, @Action, GETDATE())",
                 new()

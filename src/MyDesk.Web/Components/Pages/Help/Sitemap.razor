@@ -1,0 +1,192 @@
+@page "/sitemap"
+@attribute [Authorize]
+@inject PlatformSettingsService PlatformSettings
+
+<PageTitle>Site Map - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <a href="/help-center">Help Centre</a><span class="sep">/</span>
+            <span>Site Map</span>
+        </div>
+        <h1>Site Map</h1>
+        <p class="tl-subtitle">Every page in @PlatformSettings.GetBrandingName(), grouped by area. Use it as a quick reference or to confirm a feature exists.</p>
+    </div>
+    <div>
+        <MudTextField T="string" @bind-Value="_filter" Placeholder="Filter pages…" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Search" Immediate="true" Margin="Margin.Dense" Style="width: 280px;" />
+    </div>
+</div>
+
+<MudGrid Spacing="3" Class="mt-2">
+    @foreach (var section in _sections)
+    {
+        var visible = section.Pages.Where(MatchesFilter).ToList();
+        if (visible.Count == 0) { continue; }
+
+        <MudItem xs="12" md="6" lg="4">
+            <MudPaper Class="pa-5 rounded-xl h-100" Elevation="0" Style="border:1px solid var(--gray-200);">
+                <div class="d-flex align-center gap-2 mb-3">
+                    <MudIcon Icon="@section.Icon" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6" Class="font-weight-bold">@section.Title</MudText>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="ml-auto">@visible.Count</MudChip>
+                </div>
+                <div class="d-flex flex-column gap-1">
+                    @foreach (var p in visible)
+                    {
+                        <MudLink Href="@p.Path" Underline="Underline.Hover" Class="d-flex align-center gap-2 sitemap-link">
+                            <MudIcon Icon="@(string.IsNullOrEmpty(p.Icon) ? Icons.Material.Rounded.ChevronRight : p.Icon)" Size="Size.Small" Color="Color.Default" />
+                            <span><strong>@p.Label</strong> <span class="mud-text-secondary" style="font-size:.85em;">@p.Path</span></span>
+                        </MudLink>
+                    }
+                </div>
+            </MudPaper>
+        </MudItem>
+    }
+</MudGrid>
+
+<style>
+    .sitemap-link { padding: 4px 6px; border-radius: 6px; }
+    .sitemap-link:hover { background: var(--gray-50); }
+    .h-100 { height: 100%; }
+</style>
+
+@code {
+    private string _filter = "";
+    private record Page(string Label, string Path, string Icon = "");
+    private record Section(string Title, string Icon, List<Page> Pages);
+
+    private bool MatchesFilter(Page p) =>
+        string.IsNullOrWhiteSpace(_filter)
+        || p.Label.Contains(_filter, StringComparison.OrdinalIgnoreCase)
+        || p.Path.Contains(_filter, StringComparison.OrdinalIgnoreCase);
+
+    private readonly List<Section> _sections = new()
+    {
+        new("Quick Access", Icons.Material.Rounded.Bolt, new()
+        {
+            new("Dashboard",         "/",            Icons.Material.Rounded.Dashboard),
+            new("Latest Activity",   "/activity",    Icons.Material.Rounded.History),
+            new("Favourites",        "/favourites",  Icons.Material.Rounded.Star),
+            new("Files Library",     "/files",       Icons.Material.Rounded.Folder),
+            new("Calendar",          "/calendar",    Icons.Material.Rounded.CalendarMonth),
+            new("Search",            "/search",      Icons.Material.Rounded.Search),
+            new("Profile",           "/profile",     Icons.Material.Rounded.AccountCircle),
+            new("Ask AI",            "/ask-ai",      Icons.Material.Rounded.AutoAwesome),
+        }),
+        new("CRM", Icons.Material.Rounded.People, new()
+        {
+            new("Contacts",          "/contacts",    Icons.Material.Rounded.Person),
+            new("Companies",         "/companies",   Icons.Material.Rounded.Business),
+            new("Sales Projects",    "/sales-projects", Icons.Material.Rounded.Assignment),
+            new("Call Reports",      "/call-reports", Icons.Material.Rounded.PhoneCallback),
+            new("DRM (Customers)",   "/drm",         Icons.Material.Rounded.Diversity3),
+        }),
+        new("Sales", Icons.Material.Rounded.ReceiptLong, new()
+        {
+            new("Quotes",            "/quotes",                 Icons.Material.Rounded.Description),
+            new("Copy Supplier Quote","/quotes/copy-supplier",  Icons.Material.Rounded.ContentCopy),
+            new("Invoices",          "/invoices",               Icons.Material.Rounded.Receipt),
+            new("MYOB Export",       "/invoices/myob-export",   Icons.Material.Rounded.CloudUpload),
+            new("Despatch",          "/despatch",               Icons.Material.Rounded.LocalShipping),
+        }),
+        new("Purchasing", Icons.Material.Rounded.ShoppingCart, new()
+        {
+            new("Purchase Orders",   "/purchase-orders", Icons.Material.Rounded.ShoppingBasket),
+            new("Expenses",          "/expenses",        Icons.Material.Rounded.Payment),
+            new("RFQ",               "/rfq",             Icons.Material.Rounded.Quiz),
+        }),
+        new("Operations", Icons.Material.Rounded.Construction, new()
+        {
+            new("Job Orders",        "/job-orders",   Icons.Material.Rounded.Work),
+            new("Products",          "/products",     Icons.Material.Rounded.Category),
+            new("Project Management","/project-management", Icons.Material.Rounded.AccountTree),
+            new("Timesheets",        "/timesheets",   Icons.Material.Rounded.AccessTime),
+            new("Staff Whereabouts", "/staff-whereabouts", Icons.Material.Rounded.LocationOn),
+            new("Subscriptions",     "/subscriptions",Icons.Material.Rounded.Subscriptions),
+        }),
+        new("Accounts", Icons.Material.Rounded.AccountBalance, new()
+        {
+            new("Accounts Hub",      "/accounts",                Icons.Material.Rounded.AccountBalanceWallet),
+            new("Reconciliation",    "/reconciliation",          Icons.Material.Rounded.Sync),
+            new("MYOB Sync",         "/reconciliation/sync",     Icons.Material.Rounded.SwapHoriz),
+            new("Aged Payables",     "/aged-payables",           Icons.Material.Rounded.Payments),
+            new("Accounting",        "/accounting",              Icons.Material.Rounded.Calculate),
+        }),
+        new("Insights", Icons.Material.Rounded.Insights, new()
+        {
+            new("Reports",           "/reports",     Icons.Material.Rounded.BarChart),
+            new("Noticeboard",       "/noticeboard", Icons.Material.Rounded.Campaign),
+        }),
+        new("Marketing", Icons.Material.Rounded.Campaign, new()
+        {
+            new("Marketing Hub",      "/marketing",             Icons.Material.Rounded.Brush),
+            new("Brand Assets",       "/marketing/brand-assets",Icons.Material.Rounded.Palette),
+            new("Email Campaigns",    "/marketing/campaigns",   Icons.Material.Rounded.Email),
+            new("Marketing Strategy", "/marketing/strategy",    Icons.Material.Rounded.LightMode),
+            new("Marketing Assets",   "/marketing/assets",      Icons.Material.Rounded.Collections),
+            new("Marketing AI",       "/marketing/ai",          Icons.Material.Rounded.AutoAwesome),
+            new("Customer Data Platform","/marketing/customers",Icons.Material.Rounded.PersonSearch),
+            new("Supplier Data Platform","/marketing/suppliers",Icons.Material.Rounded.Storefront),
+        }),
+        new("Portals", Icons.Material.Rounded.OpenInBrowser, new()
+        {
+            new("Customer Portal",     "/customer-portal",       Icons.Material.Rounded.Storefront),
+            new("Customer Files",      "/customer-portal/files", Icons.Material.Rounded.Folder),
+            new("Customer Login",      "/customer-login",        Icons.Material.Rounded.Login),
+            new("Supplier Portal",     "/supplier-portal",       Icons.Material.Rounded.LocalShipping),
+            new("Supplier Login",      "/supplier-login",        Icons.Material.Rounded.Login),
+        }),
+        new("Admin – Setup", Icons.Material.Rounded.Settings, new()
+        {
+            new("Setup Home",          "/admin/setup",            Icons.Material.Rounded.Tune),
+            new("Setup Menu",          "/admin/setup-menu",       Icons.Material.Rounded.Menu),
+            new("Platform Admin",      "/admin/platform",         Icons.Material.Rounded.AdminPanelSettings),
+            new("Nav Menu Settings",   "/admin/nav-menu",         Icons.Material.Rounded.MenuOpen),
+            new("Parameters",          "/admin/parameters",       Icons.Material.Rounded.Build),
+            new("Locations",           "/admin/locations",        Icons.Material.Rounded.Place),
+            new("Divisions",           "/admin/divisions",        Icons.Material.Rounded.AccountTree),
+            new("Currencies",          "/admin/currency",         Icons.Material.Rounded.AttachMoney),
+            new("Financial Year",      "/admin/financial-year",   Icons.Material.Rounded.CalendarToday),
+            new("Activity Types",      "/admin/activity-types",   Icons.Material.Rounded.Category),
+            new("Part Codes",          "/admin/part-codes",       Icons.Material.Rounded.Inventory2),
+            new("Brand Assets",        "/admin/brand-assets",     Icons.Material.Rounded.Palette),
+        }),
+        new("Admin – Users & Status", Icons.Material.Rounded.SupervisorAccount, new()
+        {
+            new("Users",                "/admin/users",            Icons.Material.Rounded.People),
+            new("New User",             "/admin/users/new",        Icons.Material.Rounded.PersonAdd),
+            new("User Roles",           "/admin/user-roles",       Icons.Material.Rounded.Badge),
+            new("Quote Status",         "/admin/quote-status",     Icons.Material.Rounded.LabelImportant),
+            new("Invoice Status",       "/admin/invoice-status",   Icons.Material.Rounded.LabelImportant),
+            new("PO Status",            "/admin/po-status",        Icons.Material.Rounded.LabelImportant),
+            new("Job Order Status",     "/admin/job-order-status", Icons.Material.Rounded.LabelImportant),
+        }),
+        new("Admin – Logs", Icons.Material.Rounded.Description, new()
+        {
+            new("Log Viewer",           "/admin/logs",       Icons.Material.Rounded.Description),
+            new("Error Logs",           "/admin/error-logs", Icons.Material.Rounded.BugReport),
+            new("AI Audit Log",         "/admin/ai-audit",   Icons.Material.Rounded.PrivacyTip),
+        }),
+        new("Help & About", Icons.Material.Rounded.Support, new()
+        {
+            new("Help Centre",          "/help-center",     Icons.Material.Rounded.HelpOutline),
+            new("AI User Guide",        "/help/ai-guide",   Icons.Material.Rounded.SmartToy),
+            new("Release Notes",        "/release-notes",   Icons.Material.Rounded.NewReleases),
+            new("Product Roadmap",      "/help/roadmap",    Icons.Material.Rounded.Map),
+            new("Site Map",             "/sitemap",         Icons.Material.Rounded.Schema),
+            new("Privacy Policy",       "/privacy-policy",  Icons.Material.Rounded.Lock),
+            new("Terms & Conditions",   "/terms-and-conditions", Icons.Material.Rounded.Gavel),
+        }),
+        new("System", Icons.Material.Rounded.Hub, new()
+        {
+            new("Integrations",         "/integrations",    Icons.Material.Rounded.Hub),
+            new("Settings",             "/settings",        Icons.Material.Rounded.Settings),
+            new("Login",                "/login",           Icons.Material.Rounded.Login),
+            new("Forgot Password",      "/forgot-password", Icons.Material.Rounded.LockReset),
+            new("Access Denied",        "/access-denied",   Icons.Material.Rounded.Block),
+            new("Error",                "/Error",           Icons.Material.Rounded.ErrorOutline),
+        }),
+    };
+}

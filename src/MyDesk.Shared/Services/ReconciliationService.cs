@@ -52,7 +52,7 @@ public class ReconciliationService
     public async Task<List<AgedPayable>> GetAgedPayablesAsync()
     {
         var sql = @"
-            SELECT c.Company AS SupplierName,
+            SELECT c.CompanyName AS SupplierName,
                    c.SupplierCode,
                    SUM(CASE WHEN DATEDIFF(day, po.PODate, GETDATE()) <= 30 THEN (ISNULL(po.PriceExTotal, 0) + ISNULL(po.GstTotal, 0)) ELSE 0 END) AS CurrentAmount,
                    SUM(CASE WHEN DATEDIFF(day, po.PODate, GETDATE()) BETWEEN 31 AND 60 THEN (ISNULL(po.PriceExTotal, 0) + ISNULL(po.GstTotal, 0)) ELSE 0 END) AS Days30Amount,
@@ -63,7 +63,7 @@ public class ReconciliationService
             LEFT JOIN Companies c ON c.CompanyId = po.SupplierId
             WHERE po.POStatusId IN (2, 3)
               AND (ISNULL(po.PriceExTotal, 0) + ISNULL(po.GstTotal, 0)) > 0
-            GROUP BY c.Company, c.SupplierCode
+            GROUP BY c.CompanyName, c.SupplierCode
             ORDER BY TotalOutstanding DESC";
 
         var dt = await _db.QueryAsync(sql);
@@ -272,7 +272,7 @@ public class ReconciliationService
                 MyobExportUser = '{userCode}'
             WHERE InvoiceId IN ({ids})";
         
-        await _db.ExecuteAsync(sql);
+        await _db.ExecuteNonQueryAsync(sql);
         _logger.LogInformation("Marked {Count} invoices as exported by {User}", invoiceIds.Count, userCode);
     }
 }

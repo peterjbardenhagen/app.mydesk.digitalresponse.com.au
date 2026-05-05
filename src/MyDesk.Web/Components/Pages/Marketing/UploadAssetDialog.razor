@@ -1,0 +1,21 @@
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudAlert Severity="Severity.Info" Class="mb-3">Upload brand assets (logos, fonts, images, style guides).</MudAlert>
+        <MudTextField @bind-Value="_filePath" Label="File Path" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2" Placeholder="Paste file path" />
+        <MudTextField @bind-Value="_category" Label="Category" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mt-2" Placeholder="e.g. Logos, Fonts, Templates" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit" Disabled="@string.IsNullOrEmpty(_filePath)">Upload</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public MudDialogInstance? Dialog { get; set; }
+    private string _filePath = "";
+    private string _category = "";
+    private void Submit() => Dialog?.Close(DialogResult.Ok(new { FilePath = _filePath, Category = _category }));
+    private void Cancel() => Dialog?.Cancel();
+}

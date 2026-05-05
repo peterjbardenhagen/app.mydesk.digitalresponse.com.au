@@ -10,7 +10,9 @@ public enum ReportType
     Invoices,
     Profitability,
     Quotes,
-    PurchaseOrders
+    PurchaseOrders,
+    Expenses,
+    Banking
 }
 
 public enum DateFilter
@@ -63,7 +65,7 @@ public class ReportService
                     CreatedAt DATETIME NOT NULL DEFAULT GETDATE()
                 );
             END";
-        await _db.ExecuteAsync(sql);
+        await _db.ExecuteNonQueryAsync(sql);
     }
 
     public async Task<ReportResult> GenerateReportAsync(ReportType type, DateFilter dateFilter, DateTime? startDate = null, DateTime? endDate = null)
@@ -77,6 +79,8 @@ public class ReportService
             ReportType.Quotes => await GenerateQuotesReportAsync(start, end),
             ReportType.PurchaseOrders => await GeneratePurchaseOrdersReportAsync(start, end),
             ReportType.Profitability => await GenerateProfitabilityReportAsync(start, end),
+            ReportType.Expenses => await GenerateExpensesReportAsync(start, end),
+            ReportType.Banking  => await GenerateBankingReportAsync(start, end),
             _ => throw new ArgumentException($"Unknown report type: {type}")
         };
     }
@@ -292,6 +296,87 @@ public class ReportService
         };
     }
 
+    private async Task<ReportResult> GenerateExpensesReportAsync(DateTime? start, DateTime? end)
+    {
+        var sql = @"
+            SELECT ExpenseId, Date, SupplierName, Description, Category,
+                   ISNULL(Currency,'AUD')   AS Currency,
+                   ISNULL(Amount,0)         AS Amount,
+                   ISNULL(GST,0)            AS GST,
+                   ISNULL(AmountAud,Amount) AS AmountAud,
+                   Status
+            FROM Expenses
+            WHERE 1=1";
+        if (start.HasValue && end.HasValue) sql += " AND Date BETWEEN @Start AND @End";
+        sql += " ORDER BY Date DESC";
+
+        var dt = await _db.QueryAsync(sql, new() { ["Start"] = start, ["End"] = end });
+        return new ReportResult
+        {
+            Title = "Expenses Report",
+            Headers = new() { "ID", "Date", "Supplier", "Description", "Category", "Currency", "Amount", "GST", "AUD", "Status" },
+            Rows = dt.Map(r => new List<string>
+            {
+                r["ExpenseId"]?.ToString() ?? "",
+                r["Date"] == DBNull.Value ? "" : Convert.ToDateTime(r["Date"]).ToString("dd/MM/yyyy"),
+                r["SupplierName"]?.ToString() ?? "",
+                r["Description"]?.ToString() ?? "",
+                r["Category"]?.ToString() ?? "",
+                r["Currency"]?.ToString() ?? "AUD",
+                r["Amount"]    == DBNull.Value ? "$0.00" : Convert.ToDecimal(r["Amount"]).ToString("C"),
+                r["GST"]       == DBNull.Value ? "$0.00" : Convert.ToDecimal(r["GST"]).ToString("C"),
+                r["AmountAud"] == DBNull.Value ? "$0.00" : Convert.ToDecimal(r["AmountAud"]).ToString("C"),
+                r["Status"]?.ToString() ?? ""
+            }).ToList(),
+            // Total in AUD so cross-currency expenses sum sensibly.
+            TotalAmount = dt.Rows.Count > 0
+                ? dt.Map(r => r["AmountAud"] == DBNull.Value ? 0m : Convert.ToDecimal(r["AmountAud"])).Sum()
+                : 0,
+            GeneratedAt = DateTime.Now
+        };
+    }
+
+    private async Task<ReportResult> GenerateBankingReportAsync(DateTime? start, DateTime? end)
+    {
+        var sql = @"
+            SELECT bt.BankTransactionId, bt.TransactionDate, bs.AccountName,
+                   bt.Description, bt.Reference,
+                   ISNULL(bt.Debit,0)  AS Debit,
+                   ISNULL(bt.Credit,0) AS Credit,
+                   ISNULL(bt.Balance,0) AS Balance,
+                   bt.Reconciled,
+                   ISNULL(bt.MatchedEntityType,'') + CASE WHEN bt.MatchedEntityId IS NULL THEN '' ELSE ' #' + CAST(bt.MatchedEntityId AS NVARCHAR(20)) END AS Match
+            FROM BankTransactions bt
+            INNER JOIN BankStatements bs ON bs.BankStatementId = bt.BankStatementId
+            WHERE 1=1";
+        if (start.HasValue && end.HasValue) sql += " AND bt.TransactionDate BETWEEN @Start AND @End";
+        sql += " ORDER BY bt.TransactionDate DESC, bt.BankTransactionId DESC";
+
+        var dt = await _db.QueryAsync(sql, new() { ["Start"] = start, ["End"] = end });
+        return new ReportResult
+        {
+            Title = "Banking Report",
+            Headers = new() { "ID", "Date", "Account", "Description", "Reference", "Debit", "Credit", "Balance", "Reconciled", "Match" },
+            Rows = dt.Map(r => new List<string>
+            {
+                r["BankTransactionId"]?.ToString() ?? "",
+                r["TransactionDate"] == DBNull.Value ? "" : Convert.ToDateTime(r["TransactionDate"]).ToString("dd/MM/yyyy"),
+                r["AccountName"]?.ToString() ?? "",
+                r["Description"]?.ToString() ?? "",
+                r["Reference"]?.ToString() ?? "",
+                r["Debit"]   == DBNull.Value ? "" : (Convert.ToDecimal(r["Debit"])  > 0 ? Convert.ToDecimal(r["Debit"]).ToString("C")  : ""),
+                r["Credit"]  == DBNull.Value ? "" : (Convert.ToDecimal(r["Credit"]) > 0 ? Convert.ToDecimal(r["Credit"]).ToString("C") : ""),
+                r["Balance"] == DBNull.Value ? "" : Convert.ToDecimal(r["Balance"]).ToString("C"),
+                Convert.ToBoolean(r["Reconciled"]) ? "Yes" : "No",
+                r["Match"]?.ToString() ?? ""
+            }).ToList(),
+            TotalAmount = dt.Rows.Count > 0
+                ? dt.Map(r => (Convert.ToDecimal(r["Credit"]) - Convert.ToDecimal(r["Debit"]))).Sum()
+                : 0,
+            GeneratedAt = DateTime.Now
+        };
+    }
+
     public async Task<List<ReportDefinition>> GetSavedReportsAsync()
     {
         var dt = await _db.QueryAsync("SELECT * FROM SavedReports ORDER BY CreatedAt DESC");
@@ -327,7 +412,7 @@ public class ReportService
 
     public async Task DeleteReportAsync(int reportId)
     {
-        await _db.ExecuteAsync("DELETE FROM SavedReports WHERE ReportId = @Id", new() { ["Id"] = reportId });
+        await _db.ExecuteNonQueryAsync("DELETE FROM SavedReports WHERE ReportId = @Id", new() { ["Id"] = reportId });
     }
 
     // ============================================================================

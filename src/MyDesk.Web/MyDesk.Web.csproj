@@ -18,7 +18,7 @@
     <RetainVMGarbageCollection>true</RetainVMGarbageCollection>
     
     <!-- Warning suppression for MudBlazor analyzers and other non-critical warnings -->
-    <NoWarn>$(NoWarn);MUD0002;RZ10012;CS8618;CS8619;CS8602;CS8604;CS0414</NoWarn>
+    <NoWarn>$(NoWarn);MUD0002;RZ10012;CS8618;CS8619;CS8602;CS8604;CS0414;CS8669;CS0169</NoWarn>
   </PropertyGroup>
 
   <!-- Production publish settings -->
@@ -33,14 +33,28 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.1" />
-    <PackageReference Include="Azure.Identity" Version="1.11.4" />
+    <!-- GraphQL (HotChocolate). HotChocolate.Path collides with System.IO.Path; aliased in GlobalUsings.cs. -->
+    <!-- 14.3.1 patches GHSA-qr3m-xw4c-jqw3 (HotChocolate.Language ReDoS vulnerability). -->
+    <PackageReference Include="HotChocolate.AspNetCore" Version="14.3.1" />
+    <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="14.3.1" />
+    <PackageReference Include="HotChocolate.Data.EntityFramework" Version="14.3.1" />
+    <!-- Pin Newtonsoft.Json to a safe version — overrides vulnerable 11.0.1 pulled in transitively. -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <!-- REST API + OpenAPI (Swashbuckle 6.x — 7.x switches to preview Microsoft.OpenApi 2.0). -->
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="7.3.2" />
+    <!-- Hangfire (background + recurring jobs, dashboard at /hangfire). Cronos for cron parsing. -->
+    <PackageReference Include="Hangfire.AspNetCore" Version="1.8.23" />
+    <PackageReference Include="Hangfire.SqlServer" Version="1.8.23" />
+    <PackageReference Include="Cronos" Version="0.13.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.1" />
+    <PackageReference Include="Azure.Identity" Version="1.21.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.7" />
     <PackageReference Include="MudBlazor" Version="7.15.0" />
     <PackageReference Include="MudBlazor.Markdown" Version="7.8.0" />
-    <PackageReference Include="Serilog.AspNetCore" Version="8.0.3" />
-    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
-    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
-    <PackageReference Include="Serilog.Settings.Configuration" Version="8.0.4" />
+    <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageReference Include="Serilog.Settings.Configuration" Version="9.0.0" />
     <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
     <PackageReference Include="Serilog.Enrichers.Thread" Version="4.0.0" />
   </ItemGroup>

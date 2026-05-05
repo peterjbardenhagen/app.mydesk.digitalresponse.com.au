@@ -1,0 +1,142 @@
+@page "/sales-projects"
+@attribute [Authorize]
+@inject SalesProjectService Svc
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Sales Projects - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">MyDesk</a><span class="sep">/</span>
+            <span>Sales Projects</span>
+        </div>
+        <h1>Sales Projects</h1>
+        <p class="tl-subtitle">Pipeline view of opportunities through to win/loss.</p>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Rounded.Add" Href="/sales-projects/edit">New Project</MudButton>
+</div>
+
+@if (_stats != null)
+{
+    <MudGrid Class="mb-4">
+        <MudItem xs="6" sm="3">
+            <MudPaper Class="pa-3 text-center" Elevation="1">
+                <MudText Typo="Typo.caption" Style="color:var(--gray-500);">Won (count)</MudText>
+                <MudText Typo="Typo.h5" Style="color:var(--tl-success);">@_stats.WonCount</MudText>
+                <MudText Typo="Typo.caption">@_stats.WonValue.ToString("C0")</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudPaper Class="pa-3 text-center" Elevation="1">
+                <MudText Typo="Typo.caption" Style="color:var(--gray-500);">Lost (count)</MudText>
+                <MudText Typo="Typo.h5" Style="color:var(--tl-error);">@_stats.LostCount</MudText>
+                <MudText Typo="Typo.caption">@_stats.LostValue.ToString("C0")</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudPaper Class="pa-3 text-center" Elevation="1">
+                <MudText Typo="Typo.caption" Style="color:var(--gray-500);">Win rate</MudText>
+                <MudText Typo="Typo.h5">@_stats.WinRate.ToString("N0")%</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudPaper Class="pa-3 text-center" Elevation="1">
+                <MudText Typo="Typo.caption" Style="color:var(--gray-500);">Open pipeline</MudText>
+                <MudText Typo="Typo.h5">@_openValue.ToString("C0")</MudText>
+                <MudText Typo="Typo.caption">@_openCount projects</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Class="pa-4 mb-4" Elevation="1">
+        <MudText Typo="Typo.subtitle1" Class="mb-3">Pipeline by stage</MudText>
+        <MudGrid>
+            @foreach (var stage in new[] { SalesStage.Lead, SalesStage.Qualified, SalesStage.Proposal, SalesStage.Negotiation, SalesStage.Won, SalesStage.Lost })
+            {
+                var inStage = _items.Where(p => p.Stage == stage).ToList();
+                <MudItem xs="6" md="2">
+                    <MudPaper Class="pa-3" Elevation="0" Style="@($"background:{StageColor(stage)};color:white;border-radius:8px;")">
+                        <MudText Typo="Typo.caption">@stage</MudText>
+                        <MudText Typo="Typo.h6">@inStage.Count</MudText>
+                        <MudText Typo="Typo.caption">@inStage.Sum(p => p.EstimatedValue).ToString("C0")</MudText>
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudPaper>
+}
+
+<MudPaper Class="pa-0" Elevation="1">
+    <MudDataGrid T="SalesProject" Items="@_items" Dense="true" Hover="true" Elevation="0" SortMode="SortMode.Multiple" Filterable="false">
+        <Columns>
+            <PropertyColumn Property="x => x.ProjectName" Title="Project" CellStyle="font-weight:600;" />
+            <PropertyColumn Property="x => x.Customer" Title="Customer" />
+            <PropertyColumn Property="x => x.EstimatedValue" Title="Value" Format="C0" CellStyle="text-align:right;width:120px;" />
+            <PropertyColumn Property="x => x.ProbabilityPercent" Title="%" CellStyle="width:70px;text-align:right;" />
+            <PropertyColumn Property="x => x.WeightedValue" Title="Weighted" Format="C0" CellStyle="text-align:right;width:120px;" />
+            <TemplateColumn Title="Stage" CellStyle="width:130px;">
+                <CellTemplate><span class="tl-badge @StageTone(context.Item.Stage)">@context.Item.Stage</span></CellTemplate>
+            </TemplateColumn>
+            <PropertyColumn Property="x => x.ExpectedCloseDate" Title="Close" Format="dd/MM/yy" CellStyle="width:100px;" />
+            <PropertyColumn Property="x => x.OwnerName" Title="Owner" CellStyle="width:120px;" />
+            <TemplateColumn Title="" CellStyle="width:140px;" Sortable="false">
+                <CellTemplate>
+                    <MudIconButton Icon="@Icons.Material.Rounded.Visibility" Size="Size.Small" Color="Color.Info" Href="@($"/sales-projects/view/{context.Item.Id}")" title="View" />
+                    <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" Color="Color.Primary" Href="@($"/sales-projects/edit/{context.Item.Id}")" title="Edit" />
+                    <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteAsync(context.Item))" title="Delete" />
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <PagerContent><MudDataGridPager T="SalesProject" /></PagerContent>
+    </MudDataGrid>
+</MudPaper>
+
+@code {
+    private List<SalesProject> _items = new();
+    private WinLossStats? _stats;
+    private decimal _openValue;
+    private int _openCount;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _items = await Svc.GetAllAsync();
+        _stats = await Svc.GetWinLossStatsAsync();
+        var open = _items.Where(p => !p.IsClosed).ToList();
+        _openValue = open.Sum(p => p.EstimatedValue);
+        _openCount = open.Count;
+    }
+
+    private async Task DeleteAsync(SalesProject p)
+    {
+        await Svc.DeleteAsync(p.Id);
+        Snackbar.Add($"Project '{p.ProjectName}' deleted", Severity.Info);
+        await LoadAsync();
+    }
+
+    private static string StageTone(SalesStage s) => s switch
+    {
+        SalesStage.Lead        => "info",
+        SalesStage.Qualified   => "info",
+        SalesStage.Proposal    => "warning",
+        SalesStage.Negotiation => "warning",
+        SalesStage.Won         => "success",
+        SalesStage.Lost        => "error",
+        _                      => "info"
+    };
+
+    private static string StageColor(SalesStage s) => s switch
+    {
+        SalesStage.Lead        => "#94a3b8",
+        SalesStage.Qualified   => "#60a5fa",
+        SalesStage.Proposal    => "#f59e0b",
+        SalesStage.Negotiation => "#f97316",
+        SalesStage.Won         => "#10b981",
+        SalesStage.Lost        => "#ef4444",
+        _                      => "#94a3b8"
+    };
+}

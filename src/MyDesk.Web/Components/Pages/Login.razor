@@ -3,6 +3,7 @@
 @attribute [AllowAnonymous]
 @inject PlatformSettingsService PlatformSettings
 @inject IJSRuntime JS
+@inject IHttpContextAccessor HttpContextAccessor
 
 <PageTitle>Login - @PlatformSettings.GetBrandingName()</PageTitle>
 
@@ -12,7 +13,7 @@
         <div class="tl-login-hero-inner">
             <div class="tl-login-hero-brand">
                 <a href="@PlatformSettings.Current.CompanyWebsite" target="_blank" rel="noreferrer">
-                    <img src="@PlatformSettings.Current.LoginLogoUrl" alt="@PlatformSettings.Current.PlatformName" class="hero-logo" />
+                    <img src="@PlatformSettings.Current.LoginLogoUrl" alt="@PlatformSettings.Current.PlatformName" class="hero-logo" onerror="this.onerror=null;this.src='/images/mydesk-logo-white-text.svg';" />
                 </a>
             </div>
 
@@ -68,7 +69,7 @@
                 </div>
                 <div class="tl-form-header">
                     <div class="tl-mark-container">
-                        <img src="@PlatformSettings.Current.LoginMarkUrl" alt="" class="tl-form-mark" />
+                        <img src="@PlatformSettings.Current.LoginMarkUrl" alt="" class="tl-form-mark" onerror="this.onerror=null;this.src='/images/techlight-mark.svg';" />
                     </div>
                     <h1>@PlatformSettings.Current.LoginHeading</h1>
                     <p class="sub-text">@PlatformSettings.Current.LoginSubheading</p>
@@ -311,6 +312,30 @@
     /* MudBlazor Adjustment */
     .mud-input-outlined-border { border-width: 1.5px !important; }
     .mud-input-control { margin-top: 0 !important; margin-bottom: 0 !important; }
+
+    /* ── Dark Mode ─────────────────────────────────────────── */
+    body.mud-dark-mode .tl-login-root { background: linear-gradient(135deg, #0a0a0a 0%, #111827 100%); }
+
+    body.mud-dark-mode .tl-login-form-area { background: #1e1e1e; color: #e0e0e0; }
+
+    body.mud-dark-mode .tl-form-card { background: #1e1e1e; border-color: #334155; }
+
+    body.mud-dark-mode .tl-form-header h1 { color: #f1f5f9; }
+    body.mud-dark-mode .sub-text { color: #94a3b8; }
+    body.mud-dark-mode .field-wrap label { color: #cbd5e1; }
+    body.mud-dark-mode .tl-form-footer { color: #94a3b8; border-top-color: #334155; }
+    body.mud-dark-mode .mud-input-outlined .mud-input { color: #e0e0e0; }
+
+    body.mud-dark-mode .mud-input-outlined-border { border-color: #475569 !important; }
+    body.mud-dark-mode .mud-input-outlined:hover .mud-input-outlined-border { border-color: #94a3b8 !important; }
+    body.mud-dark-mode .mud-input-label { color: #94a3b8 !important; }
+    body.mud-dark-mode .mud-input-adornment .mud-icon-root { color: var(--tl-primary) !important; }
+    body.mud-dark-mode .mud-checkbox .mud-button-root { color: #94a3b8 !important; }
+    body.mud-dark-mode .mud-text { color: #94a3b8 !important; }
+    body.mud-dark-mode .mud-divider { border-color: #334155 !important; }
+    body.mud-dark-mode .mud-icon-button { color: #94a3b8 !important; }
+    body.mud-dark-mode .mud-icon-button:hover { background: rgba(255,255,255,0.05) !important; color: #f1f5f9 !important; }
+    body.mud-dark-mode .portal-links-section .mud-typography { color: #64748b !important; }
 </style>
 
 @code {
@@ -327,14 +352,42 @@
     private async Task ToggleDarkMode()
     {
         _isDarkMode = !_isDarkMode;
-        await JS.InvokeVoidAsync("eval", _isDarkMode 
-            ? "document.body.classList.add('dark-mode')" 
-            : "document.body.classList.remove('dark-mode')");
+        if (_isDarkMode)
+        {
+            await JS.InvokeVoidAsync("eval", "document.body.classList.add('mud-dark-mode'); localStorage.setItem('mydesk_dark_mode','1');");
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("eval", "document.body.classList.remove('mud-dark-mode'); localStorage.removeItem('mydesk_dark_mode');");
+        }
     }
 
     protected override async Task OnInitializedAsync()
     {
+        // Resolve tenant from request host so the correct branding shows on the login page.
+        // techlight.digitalresponse.com.au + localhost -> Techlight
+        // portal.digitalresponse.com.au              -> Digital Response
+        var host = HttpContextAccessor.HttpContext?.Request?.Host.Host;
+        await PlatformSettings.LoadForHostAsync(host);
+
         await LoadSavedCredentialsAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var darkPref = await JS.InvokeAsync<string?>("localStorage.getItem", "mydesk_dark_mode");
+                if (darkPref == "1")
+                {
+                    await JS.InvokeVoidAsync("eval", "document.body.classList.add('mud-dark-mode');");
+                    StateHasChanged();
+                }
+            }
+            catch { /* localStorage may not be available during pre-render */ }
+        }
     }
 
     private async Task LoadSavedCredentialsAsync()

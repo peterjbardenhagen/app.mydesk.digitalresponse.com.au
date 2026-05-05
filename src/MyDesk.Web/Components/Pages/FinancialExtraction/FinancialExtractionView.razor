@@ -1,0 +1,291 @@
+@page "/financial-extraction/{DocumentId:guid}"
+@attribute [Authorize]
+@inject FinancialExtractionService FinancialService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Review Document - Financial Extraction - MyDesk</PageTitle>
+
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+}
+else if (_meta == null)
+{
+    <MudPaper Class="p-8 text-center" Elevation="0">
+        <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Large" Color="Color.Error" Class="mb-4" />
+        <h3 class="text-slate-600 mb-2">Document not found</h3>
+        <MudButton href="/financial-extraction" Variant="Variant.Filled" Color="Color.Primary">
+            Back to List
+        </MudButton>
+    </MudPaper>
+}
+else
+{
+    <div class="tl-page-header">
+        <div>
+            <div class="tl-breadcrumb">
+                <a href="/">MyDesk</a><span class="sep">/</span>
+                <a href="/financial-extraction">Financial Extraction</a><span class="sep">/</span>
+                <span>Review</span>
+            </div>
+            <h1>Review Extracted Data</h1>
+            <p class="text-slate-500 text-sm mt-1">
+                @_docTypeName from @_meta.SupplierName
+                — Confidence: @(_doc.ConfidenceScore.ToString("P0"))
+            </p>
+        </div>
+        <div class="flex gap-2">
+            @if (_doc.Status != 1)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="MarkVerifiedAsync" Disabled="@_saving">
+                    Mark Verified
+                </MudButton>
+            }
+            <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="@(() => Nav.NavigateTo("/financial-extraction"))">
+                Back to List
+            </MudButton>
+        </div>
+    </div>
+
+    @if (_showWarning)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-4" OnClose="@(() => _showWarning = false)">
+            @_warningMessage
+        </MudAlert>
+    }
+
+    <MudPaper Elevation="0" Class="p-6 mb-6">
+        <h3 class="text-lg font-semibold mb-4">Document Details</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <MudTextField @bind-Value="@_meta.SupplierName" Label="Supplier Name" Variant="Variant.Outlined" />
+            <MudTextField @bind-Value="@_meta.SupplierAbn" Label="ABN" Variant="Variant.Outlined" />
+            <MudTextField @bind-Value="@_meta.ReferenceNumber" Label="Reference" Variant="Variant.Outlined" />
+            <MudTextField Value="@_docTypeName" Label="Document Type" Disabled="true" Variant="Variant.Outlined" />
+            <MudTextField Value="@_docDateFormatted" Label="Date" Disabled="true" Variant="Variant.Outlined" />
+            <MudTextField Value="@_extractionMethod" Label="Extraction Method" Disabled="true" Variant="Variant.Outlined" />
+        </div>
+    </MudPaper>
+
+    <MudPaper Elevation="0" Class="p-6 mb-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">Line Items</h3>
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="AddLineItem" StartIcon="@Icons.Material.Filled.Add">
+                Add Row
+            </MudButton>
+        </div>
+
+        <MudTable Items="@_items" Hover="true" Class="compact-table">
+            <HeaderContent>
+                <MudTh>Description</MudTh>
+                <MudTh>Quantity</MudTh>
+                <MudTh>Unit Price</MudTh>
+                <MudTh>Line Total</MudTh>
+                <MudTh>Product Code</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    <MudTextField @bind-Value="@context.Description" Variant="Variant.Outlined" Size="Size.Small" />
+                </MudTd>
+                <MudTd>
+                    <MudNumericField @bind-Value="@context.Quantity" Variant="Variant.Outlined" Size="Size.Small" />
+                </MudTd>
+                <MudTd>
+                    <MudNumericField @bind-Value="@context.UnitPrice" Variant="Variant.Outlined" Size="Size.Small" />
+                </MudTd>
+                <MudTd>
+                    <MudTextField Value="@context.LineTotal.ToString("C")" Disabled="true" Variant="Variant.Outlined" Size="Size.Small" />
+                </MudTd>
+                <MudTd>
+                    <MudTextField @bind-Value="@context.ProductCode" Variant="Variant.Outlined" Size="Size.Small" />
+                </MudTd>
+                <MudTd>
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                 OnClick="@(() => RemoveLineItem(context))" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+
+    <MudPaper Elevation="0" Class="p-6 mb-6">
+        <h3 class="text-lg font-semibold mb-4">Totals</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <MudNumericField @bind-Value="@_meta.Subtotal" Label="Subtotal" Variant="Variant.Outlined"
+                             Format="C" />
+            <MudNumericField @bind-Value="@_meta.GstAmount" Label="GST" Variant="Variant.Outlined"
+                             Format="C" />
+            <MudNumericField Value="@_meta.TotalAmount.ToString("C")" Label="Total" Variant="Variant.Outlined"
+                             Format="C" Disabled="true" Class="@(_totalMismatch ? "border-amber-500" : "")" />
+        </div>
+        @if (_totalMismatch)
+        {
+            <MudAlert Severity="Severity.Warning" Class="mt-4">
+                Calculated total (Subtotal + GST = @(_calculatedTotal.ToString("C"))) does not match the extracted total.
+            </MudAlert>
+        }
+    </MudPaper>
+
+    <div class="flex gap-3 mb-8">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveChangesAsync" Disabled="@_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Class="mr-2" Size="Size.Small" Indeterminate="true" />
+                <text>Saving&hellip;</text>
+            }
+            else
+            {
+                <text>Save Changes</text>
+            }
+        </MudButton>
+        @if (_doc.Status != 1)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="MarkVerifiedAsync" Disabled="@_saving">
+                Mark Verified
+            </MudButton>
+        }
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="@(() => Nav.NavigateTo("/financial-extraction"))">
+            Cancel
+        </MudButton>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public Guid DocumentId { get; set; }
+
+    private FinancialDocument _doc = new();
+    private FinancialMetadata _meta = new();
+    private List<FinancialLineItem> _items = new();
+    private bool _loading = true;
+    private bool _saving = false;
+    private bool _showWarning = false;
+    private string _warningMessage = "";
+    private bool _totalMismatch = false;
+    private decimal _calculatedTotal = 0m;
+
+    private string _docTypeName => FinancialDocumentTypes.ToString(_doc.DocumentType);
+    private string _docDateFormatted => _meta.DocumentDate?.ToString("d") ?? "";
+    private string _extractionMethod => _doc.ExtractionMethod;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDocument();
+    }
+
+    private async Task LoadDocument()
+    {
+        _loading = true;
+        try
+        {
+            var (doc, meta, items) = await FinancialService.GetDocumentAsync(DocumentId);
+            if (doc == null || meta == null)
+            {
+                Snackbar.Add("Document not found", Severity.Error);
+                return;
+            }
+            _doc = doc;
+            _meta = meta;
+            _items = items;
+            RecalculateTotals();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading document: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void RecalculateRow(FinancialLineItem item)
+    {
+        if (item.Quantity > 0 && item.UnitPrice > 0)
+        {
+            item.LineTotal = item.Quantity * item.UnitPrice;
+        }
+        RecalculateTotals();
+    }
+
+    private void RecalculateTotals()
+    {
+        var itemsTotal = _items.Sum(i => i.LineTotal);
+        _meta.Subtotal = itemsTotal;
+        _calculatedTotal = _meta.Subtotal + _meta.GstAmount;
+        _totalMismatch = Math.Abs(_calculatedTotal - _meta.TotalAmount) > 0.01m;
+
+        if (_totalMismatch)
+        {
+            _showWarning = true;
+            _warningMessage = $"The calculated total ({_calculatedTotal:C}) does not match the amount on the document ({_meta.TotalAmount:C}).";
+        }
+        else
+        {
+            _showWarning = false;
+        }
+
+        StateHasChanged();
+    }
+
+    private void AddLineItem()
+    {
+        _items.Add(new FinancialLineItem
+        {
+            DocumentId = DocumentId,
+            Description = "",
+            Quantity = 1,
+            UnitPrice = 0,
+            LineTotal = 0
+        });
+        StateHasChanged();
+    }
+
+    private void RemoveLineItem(FinancialLineItem item)
+    {
+        _items.Remove(item);
+        RecalculateTotals();
+    }
+
+    private async Task SaveChangesAsync()
+    {
+        _saving = true;
+        try
+        {
+            await FinancialService.UpdateLineItemsAsync(DocumentId, _items);
+            Snackbar.Add("Changes saved successfully!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving changes: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task MarkVerifiedAsync()
+    {
+        _saving = true;
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var userName = user.Identity?.Name ?? "Unknown";
+
+            await FinancialService.UpdateStatusAsync(DocumentId, 1, userName);
+            _doc.Status = 1;
+            Snackbar.Add("Document marked as verified!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

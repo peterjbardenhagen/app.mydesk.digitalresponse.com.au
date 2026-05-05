@@ -1,0 +1,101 @@
+@page "/sales-projects/view/{id:int}"
+@attribute [Authorize]
+@inject SalesProjectService Svc
+@inject NavigationManager Nav
+
+<PageTitle>Sales Project View - MyDesk</PageTitle>
+
+@if (_p == null)
+{
+    <MudPaper Class="pa-6"><MudText>Loading…</MudText></MudPaper>
+}
+else
+{
+    <div class="tl-page-header">
+        <div>
+            <div class="tl-breadcrumb">
+                <a href="/">MyDesk</a><span class="sep">/</span>
+                <a href="/sales-projects">Sales Projects</a><span class="sep">/</span>
+                <span>@_p.ProjectName</span>
+            </div>
+            <h1>@_p.ProjectName</h1>
+            <p class="tl-subtitle">@_p.Customer — <span class="tl-badge @StageTone(_p.Stage)">@_p.Stage</span></p>
+        </div>
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Edit" Href="@($"/sales-projects/edit/{_p.Id}")">Edit</MudButton>
+    </div>
+
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudText Typo="Typo.h6" Class="mb-3">Summary</MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string"><strong>Estimated value:</strong>&nbsp;@_p.EstimatedValue.ToString("C0")</MudListItem>
+                    <MudListItem T="string"><strong>Probability:</strong>&nbsp;@_p.ProbabilityPercent%</MudListItem>
+                    <MudListItem T="string"><strong>Weighted value:</strong>&nbsp;@_p.WeightedValue.ToString("C0")</MudListItem>
+                    <MudListItem T="string"><strong>Expected close:</strong>&nbsp;@(_p.ExpectedCloseDate?.ToString("dd MMM yyyy") ?? "—")</MudListItem>
+                    <MudListItem T="string"><strong>Actual close:</strong>&nbsp;@(_p.ActualCloseDate?.ToString("dd MMM yyyy") ?? "—")</MudListItem>
+                    <MudListItem T="string"><strong>Owner:</strong>&nbsp;@(_p.OwnerName ?? "—")</MudListItem>
+                </MudList>
+                @if (!string.IsNullOrWhiteSpace(_p.Notes))
+                {
+                    <MudDivider Class="my-3" />
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Notes</MudText>
+                    <MudText Typo="Typo.body2" Style="white-space:pre-line;">@_p.Notes</MudText>
+                }
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudText Typo="Typo.h6" Class="mb-3">Linked records</MudText>
+                <MudText Typo="Typo.subtitle2" Class="mt-2">Quotes</MudText>
+                @if (_p.LinkedQuoteIds.Count == 0) { <MudText Typo="Typo.caption" Style="color:var(--gray-500);">None</MudText> }
+                else
+                {
+                    foreach (var q in _p.LinkedQuoteIds)
+                    {
+                        <MudChip T="string" Href="@($"/quotes/{q}")" Color="Color.Primary" Size="Size.Small">Q #@q</MudChip>
+                    }
+                }
+                <MudText Typo="Typo.subtitle2" Class="mt-3">Invoices</MudText>
+                @if (_p.LinkedInvoiceIds.Count == 0) { <MudText Typo="Typo.caption" Style="color:var(--gray-500);">None</MudText> }
+                else
+                {
+                    foreach (var i in _p.LinkedInvoiceIds)
+                    {
+                        <MudChip T="string" Href="@($"/invoices/{i}")" Color="Color.Secondary" Size="Size.Small">INV #@i</MudChip>
+                    }
+                }
+                <MudText Typo="Typo.subtitle2" Class="mt-3">Purchase Orders</MudText>
+                @if (_p.LinkedPoIds.Count == 0) { <MudText Typo="Typo.caption" Style="color:var(--gray-500);">None</MudText> }
+                else
+                {
+                    foreach (var po in _p.LinkedPoIds)
+                    {
+                        <MudChip T="string" Href="@($"/purchase-orders/{po}")" Color="Color.Tertiary" Size="Size.Small">PO #@po</MudChip>
+                    }
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private SalesProject? _p;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _p = await Svc.GetByIdAsync(Id);
+    }
+
+    private static string StageTone(SalesStage s) => s switch
+    {
+        SalesStage.Lead        => "info",
+        SalesStage.Qualified   => "info",
+        SalesStage.Proposal    => "warning",
+        SalesStage.Negotiation => "warning",
+        SalesStage.Won         => "success",
+        SalesStage.Lost        => "error",
+        _                      => "info"
+    };
+}

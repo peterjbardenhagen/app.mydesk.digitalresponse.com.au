@@ -99,7 +99,7 @@ else
                 @foreach (var link in _importantLinks)
                 {
                     <MudItem xs="12" md="6" lg="4">
-                        <div class="d-flex align-center gap-3 p-3" style="background: var(--gray-50); border-radius: 8px;">
+                        <div class="d-flex align-center gap-3 p-3 tl-important-link-card">
                             <MudIcon Icon="@GetIconForLink(link.Icon)" Color="link.IsExternal ? Color.Primary : Color.Default" />
                             <div class="flex-grow-1">
                                 <MudText Typo="Typo.body1" Style="font-weight: 500;">@link.Title</MudText>
@@ -205,6 +205,11 @@ else
             </MudCardContent>
         </MudCard>
     </div>
+
+<style>
+    .tl-important-link-card { background: var(--gray-50); border-radius: 8px; border: 1px solid transparent; }
+    body.mud-dark-mode .tl-important-link-card { background: var(--gray-100); border-color: var(--gray-300); }
+</style>
 }
 
 @code {

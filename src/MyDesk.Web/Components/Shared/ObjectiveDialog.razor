@@ -1,0 +1,28 @@
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="_title" Label="Objective" Variant="Variant.Outlined" Required="true" Margin="Margin.Dense" Class="mb-2" />
+        <MudTextField @bind-Value="_description" Label="Description" Variant="Variant.Outlined" Lines="3" Margin="Margin.Dense" Class="mb-2" />
+        <MudSelect T="string" @bind-Value="_status" Label="Status" Variant="Variant.Outlined" Margin="Margin.Dense">
+            <MudSelectItem Value="@("Not Started")">Not Started</MudSelectItem>
+            <MudSelectItem Value="@("In Progress")">In Progress</MudSelectItem>
+            <MudSelectItem Value="@("Completed")">Completed</MudSelectItem>
+        </MudSelect>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public MudDialogInstance? Dialog { get; set; }
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Description { get; set; } = "";
+    [Parameter] public string Status { get; set; } = "Not Started";
+    private string _title = "", _description = "", _status = "Not Started";
+    protected override void OnInitialized() { _title = Title; _description = Description; _status = Status; }
+    private void Submit() => Dialog?.Close(DialogResult.Ok(new { Title = _title, Description = _description, Status = _status }));
+    private void Cancel() => Dialog?.Cancel();
+}

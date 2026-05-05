@@ -157,7 +157,7 @@ public class ContactService
             
             if (existing.Rows.Count > 0) continue;
             
-            await _db.ExecuteAsync(
+            await _db.ExecuteNonQueryAsync(
                 "INSERT INTO Companies (Company, Address1) VALUES (@Name, @Addr)",
                 new() { ["Name"] = companyName, ["Addr"] = row["Address"]?.ToString() ?? "" });
             companiesImported++;
@@ -193,7 +193,7 @@ public class ContactService
                     companyId = Convert.ToInt32(companyDt.Rows[0]["CompanyId"]);
             }
             
-            await _db.ExecuteAsync(@"
+            await _db.ExecuteNonQueryAsync(@"
                 INSERT INTO Contacts (FirstName, Surname, CompanyId, Code)
                 VALUES (@First, @Last, @Cid, 'Import')",
                 new() { 
@@ -221,7 +221,7 @@ public class ContactService
                 CompanyId = @CompanyId
             WHERE ContactId = @ContactId";
 
-        return await _db.ExecuteAsync(sql, new()
+        return await _db.ExecuteNonQueryAsync(sql, new()
         {
             ["ContactId"] = contact.ContactId,
             ["FirstName"] = contact.FirstName,
@@ -248,11 +248,11 @@ public class ContactService
             FROM Contacts c
             INNER JOIN Companies co ON c.FirstName + ' ' + c.Surname LIKE '%' + co.Company + '%' -- Basic heuristic
             WHERE c.CompanyId IS NULL OR c.CompanyId = 0";
-        return await _db.ExecuteAsync(sql);
+        return await _db.ExecuteNonQueryAsync(sql);
     }
 
     public async Task DeleteContactAsync(int id) =>
-        await _db.ExecuteAsync("DELETE FROM Contacts WHERE ContactId = @id", new() { ["id"] = id });
+        await _db.ExecuteNonQueryAsync("DELETE FROM Contacts WHERE ContactId = @id", new() { ["id"] = id });
 
 
 
@@ -336,7 +336,7 @@ public class ContactService
     public async Task UpdatePortalLoginAsync(int contactId)
     {
         var sql = "UPDATE Contacts SET PortalLastLogin = GETDATE() WHERE ContactId = @ContactId";
-        await _db.ExecuteAsync(sql, new() { ["ContactId"] = contactId });
+        await _db.ExecuteNonQueryAsync(sql, new() { ["ContactId"] = contactId });
     }
 
     public async Task SetPortalCredentialsAsync(int contactId, string username, string password, DateTime? expires = null)
@@ -349,7 +349,7 @@ public class ContactService
                 PortalAccessExpires = @Expires
             WHERE ContactId = @ContactId";
 
-        await _db.ExecuteAsync(sql, new()
+        await _db.ExecuteNonQueryAsync(sql, new()
         {
             ["ContactId"] = contactId,
             ["Username"] = username,
@@ -367,7 +367,7 @@ public class ContactService
                 PortalPasswordHash = NULL
             WHERE ContactId = @ContactId";
 
-        await _db.ExecuteAsync(sql, new() { ["ContactId"] = contactId });
+        await _db.ExecuteNonQueryAsync(sql, new() { ["ContactId"] = contactId });
     }
 
     private static string HashPassword(string password)

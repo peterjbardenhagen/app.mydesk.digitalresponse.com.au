@@ -1,8 +1,16 @@
-using MudBlazor.Services;
+using System.Threading.RateLimiting;
 using MudBlazor;
+using MudBlazor.Services;
+using Microsoft.EntityFrameworkCore;
+using Hangfire;
+using Hangfire.SqlServer;
+using MyDesk.Shared.Data;
 using MyDesk.Shared.Services;
+using MyDesk.Shared.Models;
 using MyDesk.Web.Components;
 using MyDesk.Web.Services;
+using MyDesk.Web.Scheduling;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -60,14 +68,44 @@ try
 {
 
 var builder = WebApplication.CreateBuilder(args);
+Microsoft.AspNetCore.Hosting.StaticWebAssets.StaticWebAssetsLoader.UseStaticWebAssets(builder.Environment, builder.Configuration);
 builder.Host.UseSerilog();
 
 // Load custom platform settings if they exist
 var customSettingsPath = Path.Combine(builder.Environment.ContentRootPath, "Config", "platformsettings.json");
 builder.Configuration.AddJsonFile(customSettingsPath, optional: true, reloadOnChange: true);
 
-// Authentication
+// Authentication — Cookie for browser users, ApiKey (X-Api-Key header) for external products.
 builder.Services.AddHttpContextAccessor();
+
+// Rate limiting — protects login and forgot-password from brute-force attacks
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("login", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(5),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+    options.AddPolicy("forgotPassword", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(10),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+});
+
+builder.Services.AddMemoryCache();
+
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -76,8 +114,19 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.AccessDeniedPath = "/access-denied";
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
-    });
-builder.Services.AddAuthorization();
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+    })
+    .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, MyDesk.Web.Api.ApiKeyAuthenticationHandler>(
+        MyDesk.Web.Api.ApiKeyAuthenticationHandler.SchemeName, _ => { });
+builder.Services.AddAuthorization(options =>
+{
+    options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder(
+            CookieAuthenticationDefaults.AuthenticationScheme)
+        .RequireAuthenticatedUser()
+        .Build();
+});
 builder.Services.AddCascadingAuthenticationState();
 
 // MudBlazor
@@ -89,21 +138,24 @@ builder.Services.AddMudServices(config =>
     config.SnackbarConfiguration.HideTransitionDuration = 200;
 });
 
-// Database (singleton - wraps connection string, opens new conn per query)
-builder.Services.AddSingleton<DatabaseService>();
+// Database (scoped so each request can carry tenant session context)
+builder.Services.AddScoped<ICurrentTenantAccessor, CurrentTenantAccessor>();
+builder.Services.AddScoped<DatabaseService>();
+builder.Services.AddScoped<TenantIsolationService>();
+builder.Services.AddScoped<MigrationRunnerService>();
+
+// EF Core 10 — scoped DbContext for tenant/identity entities (rest of codebase still
+// uses Dapper via DatabaseService; both layers map to the same physical tables).
+builder.Services.AddDbContext<MyDeskDbContext>(opt =>
+    opt.UseSqlServer(builder.Configuration.GetConnectionString("TechlightDb")));
 builder.Services.AddSingleton<NavMenuService>();
 builder.Services.AddSingleton<SetupMenuService>();
 builder.Services.AddSingleton<EntityColorService>();
 builder.Services.AddSingleton<UserPreferencesService>();
 
-// Platform settings service (tenant-aware)
-builder.Services.AddSingleton<PlatformSettingsService>(sp => 
-{
-    var config = sp.GetRequiredService<IConfiguration>();
-    var http = sp.GetRequiredService<IHttpContextAccessor>();
-    var db = sp.GetRequiredService<DatabaseService>();
-    return new PlatformSettingsService(config, http, db);
-});
+// Platform settings service (tenant-aware) — sources from PlatformSettingsEntities table.
+// Order: 1) authenticated tenant claim → 2) Request.Host match in TenantHostnames → 3) defaults.
+builder.Services.AddScoped<PlatformSettingsService>();
 
 // Auth service (scoped to request)
 builder.Services.AddScoped<AuthService>();
@@ -113,15 +165,18 @@ builder.Services.AddSingleton<LoginTokenStore>();
 // Domain services (all in MyDesk.Shared.Services)
 builder.Services.AddScoped<ActivityService>();
 builder.Services.AddSingleton<PermissionService>();
-builder.Services.AddScoped<EmailService>(sp => 
+builder.Services.AddScoped<EmailService>(sp =>
 {
     var db = sp.GetRequiredService<DatabaseService>();
     var activity = sp.GetRequiredService<ActivityService>();
     var config = sp.GetRequiredService<IConfiguration>();
     var logger = sp.GetRequiredService<ILogger<EmailService>>();
     var platformSettings = sp.GetRequiredService<PlatformSettingsService>().Current;
-    return new EmailService(db, activity, config, logger, platformSettings);
+    var tenantAccessor = sp.GetRequiredService<ICurrentTenantAccessor>();
+    // Tenant accessor enables the Demo MyDesk redirect-all-emails-to-peter@bardenhagen.xyz guard.
+    return new EmailService(db, activity, config, logger, platformSettings, tenantAccessor);
 });
+builder.Services.AddScoped<OutlookInboxService>();
 builder.Services.AddScoped<PdfService>(sp => 
 {
     var db = sp.GetRequiredService<DatabaseService>();
@@ -146,7 +201,6 @@ builder.Services.AddScoped<MarketingDataService>();
 builder.Services.AddScoped<MarketingAIService>();
 builder.Services.AddSingleton<MarketingStrategyStore>();
 builder.Services.AddScoped<CampaignService>();
-builder.Services.AddScoped<CampaignService>();
 // builder.Services.AddSingleton<WeatherOptions>();
 // builder.Services.AddHttpClient<WeatherService>();
 // builder.Services.AddScoped<IWeatherService, WeatherService>();
@@ -166,16 +220,77 @@ builder.Services.AddScoped<ExpenseService>();
 builder.Services.AddScoped<ErrorLogService>();
 builder.Services.AddScoped<StaffWhereaboutsService>();
 builder.Services.AddScoped<DRMService>();
+builder.Services.AddScoped<BusinessGoalsService>();
+builder.Services.AddScoped<ValuationService>();
 builder.Services.AddScoped<ProjectService>();
+builder.Services.AddScoped<TimesheetService>();
+builder.Services.AddScoped<TenantService>();
+builder.Services.AddScoped<BankingService>();
 // builder.Services.AddScoped<NotificationService>(); // Not used - removed
     builder.Services.AddScoped<AuditService>();
     builder.Services.AddScoped<FileLibraryService>();
     builder.Services.AddScoped<FavouritesService>();
     builder.Services.AddScoped<AIFunctionExecutor>();
+    builder.Services.AddScoped<FinancialExtractionService>();
+
+    // ── Ports from legacy MyDesk (in-memory services) ──────────────────────
+    builder.Services.AddScoped<RfqService>();
+    builder.Services.AddScoped<SalesProjectService>();
+    builder.Services.AddScoped<CallReportService>();
+    builder.Services.AddScoped<PoRequestService>();
+
+    // ── Phase 2 of legacy port: approval chain + sales-reports dashboard ────
+    builder.Services.AddScoped<ApprovalService>();
+    builder.Services.AddScoped<SalesReportsService>();
 
 builder.Services.AddHttpClient();
+
+// ── Hangfire (background + recurring jobs) ─────────────────────────────────
+// Stored in the same SQL DB. Dashboard exposed at /hangfire (admin-only).
+builder.Services.AddHangfire(cfg => cfg
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseSqlServerStorage(builder.Configuration.GetConnectionString("TechlightDb"), new SqlServerStorageOptions
+    {
+        SchemaName = "HangFire",
+        PrepareSchemaIfNecessary = true,
+        QueuePollInterval = TimeSpan.FromSeconds(15),
+        UseRecommendedIsolationLevel = true,
+        DisableGlobalLocks = true,
+    }));
+builder.Services.AddHangfireServer(options =>
+{
+    options.WorkerCount = Math.Max(2, Environment.ProcessorCount);
+    options.Queues = new[] { "default", "scheduled" };
+});
+
+// Scheduling layer (uses Hangfire under the hood; keep MyDesk.Shared free of Hangfire deps).
+builder.Services.AddScoped<ScheduledTaskService>();
+builder.Services.AddScoped<IScheduledTaskRegistrar, ScheduledTaskRegistrar>();
+builder.Services.AddScoped<ScheduledTaskExecutor>();
+
+// Demo MyDesk seed (idempotent; runs once on startup if Demo tenant has no demo Companies).
+builder.Services.AddSingleton<DemoDataSeeder>();
+
+// ── Ask AI agent + tools ───────────────────────────────────────────────────
+// Tools run inside the caller's request scope so they pick up the current
+// tenant via ICurrentTenantAccessor — every SQL query is automatically filtered
+// by the SQL Row-Level Security policy applied by TenantIsolationService.
+builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.QuotesSummaryTool>();
+builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.InvoicesSummaryTool>();
+builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.PipelineSummaryTool>();
+builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.ScheduleReportTool>();
+builder.Services.AddScoped<MyDesk.Web.AI.AskAiAgentService>();
+
 builder.Services.Configure<AzureAIOptions>(builder.Configuration.GetSection(AzureAIOptions.Section));
 builder.Services.AddScoped<AzureAIService>();
+builder.Services.AddScoped<AzureAiVisionClientAdapter>();
+builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.IAiVisionClient>(sp =>
+    sp.GetRequiredService<AzureAiVisionClientAdapter>());
+builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.IDocumentExtractionStrategy, MyDesk.Shared.Services.Extraction.PdfPigExtractionStrategy>();
+builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.IDocumentExtractionStrategy, MyDesk.Shared.Services.Extraction.GptVisionExtractionStrategy>();
+builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.DocumentExtractionService>();
 builder.Services.AddScoped<SupplierQuoteParseService>();
 builder.Services.AddScoped<McpIntegrationService>();
 
@@ -184,6 +299,51 @@ builder.Services.AddScoped<ReconciliationService>();
 builder.Services.AddScoped<AiAuditService>();
 builder.Services.AddScoped<TelegramBotService>();
 builder.Services.AddHostedService<WorkflowSchedulerService>();
+
+// ── GraphQL (HotChocolate) ─────────────────────────────────────────────────
+// Endpoint: /graphql (with Banana Cake Pop UI in Development).
+builder.Services.AddGraphQLServer()
+    .AddAuthorization()
+    .AddQueryType<MyDesk.Web.GraphQL.Query>()
+    .AddProjections()
+    .AddFiltering()
+    .AddSorting();
+
+// ── REST API (controllers + OpenAPI / Swagger) ─────────────────────────────
+// External products integrate via /api/v1/* using either the cookie session
+// (browser clients) or X-Api-Key header (server-to-server).
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "MyDesk API",
+        Version = "v1",
+        Description = "REST API for external products integrating with MyDesk."
+    });
+    c.AddSecurityDefinition("ApiKey", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "X-Api-Key",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "API key issued to the external product."
+    });
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "ApiKey"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 // Razor Components
 builder.Services.AddRazorComponents()
@@ -195,38 +355,108 @@ var app = builder.Build();
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 // Ensure audit + email log tables exist (idempotent IF NOT EXISTS)
-// Wrapped in try/catch so app still starts even if database is temporarily unavailable
+// Wrapped in try/catch so app still starts even if database is temporarily unavailable.
+// SystemBypass() sets the SQL session flag so RLS policies don't block startup migrations
+// before the policies themselves are even applied.
 using (var scope = app.Services.CreateScope())
+using (MyDesk.Shared.Services.TenantImpersonation.SystemBypass())
 {
+    var sp = scope.ServiceProvider;
+
+    // Each EnsureTable call is independently wrapped so one service's failure
+    // (e.g. legacy schema mismatch on a single table) does NOT block the rest of
+    // startup. In particular, TenantService + PermissionService MUST run or login
+    // breaks with a 401 because the user's tenant memberships can't be resolved.
+    static async Task SafeInit(string label, Func<Task> work)
+    {
+        try { await work(); }
+        catch (Exception ex) { Log.Warning(ex, "Startup init: '{Label}' failed (continuing)", label); }
+    }
+
     try
     {
-        var actSvc   = scope.ServiceProvider.GetRequiredService<ActivityService>();
-        await actSvc.EnsureTableAsync();
-        var emailSvc = scope.ServiceProvider.GetRequiredService<EmailService>();
-        await emailSvc.EnsureTablesAsync();
-        var aiAudit  = scope.ServiceProvider.GetRequiredService<AiAuditService>();
-        await aiAudit.EnsureTableAsync();
-        var reportSvc = scope.ServiceProvider.GetRequiredService<ReportService>();
-        await reportSvc.EnsureTableAsync();
-        var logSvc = scope.ServiceProvider.GetRequiredService<LogService>();
-        await logSvc.EnsureTableAsync();
-        var expenseSvc = scope.ServiceProvider.GetRequiredService<ExpenseService>();
-        await expenseSvc.EnsureTableAsync();
-        var errorLogSvc = scope.ServiceProvider.GetRequiredService<ErrorLogService>();
-        await errorLogSvc.EnsureTableAsync();
-        var drmSvc = scope.ServiceProvider.GetRequiredService<DRMService>();
-        await drmSvc.EnsureTablesAsync();
-        var whereSvc = scope.ServiceProvider.GetRequiredService<StaffWhereaboutsService>();
-        await whereSvc.EnsureTableAsync();
-        var projSvc = scope.ServiceProvider.GetRequiredService<ProjectService>();
-        await projSvc.EnsureTablesAsync();
-        var permSvc = scope.ServiceProvider.GetRequiredService<PermissionService>();
-        await permSvc.InitializeTableAsync();
+        // Migration runner runs FIRST so any *.sql files dropped into Deployment/Migration
+        // are applied before downstream EnsureTable services / isolation policies look at the schema.
+        await SafeInit("MigrationRunner",          () => sp.GetRequiredService<MigrationRunnerService>().RunPendingAsync(app.Environment.ContentRootPath));
+
+        await SafeInit("ActivityService",          () => sp.GetRequiredService<ActivityService>().EnsureTableAsync());
+        await SafeInit("EmailService",             () => sp.GetRequiredService<EmailService>().EnsureTablesAsync());
+        await SafeInit("AiAuditService",           () => sp.GetRequiredService<AiAuditService>().EnsureTableAsync());
+        await SafeInit("ReportService",            () => sp.GetRequiredService<ReportService>().EnsureTableAsync());
+        await SafeInit("LogService",               () => sp.GetRequiredService<LogService>().EnsureTableAsync());
+        await SafeInit("ExpenseService",           () => sp.GetRequiredService<ExpenseService>().EnsureTableAsync());
+        await SafeInit("ErrorLogService",          () => sp.GetRequiredService<ErrorLogService>().EnsureTableAsync());
+        await SafeInit("FinancialExtractionService", () => sp.GetRequiredService<FinancialExtractionService>().EnsureTableAsync());
+        await SafeInit("DRMService",               () => sp.GetRequiredService<DRMService>().EnsureTablesAsync());
+        await SafeInit("StaffWhereaboutsService",  () => sp.GetRequiredService<StaffWhereaboutsService>().EnsureTableAsync());
+        await SafeInit("ProjectService",           () => sp.GetRequiredService<ProjectService>().EnsureTablesAsync());
+        await SafeInit("TimesheetService",         () => sp.GetRequiredService<TimesheetService>().EnsureTableAsync());
+        await SafeInit("TenantService",            () => sp.GetRequiredService<TenantService>().EnsureTablesAsync());
+        await SafeInit("PermissionService",        () => sp.GetRequiredService<PermissionService>().InitializeTableAsync());
+        await SafeInit("ScheduledTaskService",     () => sp.GetRequiredService<ScheduledTaskService>().EnsureTablesAsync());
+        await SafeInit("BankingService",           () => sp.GetRequiredService<BankingService>().EnsureTablesAsync());
+        await SafeInit("FileLibraryService",       () => sp.GetRequiredService<FileLibraryService>().EnsureTableAsync());
+
+        // Back-fill legacy columns absent from pre-v3.0 databases (idempotent — COL_LENGTH guards).
+        await SafeInit("Legacy schema backfill", async () =>
+        {
+            var db2 = sp.GetRequiredService<DatabaseService>();
+            await db2.ExecuteNonQueryAsync(@"
+                -- JobOrders
+                IF OBJECT_ID('JobOrders') IS NOT NULL
+                BEGIN
+                    IF COL_LENGTH('JobOrders','ContactId')        IS NULL ALTER TABLE JobOrders ADD ContactId        INT NULL;
+                    IF COL_LENGTH('JobOrders','JobOrderStatusId') IS NULL ALTER TABLE JobOrders ADD JobOrderStatusId INT NULL DEFAULT 1;
+                    IF COL_LENGTH('JobOrders','OriginatorId')     IS NULL ALTER TABLE JobOrders ADD OriginatorId     INT NULL;
+                    IF COL_LENGTH('JobOrders','Notes')            IS NULL ALTER TABLE JobOrders ADD Notes            NVARCHAR(MAX) NULL;
+                    IF COL_LENGTH('JobOrders','Code')             IS NULL ALTER TABLE JobOrders ADD Code             NVARCHAR(50) NULL;
+                END
+
+                -- JobOrderContents
+                IF OBJECT_ID('JobOrderContents') IS NOT NULL
+                BEGIN
+                    IF COL_LENGTH('JobOrderContents','Qty')          IS NULL ALTER TABLE JobOrderContents ADD Qty          DECIMAL(18,4) NULL;
+                    IF COL_LENGTH('JobOrderContents','ProductCatId') IS NULL ALTER TABLE JobOrderContents ADD ProductCatId INT NULL;
+                    IF COL_LENGTH('JobOrderContents','Price')        IS NULL ALTER TABLE JobOrderContents ADD Price        DECIMAL(18,4) NULL;
+                END
+
+                -- Expenses
+                IF OBJECT_ID('Expenses') IS NOT NULL
+                BEGIN
+                    IF COL_LENGTH('Expenses','Amount')     IS NULL ALTER TABLE Expenses ADD Amount     DECIMAL(18,2) NOT NULL DEFAULT 0;
+                    IF COL_LENGTH('Expenses','Total')      IS NULL ALTER TABLE Expenses ADD Total      DECIMAL(18,2) NOT NULL DEFAULT 0;
+                    IF COL_LENGTH('Expenses','SupplierId') IS NULL ALTER TABLE Expenses ADD SupplierId INT NULL;
+                    IF COL_LENGTH('Expenses','Category')   IS NULL ALTER TABLE Expenses ADD Category   NVARCHAR(100) NOT NULL DEFAULT 'General';
+                    IF COL_LENGTH('Expenses','Status')     IS NULL ALTER TABLE Expenses ADD Status     NVARCHAR(50)  NOT NULL DEFAULT 'Pending';
+                    IF COL_LENGTH('Expenses','FileName')   IS NULL ALTER TABLE Expenses ADD FileName   NVARCHAR(500) NULL;
+                END
+
+                -- Noticeboard
+                IF OBJECT_ID('Noticeboard') IS NOT NULL
+                BEGIN
+                    IF COL_LENGTH('Noticeboard','Title')      IS NULL ALTER TABLE Noticeboard ADD Title      NVARCHAR(200)  NULL;
+                    IF COL_LENGTH('Noticeboard','Notice')     IS NULL ALTER TABLE Noticeboard ADD Notice     NVARCHAR(MAX)  NULL;
+                    IF COL_LENGTH('Noticeboard','DatePosted') IS NULL ALTER TABLE Noticeboard ADD DatePosted DATETIME       NULL DEFAULT GETDATE();
+                    IF COL_LENGTH('Noticeboard','ExpiryDate') IS NULL ALTER TABLE Noticeboard ADD ExpiryDate DATETIME       NULL;
+                    IF COL_LENGTH('Noticeboard','PostedBy')   IS NULL ALTER TABLE Noticeboard ADD PostedBy   NVARCHAR(100)  NULL;
+                END");
+        });
+
         Log.Information("Database tables verified successfully");
+
+        // Apply tenant isolation: NOT NULL TenantId + DEFAULT(SESSION_CONTEXT) +
+        // SQL Row-Level Security policies on every tenant-scoped table.
+        await SafeInit("TenantIsolationService",   () => sp.GetRequiredService<TenantIsolationService>().EnforceAsync());
+
+        // Idempotent demo data — only seeds rows if Demo MyDesk has none yet.
+        // The seeder uses TenantImpersonation.For(DemoTenantId) so RLS allows its writes.
+        await SafeInit("DemoDataSeeder",           () => app.Services.GetRequiredService<DemoDataSeeder>().SeedAsync());
     }
     catch (Exception ex)
     {
-        Log.Warning(ex, "Database initialization failed - app will start but database features may be unavailable. Check connection string in appsettings.json");
+        // SafeInit eats individual failures; this catch only fires for completely
+        // unexpected things (e.g. DI resolution failure).
+        Log.Warning(ex, "Database initialization aborted unexpectedly - app will start but some features may be unavailable. Check connection string in appsettings.json");
     }
 }
 
@@ -288,14 +518,20 @@ app.UseExceptionHandler(errorApp =>
             }
         }
         ctx.Response.StatusCode = StatusCodes.Status500InternalServerError;
-        ctx.Response.ContentType = "text/html";
-        await ctx.Response.WriteAsync(app.Environment.IsDevelopment()
-            ? $"<h1>500 - Server Error</h1><pre>{System.Net.WebUtility.HtmlEncode(feature?.Error?.ToString() ?? "Unknown")}</pre>"
-            : "<h1>500 - Server Error</h1><p>An unexpected error occurred. Check the server logs for details.</p>");
+        if (ctx.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
+        {
+            ctx.Response.ContentType = "application/json";
+            await ctx.Response.WriteAsJsonAsync(new { error = "Internal Server Error", message = app.Environment.IsDevelopment() ? feature?.Error?.Message : "An unexpected error occurred." });
+        }
+        else
+        {
+            ctx.Response.Redirect("/Error");
+        }
     });
 });
 
 app.UseStaticFiles();
+app.MapStaticAssets(); // .NET 8+ optimized static file delivery
 
 // ── Robots.txt - Block ALL search engine indexing ──────────────────────────
 app.MapGet("/robots.txt", (HttpContext ctx) =>
@@ -343,24 +579,65 @@ app.Use(async (ctx, next) =>
     ctx.Response.Headers["Cache-Control"] = ctx.Request.Path.StartsWithSegments("/api/marketing") 
         ? "private, no-store, max-age=0" 
         : "no-store, no-cache, must-revalidate";
+    
+    // Security headers
+    ctx.Response.Headers["X-Frame-Options"] = "DENY";
+    ctx.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    ctx.Response.Headers["X-XSS-Protection"] = "0"; // Modern browsers use CSP instead
+    ctx.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    ctx.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    // CSP: Allow self, inline scripts/styles for Blazor, Google Fonts, and MudBlazor
+    ctx.Response.Headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';";
+    
     await next();
 });
 
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
 
+// HSTS only in production (development uses HTTP)
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// ── GraphQL endpoint ────────────────────────────────────────────────────────
+app.MapGraphQL("/graphql");
+
+// ── REST API + OpenAPI ──────────────────────────────────────────────────────
+app.MapControllers();
+
+// Swagger only in development — leak of API schema in production is a security risk
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "MyDesk API v1");
+        c.RoutePrefix = "swagger";
+    });
+}
+
+// ── Hangfire dashboard (admin/director only) ───────────────────────────────
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = new[] { new MyDesk.Web.Scheduling.HangfireAdminAuthorizationFilter() }
+});
 
 // ── Blazor Server sign-in endpoint (one-time-token pattern) ─────────────────
 // Blazor components cannot set cookies (response already started over SignalR).
 // Login.razor validates credentials, stores a 30-second token, then navigates
 // here (forceLoad). This endpoint sets the auth cookie and redirects to the app.
-app.MapGet("/auth/signin", async (HttpContext ctx, LoginTokenStore tokenStore, UserService userSvc, AuthService auth) =>
+app.MapGet("/auth/signin", async (HttpContext ctx, LoginTokenStore tokenStore, UserService userSvc, TenantService tenantSvc, AuthService auth) =>
 {
     var token = ctx.Request.Query["token"].ToString();
     var returnUrl = ctx.Request.Query["returnUrl"].ToString();
+    var tenantIdRaw = ctx.Request.Query["tenantId"].ToString();
     if (string.IsNullOrWhiteSpace(returnUrl) || !returnUrl.StartsWith("/")) returnUrl = "/";
 
     if (string.IsNullOrEmpty(token))
@@ -369,28 +646,65 @@ app.MapGet("/auth/signin", async (HttpContext ctx, LoginTokenStore tokenStore, U
         return Results.Redirect("/login?error=1");
     }
 
-    var entry = tokenStore.ConsumeToken(token);
-    if (entry == null)
+    var peek = tokenStore.PeekToken(token);
+    if (peek == null)
     {
         Log.Warning("/auth/signin: token not found or expired");
         return Results.Redirect("/login?error=1");
     }
 
-    var user = await userSvc.GetAsync(entry.Value.UserId);
+    var user = await userSvc.GetAsync(peek.Value.UserId);
     if (user == null)
     {
-        Log.Warning("/auth/signin: user {UserId} not found", entry.Value.UserId);
+        Log.Warning("/auth/signin: user {UserId} not found", peek.Value.UserId);
         return Results.Redirect("/login?error=1");
     }
 
-    Log.Information("Login SUCCESS via token: UserId={UserId} Code={Code} Name={Name} (RememberMe={RememberMe})",
-        user.UserId, user.Code, user.Name, entry.Value.RememberMe);
-    await auth.SignInAsync(ctx, user, entry.Value.RememberMe);
+    await tenantSvc.EnsureUserTenantAssignmentsAsync();
+    var memberships = await tenantSvc.GetUserTenantsAsync(user.UserId);
+    if (memberships.Count == 0)
+    {
+        Log.Warning("/auth/signin: user {UserId} has no tenant memberships", user.UserId);
+        return Results.Redirect("/login?error=1");
+    }
+
+    var selectedMembership = memberships.Count == 1 ? memberships[0] : null as TenantMembership;
+    if (memberships.Count > 1)
+    {
+        if (!Guid.TryParse(tenantIdRaw, out var selectedTenantId))
+        {
+            return Results.Redirect($"/login/select-tenant?token={Uri.EscapeDataString(token)}&returnUrl={Uri.EscapeDataString(returnUrl)}");
+        }
+
+        selectedMembership = memberships.FirstOrDefault(m => m.TenantId == selectedTenantId);
+        if (selectedMembership is null)
+        {
+            Log.Warning("/auth/signin: user {UserId} tried unauthorized tenant {TenantId}", user.UserId, tenantIdRaw);
+            return Results.Redirect("/login?error=1");
+        }
+    }
+
+    if (selectedMembership is null)
+    {
+        Log.Warning("/auth/signin: no tenant membership resolved for user {UserId}", user.UserId);
+        return Results.Redirect("/login?error=1");
+    }
+
+    var entry = tokenStore.ConsumeToken(token);
+    if (entry == null)
+    {
+        Log.Warning("/auth/signin: token expired before consume");
+        return Results.Redirect("/login?error=1");
+    }
+
+    Log.Information("Login SUCCESS via token: UserId={UserId} Code={Code} Name={Name} Tenant={Tenant} (RememberMe={RememberMe})",
+        user.UserId, user.Code, user.Name, selectedMembership.TenantName, entry.Value.RememberMe);
+    await auth.SignInAsync(ctx, user, selectedMembership, entry.Value.RememberMe);
     return Results.Redirect(returnUrl);
 });
 
 // Legacy POST endpoint (kept for compatibility)
-app.MapPost("/api/auth/login", async (HttpContext ctx, AuthService auth) =>
+app.MapPost("/api/auth/login", async (HttpContext ctx, AuthService auth, LoginTokenStore tokenStore) =>
 {
     var form = await ctx.Request.ReadFormAsync();
     var login = form["login"].ToString();
@@ -402,12 +716,12 @@ app.MapPost("/api/auth/login", async (HttpContext ctx, AuthService auth) =>
     {
         Log.Information("Login SUCCESS (POST): {Login} -> UserId={UserId} Code={Code} Name={Name}",
             login, user.UserId, user.Code, user.Name);
-        await auth.SignInAsync(ctx, user, rememberMe);
-        return Results.Redirect("/");
+        var token = tokenStore.CreateToken(user.UserId, user.Code, rememberMe);
+        return Results.Redirect($"/auth/signin?token={token}&returnUrl=%2F");
     }
     Log.Warning("Login FAILED for {Login} from {RemoteIP}", login, ctx.Connection.RemoteIpAddress);
     return Results.Redirect("/login?error=1");
-});
+}).RequireRateLimiting("login");
 
 // Forgot password endpoint
 app.MapPost("/api/auth/forgot-password", async (HttpContext ctx, EmailService emailSvc) =>
@@ -435,7 +749,7 @@ app.MapPost("/api/auth/forgot-password", async (HttpContext ctx, EmailService em
         Log.Error(ex, "Failed to send password reset email to {Email}", email);
         return Results.Redirect("/forgot-password?error=1");
     }
-});
+}).RequireRateLimiting("forgotPassword");
 
 // ── PDF Download endpoints (authenticated — uses existing session cookie) ──────
 app.MapGet("/api/pdf/quote/{id:int}", async (int id, PdfService pdfSvc) =>
@@ -561,6 +875,24 @@ app.MapPost("/api/brand-assets/upload", async (HttpContext ctx, BrandAssetServic
     var form = await ctx.Request.ReadFormAsync();
     var file = form.Files.FirstOrDefault();
     if (file == null) return Results.BadRequest("No file uploaded");
+    
+    // Validate file size (max 10MB)
+    const long maxFileSize = 10 * 1024 * 1024;
+    if (file.Length > maxFileSize)
+        return Results.BadRequest("File too large. Maximum size is 10MB.");
+    
+    // Validate file type
+    var allowedExtensions = new[] { ".png", ".jpg", ".jpeg", ".gif", ".svg", ".pdf", ".doc", ".docx", ".xls", ".xlsx" };
+    var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+    if (!allowedExtensions.Contains(ext))
+        return Results.BadRequest($"File type not allowed. Allowed: {string.Join(", ", allowedExtensions)}");
+    
+    // Validate MIME type
+    var allowedMimeTypes = new[] { "image/png", "image/jpeg", "image/gif", "image/svg+xml", "application/pdf", 
+        "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" };
+    if (!allowedMimeTypes.Contains(file.ContentType.ToLowerInvariant()))
+        return Results.BadRequest("Invalid file content type.");
     
     var category = form["category"].ToString();
     var description = form["description"].ToString();

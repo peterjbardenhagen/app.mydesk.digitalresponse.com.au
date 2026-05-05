@@ -1,0 +1,206 @@
+@page "/timesheets/approve"
+@attribute [Authorize]
+@inject TimesheetService TimesheetSvc
+@inject ApprovalService ApprovalSvc
+@inject AuthenticationStateProvider AuthState
+@inject ISnackbar Snackbar
+
+<PageTitle>Approve Timesheets - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">MyDesk</a><span class="sep">/</span>
+            <a href="/timesheets">Timesheets</a><span class="sep">/</span>
+            <span>Approve</span>
+        </div>
+        <h1>Approve Timesheets</h1>
+        <p class="tl-subtitle">Submitted timesheets from your direct reports — approve or reject individual lines.</p>
+    </div>
+</div>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudGrid Spacing="2">
+        <MudItem xs="12" sm="4">
+            <MudDatePicker @bind-Date="_weekEnding" Label="Week Ending"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12" sm="8" Class="d-flex align-center gap-2">
+            <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                       StartIcon="@Icons.Material.Rounded.FilterList" OnClick="LoadAsync">Apply</MudButton>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Clear"
+                       OnClick="@ClearWeekAsync">Clear week filter</MudButton>
+            <MudButton Color="Color.Success" Variant="Variant.Filled"
+                       StartIcon="@Icons.Material.Rounded.DoneAll"
+                       OnClick="ApproveAllAsync" Disabled="@(_loaded.Count == 0)">Approve all</MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@if (_loading) { <MudProgressLinear Indeterminate="true" /> }
+
+@if (!_loading && _loaded.Count == 0)
+{
+    <MudPaper Class="pa-6 text-center" Elevation="0">
+        <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Large" />
+        <MudText Typo="Typo.h6" Class="mt-2">Nothing to approve.</MudText>
+        <MudText Typo="Typo.body2" Style="color:var(--gray-500);">No submitted timesheets from your direct reports for the selected week.</MudText>
+    </MudPaper>
+}
+
+@foreach (var ts in _loaded)
+{
+    <MudPaper Class="pa-4 mb-3" Elevation="1">
+        <div class="d-flex align-center justify-space-between mb-2">
+            <div>
+                <MudText Typo="Typo.h6">@ts.UserName — Week of @ts.WeekStartDate.ToString("dd MMM yyyy")</MudText>
+                <MudText Typo="Typo.caption" Style="color:var(--gray-500);">
+                    Status: @ts.Status — Submitted @(ts.SubmittedAt?.ToString("dd MMM HH:mm") ?? "—") — @ts.TotalHours h total (@ts.BillableHours billable)
+                </MudText>
+            </div>
+            <div class="d-flex gap-2">
+                <MudButton Color="Color.Success" Variant="Variant.Filled" Size="Size.Small"
+                           StartIcon="@Icons.Material.Rounded.Check"
+                           OnClick="@(() => ApproveTimesheetAsync(ts))">Approve</MudButton>
+                <MudButton Color="Color.Error" Variant="Variant.Outlined" Size="Size.Small"
+                           StartIcon="@Icons.Material.Rounded.Close"
+                           OnClick="@(() => RejectTimesheetAsync(ts))">Reject</MudButton>
+            </div>
+        </div>
+
+        @if (_lines.TryGetValue(ts.TimesheetId, out var entries) && entries.Count > 0)
+        {
+            <MudTable T="TimesheetEntry" Items="@entries" Dense="true" Hover="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh Style="width:40px;">OK</MudTh>
+                    <MudTh>Date</MudTh>
+                    <MudTh>Type</MudTh>
+                    <MudTh>Company / Project</MudTh>
+                    <MudTh>Description</MudTh>
+                    <MudTh Style="text-align:right;">Hours</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <MudCheckBox T="bool" Value="@IsLineApproved(ts.TimesheetId, context.TimesheetEntryId)"
+                                     ValueChanged="@(v => SetLine(ts.TimesheetId, context.TimesheetEntryId, v))" />
+                    </MudTd>
+                    <MudTd>@context.EntryDate.ToString("ddd dd MMM")</MudTd>
+                    <MudTd>@context.TimeType</MudTd>
+                    <MudTd>@(context.CompanyName ?? "—") / @(context.ProjectName ?? "—")</MudTd>
+                    <MudTd>@context.Description</MudTd>
+                    <MudTd Style="text-align:right;">@($"{context.Hours}h {context.Minutes}m")</MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudPaper>
+}
+
+@code {
+    private bool _loading;
+    private string? _userCode;
+    private DateTime? _weekEnding;
+    private List<TimesheetSummary> _loaded = new();
+    private Dictionary<int, List<TimesheetEntry>> _lines = new();
+    private Dictionary<(int Ts, int Line), bool> _approvalState = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        _userCode = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                    ?? auth.User.Identity?.Name;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        if (string.IsNullOrEmpty(_userCode)) return;
+        _loading = true;
+        try
+        {
+            _loaded = await TimesheetSvc.GetSubmittedForManagerAsync(ApprovalSvc, _userCode, _weekEnding);
+            _lines.Clear();
+            _approvalState.Clear();
+            foreach (var ts in _loaded)
+            {
+                var full = await TimesheetSvc.GetTimesheetAsync(ts.TimesheetId);
+                if (full != null) _lines[ts.TimesheetId] = full.Entries;
+
+                foreach (var la in TimesheetSvc.GetLineApprovals(ts.TimesheetId))
+                {
+                    _approvalState[(ts.TimesheetId, la.LineId)] = la.Approved;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Load failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private bool IsLineApproved(int tsId, int lineId)
+        => _approvalState.TryGetValue((tsId, lineId), out var v) ? v : true;
+
+    private async Task SetLine(int tsId, int lineId, bool value)
+    {
+        _approvalState[(tsId, lineId)] = value;
+        await TimesheetSvc.ApproveLineAsync(tsId, lineId, _userCode ?? "", value);
+    }
+
+    private async Task ClearWeekAsync()
+    {
+        _weekEnding = null;
+        await LoadAsync();
+    }
+
+    private async Task ApproveTimesheetAsync(TimesheetSummary ts)
+    {
+        try
+        {
+            if (_lines.TryGetValue(ts.TimesheetId, out var entries))
+            {
+                foreach (var e in entries)
+                {
+                    if (!_approvalState.TryGetValue((ts.TimesheetId, e.TimesheetEntryId), out var ok) || ok)
+                        await TimesheetSvc.ApproveLineAsync(ts.TimesheetId, e.TimesheetEntryId, _userCode ?? "", true);
+                }
+            }
+            var full = await TimesheetSvc.GetTimesheetAsync(ts.TimesheetId);
+            if (full != null)
+            {
+                full.Status = "Approved";
+                await TimesheetSvc.SaveTimesheetAsync(full);
+            }
+            Snackbar.Add($"Timesheet for {ts.UserName} approved.", Severity.Success);
+            await LoadAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Approve failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task RejectTimesheetAsync(TimesheetSummary ts)
+    {
+        try
+        {
+            var full = await TimesheetSvc.GetTimesheetAsync(ts.TimesheetId);
+            if (full != null)
+            {
+                full.Status = "Rejected";
+                await TimesheetSvc.SaveTimesheetAsync(full);
+            }
+            Snackbar.Add($"Timesheet for {ts.UserName} rejected.", Severity.Info);
+            await LoadAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Reject failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task ApproveAllAsync()
+    {
+        foreach (var ts in _loaded.ToList())
+        {
+            await ApproveTimesheetAsync(ts);
+        }
+    }
+}

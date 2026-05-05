@@ -1,0 +1,142 @@
+@page "/503"
+@layout EmptyLayout
+@inject PlatformSettingsService PlatformSettings
+
+<PageTitle>Service Unavailable - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-503-root">
+    <div class="tl-503-bg"></div>
+    <div class="tl-503-orb tl-503-orb-1"></div>
+    <div class="tl-503-orb tl-503-orb-2"></div>
+
+    <main class="tl-503-content">
+        <div class="tl-503-icon">
+            <MudIcon Icon="@Icons.Material.Rounded.SettingsSuggest" Size="Size.Large" />
+        </div>
+        <div class="tl-503-code">503</div>
+        <h1>Service temporarily unavailable</h1>
+        <p class="tl-503-subtitle">We're performing scheduled maintenance. Please try again in a few minutes.</p>
+
+        <div class="tl-503-status">
+            <MudChip T="string" Color="Color.Warning" Size="Size.Small" Variant="Variant.Outlined">
+                <MudIcon Icon="@Icons.Material.Rounded.SyncProblem" Size="Size.Small" Style="margin-right:4px;" />
+                Maintenance in progress
+            </MudChip>
+        </div>
+
+        <div class="tl-503-actions">
+            <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" Class="tl-503-btn"
+                       StartIcon="@Icons.Material.Rounded.Refresh">
+                Try Again
+            </MudButton>
+            <MudButton Href="mailto:support@digitalresponse.com.au" Variant="Variant.Outlined" Size="Size.Large" Class="tl-503-btn"
+                       StartIcon="@Icons.Material.Rounded.Support">
+                Contact Support
+            </MudButton>
+        </div>
+    </main>
+</div>
+
+<style>
+    .tl-503-root {
+        position: relative;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(165deg, #0b1220 0%, #0f1a2a 40%, #0d1520 100%);
+        overflow: hidden;
+        padding: 40px 24px;
+    }
+
+    .tl-503-bg {
+        position: absolute; inset: 0;
+        background:
+            radial-gradient(800px 500px at 30% 0%, rgba(247, 144, 9, 0.08), transparent 60%),
+            radial-gradient(600px 400px at 80% 20%, rgba(14, 165, 233, 0.06), transparent 50%);
+        pointer-events: none;
+    }
+
+    .tl-503-orb {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        pointer-events: none;
+        animation: tl-503-float 20s ease-in-out infinite;
+    }
+    .tl-503-orb-1 {
+        width: 400px; height: 400px;
+        top: -10%; left: -5%;
+        background: radial-gradient(closest-side, rgba(247, 144, 9, 0.2), transparent);
+    }
+    .tl-503-orb-2 {
+        width: 300px; height: 300px;
+        bottom: 5%; right: -3%;
+        background: radial-gradient(closest-side, rgba(99, 102, 241, 0.2), transparent);
+        animation-delay: -10s;
+    }
+    @@keyframes tl-503-float {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        33% { transform: translate(20px, -15px) scale(1.05); }
+        66% { transform: translate(-10px, 10px) scale(0.95); }
+    }
+
+    .tl-503-content {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+        max-width: 520px;
+        animation: tl-503-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @@keyframes tl-503-rise {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .tl-503-icon {
+        width: 64px; height: 64px;
+        margin: 0 auto 16px;
+        border-radius: 16px;
+        background: rgba(247, 144, 9, 0.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #f79009;
+    }
+
+    .tl-503-code {
+        font-size: 80px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        line-height: 1;
+        background: linear-gradient(135deg, #f79009 0%, #f59e0b 50%, #fbbf24 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .tl-503-content h1 {
+        font-size: 32px;
+        font-weight: 700;
+        color: #e2e8f0;
+        margin: 24px 0 12px;
+        letter-spacing: -0.02em;
+    }
+
+    .tl-503-subtitle {
+        font-size: 16px;
+        color: #94a3b8;
+        margin: 0 0 24px;
+    }
+
+    .tl-503-status {
+        margin-bottom: 32px;
+    }
+
+    .tl-503-actions {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+</style>

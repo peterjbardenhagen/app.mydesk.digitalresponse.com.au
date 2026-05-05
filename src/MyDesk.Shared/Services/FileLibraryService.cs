@@ -11,6 +11,71 @@ public class FileLibraryService
     public FileLibraryService(DatabaseService db, ILogger<FileLibraryService> logger)
     { _db = db; _logger = logger; }
 
+    /// <summary>
+    /// Idempotently ensures the FileLibrary table exists and contains every column
+    /// the service writes to. Safe to call on every startup — pre-v3 installs that
+    /// were created without <c>ModifiedAt</c> / <c>IsShared</c> get those columns
+    /// added in place. Called from the Program.cs SafeInit chain.
+    /// </summary>
+    public async Task EnsureTableAsync()
+    {
+        var sql = @"
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'FileLibrary')
+BEGIN
+    CREATE TABLE FileLibrary (
+        FileId               UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        ParentFolderId       UNIQUEIDENTIFIER NULL,
+        CompanyId            INT NULL,
+        Name                 NVARCHAR(255) NOT NULL,
+        IsFolder             BIT NOT NULL DEFAULT 0,
+        FilePath             NVARCHAR(500) NULL,
+        FileSize             BIGINT NULL,
+        ContentType          NVARCHAR(100) NULL,
+        SharedWithCompanies  NVARCHAR(MAX) NULL,
+        SharedWithContacts   NVARCHAR(MAX) NULL,
+        IsPublic             BIT NOT NULL DEFAULT 0,
+        IsShared             BIT NOT NULL DEFAULT 0,
+        CreatedBy            NVARCHAR(50) NOT NULL,
+        CreatedAt            DATETIME2 NOT NULL DEFAULT GETDATE(),
+        ModifiedAt           DATETIME2 NOT NULL DEFAULT GETDATE()
+    );
+    CREATE INDEX IX_FileLibrary_Parent   ON FileLibrary(ParentFolderId);
+    CREATE INDEX IX_FileLibrary_Company  ON FileLibrary(CompanyId);
+    CREATE INDEX IX_FileLibrary_IsFolder ON FileLibrary(IsFolder);
+END
+ELSE
+BEGIN
+    -- Pre-v3 installs may be missing some of these. Add idempotently.
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('FileLibrary') AND name = 'ModifiedAt')
+        ALTER TABLE FileLibrary ADD ModifiedAt DATETIME2 NOT NULL DEFAULT GETDATE();
+
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('FileLibrary') AND name = 'IsShared')
+        ALTER TABLE FileLibrary ADD IsShared BIT NOT NULL DEFAULT 0;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('FileLibrary') AND name = 'IsPublic')
+        ALTER TABLE FileLibrary ADD IsPublic BIT NOT NULL DEFAULT 0;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('FileLibrary') AND name = 'FilePath')
+        ALTER TABLE FileLibrary ADD FilePath NVARCHAR(500) NULL;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('FileLibrary') AND name = 'FileSize')
+        ALTER TABLE FileLibrary ADD FileSize BIGINT NULL;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('FileLibrary') AND name = 'ContentType')
+        ALTER TABLE FileLibrary ADD ContentType NVARCHAR(100) NULL;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('FileLibrary') AND name = 'SharedWithCompanies')
+        ALTER TABLE FileLibrary ADD SharedWithCompanies NVARCHAR(MAX) NULL;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('FileLibrary') AND name = 'SharedWithContacts')
+        ALTER TABLE FileLibrary ADD SharedWithContacts NVARCHAR(MAX) NULL;
+
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('FileLibrary') AND name = 'CreatedAt')
+        ALTER TABLE FileLibrary ADD CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE();
+END";
+        await _db.ExecuteNonQueryAsync(sql);
+    }
+
     public async Task<List<FileLibraryItem>> GetRootFoldersAsync(int? companyId = null, string sortBy = "newest")
     {
         var orderBy = GetSortClause(sortBy);
@@ -65,7 +130,7 @@ public class FileLibraryService
     public async Task<Guid> CreateFolderAsync(string name, Guid? parentFolderId = null, int? companyId = null, string createdBy = "")
     {
         var fileId = Guid.NewGuid();
-        await _db.ExecuteAsync(@"
+        await _db.ExecuteNonQueryAsync(@"
             INSERT INTO FileLibrary (FileId, ParentFolderId, CompanyId, Name, IsFolder, CreatedBy)
             VALUES (@FileId, @ParentId, @CompanyId, @Name, 1, @CreatedBy)",
             new() { ["FileId"] = fileId, 
@@ -90,7 +155,7 @@ public class FileLibraryService
             await DeleteItemAsync((Guid)row["FileId"], userCode);
         }
 
-        await _db.ExecuteAsync(@"
+        await _db.ExecuteNonQueryAsync(@"
             DELETE FROM FileLibrary WHERE FileId = @Id",
             new() { ["Id"] = fileId });
 
@@ -106,7 +171,7 @@ public class FileLibraryService
         var existing = await GetItemAsync(item.FileId);
         if (existing == null)
         {
-            await _db.ExecuteAsync(@"
+            await _db.ExecuteNonQueryAsync(@"
                 INSERT INTO FileLibrary (FileId, ParentFolderId, CompanyId, Name, IsFolder, FilePath, FileSize, ContentType, SharedWithCompanies, SharedWithContacts, IsPublic, CreatedBy, CreatedAt, ModifiedAt)
                 VALUES (@FileId, @ParentFolderId, @CompanyId, @Name, @IsFolder, @FilePath, @FileSize, @ContentType, @SharedWithCompanies, @SharedWithContacts, @IsPublic, @CreatedBy, @CreatedAt, @ModifiedAt)",
                 new() {
@@ -129,7 +194,7 @@ public class FileLibraryService
         }
         else
         {
-            await _db.ExecuteAsync(@"
+            await _db.ExecuteNonQueryAsync(@"
                 UPDATE FileLibrary 
                 SET ParentFolderId = @ParentFolderId, CompanyId = @CompanyId, Name = @Name, IsFolder = @IsFolder,
                     FilePath = @FilePath, FileSize = @FileSize, ContentType = @ContentType,
@@ -159,7 +224,7 @@ public class FileLibraryService
         var sharedCompanies = companyIds != null ? System.Text.Json.JsonSerializer.Serialize(companyIds) : null;
         var sharedContacts = contactIds != null ? System.Text.Json.JsonSerializer.Serialize(contactIds) : null;
         
-        await _db.ExecuteAsync(@"
+        await _db.ExecuteNonQueryAsync(@"
             UPDATE FileLibrary 
             SET SharedWithCompanies = @Companies, SharedWithContacts = @Contacts, IsShared = 1
             WHERE FileId = @Id",

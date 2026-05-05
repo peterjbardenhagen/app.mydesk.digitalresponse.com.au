@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @inject UserService UserSvc
 @inject AuthService AuthSvc
+@inject PlatformSettingsService PlatformSettingsSvc
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
 
@@ -104,14 +105,52 @@ else
                 </MudText>
             </MudPaper>
         </MudItem>
+
+        <MudItem xs="12">
+            <MudPaper Class="pa-6" Elevation="1">
+                <MudText Typo="Typo.h6" Class="mb-4">Outlook Email Assistant</MudText>
+                <MudText Typo="Typo.body2" Class="mb-4" Style="color:var(--gray-500);">
+                    Configure how the AI Email Assistant handles your Outlook inbox.
+                </MudText>
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="4">
+                        <MudCheckBox T="bool" @bind-Value="_autoCategorise" Label="Automatically categorise emails" Color="Color.Primary" />
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudCheckBox T="bool" @bind-Value="_autoDraftReplies" Label="Prepare Draft emails automatically" Color="Color.Primary" />
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudCheckBox T="bool" @bind-Value="_moveToCompanyFolder" Label="Move to Company folder if read and 1 day has elapsed" Color="Color.Primary" />
+                    </MudItem>
+                </MudGrid>
+                <div class="d-flex gap-3 mt-4">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveOutlookSettingsAsync" Disabled="_saving">
+                        Save Outlook Settings
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Href="/emails">Open Emails</MudButton>
+                </div>
+            </MudPaper>
+        </MudItem>
     </MudGrid>
 }
+
+<style>
+    body.mud-dark-mode .tl-breadcrumb span {
+        color: var(--gray-400) !important;
+    }
+    body.mud-dark-mode .tl-subtitle {
+        color: var(--gray-500) !important;
+    }
+</style>
 
 @code {
     private User? _user;
     private bool _saving;
     private bool _isAdmin;
     private MudTextField<string>? _nameField;
+    private bool _autoCategorise = true;
+    private bool _autoDraftReplies;
+    private bool _moveToCompanyFolder = true;
 
     [CascadingParameter] private Task<AuthenticationState>? AuthStateTask { get; set; }
 
@@ -127,6 +166,11 @@ else
             {
                 _user = await UserSvc.GetByCodeAsync(userCode);
             }
+
+            var ps = PlatformSettingsSvc.Current;
+            _autoCategorise = ps.OutlookAutoCategorise;
+            _autoDraftReplies = ps.OutlookAutoDraftReplies;
+            _moveToCompanyFolder = ps.OutlookMoveToCompanyFolder;
         }
         catch (Exception ex)
         {
@@ -157,6 +201,28 @@ else
     private async Task LogoutAsync()
     {
         Nav.NavigateTo("/logout", forceLoad: true);
+    }
+
+    private async Task SaveOutlookSettingsAsync()
+    {
+        _saving = true;
+        try
+        {
+            var ps = PlatformSettingsSvc.Current;
+            ps.OutlookAutoCategorise = _autoCategorise;
+            ps.OutlookAutoDraftReplies = _autoDraftReplies;
+            ps.OutlookMoveToCompanyFolder = _moveToCompanyFolder;
+            await PlatformSettingsSvc.SaveAsync();
+            Snackbar.Add("Outlook settings saved.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Save failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
     }
 }
 

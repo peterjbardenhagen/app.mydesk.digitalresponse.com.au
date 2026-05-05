@@ -1,14 +1,67 @@
 @using MyDesk.Shared.Models
-@inject ISnackbar Snackbar
 
-<MudDialog>
-    <TitleContent><MudText Typo="Typo.h6">O365 Subscription</MudText></TitleContent>
-    <DialogContent><MudText>O365 subscription dialog stub</MudText></DialogContent>
-    <DialogActions><MudButton OnClick="Cancel">Close</MudButton></DialogActions>
-</MudDialog>
+<MudForm @ref="_form">
+    <MudDialog>
+        <TitleContent>
+            <MudText Typo="Typo.h6">O365 Subscription</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Service Name" @bind-Value="_sub.ServiceName" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Customer Name" @bind-Value="_sub.CustomerName" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="User Name" @bind-Value="_sub.UserName" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Billing Cycle" @bind-Value="_sub.BillingCycle">
+                        <MudSelectItem Value="@("Monthly")">Monthly</MudSelectItem>
+                        <MudSelectItem Value="@("Yearly")">Yearly</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="Date Commenced" @bind-Date="_sub.DateCommenced" />
+                </MudItem>
+                <MudItem xs="12" sm="3">
+                    <MudNumericField T="decimal" Label="Cost Price" @bind-Value="_sub.CostPrice" Min="0" />
+                </MudItem>
+                <MudItem xs="12" sm="3">
+                    <MudNumericField T="decimal" Label="Sell Price" @bind-Value="_sub.SellPrice" Min="0" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudCheckBox T="bool" @bind-Value="_sub.IsActive" Label="Active" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Notes" @bind-Value="_sub.Notes" Lines="2" />
+                </MudItem>
+            </MudGrid>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="Cancel">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Save</MudButton>
+        </DialogActions>
+    </MudDialog>
+</MudForm>
 
 @code {
     [CascadingParameter] private MudDialogInstance MudDialog { get; set; } = default!;
-    [Parameter] public O365Subscription? Subscription { get; set; }
+    [Parameter] public O365Subscription Subscription { get; set; } = new();
+
+    private MudForm _form = default!;
+    private O365Subscription _sub = new();
+
+    protected override void OnInitialized()
+    {
+        _sub = Subscription ?? new O365Subscription();
+    }
+
     private void Cancel() => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        MudDialog.Close(_sub);
+    }
 }

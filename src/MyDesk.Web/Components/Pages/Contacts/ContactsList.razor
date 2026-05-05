@@ -17,7 +17,7 @@
             <span>Contacts</span>
         </div>
         <h1>Contacts</h1>
-        <p class="tl-subtitle">Manage company and personal contacts.</p>
+        <p class="tl-subtitle">Manage company and personal contacts. <a href="/companies" class="tl-link-secondary">View Companies →</a></p>
     </div>
     <div class="d-flex gap-2">
         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
@@ -49,10 +49,13 @@
         <PropertyColumn Property="x => x.Position" Title="Position" />
         <PropertyColumn Property="x => x.Email" Title="Email" />
         <PropertyColumn Property="x => x.Phone" Title="Phone" />
-        <TemplateColumn Title="Actions" Sortable="false" CellStyle="width:120px;">
+        <TemplateColumn Title="Actions" Sortable="false" CellStyle="width:150px;">
             <CellTemplate>
                 <div class="d-flex gap-1">
                     <FavouriteButton EntityType="Contact" EntityId="@context.Item.ContactId" EntityName="@context.Item.FullName" />
+                    <MudIconButton Icon="@Icons.Material.Rounded.Timer" Size="Size.Small" Color="Color.Warning"
+                                   OnClick="@(() => StartStopwatchForContact(context.Item))"
+                                   Title="Track time for this contact" />
                     <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Info"
                                    Href="@($"/contacts/{context.Item.ContactId}")" />
                     <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
@@ -164,6 +167,19 @@
         await JsRuntime.InvokeVoidAsync("window.open", url, "_blank");
         
         Snackbar.Add($"Exported {_contacts.Count} contacts", Severity.Success);
+    }
+
+    private void StartStopwatchForContact(Contact contact)
+    {
+        // Navigate to timesheets page with company pre-filled
+        if (contact.CompanyId > 0)
+        {
+            Nav.NavigateTo($"/timesheets?companyId={contact.CompanyId}&companyName={Uri.EscapeDataString(contact.CompanyName ?? "")}");
+        }
+        else
+        {
+            Snackbar.Add("Contact is not associated with a company. Cannot track billable time.", Severity.Warning);
+        }
     }
 }
 

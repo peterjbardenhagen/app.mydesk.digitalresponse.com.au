@@ -1,0 +1,103 @@
+@inject CallReportService CallReportSvc
+@inject AuthenticationStateProvider AuthState
+
+<MudPaper Class="pa-4" Elevation="1">
+    <div class="d-flex align-center justify-space-between mb-3">
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Rounded.NotificationsActive" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">Follow-ups</MudText>
+            @if (_overdueCount > 0)
+            {
+                <span class="tl-badge error">@_overdueCount overdue</span>
+            }
+        </div>
+        <MudLink Href="/call-reports" Underline="Underline.Hover">View all</MudLink>
+    </div>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_items.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Style="color:var(--gray-500);" Class="pa-3 text-center">
+            No outstanding follow-ups. Nice work!
+        </MudText>
+    }
+    else
+    {
+        <div class="d-flex flex-column gap-2">
+            @foreach (var item in _items.Take(8))
+            {
+                var tone = ToneFor(item.FollowUpDate!.Value);
+                <MudPaper Class="pa-3" Elevation="0" Style="@($"border-left:4px solid {tone.Color};background:{tone.Bg};border-radius:6px;")">
+                    <div class="d-flex justify-space-between align-center">
+                        <div style="min-width:0;flex:1;">
+                            <MudText Typo="Typo.body2" Style="font-weight:600;">
+                                @item.Subject
+                            </MudText>
+                            <MudText Typo="Typo.caption" Style="color:var(--gray-600);">
+                                @(item.ContactName ?? "—")
+                                @if (!string.IsNullOrEmpty(item.CompanyName))
+                                {
+                                    <span> · @item.CompanyName</span>
+                                }
+                            </MudText>
+                        </div>
+                        <div class="text-right">
+                            <MudText Typo="Typo.caption" Style="@($"color:{tone.Color};font-weight:600;")">
+                                @tone.Label
+                            </MudText>
+                            <div>
+                                <MudIconButton Icon="@Icons.Material.Rounded.OpenInNew" Size="Size.Small"
+                                               Href="@($"/call-reports/edit/{item.Id}")" title="Open" />
+                            </div>
+                        </div>
+                    </div>
+                </MudPaper>
+            }
+        </div>
+    }
+</MudPaper>
+
+@code {
+    private List<CallReport> _items = new();
+    private int _overdueCount;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var auth = await AuthState.GetAuthenticationStateAsync();
+            var userCode = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            // Prefer current user's follow-ups, fall back to all if none
+            var mine = await CallReportSvc.GetOpenFollowUpsAsync(userCode);
+            _items = mine.Count > 0 ? mine : await CallReportSvc.GetOpenFollowUpsAsync();
+            _overdueCount = _items.Count(c => c.FollowUpDate!.Value.Date < DateTime.Today);
+        }
+        catch
+        {
+            _items = new();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private record Tone(string Label, string Color, string Bg);
+
+    private static Tone ToneFor(DateTime due)
+    {
+        var d = due.Date;
+        var today = DateTime.Today;
+        if (d < today)
+            return new Tone($"Overdue ({(today - d).Days}d)", "#ef4444", "rgba(239,68,68,0.06)");
+        if (d == today)
+            return new Tone("Due today", "#f59e0b", "rgba(245,158,11,0.06)");
+        if (d == today.AddDays(1))
+            return new Tone("Due tomorrow", "#f59e0b", "rgba(245,158,11,0.06)");
+        return new Tone(d.ToString("dd MMM"), "#10b981", "rgba(16,185,129,0.06)");
+    }
+}

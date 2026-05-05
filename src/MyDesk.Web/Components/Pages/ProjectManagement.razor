@@ -32,7 +32,7 @@
         else if (_projects.Any())
         {
             <MudGrid Spacing="3">
-                @foreach (var project in _projects)
+                @foreach (var project in _projects.OrderBy(p => p.Name))
                 {
                     <MudItem xs="12" md="6" lg="4">
                         <MudPaper Class="pa-4 tl-project-card" Elevation="0" Outlined="true" Style="cursor: pointer;" @onclick="() => OpenProject(project)">
@@ -67,11 +67,22 @@
     </MudTabPanel>
 
     <MudTabPanel Text="Scrum Board" Icon="@Icons.Material.Rounded.ViewKanban">
+        <div class="d-flex align-center gap-4 mb-4">
+            <MudSelect T="int?" Value="_selectedProjectId" ValueChanged="OnProjectSelected" Label="Select Project" Variant="Variant.Outlined" Dense="true" Style="min-width: 250px;">
+                @foreach (var p in _projects.OrderBy(p => p.Name))
+                {
+                    <MudSelectItem Value="@(p.ProjectId)">@p.Name</MudSelectItem>
+                }
+            </MudSelect>
+            @if (_selectedProject != null)
+            {
+                <MudButton Variant="Variant.Filled" Size="Size.Small" StartIcon="@Icons.Material.Rounded.Add" OnClick="CreateTask">Add Task</MudButton>
+            }
+        </div>
         @if (_selectedProject != null)
         {
             <div class="d-flex align-center justify-space-between mb-4">
                 <MudText Typo="Typo.h6">@_selectedProject.Name - Sprint Board</MudText>
-                <MudButton Variant="Variant.Filled" Size="Size.Small" StartIcon="@Icons.Material.Rounded.Add" OnClick="CreateTask">Add Task</MudButton>
             </div>
             <MudGrid Spacing="2">
                 @foreach (var status in _kanbanStatuses)
@@ -215,6 +226,8 @@
     .tl-capacity-table { width: 100%; border-collapse: collapse; }
     .tl-capacity-table th, .tl-capacity-table td { border: 1px solid #e2e8f0; padding: 8px; text-align: center; }
     .tl-capacity-table th { background: #f8fafc; font-weight: 600; }
+    body.mud-dark-mode .tl-capacity-table th, body.mud-dark-mode .tl-capacity-table td { border-color: var(--gray-300); }
+    body.mud-dark-mode .tl-capacity-table th { background: var(--gray-100); }
 </style>
 
 @code {
@@ -222,6 +235,7 @@
     private List<TaskItem> _tasks = new();
     private List<CapacityPlanning> _capacity = new();
     private Project? _selectedProject;
+    private int? _selectedProjectId;
     private bool _loading = true;
     private int _currentUserId;
     private string _currentUserName = "";
@@ -288,12 +302,23 @@
 
     private async Task CreateProject()
     {
-        var result = await DialogService.ShowAsync<ProjectDialog>("Create Project");
-        if (result.Result != null && (bool)result.Result)
+        var dialogRef = await DialogService.ShowAsync<ProjectDialog>("Create Project");
+        var result = await dialogRef.Result;
+        if (result is not null && !result.Canceled)
         {
             await LoadData();
             Snackbar.Add("Project created", Severity.Success);
         }
+    }
+
+    private async Task OnProjectSelected(int? projectId)
+    {
+        _selectedProjectId = projectId;
+        _selectedProject = _projects.FirstOrDefault(p => p.ProjectId == projectId);
+        if (_selectedProject != null)
+            _tasks = await ProjectSvc.GetTasksAsync(projectId: _selectedProject.ProjectId);
+        else
+            _tasks = await ProjectSvc.GetTasksAsync();
     }
 
     private async Task OpenProject(Project project)
@@ -305,8 +330,9 @@
     private async Task CreateTask()
     {
         if (_selectedProject == null) return;
-        var result = await DialogService.ShowAsync<TaskDialog>("Create Task", new DialogParameters { { "ProjectId", _selectedProject.ProjectId } });
-        if (result.Result != null && (bool)result.Result)
+        var dialogRef = await DialogService.ShowAsync<TaskDialog>("Create Task", new DialogParameters { { "ProjectId", _selectedProject.ProjectId } }, new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true });
+        var result = await dialogRef.Result;
+        if (result is not null && !result.Canceled)
         {
             _tasks = await ProjectSvc.GetTasksAsync(projectId: _selectedProject.ProjectId);
             Snackbar.Add("Task created", Severity.Success);
@@ -315,8 +341,9 @@
 
     private async Task EditTask(TaskItem task)
     {
-        var result = await DialogService.ShowAsync<TaskDialog>("Edit Task", new DialogParameters { { "Task", task } });
-        if (result.Result != null && (bool)result.Result)
+        var dialogRef = await DialogService.ShowAsync<TaskDialog>("Edit Task", new DialogParameters { { "Task", task } }, new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true });
+        var result = await dialogRef.Result;
+        if (result is not null && !result.Canceled)
         {
             await LoadData();
             Snackbar.Add("Task updated", Severity.Success);

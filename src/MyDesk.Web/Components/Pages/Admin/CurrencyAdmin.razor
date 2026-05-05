@@ -18,9 +18,13 @@
                OnClick="AddNew">Add Currency</MudButton>
 </div>
 
-@if (_items == null)
+@if (_loading)
 {
     <MudProgressCircular Indeterminate="true" />
+}
+else if (_items == null)
+{
+    <MudAlert Severity="Severity.Error">Failed to load currency rates.</MudAlert>
 }
 else
 {
@@ -82,13 +86,20 @@ else
 
 @code {
     private List<CurrencyRate>? _items;
+    private bool _loading = true;
     private int? _editingId;
     private string _editingCode = "";
     private string _editingName = "";
     private decimal _editingRate = 1m;
 
     protected override async Task OnInitializedAsync() => await Reload();
-    private async Task Reload() => _items = await Svc.GetCurrencyRatesAsync();
+    private async Task Reload()
+    {
+        _loading = true;
+        try { _items = await Svc.GetCurrencyRatesAsync(); }
+        catch (Exception ex) { Snackbar.Add($"Failed to load: {ex.Message}", Severity.Error); _items = new(); }
+        finally { _loading = false; }
+    }
 
     private void BeginEdit(CurrencyRate c)
     {

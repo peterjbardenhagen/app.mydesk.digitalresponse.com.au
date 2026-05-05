@@ -55,7 +55,7 @@ public class TransporterService
 
             foreach (System.Data.DataRow line in linesDt.Rows)
             {
-                await _db.ExecuteAsync(@"
+                await _db.ExecuteNonQueryAsync(@"
                     INSERT INTO JobOrderContents (JobOrderId, Qty, Description, Price)
                     VALUES (@JobOrderId, @Qty, @Description, @Price)", new()
                 {
@@ -118,7 +118,7 @@ public class TransporterService
 
             foreach (System.Data.DataRow line in linesDt.Rows)
             {
-                await _db.ExecuteAsync(@"
+                await _db.ExecuteNonQueryAsync(@"
                     INSERT INTO InvoiceLineItems (InvoiceId, Quantity, Description, UnitPrice)
                     VALUES (@InvoiceId, @Qty, @Description, @Price)", new()
                 {
@@ -181,7 +181,7 @@ public class TransporterService
 
             foreach (System.Data.DataRow line in linesDt.Rows)
             {
-                await _db.ExecuteAsync(@"
+                await _db.ExecuteNonQueryAsync(@"
                     INSERT INTO InvoiceLineItems (InvoiceId, Quantity, Description, UnitPrice)
                     VALUES (@InvoiceId, @Qty, @Description, @Price)", new()
                 {

@@ -3,6 +3,7 @@
 @inject SupplierQuoteParseService ParseService
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
+@using MyDesk.Web.Services
 
 <PageTitle>Copy Supplier Quote - MyDesk</PageTitle>
 
@@ -14,37 +15,47 @@
             <span style="color:var(--gray-700);font-weight:500;">Copy Supplier Quote</span>
         </div>
         <h1>Copy Supplier Quote</h1>
-        <p class="tl-subtitle">Upload a supplier quote (PDF or image) to have AI extract the line items.</p>
+        <p class="tl-subtitle">Upload a supplier's PDF or image quote – we'll use Azure Document Intelligence to read the text and Azure OpenAI to translate it into a new quote.</p>
     </div>
     <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ArrowBack"
                Href="/quotes">Cancel</MudButton>
 </div>
 
+@if (!ParseService.IsDocIntelConfigured)
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-4">
+        Azure Document Intelligence is not configured. Add <code>DocumentIntelligenceEndpoint</code> and
+        <code>DocumentIntelligenceApiKey</code> under the <code>Azure</code> section of <code>appsettings.json</code>,
+        or use the same multi-service Cognitive Services key as your OpenAI deployment.
+    </MudAlert>
+}
+
 <MudPaper Class="pa-6 mb-4" Elevation="1">
     <MudText Typo="Typo.subtitle2" Class="mb-4" Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">
-        Upload Supplier Quote
+        1. Upload Supplier Quote
     </MudText>
 
-    <MudFileUpload T="IReadOnlyList<IBrowserFile>" OnFilesChanged="HandleFilesChanged" Accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.bmp" Hidden="false">
-        <ButtonTemplate>
-            <div Class="d-flex flex-column align-center justify-center pa-8"
-                 Style="border: 2px dashed var(--mud-palette-grey-light); border-radius: 8px; cursor: pointer; background-color: var(--mud-palette-background-grey)">
+    <MudFileUpload T="IReadOnlyList<IBrowserFile>" OnFilesChanged="HandleFilesChanged"
+                   Accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff,.bmp,.heif" Hidden="false">
+        <ActivatorContent>
+            <div class="d-flex flex-column align-center justify-center pa-8"
+                 style="border: 2px dashed var(--mud-palette-grey-light); border-radius: 8px; cursor: pointer; background-color: var(--mud-palette-background-grey)">
                 <MudIcon Icon="@Icons.Material.Rounded.CloudUpload" Size="Size.Large" Class="mb-2" Style="color: var(--mud-palette-grey);" />
-                <MudText Typo="Typo.body1">Drag & drop files here or click to browse</MudText>
+                <MudText Typo="Typo.body1">Drag &amp; drop a supplier quote here, or click to browse</MudText>
                 <MudText Typo="Typo.caption" Class="mt-1" Style="color: var(--gray-400);">
-                    Supports PDF, JPG, PNG, GIF, WEBP (max 50MB per file)
+                    PDF, JPG, PNG, TIFF, BMP – up to 50&nbsp;MB
                 </MudText>
             </div>
-        </ButtonTemplate>
+        </ActivatorContent>
     </MudFileUpload>
 
     @if (_files.Any())
     {
-        <MudList T="string">
+        <MudList T="string" Class="mt-3" Dense="true">
             @foreach (var f in _files)
             {
                 <MudListItem T="string" Icon="@Icons.Material.Rounded.InsertDriveFile">
-                    @f.Name <span style="color:var(--gray-400);">(@(f.Size / 1024)KB)</span>
+                    <strong>@f.Name</strong> <span style="color:var(--gray-400);">(@FormatSize(f.Size))</span>
                 </MudListItem>
             }
         </MudList>
@@ -53,79 +64,115 @@
     @if (_processing)
     {
         <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mt-4" />
-        <MudText Class="mt-2">Processing with AI...</MudText>
+        <MudText Typo="Typo.body2" Class="mt-2">@(_processingStatus ?? "Processing with Azure AI…")</MudText>
     }
 
     @if (_parseResult != null && !_parseResult.IsSuccess)
     {
         <MudAlert Severity="Severity.Error" Class="mt-4">@_parseResult.ErrorMessage</MudAlert>
-    }
 
-    @if (_parseResult != null && _parseResult.IsSuccess && _parseResult.Lines.Any())
-    {
-        <MudAlert Severity="Severity.Success" Class="mt-4">
-            Successfully extracted @_parseResult.Lines.Count line item(s) from the supplier quote.
-        </MudAlert>
-
-        <MudSimpleTable Dense="true" Class="mt-4" Style="max-height: 300px; overflow: auto;">
-            <thead>
-                <tr>
-                    <th>Type</th>
-                    <th>Description</th>
-                    <th style="text-align:right;">Qty</th>
-                    <th style="text-align:right;">Unit Cost</th>
-                    <th style="text-align:right;">Nett Price</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var line in _parseResult.Lines)
-                {
-                    <tr>
-                        <td>@line.Type</td>
-                        <td>@line.Description</td>
-                        <td style="text-align:right;">@line.Quantity</td>
-                        <td style="text-align:right;">@line.UnitCost.ToString("N2")</td>
-                        <td style="text-align:right;">@line.NettPrice.ToString("N2")</td>
-                    </tr>
-                }
-            </tbody>
-        </MudSimpleTable>
-
-        <MudText Typo="Typo.body2" Class="mt-4" Style="color:var(--gray-500);">
-            Total lines: @_parseResult.Lines.Count | 
-            Total cost: $@_parseResult.Lines.Sum(l => l.UnitCost * l.Quantity).ToString("N2") | 
-            Total price: $@_parseResult.Lines.Sum(l => l.NettPrice * l.Quantity).ToString("N2")
-        </MudText>
+        @if (!string.IsNullOrWhiteSpace(_parseResult.ExtractedText))
+        {
+            <MudExpansionPanels Class="mt-3">
+                <MudExpansionPanel Text="Show raw extracted text" MaxHeight="400">
+                    <pre style="white-space:pre-wrap;font-size:0.78rem;color:var(--gray-700);">@_parseResult.ExtractedText</pre>
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+        }
     }
 </MudPaper>
 
-@if (_parseResult != null && _parseResult.IsSuccess && _parseResult.Lines.Any())
+@if (_parseResult != null && _parseResult.IsSuccess)
 {
-    <MudPaper Class="pa-4" Elevation="1">
+    <MudPaper Class="pa-6 mb-4" Elevation="1">
         <MudText Typo="Typo.subtitle2" Class="mb-4" Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">
-            Ready to Create Quote?
+            2. Detected Quote Header
         </MudText>
-        
-        <MudText Class="mb-4">
-            The extracted line items will be pre-populated in the Add Quote screen. 
-            You can edit/add/remove lines as needed before saving.
+        <MudGrid Spacing="2">
+            <MudItem xs="12" md="4"><b>Supplier:</b> @Or(_parseResult.Header.SupplierName, "—")</MudItem>
+            <MudItem xs="12" md="4"><b>ABN:</b> @Or(_parseResult.Header.SupplierAbn, "—")</MudItem>
+            <MudItem xs="12" md="4"><b>Quote #:</b> @Or(_parseResult.Header.QuoteNumber, "—")</MudItem>
+            <MudItem xs="12" md="4"><b>Quote Date:</b> @(_parseResult.Header.QuoteDate?.ToString("d MMM yyyy") ?? "—")</MudItem>
+            <MudItem xs="12" md="4"><b>Reference:</b> @Or(_parseResult.Header.Reference, "—")</MudItem>
+            <MudItem xs="12" md="4"><b>Validity:</b> @(_parseResult.Header.ValidityDays > 0 ? $"{_parseResult.Header.ValidityDays} days" : "—")</MudItem>
+            @if (!string.IsNullOrWhiteSpace(_parseResult.Header.Terms))
+            {
+                <MudItem xs="12"><b>Terms:</b> @_parseResult.Header.Terms</MudItem>
+            }
+            @if (_parseResult.Header.Total > 0)
+            {
+                <MudItem xs="12" md="4"><b>Sub-total ex GST:</b> $@_parseResult.Header.SubTotal.ToString("N2")</MudItem>
+                <MudItem xs="12" md="4"><b>GST:</b> $@_parseResult.Header.Gst.ToString("N2")</MudItem>
+                <MudItem xs="12" md="4"><b>Total inc GST:</b> $@_parseResult.Header.Total.ToString("N2")</MudItem>
+            }
+        </MudGrid>
+    </MudPaper>
+
+    <MudPaper Class="pa-6 mb-4" Elevation="1">
+        <MudText Typo="Typo.subtitle2" Class="mb-4" Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">
+            3. Detected Line Items (@_parseResult.Lines.Count)
         </MudText>
 
-        <div class="d-flex gap-2">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
-                     OnClick="CreateQuote">
-                Create Quote with These Lines
-            </MudButton>
-            <MudButton Variant="Variant.Outlined" OnClick="ClearAndStartOver">
-                Start Over
-            </MudButton>
-        </div>
+        @if (_parseResult.Lines.Any())
+        {
+            <MudSimpleTable Dense="true" Bordered="true" Hover="true" Class="mt-2">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Description</th>
+                        <th style="text-align:right;">Qty</th>
+                        <th style="text-align:right;">Unit Cost</th>
+                        <th style="text-align:right;">Nett Price (auto)</th>
+                        <th style="text-align:right;">Ext Price</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var line in _parseResult.Lines)
+                    {
+                        <tr>
+                            <td>@line.Type</td>
+                            <td>@line.Description</td>
+                            <td style="text-align:right;">@line.Quantity.ToString("N2")</td>
+                            <td style="text-align:right;">$@line.UnitCost.ToString("N2")</td>
+                            <td style="text-align:right;">$@line.NettPrice.ToString("N2")</td>
+                            <td style="text-align:right;">$@((line.NettPrice * line.Quantity).ToString("N2"))</td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+
+            <MudText Typo="Typo.body2" Class="mt-3" Style="color:var(--gray-500);">
+                Total cost: <b>$@_parseResult.Lines.Sum(l => l.UnitCost * l.Quantity).ToString("N2")</b> &nbsp;·&nbsp;
+                Total price: <b>$@_parseResult.Lines.Sum(l => l.NettPrice * l.Quantity).ToString("N2")</b>
+            </MudText>
+
+            <div class="d-flex gap-2 mt-4">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add" OnClick="CreateQuote">
+                    Create Quote with These Lines
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" OnClick="ClearAndStartOver">Start Over</MudButton>
+            </div>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info">No line items were identified. Use the raw extracted text to create a quote manually.</MudAlert>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_parseResult.ExtractedText))
+        {
+            <MudExpansionPanels Class="mt-4">
+                <MudExpansionPanel Text="Show raw extracted text from Document Intelligence" MaxHeight="400">
+                    <pre style="white-space:pre-wrap;font-size:0.78rem;color:var(--gray-700);">@_parseResult.ExtractedText</pre>
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+        }
     </MudPaper>
 }
 
 @code {
     private List<IBrowserFile> _files = new();
     private bool _processing;
+    private string? _processingStatus;
     private SupplierQuoteParseResult? _parseResult;
 
     private async Task HandleFilesChanged(InputFileChangeEventArgs e)
@@ -135,18 +182,24 @@
 
         _processing = true;
         _parseResult = null;
+        _processingStatus = "Sending file to Azure Document Intelligence…";
         StateHasChanged();
 
         try
         {
             _parseResult = await ParseService.ParseFilesAsync(_files);
+
             if (!_parseResult.IsSuccess)
             {
                 Snackbar.Add(_parseResult.ErrorMessage ?? "Failed to parse files", Severity.Error);
             }
             else if (!_parseResult.Lines.Any())
             {
-                Snackbar.Add("No line items found in the uploaded files", Severity.Warning);
+                Snackbar.Add("No line items were detected. Check the raw extracted text below.", Severity.Warning);
+            }
+            else
+            {
+                Snackbar.Add($"Detected {_parseResult.Lines.Count} line item(s)", Severity.Success);
             }
         }
         catch (Exception ex)
@@ -156,6 +209,7 @@
         finally
         {
             _processing = false;
+            _processingStatus = null;
         }
     }
 
@@ -163,7 +217,7 @@
     {
         if (_parseResult == null || !_parseResult.Lines.Any()) return;
 
-        var key = SupplierQuoteSession.Store(_parseResult.Lines);
+        var key = SupplierQuoteSession.Store(_parseResult.Lines, _parseResult.Header);
         Nav.NavigateTo($"/quotes/create?fromSupplier={key}");
     }
 
@@ -173,6 +227,14 @@
         _parseResult = null;
         StateHasChanged();
     }
+
+    private static string Or(string? value, string fallback) =>
+        string.IsNullOrWhiteSpace(value) ? fallback : value!;
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:N1} KB";
+        return $"{bytes / 1024.0 / 1024.0:N2} MB";
+    }
 }
-
-

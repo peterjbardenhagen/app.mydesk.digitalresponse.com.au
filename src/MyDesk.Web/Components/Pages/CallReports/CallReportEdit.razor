@@ -1,0 +1,135 @@
+@page "/call-reports/edit"
+@page "/call-reports/edit/{id:int?}"
+@attribute [Authorize]
+@inject CallReportService Svc
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthState
+
+<PageTitle>Call Report Edit - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">MyDesk</a><span class="sep">/</span>
+            <a href="/call-reports">Call Reports</a><span class="sep">/</span>
+            <span>@(_c.Id == 0 ? "New" : $"#{_c.Id}")</span>
+        </div>
+        <h1>@(_c.Id == 0 ? "New Call Report" : $"Edit Call Report #{_c.Id}")</h1>
+        <p class="tl-subtitle">Record a customer interaction and an optional follow-up.</p>
+    </div>
+</div>
+
+<MudPaper Class="pa-6" Elevation="1">
+    <MudGrid>
+        <MudItem xs="12" sm="4">
+            <MudDatePicker @bind-Date="_callDate" Label="Call date" Required="true"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect T="CallType" @bind-Value="_c.CallType" Label="Type"
+                       Variant="Variant.Outlined" Margin="Margin.Dense">
+                @foreach (var t in Enum.GetValues<CallType>())
+                {
+                    <MudSelectItem Value="t">@t</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudTextField @bind-Value="_c.OwnerName" Label="Owner"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_c.ContactName" Label="Contact name"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_c.CompanyName" Label="Company"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudTextField @bind-Value="_c.Subject" Label="Subject" Required="true"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudTextField @bind-Value="_c.Notes" Label="Notes" Lines="6"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+
+        <MudItem xs="12" sm="4">
+            <MudDatePicker @bind-Date="_followUp" Label="Follow-up date"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" />
+        </MudItem>
+        <MudItem xs="12" sm="4" Class="d-flex align-center">
+            <MudSwitch T="bool" @bind-Value="_c.FollowUpComplete"
+                       Color="Color.Success" Label="Follow-up complete" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudNumericField T="int?" @bind-Value="_c.SalesProjectId" Label="Sales project ID"
+                             Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+    </MudGrid>
+
+    <div class="d-flex gap-2 mt-4 justify-end">
+        <MudButton Variant="Variant.Outlined" Href="/call-reports">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Rounded.Save" OnClick="SaveAsync">Save</MudButton>
+    </div>
+</MudPaper>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private CallReport _c = new();
+    private DateTime? _callDate = DateTime.Today;
+    private DateTime? _followUp;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id.HasValue && Id.Value > 0)
+        {
+            var existing = await Svc.GetByIdAsync(Id.Value);
+            if (existing != null)
+            {
+                _c = existing;
+                _callDate = existing.CallDate;
+                _followUp = existing.FollowUpDate;
+            }
+        }
+        else
+        {
+            var auth = await AuthState.GetAuthenticationStateAsync();
+            _c.OwnerUserCode = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            _c.OwnerName = auth.User.Identity?.Name;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_c.Subject))
+        {
+            Snackbar.Add("Subject is required", Severity.Warning);
+            return;
+        }
+        _c.CallDate = _callDate ?? DateTime.Today;
+        _c.FollowUpDate = _followUp;
+
+        try
+        {
+            if (_c.Id == 0)
+            {
+                await Svc.CreateAsync(_c);
+                Snackbar.Add("Call report created", Severity.Success);
+            }
+            else
+            {
+                await Svc.UpdateAsync(_c);
+                Snackbar.Add("Call report saved", Severity.Success);
+            }
+            Nav.NavigateTo("/call-reports");
+        }
+        catch (Exception ex) { Snackbar.Add($"Save failed: {ex.Message}", Severity.Error); }
+    }
+}

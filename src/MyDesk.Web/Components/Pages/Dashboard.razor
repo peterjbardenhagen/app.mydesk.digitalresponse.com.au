@@ -2,6 +2,7 @@
 @inject NavigationManager Navigation
 @inject IWeatherService WeatherService
 @inject IJSRuntime JS
+@inject ApprovalService ApprovalSvc
 @using MyDesk.Web.Services.Weather
 
 <PageTitle>Dashboard - MyDesk</PageTitle>
@@ -21,6 +22,48 @@
     <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-4">
         Dashboard overview page. The main dashboard with full metrics is available at <MudLink Href="/">Home</MudLink>.
     </MudAlert>
+
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" md="6">
+            <FollowUpsCard />
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Elevation="1" Style="height:100%;">
+                <div class="d-flex align-center justify-space-between mb-3">
+                    <MudText Typo="Typo.h6">
+                        <MudIcon Icon="@Icons.Material.Rounded.HourglassBottom" Class="mr-2" />
+                        Approvals stalled &gt; 1 day
+                    </MudText>
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Href="/approvals/pending"
+                               StartIcon="@Icons.Material.Rounded.OpenInNew">View all</MudButton>
+                </div>
+                @if (_stalled.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Style="color:var(--gray-500);">
+                        Nothing stalled — every approval-in-flight progressed in the last 24 hours.
+                    </MudText>
+                }
+                else
+                {
+                    <MudList T="string" Dense="true">
+                        @foreach (var s in _stalled)
+                        {
+                            <MudListItem T="string" Icon="@Icons.Material.Rounded.Warning"
+                                         IconColor="Color.Warning"
+                                         Href="@(s.EntityType == "Quote" ? $"/quotes/{s.EntityId}" : $"/purchase-orders/{s.EntityId}")">
+                                <MudText Typo="Typo.body2">
+                                    <strong>@s.EntityType #@s.EntityId</strong>
+                                    — last approved by @s.LastApprover
+                                    on @s.LastAt.ToString("dd MMM HH:mm")
+                                    (waiting on @(s.NextApprover ?? "—"))
+                                </MudText>
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
 
     <div class="tl-weather-widget">
         <div class="tl-weather-header">
@@ -83,8 +126,15 @@
     private string SelectedCity = "Melbourne";
     private List<string> Cities = new() { "Melbourne", "Sydney", "Hong Kong", "London", "New York", "Paris" };
 
+    private record StalledRow(string EntityType, int EntityId, string LastApprover, DateTime LastAt, string? NextApprover);
+    private List<StalledRow> _stalled = new();
+
     protected override async Task OnInitializedAsync()
     {
+        _stalled = ApprovalSvc.StalledApprovals(24)
+            .Select(t => new StalledRow(t.EntityType, t.EntityId, t.LastApprover, t.LastAt, t.NextApprover))
+            .OrderBy(s => s.LastAt)
+            .ToList();
         await LoadWeatherData();
     }
 

@@ -1,34 +1,39 @@
 @using MudBlazor
 
 <MudDialog>
-    <TitleContent>
-        <MudText Typo="Typo.h6">Keyboard Shortcuts</MudText>
-    </TitleContent>
     <DialogContent>
-        <MudSimpleTable Dense="true" Hover="true" Striped="true">
-            <thead>
-                <tr>
-                    <th>Action</th>
-                    <th>Shortcut</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr><td>Open search</td><td><MudChip T="string" Size="Size.Small">Alt + K</MudChip></td></tr>
-                <tr><td>Go to Dashboard</td><td><MudChip T="string" Size="Size.Small">Alt + H</MudChip></td></tr>
-                <tr><td>Go to Settings</td><td><MudChip T="string" Size="Size.Small">Alt + ,</MudChip></td></tr>
-                <tr><td>Toggle sidebar</td><td><MudChip T="string" Size="Size.Small">Alt + B</MudChip></td></tr>
-                <tr><td>Create new item</td><td><MudChip T="string" Size="Size.Small">Alt + N</MudChip></td></tr>
-                <tr><td>Save</td><td><MudChip T="string" Size="Size.Small">Alt + S</MudChip></td></tr>
-                <tr><td>Show keyboard shortcuts</td><td><MudChip T="string" Size="Size.Small">?</MudChip></td></tr>
-            </tbody>
-        </MudSimpleTable>
+        <MudText Typo="Typo.subtitle1" Class="mb-3">Keyboard Shortcuts</MudText>
+        <MudTable Items="@_shortcuts" Hover="true" Striped="true" Dense="true">
+            <HeaderContent>
+                <MudTh>Shortcut</MudTh>
+                <MudTh>Action</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd><kbd class="tl-shortcut-kbd">@context.Keys</kbd></MudTd>
+                <MudTd>@context.Action</MudTd>
+            </RowTemplate>
+        </MudTable>
     </DialogContent>
     <DialogActions>
-        <MudButton Color="Color.Primary" OnClick="Close">Close</MudButton>
+        <MudButton OnClick="Cancel">Close</MudButton>
     </DialogActions>
 </MudDialog>
 
+<style>
+    .tl-shortcut-kbd { background:#f1f5f9; padding:2px 8px; border-radius:4px; font-size:.85rem; border:1px solid #cbd5e1; }
+    body.mud-dark-mode .tl-shortcut-kbd { background: var(--gray-100); border-color: var(--gray-300); color: var(--gray-900); }
+</style>
+
 @code {
-    [CascadingParameter] public MudDialogInstance MudDialog { get; set; } = null!;
-    private void Close() => MudDialog.Close();
+    [CascadingParameter] public MudDialogInstance? Dialog { get; set; }
+    private readonly List<ShortcutInfo> _shortcuts = new()
+    {
+        new() { Keys = "Ctrl + K", Action = "Quick Search" },
+        new() { Keys = "Ctrl + N", Action = "New Record" },
+        new() { Keys = "Ctrl + S", Action = "Save" },
+        new() { Keys = "Ctrl + /", Action = "Show Shortcuts" },
+        new() { Keys = "Escape", Action = "Close Dialog" },
+    };
+    private void Cancel() => Dialog?.Close(DialogResult.Ok(true));
+    private class ShortcutInfo { public string Keys { get; set; } = ""; public string Action { get; set; } = ""; }
 }

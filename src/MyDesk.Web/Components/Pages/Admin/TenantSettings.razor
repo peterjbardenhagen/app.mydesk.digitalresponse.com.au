@@ -1,0 +1,212 @@
+@page "/admin/tenants"
+@attribute [Authorize(Roles = "SuperAdministrator")]
+@inject TenantService TenantSvc
+@inject PlatformSettingsService PlatformSettings
+@inject ISnackbar Snackbar
+@inject IDialogService Dialog
+
+<PageTitle>Tenant Settings - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <a href="/admin/setup">Admin</a><span class="sep">/</span>
+            <span>Tenant Settings</span>
+        </div>
+        <h1>Tenant Settings</h1>
+        <p class="tl-subtitle">Manage workspaces and tenant configuration</p>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Rounded.Add"
+               OnClick="OpenAddDialog" Class="rounded-lg px-6">
+        New Tenant
+    </MudButton>
+</div>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+}
+else if (_tenants.Count == 0)
+{
+    <MudAlert Severity="Severity.Info" Class="mt-4">No tenants found.</MudAlert>
+}
+else
+{
+    <MudTable Items="_tenants" Hover="true" Striped="false" Dense="false"
+              Class="surface-panel rounded-xl mt-4">
+        <HeaderContent>
+            <MudTh>Name</MudTh>
+            <MudTh>Slug</MudTh>
+            <MudTh>Plan</MudTh>
+            <MudTh>Max Users</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh Style="text-align:right">Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>
+                <div class="d-flex align-center gap-2">
+                    <MudIcon Icon="@Icons.Material.Rounded.Business" Size="Size.Small" Color="Color.Primary" />
+                    <strong>@context.Name</strong>
+                </div>
+            </MudTd>
+            <MudTd><code class="text-sm opacity-60">@context.Slug</code></MudTd>
+            <MudTd>
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">
+                    @context.SubscriptionPlan
+                </MudChip>
+            </MudTd>
+            <MudTd>@context.MaxUsers</MudTd>
+            <MudTd>
+                @if (context.IsActive)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">Active</MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">Inactive</MudChip>
+                }
+            </MudTd>
+            <MudTd Style="text-align:right">
+                <MudIconButton Icon="@Icons.Material.Rounded.Edit"
+                               Size="Size.Small"
+                               Color="Color.Primary"
+                               OnClick="() => OpenEditDialog(context)"
+                               Title="Edit tenant" />
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@* ── Add / Edit Dialog ──────────────────────────────────────── *@
+<MudDialog @bind-Visible="_dialogOpen">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(_editTenant.TenantId == Guid.Empty ? "New Tenant" : "Edit Tenant")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_editTenant.Name" Label="Tenant Name" Required="true"
+                              Variant="Variant.Outlined" FullWidth="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_editTenant.Slug" Label="Slug (URL key)" Required="true"
+                              Variant="Variant.Outlined" FullWidth="true"
+                              HelperText="e.g. techlight, digital-response" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_editTenant.ContactEmail" Label="Contact Email"
+                              Variant="Variant.Outlined" FullWidth="true" InputType="InputType.Email" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect @bind-Value="_editTenant.SubscriptionPlan" Label="Subscription Plan"
+                           Variant="Variant.Outlined" FullWidth="true">
+                    <MudSelectItem Value="@("Foundation")">Foundation</MudSelectItem>
+                    <MudSelectItem Value="@("Professional")">Professional</MudSelectItem>
+                    <MudSelectItem Value="@("Enterprise")">Enterprise</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField @bind-Value="_editTenant.MaxUsers" Label="Max Users" Min="1"
+                                 Variant="Variant.Outlined" FullWidth="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudCheckBox @bind-Value="_editTenant.IsActive" Label="Active" Color="Color.Primary" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _dialogOpen = false" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="SaveTenant" Color="Color.Primary" Variant="Variant.Filled"
+                   Disabled="_saving">
+            @if (_saving) { <MudProgressCircular Size="Size.Small" Color="Color.Inherit" Class="mr-2" /> }
+            Save
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private List<Tenant> _tenants = new();
+    private bool _loading = true;
+    private bool _saving;
+    private bool _dialogOpen;
+    private Tenant _editTenant = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTenantsAsync();
+    }
+
+    private async Task LoadTenantsAsync()
+    {
+        _loading = true;
+        try
+        {
+            _tenants = await TenantSvc.GetAllTenantsAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load tenants: {ex.Message}", Severity.Error);
+        }
+        finally { _loading = false; }
+    }
+
+    private void OpenAddDialog()
+    {
+        _editTenant = new Tenant
+        {
+            TenantId = Guid.Empty,
+            SubscriptionPlan = "Foundation",
+            MaxUsers = 10,
+            IsActive = true
+        };
+        _dialogOpen = true;
+    }
+
+    private void OpenEditDialog(Tenant tenant)
+    {
+        _editTenant = new Tenant
+        {
+            TenantId = tenant.TenantId,
+            Name = tenant.Name,
+            Slug = tenant.Slug,
+            ContactEmail = tenant.ContactEmail,
+            SubscriptionPlan = tenant.SubscriptionPlan,
+            MaxUsers = tenant.MaxUsers,
+            IsActive = tenant.IsActive
+        };
+        _dialogOpen = true;
+    }
+
+    private async Task SaveTenant()
+    {
+        if (string.IsNullOrWhiteSpace(_editTenant.Name) || string.IsNullOrWhiteSpace(_editTenant.Slug))
+        {
+            Snackbar.Add("Name and Slug are required.", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            if (_editTenant.TenantId == Guid.Empty)
+            {
+                await TenantSvc.CreateTenantAsync(_editTenant);
+                Snackbar.Add($"Tenant '{_editTenant.Name}' created.", Severity.Success);
+            }
+            else
+            {
+                await TenantSvc.UpdateTenantAsync(_editTenant);
+                Snackbar.Add($"Tenant '{_editTenant.Name}' updated.", Severity.Success);
+            }
+            _dialogOpen = false;
+            await LoadTenantsAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Save failed: {ex.Message}", Severity.Error);
+        }
+        finally { _saving = false; }
+    }
+}

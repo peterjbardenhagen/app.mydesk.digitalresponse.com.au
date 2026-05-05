@@ -1,0 +1,19 @@
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudAlert Severity="Severity.Info" Class="mb-3">Import companies from a CSV file. Required columns: CompanyName, ABN, Email, Phone.</MudAlert>
+        <MudTextField @bind-Value="_filePath" Label="CSV File Path" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2" Placeholder="Paste file path" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit" Disabled="@string.IsNullOrEmpty(_filePath)">Import</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public MudDialogInstance? Dialog { get; set; }
+    private string _filePath = "";
+    private void Submit() => Dialog?.Close(DialogResult.Ok(new { FilePath = _filePath }));
+    private void Cancel() => Dialog?.Cancel();
+}

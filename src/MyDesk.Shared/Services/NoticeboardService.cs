@@ -14,7 +14,7 @@ public class NoticeboardService
     {
         try
         {
-            await _db.ExecuteAsync(@"
+            await _db.ExecuteNonQueryAsync(@"
                 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Noticeboard')
                 CREATE TABLE Noticeboard (
                     NoticeboardId INT IDENTITY(1,1) PRIMARY KEY,
@@ -76,7 +76,7 @@ public class NoticeboardService
                     ["By"]    = (object?)n.PostedBy ?? DBNull.Value,
                 });
         }
-        await _db.ExecuteAsync(
+        await _db.ExecuteNonQueryAsync(
             @"UPDATE Noticeboard SET Title=@Title, Notice=@Body, ExpiryDate=@Expires
               WHERE NoticeboardId=@Id",
             new()
@@ -90,7 +90,7 @@ public class NoticeboardService
     }
 
     public async Task DeleteAsync(int id) =>
-        await _db.ExecuteAsync("DELETE FROM Noticeboard WHERE NoticeboardId = @id", new() { ["id"] = id });
+        await _db.ExecuteNonQueryAsync("DELETE FROM Noticeboard WHERE NoticeboardId = @id", new() { ["id"] = id });
 }
 
 public class Notice

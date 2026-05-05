@@ -1,0 +1,83 @@
+@using MyDesk.Web.AI
+
+@*
+    Renders a single AiRenderable artefact produced by an Ask AI tool.
+    Dispatches on the concrete record type to MudChart / MudSimpleTable / MudAlert.
+*@
+
+@if (Item is AiChartSpec chart)
+{
+    <MudPaper Elevation="0" Class="pa-3 my-2" Style="border:1px solid var(--mud-palette-lines-default);border-radius:12px;">
+        <MudText Typo="Typo.subtitle2" Class="mb-2">@chart.Title</MudText>
+        <MudChart ChartType="@MapChartType(chart.ChartType)"
+                  ChartSeries="@BuildSeries(chart)"
+                  XAxisLabels="@chart.Labels"
+                  InputLabels="@chart.Labels"
+                  InputData="@(chart.Series.FirstOrDefault()?.Values ?? Array.Empty<double>())"
+                  Height="300px"
+                  Width="100%" />
+        @if (chart.XAxisLabel is not null || chart.YAxisLabel is not null)
+        {
+            <MudText Typo="Typo.caption" Style="opacity:.7;">
+                @chart.XAxisLabel @(chart.XAxisLabel is not null && chart.YAxisLabel is not null ? "·" : "") @chart.YAxisLabel
+            </MudText>
+        }
+    </MudPaper>
+}
+else if (Item is AiTableSpec table)
+{
+    <MudPaper Elevation="0" Class="pa-3 my-2" Style="border:1px solid var(--mud-palette-lines-default);border-radius:12px;">
+        <MudText Typo="Typo.subtitle2" Class="mb-2">@table.Title</MudText>
+        <MudSimpleTable Dense Hover Bordered Style="background:transparent;">
+            <thead>
+                <tr>@foreach (var col in table.Columns) { <th>@col</th> }</tr>
+            </thead>
+            <tbody>
+                @foreach (var row in table.Rows)
+                {
+                    <tr>@foreach (var cell in row) { <td>@cell</td> }</tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    </MudPaper>
+}
+else if (Item is AiNoticeSpec notice)
+{
+    <MudAlert Severity="@MapSeverity(notice.Severity)" Class="my-2" Variant="Variant.Outlined">
+        <MudText Typo="Typo.subtitle2">@notice.Title</MudText>
+        <MudText Typo="Typo.body2">@notice.Message</MudText>
+    </MudAlert>
+}
+
+@code {
+    [Parameter, EditorRequired] public AiRenderable Item { get; set; } = default!;
+
+    private static ChartType MapChartType(string s) => s.ToLowerInvariant() switch
+    {
+        "line"  => ChartType.Line,
+        "pie"   => ChartType.Pie,
+        "donut" => ChartType.Donut,
+        "bar"   => ChartType.Bar,
+        _       => ChartType.Bar
+    };
+
+    private static Severity MapSeverity(string s) => s.ToLowerInvariant() switch
+    {
+        "success" => Severity.Success,
+        "warning" => Severity.Warning,
+        "error"   => Severity.Error,
+        _         => Severity.Info
+    };
+
+    private static List<ChartSeries> BuildSeries(AiChartSpec spec)
+    {
+        // MudChart's bar/line take ChartSeries[]. Pie/Donut use InputData/InputLabels
+        // (both bound above so the same component works for either family).
+        var list = new List<ChartSeries>();
+        foreach (var s in spec.Series)
+        {
+            list.Add(new ChartSeries { Name = s.Name, Data = s.Values });
+        }
+        return list;
+    }
+}

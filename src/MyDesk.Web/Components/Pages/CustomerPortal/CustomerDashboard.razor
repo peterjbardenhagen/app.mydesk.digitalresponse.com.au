@@ -166,7 +166,7 @@
 
         var companyId = _contact.CompanyId;
         
-        _recentQuotes = await QuoteService.GetQuotesAsync(null, null, null, 0, null);
+        _recentQuotes = await QuoteService.GetQuotesAsync(null, null, null, null, 0, null);
         _recentQuotes = _recentQuotes.Where(q => q.CompanyName == _contact.CompanyName && q.QuoteStatusId != 1).Take(5).ToList();
         _quoteCount = _recentQuotes.Count;
 

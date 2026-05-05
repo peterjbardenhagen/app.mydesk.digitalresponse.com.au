@@ -1,3 +1,4 @@
+@using MudBlazor
 @inject ErrorLogService ErrorLogService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -92,7 +93,7 @@
             else
             {
                 <MudItem xs="12">
-                    <MudPaper Class="pa-4" Elevation="0" Outlined="true" Style="background: #f0fdf4;">
+                    <MudPaper Class="pa-4 tl-resolved-panel" Elevation="0" Outlined="true">
                         <MudText Typo="Typo.subtitle2" Class="mb-2" Color="Color.Success">Resolved</MudText>
                         @if (!string.IsNullOrEmpty(_errorLog.ResolutionNotes))
                         {
@@ -111,6 +112,11 @@
 <MudDialogActions>
     <MudButton OnClick="Cancel">Close</MudButton>
 </MudDialogActions>
+
+<style>
+    .tl-resolved-panel { background: #f0fdf4; }
+    body.mud-dark-mode .tl-resolved-panel { background: rgba(34,197,94,.10); border-color: rgba(34,197,94,.22) !important; }
+</style>
 
 @code {
     [CascadingParameter] public MudDialogInstance MudDialog { get; set; } = default!;

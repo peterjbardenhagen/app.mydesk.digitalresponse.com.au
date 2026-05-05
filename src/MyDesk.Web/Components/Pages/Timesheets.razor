@@ -1,3 +1,4 @@
+@page "/timesheets"
 @page "/timeshets"
 @attribute [Authorize]
 @inject TimesheetService TimesheetSvc
@@ -9,6 +10,7 @@
 @inject IJSRuntime JS
 @using System.Security.Claims
 @using System.Timers
+@implements IDisposable
 
 <PageTitle>Timesheets - @PlatformSettings.GetBrandingName()</PageTitle>
 
@@ -217,6 +219,9 @@ else
             _currentUserName = nameClaim ?? "";
         }
         
+        // Ensure Timesheets tables exist
+        await TimesheetSvc.EnsureTableAsync();
+        
         await LoadCompaniesAndProjects();
         await LoadTimesheets();
     }
@@ -361,8 +366,18 @@ else
 
     private async Task SubmitTimesheet(int timesheetId)
     {
-        await TimesheetSvc.SubmitTimesheetAsync(timesheetId, "Manager"); // TODO: Get actual manager
+        var allUsers = await UserSvc.GetAllAsync(includeInactive: false);
+        var manager = allUsers.FirstOrDefault(u => u.IsManager || u.Role == RoleType.Director);
+        var approverName = manager?.Name ?? "Manager";
+        
+        await TimesheetSvc.SubmitTimesheetAsync(timesheetId, approverName);
         await LoadTimesheets();
-        Snackbar.Add("Timesheet submitted for approval", Severity.Success);
+        Snackbar.Add($"Timesheet submitted for approval to {approverName}", Severity.Success);
+    }
+
+    public void Dispose()
+    {
+        _stopwatchTimer?.Stop();
+        _stopwatchTimer?.Dispose();
     }
 }

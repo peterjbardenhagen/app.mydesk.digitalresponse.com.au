@@ -1,25 +1,54 @@
 @using MyDesk.Shared.Models
-@inject ISnackbar Snackbar
 
-<MudDialog>
-    <TitleContent>
-        <MudText Typo="Typo.h6">@(_project.ProjectId == 0 ? "Create Project" : "Edit Project")</MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudTextField T="string" Label="Name" @bind-Value="_project.Name" Required="true" />
-        <MudTextField T="string" Label="Description" @bind-Value="_project.Description" Lines="2" Class="mt-3" />
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Save</MudButton>
-    </DialogActions>
-</MudDialog>
+<MudForm @ref="_form">
+    <MudDialog>
+        <TitleContent>
+            <MudText Typo="Typo.h6">Project</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Name" @bind-Value="_project.Name" Required="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Description" @bind-Value="_project.Description" Lines="3" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Status" @bind-Value="_project.Status">
+                        <MudSelectItem Value="@("Active")">Active</MudSelectItem>
+                        <MudSelectItem Value="@("On Hold")">On Hold</MudSelectItem>
+                        <MudSelectItem Value="@("Completed")">Completed</MudSelectItem>
+                        <MudSelectItem Value="@("Cancelled")">Cancelled</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Priority" @bind-Value="_project.Priority">
+                        <MudSelectItem Value="@("Low")">Low</MudSelectItem>
+                        <MudSelectItem Value="@("Medium")">Medium</MudSelectItem>
+                        <MudSelectItem Value="@("High")">High</MudSelectItem>
+                        <MudSelectItem Value="@("Critical")">Critical</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="Start Date" @bind-Date="_project.StartDate" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="End Date" @bind-Date="_project.EndDate" />
+                </MudItem>
+            </MudGrid>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="Cancel">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Save</MudButton>
+        </DialogActions>
+    </MudDialog>
+</MudForm>
 
 @code {
     [CascadingParameter] private MudDialogInstance MudDialog { get; set; } = default!;
-    [Parameter] public int ProjectId { get; set; }
-    [Parameter] public Project? Project { get; set; }
+    [Parameter] public Project Project { get; set; } = new();
 
+    private MudForm _form = default!;
     private Project _project = new();
 
     protected override void OnInitialized()
@@ -28,5 +57,9 @@
     }
 
     private void Cancel() => MudDialog.Cancel();
-    private void Submit() => MudDialog.Close(_project);
+
+    private void Submit()
+    {
+        MudDialog.Close(_project);
+    }
 }

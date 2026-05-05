@@ -1,0 +1,50 @@
+@using MyDesk.Shared.Models
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-3">
+            <strong>@Transaction.TransactionDate.ToString("d MMM yyyy")</strong> &nbsp;
+            @Transaction.Description &nbsp;
+            <strong>@(Transaction.Debit > 0 ? "−" + Transaction.Debit.ToString("C") : Transaction.Credit.ToString("C"))</strong>
+        </MudText>
+
+        <MudGrid Spacing="2">
+            <MudItem xs="12" sm="5">
+                <MudSelect T="string" @bind-Value="_entityType" Label="Match to" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("Invoice")">Invoice (AR)</MudSelectItem>
+                    <MudSelectItem Value="@("Expense")">Expense (AP)</MudSelectItem>
+                    <MudSelectItem Value="@("PurchaseOrder")">Purchase Order</MudSelectItem>
+                    <MudSelectItem Value="@("Quote")">Quote deposit</MudSelectItem>
+                    <MudSelectItem Value="@("Other")">Other / journal</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudNumericField T="int?" @bind-Value="_entityId" Label="Record #" Variant="Variant.Outlined"
+                                 HelperText="@($"e.g. invoice or expense id")" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudTextField T="string" @bind-Value="_notes" Label="Note" Variant="Variant.Outlined" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => MudDialog?.Cancel())">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save">
+            Mark reconciled
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudDialogInstance? MudDialog { get; set; }
+    [Parameter, EditorRequired] public BankTransaction Transaction { get; set; } = default!;
+
+    private string _entityType = "Invoice";
+    private int?   _entityId;
+    private string _notes = "";
+
+    private void Save()
+    {
+        MudDialog?.Close(DialogResult.Ok((_entityType, _entityId, (string?)(_notes is { Length: > 0 } ? _notes : null))));
+    }
+}

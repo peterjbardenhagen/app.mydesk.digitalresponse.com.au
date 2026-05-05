@@ -1,0 +1,360 @@
+@page "/strategy/business-goals"
+@page "/business-goals"
+@attribute [Authorize(Roles = "Director,Administrator,Admin")]
+@using System.Security.Claims
+@inject BusinessGoalsService GoalsSvc
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject PlatformSettingsService PlatformSettings
+
+<PageTitle>Business Goals — @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <span>Strategy</span><span class="sep">/</span>
+            <span>Business Goals</span>
+        </div>
+        <h1>Business Goals</h1>
+        <p class="tl-subtitle">
+            Strategic 1–5 year goals owned by the Executive team. The AI uses these to coach the team, surface drift early,
+            and shape recommendations across the platform.
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.UploadFile" OnClick="ShowUploadRoadmap">Upload Roadmap</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Flag" OnClick="AddGoal">New Goal</MudButton>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <div class="d-flex justify-center pa-10"><MudProgressCircular Indeterminate="true" Size="Size.Medium" /></div>
+}
+else
+{
+    <MudGrid Class="mt-2">
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 rounded-xl tl-stat tl-stat--green" Elevation="0">
+                <MudText Typo="Typo.overline" Class="mud-text-secondary">On track</MudText>
+                <MudText Typo="Typo.h4" Class="font-weight-bold">@_goals.Count(g => g.Status == "OnTrack")</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">of @_goals.Count goals</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 rounded-xl tl-stat tl-stat--amber" Elevation="0">
+                <MudText Typo="Typo.overline" Class="mud-text-secondary">At risk</MudText>
+                <MudText Typo="Typo.h4" Class="font-weight-bold">@_goals.Count(g => g.Status == "AtRisk")</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">need attention</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 rounded-xl tl-stat tl-stat--red" Elevation="0">
+                <MudText Typo="Typo.overline" Class="mud-text-secondary">Off track</MudText>
+                <MudText Typo="Typo.h4" Class="font-weight-bold">@_goals.Count(g => g.Status == "OffTrack" || g.IsOverdue)</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">intervention required</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 rounded-xl tl-stat tl-stat--gold" Elevation="0">
+                <MudText Typo="Typo.overline" Class="mud-text-secondary">Achieved</MudText>
+                <MudText Typo="Typo.h4" Class="font-weight-bold">@_goals.Count(g => g.Status == "Achieved")</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">this period</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    @if (_goals.Count == 0)
+    {
+        <MudPaper Class="pa-10 mt-6 text-center rounded-xl" Elevation="0" Style="border:2px dashed var(--gray-200);">
+            <MudIcon Icon="@Icons.Material.Rounded.Flag" Size="Size.Large" Color="Color.Default" />
+            <MudText Typo="Typo.h6" Class="mt-3">No goals defined yet</MudText>
+            <MudText Class="mud-text-secondary mb-4">Set a strategic direction the AI can coach the team towards. Examples: <em>"Reach $10M revenue by FY28"</em>, <em>"Become acquisition-ready by mid-2027"</em>, <em>"Achieve ISO 9001 certification this year"</em>.</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add" OnClick="AddGoal">Add your first goal</MudButton>
+        </MudPaper>
+    }
+    else
+    {
+        <MudGrid Class="mt-4" Spacing="3">
+            @foreach (var g in _goals)
+            {
+                <MudItem xs="12" md="6">
+                    <MudPaper Class="pa-5 rounded-xl tl-goal-card" Elevation="0" Style="@($"border-left:5px solid {StatusColor(g.Status)}; height:100%;")">
+                        <div class="d-flex justify-space-between align-start gap-3 mb-2">
+                            <div>
+                                <MudChip T="string" Size="Size.Small" Color="@CategoryColor(g.Category)" Variant="Variant.Filled">@g.Category</MudChip>
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="ml-1">@g.HorizonYears yr</MudChip>
+                                @if (g.Priority is "High" or "Critical")
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined" Class="ml-1">@g.Priority</MudChip>
+                                }
+                                <MudText Typo="Typo.h6" Class="mt-2 font-weight-bold">@g.Title</MudText>
+                                @if (!string.IsNullOrEmpty(g.Description))
+                                {
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary mt-1" Style="display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">@g.Description</MudText>
+                                }
+                            </div>
+                            <MudMenu Icon="@Icons.Material.Rounded.MoreVert" Size="Size.Small" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                                <MudMenuItem OnClick="() => EditGoal(g)" Icon="@Icons.Material.Rounded.Edit">Edit</MudMenuItem>
+                                <MudMenuItem OnClick="() => AddKpi(g)" Icon="@Icons.Material.Rounded.Insights">Add KPI</MudMenuItem>
+                                <MudMenuItem OnClick="() => RunAiCoach(g)" Icon="@Icons.Material.Rounded.AutoAwesome">AI coaching nudge</MudMenuItem>
+                                <MudDivider />
+                                <MudMenuItem OnClick="() => DeleteGoal(g)" Icon="@Icons.Material.Rounded.Delete" IconColor="Color.Error">Delete</MudMenuItem>
+                            </MudMenu>
+                        </div>
+
+                        <div class="my-3">
+                            <div class="d-flex justify-space-between mb-1">
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Progress</MudText>
+                                <MudText Typo="Typo.caption" Class="font-weight-bold">@g.ProgressPercent%</MudText>
+                            </div>
+                            <MudProgressLinear Value="@((double)g.ProgressPercent)" Color="@StatusBarColor(g.Status)" Rounded="true" Size="Size.Medium" />
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-3 mb-2">
+                            @if (g.TargetDate.HasValue)
+                            {
+                                <div>
+                                    <MudText Typo="Typo.overline" Class="mud-text-secondary">Target</MudText>
+                                    <MudText Typo="Typo.body2" Class="font-weight-bold">
+                                        @g.TargetDate.Value.ToString("MMM yyyy")
+                                        @if (g.IsOverdue) { <span class="ml-1" style="color:var(--mud-palette-error);">(overdue)</span> }
+                                        else if (g.DaysRemaining > 0) { <span class="ml-1 mud-text-secondary">(@g.DaysRemaining d)</span> }
+                                    </MudText>
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(g.OwnerName))
+                            {
+                                <div>
+                                    <MudText Typo="Typo.overline" Class="mud-text-secondary">Owner</MudText>
+                                    <MudText Typo="Typo.body2" Class="font-weight-bold">@g.OwnerName</MudText>
+                                </div>
+                            }
+                            <div>
+                                <MudText Typo="Typo.overline" Class="mud-text-secondary">Status</MudText>
+                                <MudText Typo="Typo.body2" Class="font-weight-bold">@g.Status</MudText>
+                            </div>
+                        </div>
+
+                        @if (g.Kpis.Count > 0)
+                        {
+                            <MudDivider Class="my-2" />
+                            <MudText Typo="Typo.overline" Class="mud-text-secondary mb-2">Key Indicators</MudText>
+                            @foreach (var kpi in g.Kpis.Take(3))
+                            {
+                                <div class="d-flex justify-space-between align-center mb-1">
+                                    <MudText Typo="Typo.body2" Style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:60%;">@kpi.Name</MudText>
+                                    <div class="d-flex align-center gap-2">
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@FormatKpiValue(kpi.CurrentValue, kpi) / @FormatKpiValue(kpi.TargetValue, kpi)</MudText>
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@KpiColor(kpi.ProgressPercent)">@kpi.ProgressPercent%</MudChip>
+                                    </div>
+                                </div>
+                            }
+                            @if (g.Kpis.Count > 3)
+                            {
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">+@(g.Kpis.Count - 3) more</MudText>
+                            }
+                        }
+                        else
+                        {
+                            <MudDivider Class="my-2" />
+                            <MudButton Size="Size.Small" StartIcon="@Icons.Material.Rounded.Insights" OnClick="() => AddKpi(g)">Add the first KPI</MudButton>
+                        }
+
+                        @if (g.AiCoachingEnabled)
+                        {
+                            <MudPaper Class="pa-3 mt-3 rounded-lg" Elevation="0" Style="background: rgba(0,168,176,.08); border:1px solid rgba(0,168,176,.25);">
+                                <div class="d-flex align-center gap-2 mb-1">
+                                    <MudIcon Icon="@Icons.Material.Rounded.AutoAwesome" Size="Size.Small" Color="Color.Primary" />
+                                    <MudText Typo="Typo.caption" Class="font-weight-bold" Style="color:var(--mud-palette-primary);">AI coaching nudge</MudText>
+                                </div>
+                                <MudText Typo="Typo.body2">@GoalsSvc.DraftCoachingNudge(g)</MudText>
+                            </MudPaper>
+                        }
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+
+        @if (_roadmaps.Count > 0)
+        {
+            <MudPaper Class="pa-5 mt-6 rounded-xl" Elevation="0" Style="border:1px solid var(--gray-200);">
+                <div class="d-flex align-center gap-2 mb-3">
+                    <MudIcon Icon="@Icons.Material.Rounded.Map" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6" Class="font-weight-bold">Roadmap Documents</MudText>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@_roadmaps.Count</MudChip>
+                </div>
+                <MudGrid>
+                    @foreach (var r in _roadmaps)
+                    {
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudPaper Class="pa-3 rounded-lg" Elevation="0" Style="border:1px solid var(--gray-200);">
+                                <MudText Typo="Typo.body1" Class="font-weight-bold">@r.Title</MudText>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">@(r.FromYear is null ? "" : $"{r.FromYear} → {r.ToYear} · ") @r.UploadedAt.ToString("dd MMM yyyy")</MudText>
+                                @if (!string.IsNullOrEmpty(r.FileName))
+                                {
+                                    <div class="d-flex align-center gap-1 mt-2">
+                                        <MudIcon Icon="@Icons.Material.Rounded.PictureAsPdf" Size="Size.Small" Color="Color.Default" />
+                                        <MudText Typo="Typo.caption">@r.FileName</MudText>
+                                    </div>
+                                }
+                            </MudPaper>
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudPaper>
+        }
+    }
+}
+
+<style>
+    .tl-page-header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:24px; flex-wrap:wrap; }
+    .tl-breadcrumb { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--gray-500); margin-bottom:6px; }
+    .tl-breadcrumb a { color:var(--gray-500); text-decoration:none; }
+    .tl-subtitle { color:var(--gray-500); margin:4px 0 0; max-width:760px; }
+    .tl-stat { border:1px solid var(--gray-200); }
+    .tl-stat--green { background: linear-gradient(135deg,#f0fdfa,#fff); border-color:rgba(0,168,176,.25); }
+    .tl-stat--amber { background: linear-gradient(135deg,#fffbeb,#fff); border-color:#fde68a; }
+    .tl-stat--red   { background: linear-gradient(135deg,#fef2f2,#fff); border-color:#fecaca; }
+    .tl-stat--gold  { background: linear-gradient(135deg,#fef3c7,#fff); border-color:#fcd34d; }
+    .tl-goal-card   { transition: box-shadow .15s ease; }
+    .tl-goal-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,.06); }
+    body.mud-dark-mode .tl-stat--green { background: linear-gradient(135deg, rgba(34,197,94,.10), var(--surface)); border-color: rgba(34,197,94,.24); }
+    body.mud-dark-mode .tl-stat--amber { background: linear-gradient(135deg, rgba(251,191,36,.10), var(--surface)); border-color: rgba(251,191,36,.24); }
+    body.mud-dark-mode .tl-stat--red { background: linear-gradient(135deg, rgba(248,113,113,.10), var(--surface)); border-color: rgba(248,113,113,.24); }
+    body.mud-dark-mode .tl-stat--gold { background: linear-gradient(135deg, rgba(245,158,11,.10), var(--surface)); border-color: rgba(245,158,11,.24); }
+</style>
+
+@code {
+    private bool _loading = true;
+    private List<BusinessGoal> _goals = new();
+    private List<BusinessRoadmap> _roadmaps = new();
+    private string _currentUser = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        _currentUser = auth.User.Identity?.Name ?? "";
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            _goals = await GoalsSvc.GetGoalsAsync();
+            _roadmaps = await GoalsSvc.GetRoadmapsAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load goals: {ex.Message}", Severity.Error);
+        }
+        finally { _loading = false; }
+    }
+
+    private async Task AddGoal()
+    {
+        var newGoal = new BusinessGoal
+        {
+            Status     = "Active",
+            HorizonYears = 1,
+            StartDate  = DateTime.Today,
+            TargetDate = DateTime.Today.AddYears(1),
+            CreatedBy  = _currentUser,
+        };
+        var ok = await DialogService.ShowMessageBox(
+            "New Goal — coming soon",
+            "Goal-creation dialog will open here. The data model and service is wired and ready.",
+            yesText: "OK");
+        // Placeholder until the dialog is wired in a follow-up commit.
+    }
+
+    private Task EditGoal(BusinessGoal g) =>
+        DialogService.ShowMessageBox("Edit Goal", $"Editing \"{g.Title}\" — dialog coming soon.", yesText: "OK");
+
+    private Task AddKpi(BusinessGoal g) =>
+        DialogService.ShowMessageBox("Add KPI", $"Adding KPI to \"{g.Title}\" — dialog coming soon.", yesText: "OK");
+
+    private async Task RunAiCoach(BusinessGoal g)
+    {
+        var nudge = GoalsSvc.DraftCoachingNudge(g);
+        await GoalsSvc.AddCheckInAsync(new GoalCheckIn
+        {
+            GoalId          = g.GoalId,
+            CheckInDate     = DateTime.UtcNow,
+            Source          = "AI",
+            AuthorName      = "MyDesk AI",
+            ProgressPercent = g.ProgressPercent,
+            Status          = g.Status,
+            Summary         = nudge,
+            Recommendation  = nudge,
+        });
+        Snackbar.Add("AI coaching nudge logged against this goal", Severity.Success);
+    }
+
+    private async Task DeleteGoal(BusinessGoal g)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Delete goal?",
+            $"This will permanently delete \"{g.Title}\" and all its KPIs and check-ins. This cannot be undone.",
+            yesText: "Delete", cancelText: "Cancel");
+        if (confirmed != true) return;
+
+        await GoalsSvc.DeleteGoalAsync(g.GoalId);
+        Snackbar.Add($"Goal \"{g.Title}\" deleted", Severity.Info);
+        await LoadAsync();
+    }
+
+    private Task ShowUploadRoadmap() =>
+        DialogService.ShowMessageBox("Upload Roadmap", "Upload dialog coming soon. Tables and service are wired.", yesText: "OK");
+
+    private static string StatusColor(string status) => status switch
+    {
+        "OnTrack"   => "#16a34a",
+        "AtRisk"    => "#f59e0b",
+        "OffTrack"  => "#dc2626",
+        "Achieved"  => "#0891b2",
+        "Cancelled" => "#94a3b8",
+        _           => "#475569",
+    };
+
+    private static Color StatusBarColor(string status) => status switch
+    {
+        "OnTrack"   => Color.Success,
+        "AtRisk"    => Color.Warning,
+        "OffTrack"  => Color.Error,
+        "Achieved"  => Color.Info,
+        _           => Color.Default,
+    };
+
+    private static Color CategoryColor(string c) => c switch
+    {
+        "Sales" or "Growth"             => Color.Primary,
+        "Financial"                     => Color.Success,
+        "Strategic" or "MergerAcquisition" or "IPO" or "Exit" => Color.Tertiary,
+        "Compliance"                    => Color.Warning,
+        _                               => Color.Default,
+    };
+
+    private static Color KpiColor(int progress) => progress switch
+    {
+        >= 75 => Color.Success,
+        >= 50 => Color.Warning,
+        _     => Color.Error,
+    };
+
+    private static string FormatKpiValue(decimal? v, BusinessGoalKpi kpi)
+    {
+        if (v is null) return "—";
+        return kpi.MetricType switch
+        {
+            "Currency" => v.Value.ToString("C0"),
+            "Percent"  => $"{v.Value:N1}%",
+            "Ratio"    => $"{v.Value:N2}x",
+            _          => v.Value.ToString("N0") + (string.IsNullOrEmpty(kpi.Unit) ? "" : $" {kpi.Unit}"),
+        };
+    }
+}

@@ -15,7 +15,7 @@ public class DRMSubscription
     public string Schedule { get; set; } = "Monthly";
     public decimal AmountInclGST { get; set; }
     public decimal AmountExGST { get; set; }
-    public DateTime StartDate { get; set; }
+    public DateTime? StartDate { get; set; }
     public DateTime? NextInvoiceDate { get; set; }
     public string Status { get; set; } = "Active";
     public string? Notes { get; set; }

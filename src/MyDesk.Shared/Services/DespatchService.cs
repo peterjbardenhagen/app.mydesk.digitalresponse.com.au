@@ -36,7 +36,7 @@ public class DespatchService
 
     public async Task DeleteAsync(int despatchId, string userCode)
     {
-        await _db.ExecuteAsync(@"
+        await _db.ExecuteNonQueryAsync(@"
             DELETE FROM Despatch WHERE DespatchId = @Id",
             new() { ["Id"] = despatchId });
 

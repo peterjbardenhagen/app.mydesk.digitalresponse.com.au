@@ -89,8 +89,14 @@ public class PlatformSettings
     public IntegrationSettings Xero { get; set; } = new();
     public IntegrationSettings QuickBooks { get; set; } = new();
     public IntegrationSettings Outlook { get; set; } = new();
+    public IntegrationSettings MyOutlook { get; set; } = new();
     public IntegrationSettings Google { get; set; } = new();
     public IntegrationSettings Weather { get; set; } = new();
+
+    // Outlook AI settings (applied per-mailbox)
+    public bool OutlookAutoCategorise { get; set; } = true;
+    public bool OutlookAutoDraftReplies { get; set; } = false;
+    public bool OutlookMoveToCompanyFolder { get; set; } = true;
 
     // Misc defaults
     public string CompanyAddress { get; set; } = "";

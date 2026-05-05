@@ -1,0 +1,190 @@
+@page "/reports/sales"
+@attribute [Authorize]
+@inject SalesReportsService SalesSvc
+@inject ISnackbar Snackbar
+
+<PageTitle>Sales Reports - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">MyDesk</a><span class="sep">/</span>
+            <a href="/reports">Reports</a><span class="sep">/</span>
+            <span>Sales Reports</span>
+        </div>
+        <h1>Sales Reports</h1>
+        <p class="tl-subtitle">Visual analytics across quotes and invoices — last 12 months.</p>
+    </div>
+    <div class="d-flex gap-2 align-center">
+        <MudDatePicker @bind-Date="_from" Label="From" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        <MudDatePicker @bind-Date="_to"   Label="To"   Variant="Variant.Outlined" Margin="Margin.Dense" />
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   StartIcon="@Icons.Material.Rounded.Refresh" OnClick="LoadAsync">Refresh</MudButton>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+
+<MudGrid Spacing="3">
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudText Typo="Typo.h6" Class="mb-2">Sales by Month</MudText>
+            <MudText Typo="Typo.caption" Style="color:var(--gray-500);">Quotes vs invoices, last 12 months.</MudText>
+            <MudChart ChartType="ChartType.Bar"
+                      ChartSeries="@_byMonthSeries"
+                      XAxisLabels="@_byMonthLabels"
+                      Width="100%" Height="320px"
+                      ChartOptions="@_currencyOptions" />
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudText Typo="Typo.h6" Class="mb-2">Sales by Rep</MudText>
+            <MudText Typo="Typo.caption" Style="color:var(--gray-500);">Won quotes by owner, in selected range.</MudText>
+            <div class="d-flex flex-wrap align-center justify-center gap-4 mt-2">
+                <MudChart ChartType="ChartType.Pie"
+                          InputData="@_byRepData"
+                          InputLabels="@_byRepLabels"
+                          Width="300px" Height="300px" />
+                <MudSimpleTable Hover="true" Dense="true" Style="min-width:240px;">
+                    <thead><tr><th>Owner</th><th style="text-align:right;">Total</th></tr></thead>
+                    <tbody>
+                    @foreach (var r in _byRep)
+                    {
+                        <tr><td>@(string.IsNullOrEmpty(r.OwnerName) ? r.OwnerUserCode : r.OwnerName)</td>
+                            <td style="text-align:right;">@r.Total.ToString("C0")</td></tr>
+                    }
+                    </tbody>
+                </MudSimpleTable>
+            </div>
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudText Typo="Typo.h6" Class="mb-2">Sales by Division</MudText>
+            <MudText Typo="Typo.caption" Style="color:var(--gray-500);">Won quotes split by division.</MudText>
+            <MudChart ChartType="ChartType.Donut"
+                      InputData="@_byDivisionData"
+                      InputLabels="@_byDivisionLabels"
+                      Width="320px" Height="320px" />
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudText Typo="Typo.h6" Class="mb-2">Year on Year</MudText>
+            <MudText Typo="Typo.caption" Style="color:var(--gray-500);">
+                Invoiced revenue: @_yoy.CurrentYear vs @_yoy.PreviousYear.
+            </MudText>
+            <MudChart ChartType="ChartType.Line"
+                      ChartSeries="@_yoySeries"
+                      XAxisLabels="@_monthNames"
+                      Width="100%" Height="320px"
+                      ChartOptions="@_currencyOptions" />
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12">
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudText Typo="Typo.h6" Class="mb-2">Pending vs Won Quotes</MudText>
+            <MudText Typo="Typo.caption" Style="color:var(--gray-500);">Stacked monthly view — pending pipeline + closed-won.</MudText>
+            <MudChart ChartType="ChartType.StackedBar"
+                      ChartSeries="@_pendingWonSeries"
+                      XAxisLabels="@_pendingWonLabels"
+                      Width="100%" Height="320px"
+                      ChartOptions="@_currencyOptions" />
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private bool _loading;
+    private DateTime? _from = DateTime.Today.AddMonths(-11);
+    private DateTime? _to   = DateTime.Today;
+
+    private MonthlySalesDto[] _byMonth = Array.Empty<MonthlySalesDto>();
+    private RepSalesDto[]     _byRep   = Array.Empty<RepSalesDto>();
+    private DivisionSalesDto[] _byDivision = Array.Empty<DivisionSalesDto>();
+    private YearOnYearDto _yoy = new();
+    private QuoteStatusSummaryDto _pendingWon = new();
+
+    private List<ChartSeries> _byMonthSeries = new();
+    private string[] _byMonthLabels = Array.Empty<string>();
+
+    private double[] _byRepData = Array.Empty<double>();
+    private string[] _byRepLabels = Array.Empty<string>();
+
+    private double[] _byDivisionData = Array.Empty<double>();
+    private string[] _byDivisionLabels = Array.Empty<string>();
+
+    private List<ChartSeries> _yoySeries = new();
+    private readonly string[] _monthNames =
+        { "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec" };
+
+    private List<ChartSeries> _pendingWonSeries = new();
+    private string[] _pendingWonLabels = Array.Empty<string>();
+
+    private readonly ChartOptions _currencyOptions = new()
+    {
+        ChartPalette  = new[] { "#00a8b0", "#cca05a", "#6941c6", "#94a3b8", "#dc2626" },
+        YAxisLines    = true,
+        XAxisLines    = false,
+        YAxisFormat   = "$#,##0",
+        LineStrokeWidth = 3,
+    };
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            var from = _from ?? DateTime.Today.AddMonths(-11);
+            var to   = _to   ?? DateTime.Today;
+
+            _byMonth    = await SalesSvc.GetSalesByMonthAsync(12);
+            _byRep      = await SalesSvc.GetSalesByRepAsync(from, to);
+            _byDivision = await SalesSvc.GetSalesByDivisionAsync(from, to);
+            _yoy        = await SalesSvc.GetYearOnYearAsync();
+            _pendingWon = await SalesSvc.GetPendingVsWonAsync(from, to);
+
+            _byMonthLabels = _byMonth.Select(m => m.Label).ToArray();
+            _byMonthSeries = new()
+            {
+                new ChartSeries { Name = "Quotes (won)",  Data = _byMonth.Select(m => (double)m.QuoteTotal).ToArray() },
+                new ChartSeries { Name = "Invoices",      Data = _byMonth.Select(m => (double)m.InvoiceTotal).ToArray() },
+            };
+
+            _byRepData   = _byRep.Select(r => (double)r.Total).ToArray();
+            _byRepLabels = _byRep.Select(r => string.IsNullOrEmpty(r.OwnerName) ? r.OwnerUserCode : r.OwnerName).ToArray();
+
+            _byDivisionData   = _byDivision.Select(d => (double)d.Total).ToArray();
+            _byDivisionLabels = _byDivision.Select(d => d.DivisionName).ToArray();
+
+            _yoySeries = new()
+            {
+                new ChartSeries { Name = $"{_yoy.CurrentYear}",  Data = _yoy.CurrentYearMonthly.Select(v => (double)v).ToArray() },
+                new ChartSeries { Name = $"{_yoy.PreviousYear}", Data = _yoy.PreviousYearMonthly.Select(v => (double)v).ToArray() },
+            };
+
+            _pendingWonLabels = _pendingWon.Labels;
+            _pendingWonSeries = new()
+            {
+                new ChartSeries { Name = "Pending", Data = _pendingWon.Pending.Select(v => (double)v).ToArray() },
+                new ChartSeries { Name = "Won",     Data = _pendingWon.Won.Select(v => (double)v).ToArray() },
+            };
+        }
+        catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+}

@@ -1,0 +1,124 @@
+@using MyDesk.Shared.Models
+@using MyDesk.Shared.Services
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12" md="8">
+                <MudTextField @bind-Value="Task.Name" Label="Name" Required Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudSwitch @bind-Value="Task.IsEnabled" Label="Enabled" Color="Color.Success" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="Task.Description" Label="Description" Variant="Variant.Outlined" Lines="2" />
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudSelect T="string" @bind-Value="Task.ActionType" Label="Action" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("AskAi")">Ask AI (and email response)</MudSelectItem>
+                    <MudSelectItem Value="@("EmailReport")">Email report</MudSelectItem>
+                    <MudSelectItem Value="@("SendEmail")">Send static email</MudSelectItem>
+                    <MudSelectItem Value="@("HttpCall")">HTTP call (webhook)</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudSelect T="string" @bind-Value="Task.Recurrence" Label="Recurrence" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("Hourly")">Hourly</MudSelectItem>
+                    <MudSelectItem Value="@("Daily")">Daily</MudSelectItem>
+                    <MudSelectItem Value="@("Weekly")">Weekly</MudSelectItem>
+                    <MudSelectItem Value="@("Monthly")">Monthly</MudSelectItem>
+                    <MudSelectItem Value="@("Cron")">Custom cron</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+
+            @if (Task.Recurrence != "Cron")
+            {
+                <MudItem xs="6" md="3">
+                    <MudNumericField @bind-Value="Task.HourOfDay" Label="Hour (0-23)" Min="0" Max="23" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="6" md="3">
+                    <MudNumericField @bind-Value="Task.MinuteOfHour" Label="Minute (0-59)" Min="0" Max="59" Variant="Variant.Outlined" />
+                </MudItem>
+                @if (Task.Recurrence == "Weekly")
+                {
+                    <MudItem xs="12" md="6">
+                        <MudSelect T="int?" @bind-Value="Task.DayOfWeek" Label="Day of week" Variant="Variant.Outlined">
+                            <MudSelectItem Value="@((int?)1)">Monday</MudSelectItem>
+                            <MudSelectItem Value="@((int?)2)">Tuesday</MudSelectItem>
+                            <MudSelectItem Value="@((int?)3)">Wednesday</MudSelectItem>
+                            <MudSelectItem Value="@((int?)4)">Thursday</MudSelectItem>
+                            <MudSelectItem Value="@((int?)5)">Friday</MudSelectItem>
+                            <MudSelectItem Value="@((int?)6)">Saturday</MudSelectItem>
+                            <MudSelectItem Value="@((int?)0)">Sunday</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                }
+                @if (Task.Recurrence == "Monthly")
+                {
+                    <MudItem xs="12" md="6">
+                        <MudNumericField T="int?" @bind-Value="Task.DayOfMonth" Label="Day of month (1-31)" Min="1" Max="31" Variant="Variant.Outlined" />
+                    </MudItem>
+                }
+            }
+            else
+            {
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="Task.CronExpression" Label="Cron expression"
+                                  Placeholder="e.g. 0 9 * * 1  (every Monday 9am)"
+                                  HelperText="5 fields: minute hour day-of-month month day-of-week" Variant="Variant.Outlined" />
+                </MudItem>
+            }
+
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle2" Class="mt-4 mb-1">Action parameters (JSON)</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@HelpForAction(Task.ActionType)</MudText>
+                <MudTextField @bind-Value="Task.ParametersJson" Lines="6" Variant="Variant.Outlined"
+                              Placeholder="@PlaceholderForAction(Task.ActionType)"
+                              Style="font-family: 'Cascadia Code', Consolas, monospace; font-size: 13px;" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => MudDialog?.Cancel()">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudDialogInstance? MudDialog { get; set; }
+    [Parameter] public ScheduledTask Task { get; set; } = new();
+
+    private void Save()
+    {
+        try
+        {
+            ScheduledTaskService.ValidateOrThrow(Task);
+            MudDialog?.Close(DialogResult.Ok(Task));
+        }
+        catch (Exception)
+        {
+            // Validation failed — leave dialog open so the user can correct the input.
+            // The parent handles any snackbar messaging.
+        }
+    }
+
+    private static string HelpForAction(string action) => action switch
+    {
+        "AskAi"       => "Required: prompt. Optional: system, maxTokens (int), emailTo, subject.",
+        "EmailReport" => "Required: emailTo. Optional: report (key), subject.",
+        "SendEmail"   => "Required: to, subject, body.",
+        "HttpCall"    => "Required: url. Optional: method (GET/POST/PUT/DELETE), body.",
+        _ => "Configure the JSON payload for this action."
+    };
+
+    private static string PlaceholderForAction(string action) => action switch
+    {
+        "AskAi"       => "{\n  \"prompt\": \"Summarise this week's pipeline\",\n  \"emailTo\": \"team@example.com\",\n  \"subject\": \"Weekly pipeline summary\"\n}",
+        "EmailReport" => "{\n  \"report\": \"weekly-summary\",\n  \"emailTo\": \"team@example.com\"\n}",
+        "SendEmail"   => "{\n  \"to\": \"team@example.com\",\n  \"subject\": \"Reminder\",\n  \"body\": \"<p>Don't forget to file timesheets.</p>\"\n}",
+        "HttpCall"    => "{\n  \"url\": \"https://example.com/webhook\",\n  \"method\": \"POST\",\n  \"body\": \"{\\\"hello\\\":\\\"world\\\"}\"\n}",
+        _ => "{}"
+    };
+}

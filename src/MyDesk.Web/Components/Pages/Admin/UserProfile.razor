@@ -2,7 +2,7 @@
 @attribute [Authorize]
 @inject UserService UserSvc
 @inject IntelligenceService Intel
-@inject IHttpContextAccessor HttpContext
+@inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Nav
 
 <PageTitle>@(_user?.Name ?? "User Profile") - DR MyDesk</PageTitle>
@@ -140,9 +140,15 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        // Director/Admin only
-        var userType = HttpContext.HttpContext?.User.FindFirst("UserTypeId")?.Value;
-        _isAuthorized = userType is "1" or "2"; // 1=Admin, 2=Director typically
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userType = user.FindFirst("UserTypeId")?.Value;
+        var isAdminClaim = user.FindFirst("IsAdmin")?.Value == "True";
+        _isAuthorized = userType is "1" or "2"
+            || isAdminClaim
+            || user.IsInRole("Administrator")
+            || user.IsInRole("Director")
+            || user.IsInRole("SuperAdministrator");
         if (!_isAuthorized) return;
 
         _user = await UserSvc.GetAsync(UserId);

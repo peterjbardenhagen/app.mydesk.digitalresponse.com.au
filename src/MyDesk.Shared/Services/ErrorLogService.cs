@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using MyDesk.Shared.Models;
-using Dapper;
 
 namespace MyDesk.Shared.Services;
 
@@ -48,7 +47,7 @@ public class ErrorLogService
                 CREATE INDEX IX_ErrorLogs_UserId ON ErrorLogs(UserId);
                 CREATE INDEX IX_ErrorLogs_Source ON ErrorLogs(Source);
             END";
-        await _db.ExecuteAsync(sql);
+        await _db.ExecuteNonQueryAsync(sql);
     }
 
     public async Task<int> LogErrorAsync(ErrorLog errorLog)

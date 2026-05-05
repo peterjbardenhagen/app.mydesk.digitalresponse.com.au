@@ -113,6 +113,17 @@
     </MudCard>
 </div>
 
+<style>
+    body.mud-dark-mode .tl-ai-message.ai {
+        background: var(--gray-100) !important;
+        border: 1px solid var(--gray-300);
+    }
+    body.mud-dark-mode .tl-ai-message.user {
+        background: rgba(34,197,94,.12) !important;
+        border: 1px solid rgba(34,197,94,.20);
+    }
+</style>
+
 @code {
     private List<ChatMessage> _messages = new();
     private string _input = "";

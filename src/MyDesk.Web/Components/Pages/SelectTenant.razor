@@ -1,0 +1,596 @@
+@page "/login/select-tenant"
+@layout EmptyLayout
+@attribute [AllowAnonymous]
+@inject LoginTokenStore TokenStore
+@inject TenantService TenantService
+@inject UserService UserService
+@inject PlatformSettingsService PlatformSettings
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Select Workspace - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-tenant-root">
+    <!-- Animated background -->
+    <div class="tl-tenant-bg-gradient"></div>
+    <div class="tl-tenant-bg-orb tl-tenant-bg-orb--1"></div>
+    <div class="tl-tenant-bg-orb tl-tenant-bg-orb--2"></div>
+    <div class="tl-tenant-grid-pattern"></div>
+
+    <main class="tl-tenant-main">
+        <!-- Top brand bar -->
+        <header class="tl-tenant-topbar">
+            <div class="tl-tenant-topbar-brand-text">
+                @PlatformSettings.GetBrandingName()
+            </div>
+            <button class="tl-tenant-dark-toggle" @onclick="ToggleDarkMode" aria-label="Toggle dark mode">
+                <MudIcon Icon="@(_isDarkMode ? Icons.Material.Rounded.LightMode : Icons.Material.Rounded.DarkMode)" Size="Size.Small" />
+            </button>
+        </header>
+
+        <section class="tl-tenant-card">
+            <header class="tl-tenant-card-header">
+                <div class="tl-tenant-welcome-icon">
+                    <MudIcon Icon="@Icons.Material.Rounded.AccountCircle" Size="Size.Large" />
+                </div>
+                <h1>Welcome back, @_firstName</h1>
+                <p>Choose the workspace you want to open. Each workspace keeps your data separate and secure.</p>
+            </header>
+
+            @if (!string.IsNullOrWhiteSpace(_error))
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4" Variant="Variant.Filled">
+                    @_error
+                </MudAlert>
+            }
+
+            @if (_memberships.Count == 0 && string.IsNullOrEmpty(_error))
+            {
+                <div class="tl-tenant-loading">
+                    <MudProgressCircular Indeterminate Color="Color.Primary" Size="Size.Medium" />
+                    <span>Loading your workspaces…</span>
+                </div>
+            }
+
+            @if (_memberships.Count > 0)
+            {
+                <div class="tl-tenant-list" role="list">
+                    @foreach (var (m, idx) in _memberships.Select((m, i) => (m, i)))
+                    {
+                        <div class="tl-tenant-card-item"
+                             @onclick="() => SelectTenantAsync(m.TenantId)"
+                             @onkeydown="@((KeyboardEventArgs e) => HandleItemKey(e, m.TenantId))"
+                             role="button"
+                             tabindex="0"
+                             aria-label="@($"Continue to {m.TenantName}")">
+                            <!-- Hover glow -->
+                            <div class="tl-tenant-card-glow" style="@($"--glow-color: {GlowColor(idx)}")"></div>
+
+                            <!-- Left: Icon Avatar -->
+                            <div class="tl-tenant-avatar" style="@AvatarStyle(idx)">
+                                <MudIcon Icon="@TenantIcon(m.TenantName, m.TenantSlug)" Size="Size.Medium" />
+                            </div>
+
+                            <!-- Center: Details -->
+                            <div class="tl-tenant-info">
+                                <div class="tl-tenant-title-row">
+                                    <span class="tl-tenant-name">@m.TenantName</span>
+                                    @if (m.IsDefault)
+                                    {
+                                <span class="tl-tenant-badge tl-tenant-badge--default">
+                                    <MudIcon Icon="@Icons.Material.Rounded.Verified" Size="Size.Small" />
+                                    Default
+                                </span>
+                            }
+                        </div>
+                                <div class="tl-tenant-meta-row">
+                                    <span class="tl-tenant-slug">
+                                        <MudIcon Icon="@Icons.Material.Rounded.Link" Size="Size.Small" />
+                                        @m.TenantSlug
+                                    </span>
+                                    <span class="tl-tenant-divider">·</span>
+                                    <span class="tl-tenant-desc">@TenantDescription(m.TenantName)</span>
+                                </div>
+                            </div>
+
+                            <!-- Right: Action arrow -->
+                            <div class="tl-tenant-arrow">
+                                @if (_pendingId == m.TenantId)
+                                {
+                                    <MudProgressCircular Indeterminate Size="Size.Small" Color="Color.Inherit" />
+                                }
+                                else
+                                {
+                                    <MudIcon Icon="@Icons.Material.Rounded.ChevronRight" />
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            <footer class="tl-tenant-footer">
+                <div class="tl-tenant-footer-left">
+                    <MudIcon Icon="@Icons.Material.Rounded.AccountCircle" Size="Size.Small" />
+                    <span>Signed in as <strong>@_userName</strong></span>
+                </div>
+                <MudLink Href="/logout" Class="tl-tenant-logout-link">
+                    <MudIcon Icon="@Icons.Material.Rounded.SwapHoriz" Size="Size.Small" />
+                    Use a different account
+                </MudLink>
+            </footer>
+        </section>
+
+        <p class="tl-tenant-tip">
+            <MudIcon Icon="@Icons.Material.Rounded.Security" Size="Size.Small" />
+            Workspaces are fully isolated — your quotes, invoices, and reports never cross tenants.
+        </p>
+    </main>
+</div>
+
+<style>
+    :root {
+        --tl-tnt-accent: @PlatformSettings.Current.LoginPrimaryColor;
+        --tl-tnt-accent-rgb: 0, 200, 200;
+        --tl-tnt-surface: rgba(255, 255, 255, 0.97);
+        --tl-tnt-text: #0f172a;
+        --tl-tnt-text-secondary: #475569;
+        --tl-tnt-text-muted: #94a3b8;
+        --tl-tnt-border: rgba(15, 23, 42, 0.08);
+        --tl-tnt-hover-bg: rgba(0, 200, 200, 0.04);
+        --tl-tnt-card-radius: 20px;
+        --tl-tnt-item-radius: 16px;
+    }
+
+    /* ── Root ─────────────────────────────────────────────── */
+    .tl-tenant-root {
+        position: relative;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 40px 24px 48px;
+        background: linear-gradient(165deg, #0b1220 0%, #0f1a2a 40%, #0d1520 100%);
+        font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+        color: #e2e8f0;
+        overflow-x: hidden;
+    }
+
+    /* Background gradient mesh */
+    .tl-tenant-bg-gradient {
+        position: absolute; inset: 0;
+        background:
+            radial-gradient(800px 500px at 30% 0%, rgba(0, 200, 200, 0.12), transparent 60%),
+            radial-gradient(600px 400px at 80% 20%, rgba(14, 165, 233, 0.08), transparent 50%),
+            radial-gradient(500px 300px at 50% 80%, rgba(99, 102, 241, 0.06), transparent 50%);
+        pointer-events: none;
+    }
+
+    /* Floating orbs */
+    .tl-tenant-bg-orb {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.35;
+        pointer-events: none;
+        animation: tl-float 20s ease-in-out infinite;
+    }
+    .tl-tenant-bg-orb--1 {
+        width: 400px; height: 400px;
+        top: -10%; left: -5%;
+        background: radial-gradient(closest-side, rgba(0, 200, 200, 0.4), transparent);
+    }
+    .tl-tenant-bg-orb--2 {
+        width: 300px; height: 300px;
+        bottom: 5%; right: -3%;
+        background: radial-gradient(closest-side, rgba(99, 102, 241, 0.3), transparent);
+        animation-delay: -10s;
+    }
+    @@keyframes tl-float {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        33% { transform: translate(20px, -15px) scale(1.05); }
+        66% { transform: translate(-10px, 10px) scale(0.95); }
+    }
+
+    /* Grid pattern */
+    .tl-tenant-grid-pattern {
+        position: absolute; inset: 0;
+        background-image:
+            linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+        background-size: 60px 60px;
+        pointer-events: none;
+        mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, black, transparent);
+        -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, black, transparent);
+    }
+
+    /* ── Main container ───────────────────────────────────── */
+    .tl-tenant-main {
+        position: relative; z-index: 1;
+        width: 100%; max-width: 580px;
+        display: flex; flex-direction: column; gap: 20px;
+        animation: tl-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @@keyframes tl-rise {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Top bar ──────────────────────────────────────────── */
+    .tl-tenant-topbar {
+        display: flex; align-items: center; justify-content: space-between;
+    }
+    .tl-tenant-topbar-brand-text {
+        font-size: 16px; font-weight: 600; color: #e2e8f0; letter-spacing: -0.01em;
+    }
+    .tl-tenant-dark-toggle {
+        all: unset; cursor: pointer;
+        width: 36px; height: 36px;
+        display: flex; align-items: center; justify-content: center;
+        border-radius: 10px;
+        background: rgba(255,255,255,0.08);
+        color: #94a3b8;
+        transition: background 0.2s, color 0.2s;
+    }
+    .tl-tenant-dark-toggle:hover { background: rgba(255,255,255,0.14); color: #e2e8f0; }
+
+    /* ── Card ─────────────────────────────────────────────── */
+    .tl-tenant-card {
+        background: var(--tl-tnt-surface);
+        color: var(--tl-tnt-text);
+        border-radius: var(--tl-tnt-card-radius);
+        padding: 32px;
+        box-shadow:
+            0 32px 64px -16px rgba(0, 0, 0, 0.5),
+            0 0 0 1px rgba(255, 255, 255, 0.06);
+    }
+
+    /* ── Header ───────────────────────────────────────────── */
+    .tl-tenant-card-header {
+        text-align: center;
+        margin-bottom: 28px;
+    }
+    .tl-tenant-welcome-icon {
+        width: 56px; height: 56px;
+        margin: 0 auto 16px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        background: linear-gradient(135deg, rgba(var(--tl-tnt-accent-rgb), 0.15), rgba(var(--tl-tnt-accent-rgb), 0.05));
+        color: rgb(var(--tl-tnt-accent-rgb));
+    }
+    .tl-tenant-card-header h1 {
+        font-size: 26px; font-weight: 700; letter-spacing: -0.02em;
+        margin: 0 0 8px;
+        color: var(--tl-tnt-text);
+    }
+    .tl-tenant-card-header p {
+        font-size: 14px; color: var(--tl-tnt-text-secondary); margin: 0;
+        line-height: 1.5;
+    }
+
+    /* ── Tenant list ──────────────────────────────────────── */
+    .tl-tenant-list {
+        display: flex; flex-direction: column; gap: 10px;
+    }
+
+    .tl-tenant-card-item {
+        position: relative;
+        display: flex; align-items: center; gap: 14px;
+        padding: 16px;
+        border: 1px solid var(--tl-tnt-border);
+        border-radius: var(--tl-tnt-item-radius);
+        background: #fff;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        overflow: hidden;
+    }
+    .tl-tenant-card-item:hover {
+        border-color: rgba(var(--tl-tnt-accent-rgb), 0.3);
+        box-shadow: 0 8px 24px -8px rgba(var(--tl-tnt-accent-rgb), 0.25);
+        transform: translateY(-2px);
+    }
+    .tl-tenant-card-item:focus-visible {
+        outline: 2px solid rgb(var(--tl-tnt-accent-rgb));
+        outline-offset: 2px;
+    }
+    .tl-tenant-card-item:active {
+        transform: translateY(0);
+    }
+
+    /* Hover glow overlay */
+    .tl-tenant-card-glow {
+        position: absolute; inset: 0;
+        background: radial-gradient(300px 100px at 20% 50%, var(--glow-color), transparent);
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: none;
+    }
+    .tl-tenant-card-item:hover .tl-tenant-card-glow { opacity: 0.15; }
+
+    /* Avatar icon */
+    .tl-tenant-avatar {
+        position: relative; z-index: 1;
+        flex: 0 0 48px; width: 48px; height: 48px;
+        border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        color: #fff;
+        font-weight: 600; font-size: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Info section */
+    .tl-tenant-info {
+        position: relative; z-index: 1;
+        flex: 1; min-width: 0;
+    }
+    .tl-tenant-title-row {
+        display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .tl-tenant-name {
+        font-size: 15px; font-weight: 600; color: var(--tl-tnt-text);
+    }
+
+    /* Badges */
+    .tl-tenant-badge {
+        display: inline-flex; align-items: center; gap: 3px;
+        font-size: 11px; font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 999px;
+        letter-spacing: 0.02em;
+        text-transform: capitalize;
+    }
+    .tl-tenant-badge--default {
+        background: rgba(34, 197, 94, 0.1);
+        color: #16a34a;
+    }
+    .tl-tenant-badge--role {
+        background: rgba(var(--tl-tnt-accent-rgb), 0.1);
+        color: rgb(var(--tl-tnt-accent-rgb));
+    }
+
+    .tl-tenant-meta-row {
+        display: flex; align-items: center; gap: 6px;
+        margin-top: 4px;
+        font-size: 13px; color: var(--tl-tnt-text-muted);
+    }
+    .tl-tenant-slug {
+        display: inline-flex; align-items: center; gap: 4px;
+    }
+    .tl-tenant-divider { opacity: 0.4; }
+
+    /* Action arrow */
+    .tl-tenant-arrow {
+        position: relative; z-index: 1;
+        flex: 0 0 32px; width: 32px; height: 32px;
+        display: flex; align-items: center; justify-content: center;
+        border-radius: 50%;
+        background: rgba(var(--tl-tnt-accent-rgb), 0.08);
+        color: rgb(var(--tl-tnt-accent-rgb));
+        transition: transform 0.2s, background 0.2s;
+    }
+    .tl-tenant-card-item:hover .tl-tenant-arrow {
+        transform: translateX(3px);
+        background: rgba(var(--tl-tnt-accent-rgb), 0.15);
+    }
+    .tl-tenant-card-item.is-pending {
+        opacity: 0.6; pointer-events: none;
+    }
+
+    /* ── Loading ──────────────────────────────────────────── */
+    .tl-tenant-loading {
+        display: flex; gap: 12px; align-items: center; justify-content: center;
+        padding: 32px 0; color: var(--tl-tnt-text-muted);
+    }
+
+    /* ── Footer ───────────────────────────────────────────── */
+    .tl-tenant-footer {
+        margin-top: 24px;
+        padding-top: 16px;
+        border-top: 1px solid var(--tl-tnt-border);
+        display: flex; align-items: center; justify-content: space-between;
+        font-size: 13px; color: var(--tl-tnt-text-muted);
+    }
+    .tl-tenant-footer-left {
+        display: flex; align-items: center; gap: 6px;
+    }
+    .tl-tenant-logout-link {
+        display: inline-flex; align-items: center; gap: 4px;
+        color: rgb(var(--tl-tnt-accent-rgb)) !important;
+        font-weight: 500;
+        text-decoration: none;
+        transition: opacity 0.2s;
+    }
+    .tl-tenant-logout-link:hover { opacity: 0.8; }
+
+    /* ── Tip ──────────────────────────────────────────────── */
+    .tl-tenant-tip {
+        display: flex; align-items: center; gap: 8px;
+        color: #64748b; font-size: 12px;
+        justify-content: center; text-align: center;
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    /* ── Dark mode ────────────────────────────────────────── */
+    body.mud-dark-mode {
+        --tl-tnt-surface: rgba(30, 41, 59, 0.95);
+        --tl-tnt-text: #e2e8f0;
+        --tl-tnt-text-secondary: #94a3b8;
+        --tl-tnt-text-muted: #94a3b8;
+        --tl-tnt-border: rgba(255, 255, 255, 0.06);
+        --tl-tnt-hover-bg: rgba(0, 200, 200, 0.08);
+    }
+    body.mud-dark-mode .tl-tenant-card {
+        background: rgba(30, 41, 59, 0.95);
+        color: #e2e8f0;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    body.mud-dark-mode .tl-tenant-card-header h1 { color: #f1f5f9; }
+    body.mud-dark-mode .tl-tenant-card-header p { color: #94a3b8; }
+    body.mud-dark-mode .tl-tenant-card-item {
+        background: rgba(51, 65, 85, 0.5);
+        border-color: rgba(255, 255, 255, 0.08);
+    }
+    body.mud-dark-mode .tl-tenant-card-item:hover {
+        border-color: rgba(var(--tl-tnt-accent-rgb), 0.3);
+        background: rgba(51, 65, 85, 0.7);
+    }
+    body.mud-dark-mode .tl-tenant-name { color: #f1f5f9; }
+    body.mud-dark-mode .tl-tenant-desc { color: #94a3b8; }
+    body.mud-dark-mode .tl-tenant-footer { border-top-color: rgba(255, 255, 255, 0.06); }
+    body.mud-dark-mode .tl-tenant-tip { color: #64748b; }
+    body.mud-dark-mode .tl-tenant-dark-toggle { background: rgba(255,255,255,0.06); color: #94a3b8; }
+
+    /* ── Responsive ───────────────────────────────────────── */
+    @@media (max-width: 600px) {
+        .tl-tenant-root { padding: 24px 16px; }
+        .tl-tenant-card { padding: 20px; border-radius: 16px; }
+        .tl-tenant-card-header h1 { font-size: 22px; }
+        .tl-tenant-card-item { padding: 12px; gap: 12px; }
+        .tl-tenant-avatar { width: 40px; height: 40px; border-radius: 12px; }
+        .tl-tenant-footer { flex-direction: column; gap: 10px; text-align: center; }
+    }
+</style>
+
+@code {
+    [SupplyParameterFromQuery] public string? Token { get; set; }
+    [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+
+    private readonly List<TenantMembership> _memberships = new();
+    private string  _firstName = "";
+    private string  _userName = "you";
+    private string? _error;
+    private Guid?   _pendingId;
+    private bool    _isDarkMode;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true && string.IsNullOrWhiteSpace(Token))
+        {
+            Nav.NavigateTo("/", forceLoad: true);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Token))    { Nav.NavigateTo("/login?error=1", forceLoad: true); return; }
+        var pending = TokenStore.PeekToken(Token);
+        if (pending == null)                     { Nav.NavigateTo("/login?error=1", forceLoad: true); return; }
+        var user = await UserService.GetAsync(pending.Value.UserId);
+        if (user == null)                        { Nav.NavigateTo("/login?error=1", forceLoad: true); return; }
+
+        _userName = user.Name;
+        _firstName = user.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? user.Name;
+        _memberships.AddRange(await TenantService.GetUserTenantsAsync(user.UserId));
+
+        if (_memberships.Count == 0)
+        {
+            _error = "No workspaces are linked to your account. Contact your administrator.";
+        }
+        else if (_memberships.Count == 1)
+        {
+            await SelectTenantAsync(_memberships[0].TenantId);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var darkPref = await JS.InvokeAsync<string?>("localStorage.getItem", "mydesk_dark_mode");
+                if (darkPref == "1")
+                {
+                    _isDarkMode = true;
+                    await JS.InvokeVoidAsync("eval", "document.body.classList.add('mud-dark-mode');");
+                    StateHasChanged();
+                }
+            }
+            catch { }
+        }
+    }
+
+    private async Task ToggleDarkMode()
+    {
+        _isDarkMode = !_isDarkMode;
+        if (_isDarkMode)
+        {
+            await JS.InvokeVoidAsync("eval", "document.body.classList.add('mud-dark-mode'); localStorage.setItem('mydesk_dark_mode','1');");
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("eval", "document.body.classList.remove('mud-dark-mode'); localStorage.removeItem('mydesk_dark_mode');");
+        }
+        StateHasChanged();
+    }
+
+    private Task SelectTenantAsync(Guid tenantId)
+    {
+        _pendingId = tenantId;
+        var returnUrl = string.IsNullOrWhiteSpace(ReturnUrl) ? "/" : ReturnUrl!;
+        Nav.NavigateTo($"/auth/signin?token={Uri.EscapeDataString(Token!)}&tenantId={tenantId}&returnUrl={Uri.EscapeDataString(returnUrl)}", forceLoad: true);
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleItemKey(KeyboardEventArgs e, Guid tenantId)
+    {
+        if (e.Key == "Enter" || e.Key == " ")
+        {
+            await SelectTenantAsync(tenantId);
+        }
+    }
+
+    /// <summary>Icon based on tenant name/slug for visual distinction.</summary>
+    private static string TenantIcon(string name, string slug)
+    {
+        var key = $"{name} {slug}".ToLowerInvariant();
+        return key switch
+        {
+            var s when s.Contains("techlight")       => Icons.Material.Rounded.Lightbulb,
+            var s when s.Contains("digital") || s.Contains("response") => Icons.Material.Rounded.Computer,
+            var s when s.Contains("demo")             => Icons.Material.Rounded.Visibility,
+            _                                         => Icons.Material.Rounded.Apartment
+        };
+    }
+
+    /// <summary>Short description based on tenant.</summary>
+    private static string TenantDescription(string name)
+    {
+        return name.ToLowerInvariant() switch
+        {
+            var s when s.Contains("techlight")       => "Business management platform",
+            var s when s.Contains("digital") || s.Contains("response") => "Client portal workspace",
+            var s when s.Contains("demo")             => "Sandbox environment",
+            _                                         => "Workspace"
+        };
+    }
+
+    /// <summary>Glow color for hover effect.</summary>
+    private static string GlowColor(int idx)
+    {
+        var colors = new[]
+        {
+            "rgba(0, 200, 200, 0.3)",
+            "rgba(14, 165, 233, 0.3)",
+            "rgba(168, 85, 247, 0.3)",
+            "rgba(249, 115, 22, 0.3)",
+            "rgba(16, 185, 129, 0.3)",
+        };
+        return colors[idx % colors.Length];
+    }
+
+    /// <summary>Avatar gradient style per tenant row.</summary>
+    private static string AvatarStyle(int idx)
+    {
+        var palettes = new[]
+        {
+            "linear-gradient(135deg, #00C8C8 0%, #008b8b 100%)",
+            "linear-gradient(135deg, #0ea5e9 0%, #14b8a6 100%)",
+            "linear-gradient(135deg, #a855f7 0%, #facc15 100%)",
+            "linear-gradient(135deg, #f97316 0%, #ef4444 100%)",
+            "linear-gradient(135deg, #10b981 0%, #06b6d4 100%)",
+        };
+        return $"background:{palettes[idx % palettes.Length]};";
+    }
+}

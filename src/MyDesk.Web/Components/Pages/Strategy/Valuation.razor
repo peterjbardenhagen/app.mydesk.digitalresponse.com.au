@@ -1,0 +1,358 @@
+@page "/strategy/valuation"
+@page "/valuation"
+@attribute [Authorize(Roles = "Director,Administrator,Admin")]
+@inject ValuationService ValSvc
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject PlatformSettingsService PlatformSettings
+
+<PageTitle>Business Valuation — @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <span>Strategy</span><span class="sep">/</span>
+            <span>Valuation</span>
+        </div>
+        <h1>Business Valuation</h1>
+        <p class="tl-subtitle">
+            Live, EBITDA-based valuation of the business using your connected MYOB &amp; bank data, normalised with industry multiples,
+            DCF and asset-based methods.
+        </p>
+    </div>
+    <div class="d-flex gap-2 align-center">
+        <MudSelect T="string" @bind-Value="_industryKey" Label="Industry" Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width: 220px;" Dense="true">
+            @foreach (var i in _industries)
+            {
+                <MudSelectItem T="string" Value="@i.IndustryKey">@i.DisplayName (@i.EbitdaMultipleLow.ToString("N1"))×–@i.EbitdaMultipleHigh.ToString("N1")×)</MudSelectItem>
+            }
+        </MudSelect>
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Refresh" OnClick="RebuildSnapshot">Rebuild from data</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.SaveAlt" OnClick="SaveSnapshot">Save snapshot</MudButton>
+    </div>
+</div>
+
+@if (_loading || _snapshot == null)
+{
+    <div class="d-flex justify-center pa-10"><MudProgressCircular Indeterminate="true" Size="Size.Medium" /></div>
+}
+else
+{
+    @* ─── Hero card: midpoint valuation + range ─── *@
+    <MudPaper Class="pa-6 rounded-xl tl-hero" Elevation="0">
+        <MudGrid AlignItems="Center.Start">
+            <MudItem xs="12" md="7">
+                <MudText Typo="Typo.overline" Style="letter-spacing:.2em;color:#94a3b8;">Estimated business value</MudText>
+                <MudText Typo="Typo.h2" Class="font-weight-bold tl-hero-value">@FormatCurrencyShort(_snapshot.ValuationMidpoint)</MudText>
+                <MudText Typo="Typo.body1" Style="color:#cbd5e1;">
+                    Range: <strong>@FormatCurrencyShort(_snapshot.ValuationLow)</strong> – <strong>@FormatCurrencyShort(_snapshot.ValuationHigh)</strong>
+                    using industry multiples for <strong>@_snapshot.IndustryClassification</strong>.
+                </MudText>
+                <div class="d-flex gap-2 mt-3">
+                    <MudChip T="string" Color="@ConfidenceColor(_snapshot.Confidence)" Variant="Variant.Filled" Size="Size.Small">
+                        @_snapshot.Confidence confidence
+                    </MudChip>
+                    <MudChip T="string" Color="Color.Default" Variant="Variant.Outlined" Size="Size.Small">
+                        @((_snapshot.DataCompleteness ?? 0).ToString("P0")) data completeness
+                    </MudChip>
+                    <MudChip T="string" Color="Color.Default" Variant="Variant.Outlined" Size="Size.Small">
+                        @_snapshot.Period · @_snapshot.SnapshotDate.ToString("MMM yyyy")
+                    </MudChip>
+                </div>
+            </MudItem>
+            <MudItem xs="12" md="5">
+                <div class="tl-hero-pillars">
+                    <div class="tl-pillar">
+                        <div class="label">Multiple of EBITDA</div>
+                        <div class="value">@FormatCurrencyShort(_snapshot.ValuationMultiple)</div>
+                        <div class="sub">@(_snapshot.IndustryMultiple?.ToString("N1") ?? "—")× × EBITDA</div>
+                    </div>
+                    <div class="tl-pillar">
+                        <div class="label">DCF (5-yr + terminal)</div>
+                        <div class="value">@FormatCurrencyShort(_snapshot.ValuationDcf)</div>
+                        <div class="sub">12% WACC, 5% growth</div>
+                    </div>
+                    <div class="tl-pillar">
+                        <div class="label">Asset-based</div>
+                        <div class="value">@FormatCurrencyShort(_snapshot.ValuationAssetBased)</div>
+                        <div class="sub">Net assets + goodwill</div>
+                    </div>
+                </div>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    @* ─── KPI strip ─── *@
+    <MudGrid Class="mt-4" Spacing="3">
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 rounded-xl tl-kpi" Elevation="0">
+                <div class="d-flex align-center gap-2 mb-1">
+                    <MudIcon Icon="@Icons.Material.Rounded.TrendingUp" Color="Color.Primary" />
+                    <MudText Typo="Typo.overline" Class="mud-text-secondary">Revenue (TTM)</MudText>
+                </div>
+                <MudText Typo="Typo.h5" Class="font-weight-bold">@FormatCurrencyShort(_snapshot.Revenue)</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 rounded-xl tl-kpi" Elevation="0">
+                <div class="d-flex align-center gap-2 mb-1">
+                    <MudIcon Icon="@Icons.Material.Rounded.AccountBalanceWallet" Color="Color.Success" />
+                    <MudText Typo="Typo.overline" Class="mud-text-secondary">EBITDA</MudText>
+                </div>
+                <MudText Typo="Typo.h5" Class="font-weight-bold">@FormatCurrencyShort(_snapshot.EBITDA)</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 rounded-xl tl-kpi" Elevation="0">
+                <div class="d-flex align-center gap-2 mb-1">
+                    <MudIcon Icon="@Icons.Material.Rounded.Percent" Color="Color.Info" />
+                    <MudText Typo="Typo.overline" Class="mud-text-secondary">EBITDA margin</MudText>
+                </div>
+                <MudText Typo="Typo.h5" Class="font-weight-bold">@((_snapshot.EBITDAMargin ?? 0).ToString("P1"))</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 rounded-xl tl-kpi" Elevation="0">
+                <div class="d-flex align-center gap-2 mb-1">
+                    <MudIcon Icon="@Icons.Material.Rounded.Savings" Color="Color.Tertiary" />
+                    <MudText Typo="Typo.overline" Class="mud-text-secondary">Net assets</MudText>
+                </div>
+                <MudText Typo="Typo.h5" Class="font-weight-bold">@FormatCurrencyShort(_snapshot.NetAssets)</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    @* ─── Editable inputs + computed P&L ─── *@
+    <MudGrid Class="mt-4" Spacing="3">
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-5 rounded-xl" Elevation="0" Style="border:1px solid var(--gray-200); height:100%;">
+                <div class="d-flex align-center gap-2 mb-3">
+                    <MudIcon Icon="@Icons.Material.Rounded.Edit" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6" Class="font-weight-bold">Inputs</MudText>
+                    <MudSpacer />
+                    @if (_snapshot.DataSourceMyob)   { <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">MYOB</MudChip> }
+                    @if (_snapshot.DataSourceBank)   { <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">Bank</MudChip> }
+                    @if (_snapshot.DataSourceManual) { <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">Manual</MudChip> }
+                </div>
+
+                <MudGrid Dense="true" Spacing="2">
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="decimal?" Label="Revenue" @bind-Value="_snapshot.Revenue" Adornment="Adornment.Start" AdornmentText="$" Variant="Variant.Outlined" Margin="Margin.Dense" OnBlur="OnInputChanged" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="decimal?" Label="Cost of goods sold" @bind-Value="_snapshot.CostOfGoodsSold" Adornment="Adornment.Start" AdornmentText="$" Variant="Variant.Outlined" Margin="Margin.Dense" OnBlur="OnInputChanged" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="decimal?" Label="Operating expenses" @bind-Value="_snapshot.OperatingExpenses" Adornment="Adornment.Start" AdornmentText="$" Variant="Variant.Outlined" Margin="Margin.Dense" OnBlur="OnInputChanged" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="decimal?" Label="Depreciation" @bind-Value="_snapshot.Depreciation" Adornment="Adornment.Start" AdornmentText="$" Variant="Variant.Outlined" Margin="Margin.Dense" OnBlur="OnInputChanged" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="decimal?" Label="Amortisation" @bind-Value="_snapshot.Amortisation" Adornment="Adornment.Start" AdornmentText="$" Variant="Variant.Outlined" Margin="Margin.Dense" OnBlur="OnInputChanged" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="decimal?" Label="Interest" @bind-Value="_snapshot.Interest" Adornment="Adornment.Start" AdornmentText="$" Variant="Variant.Outlined" Margin="Margin.Dense" OnBlur="OnInputChanged" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="decimal?" Label="Tax" @bind-Value="_snapshot.Tax" Adornment="Adornment.Start" AdornmentText="$" Variant="Variant.Outlined" Margin="Margin.Dense" OnBlur="OnInputChanged" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="decimal?" Label="Total assets" @bind-Value="_snapshot.TotalAssets" Adornment="Adornment.Start" AdornmentText="$" Variant="Variant.Outlined" Margin="Margin.Dense" OnBlur="OnInputChanged" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="decimal?" Label="Total liabilities" @bind-Value="_snapshot.TotalLiabilities" Adornment="Adornment.Start" AdornmentText="$" Variant="Variant.Outlined" Margin="Margin.Dense" OnBlur="OnInputChanged" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="decimal?" Label="Cash" @bind-Value="_snapshot.Cash" Adornment="Adornment.Start" AdornmentText="$" Variant="Variant.Outlined" Margin="Margin.Dense" OnBlur="OnInputChanged" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="decimal?" Label="Debt" @bind-Value="_snapshot.Debt" Adornment="Adornment.Start" AdornmentText="$" Variant="Variant.Outlined" Margin="Margin.Dense" OnBlur="OnInputChanged" />
+                    </MudItem>
+                </MudGrid>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary mt-3">
+                    Tip: connect MYOB and your bank feed in <MudLink Href="/integrations">Integrations</MudLink> and these fields auto-populate every snapshot.
+                </MudText>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-5 rounded-xl" Elevation="0" Style="border:1px solid var(--gray-200); height:100%;">
+                <div class="d-flex align-center gap-2 mb-3">
+                    <MudIcon Icon="@Icons.Material.Rounded.Calculate" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6" Class="font-weight-bold">P&amp;L bridge</MudText>
+                </div>
+                <table class="tl-bridge">
+                    <tbody>
+                        <tr><td>Revenue</td><td class="amt">@FormatCurrency(_snapshot.Revenue)</td></tr>
+                        <tr><td>Less: Cost of goods sold</td><td class="amt sub">(@FormatCurrency(_snapshot.CostOfGoodsSold))</td></tr>
+                        <tr class="subtotal"><td><strong>Gross profit</strong></td><td class="amt"><strong>@FormatCurrency(_snapshot.GrossProfit)</strong></td></tr>
+                        <tr><td>Less: Operating expenses</td><td class="amt sub">(@FormatCurrency(_snapshot.OperatingExpenses))</td></tr>
+                        <tr class="ebitda"><td><strong>EBITDA</strong></td><td class="amt"><strong>@FormatCurrency(_snapshot.EBITDA)</strong></td></tr>
+                        <tr><td>Less: Depreciation</td><td class="amt sub">(@FormatCurrency(_snapshot.Depreciation))</td></tr>
+                        <tr><td>Less: Amortisation</td><td class="amt sub">(@FormatCurrency(_snapshot.Amortisation))</td></tr>
+                        <tr><td>Less: Interest</td><td class="amt sub">(@FormatCurrency(_snapshot.Interest))</td></tr>
+                        <tr><td>Less: Tax</td><td class="amt sub">(@FormatCurrency(_snapshot.Tax))</td></tr>
+                        <tr class="netprofit"><td><strong>Net profit</strong></td><td class="amt"><strong>@FormatCurrency(_snapshot.NetProfit)</strong></td></tr>
+                    </tbody>
+                </table>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    @* ─── Methodology + history ─── *@
+    <MudGrid Class="mt-4" Spacing="3">
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-5 rounded-xl" Elevation="0" Style="border:1px solid var(--gray-200);">
+                <MudText Typo="Typo.h6" Class="font-weight-bold mb-3">How this is calculated</MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">
+                    The midpoint valuation is the average of three independent methods. For most Australian SMBs the EBITDA-multiple
+                    method is the most relevant. Confidence is driven by how complete the input data is.
+                </MudText>
+                <ul class="tl-method-list">
+                    <li><strong>Multiple of EBITDA.</strong> Industry multiples sourced from SMB transaction comps. The current industry is <strong>@_snapshot.IndustryClassification</strong> at <strong>@(_snapshot.IndustryMultiple?.ToString("N1") ?? "—")×</strong>.</li>
+                    <li><strong>Discounted cash flow.</strong> 5-year projection at 5% growth, 12% WACC, 2.5% terminal growth (Gordon model).</li>
+                    <li><strong>Asset-based.</strong> Net assets plus a goodwill premium scaled by EBITDA margin.</li>
+                </ul>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-5 rounded-xl" Elevation="0" Style="border:1px solid var(--gray-200);">
+                <MudText Typo="Typo.h6" Class="font-weight-bold mb-3">Snapshot history</MudText>
+                @if (_history.Count == 0)
+                {
+                    <MudText Class="mud-text-secondary">No saved snapshots yet. Click <strong>Save snapshot</strong> to capture this point in time and start a track record.</MudText>
+                }
+                else
+                {
+                    <MudTable Items="_history" Dense="true" Hover="true" Bordered="false">
+                        <HeaderContent>
+                            <MudTh>Date</MudTh>
+                            <MudTh>EBITDA</MudTh>
+                            <MudTh>Mid value</MudTh>
+                            <MudTh>Confidence</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>@context.SnapshotDate.ToString("dd MMM yyyy")</MudTd>
+                            <MudTd>@FormatCurrencyShort(context.EBITDA)</MudTd>
+                            <MudTd>@FormatCurrencyShort(context.ValuationMidpoint)</MudTd>
+                            <MudTd>@context.Confidence</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+<style>
+    .tl-page-header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:24px; flex-wrap:wrap; }
+    .tl-breadcrumb { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--gray-500); margin-bottom:6px; }
+    .tl-breadcrumb a { color:var(--gray-500); text-decoration:none; }
+    .tl-subtitle { color:var(--gray-500); margin:4px 0 0; max-width:760px; }
+
+    .tl-hero {
+        background: linear-gradient(135deg,#0f172a 0%, #1e293b 100%);
+        color: white;
+        border:1px solid rgba(255,255,255,0.06);
+    }
+    .tl-hero-value {
+        background: linear-gradient(135deg,#fff,#94e7e1);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        letter-spacing:-.03em;
+    }
+    .tl-hero-pillars { display:grid; grid-template-columns:1fr; gap:12px; }
+    .tl-pillar { background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); padding:14px 16px; border-radius:10px; }
+    .tl-pillar .label { font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:#94a3b8; font-weight:600; }
+    .tl-pillar .value { font-size:18pt; font-weight:700; margin-top:2px; color:white; }
+    .tl-pillar .sub   { font-size:9pt; color:#94a3b8; }
+
+    .tl-kpi { border:1px solid var(--gray-200); }
+
+    .tl-bridge { width:100%; border-collapse:collapse; }
+    .tl-bridge td { padding:8px 0; border-bottom:1px solid var(--gray-100); font-size:13px; }
+    .tl-bridge td.amt { text-align:right; font-variant-numeric: tabular-nums; }
+    .tl-bridge td.sub { color:var(--gray-500); }
+    .tl-bridge tr.subtotal td { background: var(--gray-50); }
+    .tl-bridge tr.ebitda td { background: rgba(0,168,176,.10); color:var(--mud-palette-primary-darken); border-bottom:2px solid var(--mud-palette-primary); }
+    .tl-bridge tr.netprofit td { font-size:14px; }
+
+    .tl-method-list { padding-left:20px; }
+    .tl-method-list li { margin-bottom:8px; line-height:1.5; }
+</style>
+
+@code {
+    private bool _loading = true;
+    private string _industryKey = "wholesale";
+    private List<IndustryMultiple> _industries = new();
+    private ValuationSnapshot? _snapshot;
+    private List<ValuationSnapshot> _history = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _industries = await ValSvc.GetIndustryMultiplesAsync();
+            await RebuildSnapshot();
+            _history = await ValSvc.GetSnapshotsAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load valuation: {ex.Message}", Severity.Error);
+        }
+        finally { _loading = false; }
+    }
+
+    private async Task RebuildSnapshot()
+    {
+        var industry = _industries.FirstOrDefault(i => i.IndustryKey == _industryKey);
+        _snapshot = await ValSvc.BuildDraftSnapshotAsync(_industryKey, industry);
+        StateHasChanged();
+    }
+
+    private void OnInputChanged()
+    {
+        if (_snapshot == null) return;
+        var industry = _industries.FirstOrDefault(i => i.IndustryKey == _industryKey);
+        ValuationService.Recompute(_snapshot, industry);
+    }
+
+    private async Task SaveSnapshot()
+    {
+        if (_snapshot == null) return;
+        try
+        {
+            await ValSvc.SaveSnapshotAsync(_snapshot);
+            _history = await ValSvc.GetSnapshotsAsync();
+            Snackbar.Add("Snapshot saved", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Save failed: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private static string FormatCurrency(decimal? v) =>
+        v is null ? "—" : v.Value.ToString("C0");
+
+    private static string FormatCurrencyShort(decimal? v)
+    {
+        if (v is null) return "—";
+        var n = (double)v.Value;
+        if (Math.Abs(n) >= 1_000_000_000) return $"${n / 1_000_000_000:N2}B";
+        if (Math.Abs(n) >= 1_000_000)     return $"${n / 1_000_000:N2}M";
+        if (Math.Abs(n) >= 1_000)         return $"${n / 1_000:N0}k";
+        return $"${n:N0}";
+    }
+
+    private static Color ConfidenceColor(string? c) => c switch
+    {
+        "High"   => Color.Success,
+        "Medium" => Color.Warning,
+        "Low"    => Color.Error,
+        _        => Color.Default,
+    };
+}

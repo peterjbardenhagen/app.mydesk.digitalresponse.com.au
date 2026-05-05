@@ -47,30 +47,49 @@
                 <MudIconButton Icon="@Icons.Material.Rounded.LocalShipping" Href="/despatch" Color="Color.Default" />
             </MudTooltip>
         }
+        @if (NavMenuSvc.IsVisible("calendar"))
+        {
+            <MudTooltip Text="Calendar" Placement="Placement.Right" Arrow="true">
+                <MudIconButton Icon="@Icons.Material.Rounded.CalendarMonth" Href="/calendar" Color="Color.Default" />
+            </MudTooltip>
+        }
         <MudTooltip Text="Site Map" Placement="Placement.Right" Arrow="true">
             <MudIconButton Icon="@Icons.Material.Rounded.Schema" Href="/sitemap" Color="Color.Default" />
         </MudTooltip>
     </div>
 
+    <div class="tl-col1-footer">
+        <MudTooltip Text="Switch Workspace" Placement="Placement.Right" Arrow="true">
+            <MudIconButton Icon="@Icons.Material.Rounded.SwapHoriz" OnClick="SwitchWorkspace" Color="Color.Default" />
+        </MudTooltip>
+        <MudTooltip Text="User Profile" Placement="Placement.Right" Arrow="true">
+            <MudIconButton Icon="@Icons.Material.Rounded.Person" Href="/profile" Color="Color.Default" />
+        </MudTooltip>
+    </div>
 </div>
 
 @code {
-    protected override async Task OnInitializedAsync()
+    [Parameter] public string ActiveSection { get; set; } = "";
+    [Parameter] public EventCallback<string> OnSectionSelected { get; set; }
+
+    private void SwitchWorkspace()
     {
-        await Task.CompletedTask;
+        Nav.NavigateTo("/login/select-tenant", forceLoad: true);
     }
 }
 
 <style>
-    .tl-col1-nav {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        height: 100%;
-        padding: 10px 0 8px;
-        gap: 6px;
-        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-    }
+.tl-col1-nav {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    padding: 10px 0 8px;
+    gap: 6px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    width: 50px !important;
+    min-width: 50px !important;
+}
     .tl-col1-logo {
         padding: 6px 0 12px;
         border-bottom: 1px solid rgba(15, 23, 42, 0.06);

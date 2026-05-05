@@ -8,50 +8,48 @@
 
 <PageTitle>Dashboard - @PlatformSettings.GetBrandingName()</PageTitle>
 
-<AuthorizeView Context="authContext">
-    @* ── Enterprise Dashboard Header ──────────────────────────────────────────── *@
-    <div class="tl-dashboard-header">
-        <div class="tl-dashboard-header-bg">
-            <div class="tl-header-swoosh"></div>
-            <div class="tl-header-glow"></div>
+@* ── Enterprise Dashboard Header ──────────────────────────────────────────── *@
+<div class="tl-dashboard-header">
+    <div class="tl-dashboard-header-bg">
+        <div class="tl-header-swoosh"></div>
+        <div class="tl-header-glow"></div>
+    </div>
+    <div class="tl-dashboard-header-content">
+        <div class="tl-dashboard-welcome">
+            <div class="tl-welcome-badge">
+                <MudIcon Icon="@Icons.Material.Rounded.Dashboard" Size="Size.Small" />
+                <span>Executive Dashboard</span>
+            </div>
+            <h1 class="tl-welcome-title">Welcome back, @FirstName(_userName)</h1>
+            <p class="tl-welcome-subtitle">
+                Real-time business intelligence for @PlatformSettings.GetBrandingName().
+                @if (_isDirectorOrAdmin)
+                {
+                    <span>Accessing company analytics and team performance metrics. <strong>It's like having your own MBA in your pocket advising and coaching you towards your goals and increased profitability.</strong></span>
+                }
+                else
+                {
+                    <span>Viewing your personal performance metrics.</span>
+                }
+            </p>
         </div>
-        <div class="tl-dashboard-header-content">
-            <div class="tl-dashboard-welcome">
-                <div class="tl-welcome-badge">
-                    <MudIcon Icon="@Icons.Material.Rounded.Dashboard" Size="Size.Small" />
-                    <span>Executive Dashboard</span>
-                </div>
-                <h1 class="tl-welcome-title">Welcome back, @FirstName(authContext.User.Identity?.Name)</h1>
-                <p class="tl-welcome-subtitle">
-                    Real-time business intelligence for @PlatformSettings.GetBrandingName(). 
-                    @if (_isDirectorOrAdmin)
-                    {
-                        <span>Accessing company analytics and team performance metrics. <strong>It's like having your own MBA in your pocket advising and coaching you towards your goals and increased profitability.</strong></span>
-                    }
-                    else
-                    {
-                        <span>Viewing your personal performance metrics.</span>
-                    }
-                </p>
-            </div>
-            <div class="tl-dashboard-actions">
-                <MudButton Variant="Variant.Filled" 
-                           Color="Color.Primary" 
-                           Href="/quotes/create"
-                           StartIcon="@Icons.Material.Rounded.Add"
-                           Class="tl-action-btn">
-                    New Quote
-                </MudButton>
-                <MudButton Variant="Variant.Outlined"
-                           Href="/admin/setup"
-                           StartIcon="@Icons.Material.Rounded.Settings"
-                           Class="tl-action-btn-secondary">
-                    Settings
-                </MudButton>
-            </div>
+        <div class="tl-dashboard-actions">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Href="/quotes/create"
+                       StartIcon="@Icons.Material.Rounded.Add"
+                       Class="tl-action-btn">
+                New Quote
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Href="/admin/setup"
+                       StartIcon="@Icons.Material.Rounded.Settings"
+                       Class="tl-action-btn-secondary">
+                Settings
+            </MudButton>
         </div>
     </div>
-</AuthorizeView>
+</div>
 
 @if (_metrics == null)
 {
@@ -492,6 +490,7 @@ else
 }
 
 @code {
+    private string _userName = "there";
     private DashboardMetrics? _metrics;
     private UserKPI? _userKpi;
     private UserKPI? _myKpi;
@@ -538,9 +537,9 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        // Get user info
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
+        _userName = user.Identity?.Name ?? "there";
         _userCode = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         _isDirectorOrAdmin = user.IsInRole("Director") || user.IsInRole("Admin");
 

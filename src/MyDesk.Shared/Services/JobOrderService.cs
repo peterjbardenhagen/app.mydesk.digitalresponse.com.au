@@ -188,10 +188,10 @@ public class JobOrderService
             ["JobOrderId"] = jobOrder.JobOrderId
         };
 
-        await _db.ExecuteAsync(sql, p);
+        await _db.ExecuteNonQueryAsync(sql, p);
 
         // Delete existing line items and recreate
-        await _db.ExecuteAsync("DELETE FROM JobOrderContents WHERE JobOrderId = @Id", new() { ["Id"] = jobOrder.JobOrderId });
+        await _db.ExecuteNonQueryAsync("DELETE FROM JobOrderContents WHERE JobOrderId = @Id", new() { ["Id"] = jobOrder.JobOrderId });
 
         if (lineItems.Any())
         {
@@ -218,7 +218,7 @@ public class JobOrderService
                 ["Price"] = item.LineTotal / (item.Qty > 0 ? item.Qty : 1)
             };
 
-            await _db.ExecuteAsync(sql, p);
+            await _db.ExecuteNonQueryAsync(sql, p);
         }
     }
 
@@ -230,7 +230,7 @@ public class JobOrderService
                 Code = @Code
             WHERE JobOrderId = @JobOrderId";
 
-        await _db.ExecuteAsync(sql, new()
+        await _db.ExecuteNonQueryAsync(sql, new()
         {
             ["StatusId"] = statusId,
             ["Code"] = userCode,

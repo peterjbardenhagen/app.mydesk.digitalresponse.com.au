@@ -1,0 +1,159 @@
+@page "/banking/statement/{Id:int}"
+@attribute [Authorize]
+@using MyDesk.Shared.Models
+@using MyDesk.Shared.Services
+@inject BankingService BankingSvc
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Statement #@Id - Banking - MyDesk</PageTitle>
+
+@if (_statement is null)
+{
+    <MudProgressLinear Indeterminate Color="Color.Primary" />
+}
+else
+{
+    <div class="tl-page-header">
+        <div>
+            <div class="tl-breadcrumb">
+                <a href="/">MyDesk</a><span class="sep">/</span>
+                <a href="/banking">Banking</a><span class="sep">/</span>
+                <span style="color:var(--gray-700);font-weight:500;">Statement #@_statement.BankStatementId</span>
+            </div>
+            <h1>@_statement.AccountName</h1>
+            <p class="tl-subtitle">@_statement.FromDate.ToString("d MMM yyyy") – @_statement.ToDate.ToString("d MMM yyyy")</p>
+        </div>
+        <div class="d-flex gap-2 align-center">
+            <MudChip T="string" Color="@(_statement.IsFullyReconciled ? Color.Success : Color.Warning)" Size="Size.Small">
+                @_statement.ReconciledCount / @_statement.TransactionCount reconciled
+            </MudChip>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ArrowBack"
+                       Href="/banking">Back to Banking</MudButton>
+        </div>
+    </div>
+
+    <MudPaper Class="mb-3 pa-4" Elevation="0" Style="border:1px solid var(--gray-200);border-radius:12px;">
+        <MudGrid Spacing="3">
+            <MudItem xs="4">
+                <MudText Typo="Typo.caption" Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Opening Balance</MudText>
+                <MudText Typo="Typo.h6" Style="font-weight:700;">@_statement.OpeningBalance.ToString("C")</MudText>
+            </MudItem>
+            <MudItem xs="4">
+                <MudText Typo="Typo.caption" Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Closing Balance</MudText>
+                <MudText Typo="Typo.h6" Style="font-weight:700;">@_statement.ClosingBalance.ToString("C")</MudText>
+            </MudItem>
+            <MudItem xs="4">
+                <MudText Typo="Typo.caption" Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Transactions</MudText>
+                <MudText Typo="Typo.h6" Style="font-weight:700;">@_statement.TransactionCount</MudText>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudTabs Elevation="0" Rounded ApplyEffectsToContainer>
+        <MudTabPanel Text="@($"All ({_transactions.Count})")">
+            @RenderTable(_transactions)
+        </MudTabPanel>
+        <MudTabPanel Text="@($"Unreconciled ({_unreconciled})")">
+            @RenderTable(_transactions.Where(t => !t.Reconciled).ToList())
+        </MudTabPanel>
+        <MudTabPanel Text="@($"Reconciled ({_reconciledCount})")">
+            @RenderTable(_transactions.Where(t => t.Reconciled).ToList())
+        </MudTabPanel>
+    </MudTabs>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private BankStatement? _statement;
+    private List<BankTransaction> _transactions = new();
+    private int _unreconciled => _transactions.Count(t => !t.Reconciled);
+    private int _reconciledCount => _transactions.Count(t => t.Reconciled);
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _statement = await BankingSvc.GetStatementAsync(Id);
+            _transactions = await BankingSvc.ListTransactionsAsync(Id);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Could not load: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private RenderFragment RenderTable(List<BankTransaction> rows) => @<MudTable Items="rows" Bordered Hover Dense>
+        <HeaderContent>
+            <MudTh>Date</MudTh>
+            <MudTh>Description</MudTh>
+            <MudTh>Reference</MudTh>
+            <MudTh Class="text-right">Debit</MudTh>
+            <MudTh Class="text-right">Credit</MudTh>
+            <MudTh Class="text-right">Balance</MudTh>
+            <MudTh>Match</MudTh>
+            <MudTh></MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.TransactionDate.ToString("d MMM")</MudTd>
+            <MudTd>@context.Description</MudTd>
+            <MudTd Style="opacity:.7;">@context.Reference</MudTd>
+            <MudTd Class="text-right" Style="@(context.Debit > 0 ? "color:var(--mud-palette-error);" : "")">@(context.Debit > 0 ? context.Debit.ToString("C") : "")</MudTd>
+            <MudTd Class="text-right" Style="@(context.Credit > 0 ? "color:var(--mud-palette-success);" : "")">@(context.Credit > 0 ? context.Credit.ToString("C") : "")</MudTd>
+            <MudTd Class="text-right">@context.Balance.ToString("C")</MudTd>
+            <MudTd>
+                @if (context.Reconciled)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success">@context.MatchedEntityType #@context.MatchedEntityId</MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default">Unmatched</MudChip>
+                }
+            </MudTd>
+            <MudTd Class="text-right">
+                @if (!context.Reconciled)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.LinkOff"
+                               OnClick="() => OpenMatch(context)">Match</MudButton>
+                }
+                else
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.LinkOff" Size="Size.Small"
+                                   OnClick="() => UnmatchAsync(context)" />
+                }
+            </MudTd>
+        </RowTemplate>
+    </MudTable>;
+
+    private async Task OpenMatch(BankTransaction t)
+    {
+        var dialog = await DialogService.ShowAsync<MatchTransactionDialog>("Match transaction",
+            new DialogParameters<MatchTransactionDialog>
+            {
+                { x => x.Transaction, t }
+            });
+        var result = await dialog.Result;
+        if (result is { Canceled: false, Data: { } payload } &&
+            payload is ValueTuple<string, int?, string?> match)
+        {
+            try
+            {
+                await BankingSvc.ReconcileAsync(t.BankTransactionId, match.Item1, match.Item2, match.Item3);
+                Snackbar.Add("Transaction reconciled.", Severity.Success);
+                await LoadAsync();
+            }
+            catch (Exception ex) { Snackbar.Add($"Reconcile failed: {ex.Message}", Severity.Error); }
+        }
+    }
+
+    private async Task UnmatchAsync(BankTransaction t)
+    {
+        try { await BankingSvc.UnreconcileAsync(t.BankTransactionId); await LoadAsync(); }
+        catch (Exception ex) { Snackbar.Add($"Unmatch failed: {ex.Message}", Severity.Error); }
+    }
+}

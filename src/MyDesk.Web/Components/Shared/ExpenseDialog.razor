@@ -4,23 +4,98 @@
 <MudDialog>
     <DialogContent>
         <MudForm @ref="_form">
-            <MudTextField T="string" @bind-Value="_expense.SupplierName" Label="Supplier" Required="true" RequiredError="Supplier is required" Variant="Variant.Outlined" FullWidth="true" Class="mb-4" />
-            <MudTextField T="string" @bind-Value="_expense.Description" Label="Description" Required="true" RequiredError="Description is required" Variant="Variant.Outlined" FullWidth="true" Class="mb-4" />
-            <MudTextField T="decimal" @bind-Value="_expense.Amount" Label="Amount (ex GST)" Variant="Variant.Outlined" FullWidth="true" Class="mb-4" Adornment="Adornment.Start" AdornmentText="$" />
-            <MudTextField T="decimal" @bind-Value="_expense.GST" Label="GST" Variant="Variant.Outlined" FullWidth="true" Class="mb-4" Adornment="Adornment.Start" AdornmentText="$" />
-            <MudSelect T="string" @bind-Value="_expense.Category" Label="Category" Variant="Variant.Outlined" FullWidth="true" Class="mb-4">
-                @foreach (var cat in _categories)
+            <MudGrid Spacing="2">
+                <MudItem xs="12" sm="8">
+                    <MudTextField T="string" @bind-Value="_expense.SupplierName" Label="Supplier" Required RequiredError="Supplier is required"
+                                  Variant="Variant.Outlined" FullWidth="true" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudDatePicker @bind-Date="_dateNullable" Label="Date" Variant="Variant.Outlined" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField T="string" @bind-Value="_expense.Description" Label="Description" Required RequiredError="Description is required"
+                                  Variant="Variant.Outlined" FullWidth="true" />
+                </MudItem>
+
+                <MudItem xs="6" sm="3">
+                    <MudSelect T="string" @bind-Value="_expense.Currency" Label="Currency" Variant="Variant.Outlined" Dense
+                               HelperText="@(IsForeign ? "Non-AUD: enter AUD-equivalent below" : null)">
+                        <MudSelectItem Value="@("AUD")">AUD</MudSelectItem>
+                        <MudSelectItem Value="@("USD")">USD</MudSelectItem>
+                        <MudSelectItem Value="@("EUR")">EUR</MudSelectItem>
+                        <MudSelectItem Value="@("GBP")">GBP</MudSelectItem>
+                        <MudSelectItem Value="@("NZD")">NZD</MudSelectItem>
+                        <MudSelectItem Value="@("SGD")">SGD</MudSelectItem>
+                        <MudSelectItem Value="@("JPY")">JPY</MudSelectItem>
+                        <MudSelectItem Value="@("CNY")">CNY</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="6" sm="5">
+                    <MudNumericField T="decimal" @bind-Value="_expense.Amount" Label="Amount (gross)" Variant="Variant.Outlined"
+                                     Adornment="Adornment.Start" AdornmentText="@_expense.Currency" Min="0" />
+                </MudItem>
+                <MudItem xs="12" sm="4" Class="d-flex align-center">
+                    <MudSwitch T="bool" @bind-Value="_expense.HasGst" Color="Color.Primary"
+                               Disabled="@IsForeign"
+                               Label="@(IsForeign ? "GST (AUD only)" : "GST applies (10%)")" />
+                </MudItem>
+
+                @if (_expense.HasGst && !IsForeign)
                 {
-                    <MudSelectItem Value="@cat">@cat</MudSelectItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="decimal" @bind-Value="_expense.Gst" Label="GST component"
+                                         HelperText="Auto-calculated as Amount/11; override if your receipt differs"
+                                         Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentText="$" Min="0" />
+                    </MudItem>
                 }
-            </MudSelect>
-            <MudSelect T="string" @bind-Value="_expense.Status" Label="Status" Variant="Variant.Outlined" FullWidth="true" Class="mb-4">
-                @foreach (var status in _statuses)
+
+                @if (IsForeign)
                 {
-                    <MudSelectItem Value="@status">@status</MudSelectItem>
+                    <MudItem xs="12">
+                        <MudPaper Class="pa-3 mt-2" Elevation="0"
+                                  Style="background:var(--mud-palette-warning-lighten); border:1px solid var(--mud-palette-warning);">
+                            <MudText Typo="Typo.subtitle2" Class="mb-2">
+                                <MudIcon Icon="@Icons.Material.Rounded.CurrencyExchange" Size="Size.Small" /> AUD equivalent
+                            </MudText>
+                            <MudText Typo="Typo.caption" Class="mb-2">
+                                Enter the AUD value as charged to the bank account (from the receipt or — until the
+                                banking integration is connected — your bank statement).
+                            </MudText>
+
+                            <MudGrid Spacing="2">
+                                <MudItem xs="12" sm="5">
+                                    <MudNumericField T="decimal" @bind-Value="_expense.AmountAud" Label="Amount in AUD"
+                                                     Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentText="$" Min="0" />
+                                </MudItem>
+                                <MudItem xs="12" sm="4">
+                                    <MudNumericField T="decimal?" @bind-Value="_expense.ExchangeRate" Label="Rate" HelperText="@RateHelper"
+                                                     Variant="Variant.Outlined" Format="0.0000" Min="0" />
+                                </MudItem>
+                                <MudItem xs="12" sm="3">
+                                    <MudSelect T="string" @bind-Value="_expense.AmountAudSource" Label="Source"
+                                               Variant="Variant.Outlined" Dense>
+                                        <MudSelectItem Value="@("receipt")">Receipt</MudSelectItem>
+                                        <MudSelectItem Value="@("bank")">Bank statement</MudSelectItem>
+                                        <MudSelectItem Value="@("manual")">Manual estimate</MudSelectItem>
+                                    </MudSelect>
+                                </MudItem>
+                            </MudGrid>
+                        </MudPaper>
+                    </MudItem>
                 }
-            </MudSelect>
-            <MudTextField T="DateTime" @bind-Value="_expense.Date" Label="Date" Variant="Variant.Outlined" FullWidth="true" Class="mb-4" />
+
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" @bind-Value="_expense.Category" Label="Category" Variant="Variant.Outlined">
+                        @foreach (var cat in _categories) { <MudSelectItem Value="@cat">@cat</MudSelectItem> }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" @bind-Value="_expense.Status" Label="Status" Variant="Variant.Outlined">
+                        @foreach (var s in _statuses) { <MudSelectItem Value="@s">@s</MudSelectItem> }
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
         </MudForm>
     </DialogContent>
     <DialogActions>
@@ -35,19 +110,45 @@
 
     private MudForm? _form;
     private Expense _expense = new();
-    private readonly string[] _categories = { "General", "Software", "Hardware", "Office Supplies", "Travel", "Marketing", "Utilities", "Rent" };
+    private DateTime? _dateNullable;
+    private readonly string[] _categories = { "General", "Software", "Hardware", "Office Supplies", "Travel", "Marketing", "Utilities", "Rent", "Subscriptions" };
     private readonly string[] _statuses = { "Pending", "Approved", "Paid", "Rejected" };
+
+    private bool IsForeign => !string.Equals(_expense.Currency, "AUD", StringComparison.OrdinalIgnoreCase);
+    private string RateHelper => _expense.AmountAud > 0 && _expense.Amount > 0
+        ? $"≈ 1 AUD = {(_expense.Amount / _expense.AmountAud):0.0000} {_expense.Currency}"
+        : "Optional — used for reporting";
 
     protected override void OnInitialized()
     {
         _expense = Expense ?? new Expense();
+        _dateNullable = _expense.Date;
+        // Default GST off for foreign currency.
+        if (IsForeign && _expense.HasGst && _expense.Gst == 0) _expense.HasGst = false;
     }
 
     private void Cancel() => MudDialog.Cancel();
 
     private void Submit()
     {
-        _expense.Total = _expense.Amount + _expense.GST;
+        _expense.Date = _dateNullable ?? DateTime.Today;
+
+        // Mirror AUD <-> primary amount when in AUD mode.
+        if (!IsForeign)
+        {
+            _expense.AmountAud = _expense.Amount;
+            _expense.ExchangeRate = null;
+            _expense.AmountAudSource = "receipt";
+        }
+
+        // GST inclusive total.
+        _expense.Total = _expense.Amount;
+        if (!IsForeign && _expense.HasGst && _expense.Gst == 0)
+        {
+            _expense.Gst = Math.Round(_expense.Amount / 11m, 2);
+        }
+        if (!_expense.HasGst) _expense.Gst = 0;
+
         MudDialog.Close(DialogResult.Ok(_expense));
     }
 }

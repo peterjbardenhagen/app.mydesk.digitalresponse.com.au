@@ -4,6 +4,9 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
+@* Suppress nullable warnings in generated code *@
+#pragma warning disable CS8669
+
 <PageTitle>Error Logs - @PlatformSettings.GetBrandingName()</PageTitle>
 
 <div class="tl-page-header">
@@ -258,6 +261,7 @@ else
             _totalCount = await ErrorLogService.GetErrorCountAsync();
             _unresolvedCount = await ErrorLogService.GetErrorCountAsync(isResolved: false);
             _resolvedCount = await ErrorLogService.GetErrorCountAsync(isResolved: true);
+            _todayCount = _errorLogs.Count(e => e.ErrorDate.Date == DateTime.Today);
         }
         catch (Exception ex)
         {
@@ -287,7 +291,7 @@ else
         {
             { nameof(ErrorDetailsDialog.ErrorLog), errorLog }
         };
-        var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true };
+        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Large, FullWidth = true };
         await DialogService.ShowAsync<ErrorDetailsDialog>("Error Details", parameters, options);
     }
 

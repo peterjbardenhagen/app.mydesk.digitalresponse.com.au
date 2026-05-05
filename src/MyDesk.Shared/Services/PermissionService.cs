@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MyDesk.Shared.Models;
 
@@ -9,14 +11,14 @@ namespace MyDesk.Shared.Services;
 /// </summary>
 public class PermissionService
 {
-    private readonly DatabaseService _db;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<PermissionService> _logger;
-    private readonly Dictionary<string, PermissionDefinition> _allPermissions = new();
-    private Dictionary<int, UserPermissionSet>? _cachedPermissionSets;
+    private readonly ConcurrentDictionary<string, PermissionDefinition> _allPermissions = new();
+    private ConcurrentDictionary<int, UserPermissionSet>? _cachedPermissionSets;
 
-    public PermissionService(DatabaseService db, ILogger<PermissionService> logger)
+    public PermissionService(IServiceScopeFactory scopeFactory, ILogger<PermissionService> logger)
     {
-        _db = db;
+        _scopeFactory = scopeFactory;
         _logger = logger;
         InitializePermissions();
     }
@@ -170,6 +172,9 @@ public class PermissionService
         
         // Calendar
         AddPerm("calendar", "view", "View Calendar", "Access calendar");
+
+        // Emails
+        AddPerm("emails", "view", "View Emails", "Access Outlook inbox and email summaries");
         
         // Expenses
         AddPerm("expenses", "view", "View Expenses", "View expenses");
@@ -203,7 +208,7 @@ public class PermissionService
     /// <summary>
     /// Get all defined permissions
     /// </summary>
-    public Dictionary<string, PermissionDefinition> GetAllPermissions() => _allPermissions;
+    public IReadOnlyDictionary<string, PermissionDefinition> GetAllPermissions() => _allPermissions;
 
     /// <summary>
     /// Get permissions grouped by module
@@ -258,6 +263,7 @@ public class PermissionService
             "settings" => "Settings",
             "noticeboard" => "Campaign",
             "calendar" => "CalendarToday",
+            "emails" => "Mail",
             "expenses" => "Payment",
             "activity" => "History",
             "favourites" => "Star",
@@ -271,12 +277,14 @@ public class PermissionService
     /// </summary>
     public async Task<Dictionary<int, UserPermissionSet>> LoadAllPermissionsAsync()
     {
-        var result = new Dictionary<int, UserPermissionSet>();
+        var result = new ConcurrentDictionary<int, UserPermissionSet>();
         
         try
         {
-            // Get all user types from the UserTypes table
-            var userTypes = await _db.QueryAsync(
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<DatabaseService>();
+
+            var userTypes = await db.QueryAsync(
                 @"SELECT UserTypeId, UserType AS UserRole FROM UserTypes ORDER BY UserTypeId");
             
             foreach (System.Data.DataRow row in userTypes.Rows)
@@ -290,8 +298,7 @@ public class PermissionService
                     RoleName = roleName
                 };
                 
-                // Get permissions for this user type
-                var perms = await _db.QueryAsync(
+                var perms = await db.QueryAsync(
                     @"SELECT PermissionKey, IsAllowed FROM RolePermissions WHERE UserTypeId = @UserTypeId",
                     new() { ["UserTypeId"] = userTypeId });
                 
@@ -311,7 +318,7 @@ public class PermissionService
         }
         
         _cachedPermissionSets = result;
-        return result;
+        return result.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
     }
 
     /// <summary>
@@ -342,28 +349,29 @@ public class PermissionService
     {
         try
         {
-            // Check if exists
-            var existing = await _db.QueryAsync(
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<DatabaseService>();
+
+            var existing = await db.QueryAsync(
                 @"SELECT RolePermissionId FROM RolePermissions WHERE UserTypeId = @UserTypeId AND PermissionKey = @PermissionKey",
                 new() { ["UserTypeId"] = userTypeId, ["PermissionKey"] = permissionKey });
             
             if (existing.Rows.Count > 0)
             {
-                await _db.ExecuteAsync(
+                await db.ExecuteNonQueryAsync(
                     @"UPDATE RolePermissions SET IsAllowed = @IsAllowed, UpdatedAt = GETDATE() 
                       WHERE UserTypeId = @UserTypeId AND PermissionKey = @PermissionKey",
                     new() { ["IsAllowed"] = isAllowed, ["UserTypeId"] = userTypeId, ["PermissionKey"] = permissionKey });
             }
             else
             {
-                await _db.ExecuteAsync(
+                await db.ExecuteNonQueryAsync(
                     @"INSERT INTO RolePermissions (UserTypeId, PermissionKey, IsAllowed, CreatedAt) 
                       VALUES (@UserTypeId, @PermissionKey, @IsAllowed, GETDATE())",
                     new() { ["UserTypeId"] = userTypeId, ["PermissionKey"] = permissionKey, ["IsAllowed"] = isAllowed });
             }
             
-            // Invalidate cache
-            _cachedPermissionSets = null;
+            Interlocked.Exchange(ref _cachedPermissionSets, null);
         }
         catch (Exception ex)
         {
@@ -379,18 +387,19 @@ public class PermissionService
     {
         try
         {
-            using var conn = await _db.GetConnectionAsync();
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<DatabaseService>();
+
+            using var conn = await db.GetConnectionAsync();
             using var transaction = conn.BeginTransaction();
             
             try
             {
-                // Delete existing permissions
                 using var deleteCmd = new Microsoft.Data.SqlClient.SqlCommand(
                     "DELETE FROM RolePermissions WHERE UserTypeId = @UserTypeId", conn, transaction);
                 deleteCmd.Parameters.AddWithValue("@UserTypeId", userTypeId);
                 await deleteCmd.ExecuteNonQueryAsync();
                 
-                // Insert new permissions
                 foreach (var (key, isAllowed) in permissions)
                 {
                     using var insertCmd = new Microsoft.Data.SqlClient.SqlCommand(
@@ -404,8 +413,7 @@ public class PermissionService
                 
                 transaction.Commit();
                 
-                // Invalidate cache
-                _cachedPermissionSets = null;
+                Interlocked.Exchange(ref _cachedPermissionSets, null);
             }
             catch
             {
@@ -544,7 +552,10 @@ public class PermissionService
     {
         try
         {
-            await _db.ExecuteAsync(@"
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<DatabaseService>();
+
+            await db.ExecuteNonQueryAsync(@"
                 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='RolePermissions' AND xtype='U')
                 CREATE TABLE RolePermissions (
                     RolePermissionId INT IDENTITY(1,1) PRIMARY KEY,
@@ -560,8 +571,7 @@ public class PermissionService
                 CREATE INDEX IX_RolePermissions_UserType_Permission ON RolePermissions(UserTypeId, PermissionKey);
             ");
             
-            // Check if any permissions exist, if not apply defaults
-            var count = await _db.ScalarAsync<int>("SELECT COUNT(*) FROM RolePermissions");
+            var count = await db.ScalarAsync<int>("SELECT COUNT(*) FROM RolePermissions");
             if (count == 0)
             {
                 await ApplyDefaultPermissionsAsync();

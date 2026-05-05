@@ -1,0 +1,211 @@
+@page "/banking"
+@attribute [Authorize]
+@using MyDesk.Shared.Models
+@using MyDesk.Shared.Services
+@inject BankingService BankingSvc
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject PlatformSettingsService PlatformSettings
+
+<PageTitle>Banking - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <a href="/accounts">Accounts</a><span class="sep">/</span>
+            <span>Banking</span>
+        </div>
+        <h1>Banking</h1>
+        <p class="tl-subtitle">Import bank statements, review transactions and drive reconciliation from one finance workspace.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadAsync">Refresh</MudButton>
+        <MudButton Variant="Variant.Outlined" Href="/accounts" StartIcon="@Icons.Material.Rounded.AccountBalanceWallet">Accounts Hub</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.UploadFile"
+                   OnClick="@(() => Nav.NavigateTo("/banking/upload"))">
+            Upload Statement
+        </MudButton>
+    </div>
+</div>
+
+<MudPaper Class="tl-banking-hero pa-5 mb-5" Elevation="0" Outlined="true">
+    <div class="tl-banking-hero-copy">
+        <div class="tl-banking-badge">
+            <MudIcon Icon="@Icons.Material.Rounded.AccountBalance" Size="Size.Small" />
+            <span>Finance Workspace</span>
+        </div>
+        <MudText Typo="Typo.h5" Class="tl-banking-title">Statement-led cash visibility for Accounts</MudText>
+        <MudText Typo="Typo.body2" Class="tl-banking-subtitle">Track imported statements, inspect reconciliation progress and jump straight into transaction matching without leaving the banking module.</MudText>
+    </div>
+    <div class="tl-banking-hero-actions">
+        <MudChip T="string" Color="Color.Info" Variant="Variant.Outlined" Size="Size.Small">CSV Import</MudChip>
+        <MudChip T="string" Color="Color.Success" Variant="Variant.Outlined" Size="Size.Small">Reconciliation Ready</MudChip>
+    </div>
+</MudPaper>
+
+@if (_summary is not null)
+{
+    <MudGrid Class="mb-4" Spacing="3">
+        <MudItem xs="6" md="3">@Kpi("Statements",   _summary.StatementCount.ToString("N0"),   Icons.Material.Rounded.Description, "teal")</MudItem>
+        <MudItem xs="6" md="3">@Kpi("Transactions", _summary.TransactionCount.ToString("N0"), Icons.Material.Rounded.SwapVert, "gold")</MudItem>
+        <MudItem xs="6" md="3">@Kpi("Reconciled",   $"{_summary.ReconciledCount} / {_summary.TransactionCount}", Icons.Material.Rounded.Verified, "success")</MudItem>
+        <MudItem xs="6" md="3">@Kpi("Unreconciled", _summary.UnreconciledCount.ToString("N0"), Icons.Material.Rounded.PendingActions, "dark")</MudItem>
+    </MudGrid>
+}
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate Color="Color.Primary" />
+}
+else if (_statements.Count == 0)
+{
+    <MudPaper Class="pa-8 text-center" Elevation="0" Style="border:1px dashed var(--mud-palette-lines-default); border-radius:12px;">
+        <MudIcon Icon="@Icons.Material.Outlined.AccountBalance" Size="Size.Large" Color="Color.Secondary" />
+        <MudText Typo="Typo.h6" Class="mt-2">No bank statements yet</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+            Upload a CSV exported from your bank to get started.
+        </MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.UploadFile"
+                   OnClick="@(() => Nav.NavigateTo("/banking/upload"))">
+            Upload your first statement
+        </MudButton>
+    </MudPaper>
+}
+else
+{
+    <MudPaper Class="tl-banking-table-wrap" Elevation="0" Outlined="true">
+        <div class="tl-table-header">
+            <div>
+                <MudText Typo="Typo.h6">Imported Statements</MudText>
+                <MudText Typo="Typo.body2" Class="tl-table-subtitle">Open a statement to review transactions and reconcile line-by-line.</MudText>
+            </div>
+        </div>
+        <MudTable Items="_statements" Hover Bordered="false" Dense>
+            <HeaderContent>
+                <MudTh>Account</MudTh>
+                <MudTh>Period</MudTh>
+                <MudTh Class="text-right">Opening</MudTh>
+                <MudTh Class="text-right">Closing</MudTh>
+                <MudTh Class="text-right">Txns</MudTh>
+                <MudTh>Reconciled</MudTh>
+                <MudTh>Source</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    <div class="tl-statement-account">
+                        <strong>@context.AccountName</strong>
+                        @if (!string.IsNullOrWhiteSpace(context.Bsb) || !string.IsNullOrWhiteSpace(context.AccountNumber))
+                        {
+                            <MudText Typo="Typo.caption" Class="tl-statement-meta">@context.Bsb @context.AccountNumber</MudText>
+                        }
+                    </div>
+                </MudTd>
+                <MudTd>@context.FromDate.ToString("d MMM") – @context.ToDate.ToString("d MMM yyyy")</MudTd>
+                <MudTd Class="text-right">@context.OpeningBalance.ToString("C")</MudTd>
+                <MudTd Class="text-right">@context.ClosingBalance.ToString("C")</MudTd>
+                <MudTd Class="text-right">@context.TransactionCount</MudTd>
+                <MudTd>
+                    @if (context.IsFullyReconciled)
+                    {
+                        <MudChip T="string" Color="Color.Success" Size="Size.Small">All reconciled</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Color="Color.Warning" Size="Size.Small">@(context.ReconciledCount)/@(context.TransactionCount)</MudChip>
+                    }
+                </MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">@context.Source</MudChip>
+                </MudTd>
+                <MudTd Class="text-right">
+                    <MudButton Size="Size.Small" Variant="Variant.Text" EndIcon="@Icons.Material.Filled.OpenInNew"
+                               OnClick="@(() => Nav.NavigateTo($"/banking/statement/{context.BankStatementId}"))">Open</MudButton>
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                                   OnClick="() => DeleteAsync(context)" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+}
+
+<style>
+    .tl-page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; gap:16px; }
+    .tl-breadcrumb { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--gray-500); margin-bottom:8px; }
+    .tl-breadcrumb a { color:var(--gray-500); text-decoration:none; }
+    .tl-subtitle { color:var(--gray-500); margin:0; max-width:760px; }
+    .tl-banking-hero { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; border-radius:20px; background:linear-gradient(135deg, rgba(0,168,176,.08) 0%, rgba(30,64,175,.05) 100%); }
+    .tl-banking-badge { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; background:rgba(0,168,176,.12); color:#0f766e; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; margin-bottom:14px; }
+    .tl-banking-title { font-weight:700 !important; margin-bottom:8px !important; }
+    .tl-banking-subtitle { color:var(--gray-600) !important; max-width:760px; }
+    .tl-banking-hero-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .tl-banking-table-wrap { border-radius:18px; overflow:hidden; }
+    .tl-table-header { display:flex; justify-content:space-between; align-items:center; padding:20px 24px 8px; }
+    .tl-table-subtitle { color:var(--gray-500) !important; }
+    .tl-statement-account { display:flex; flex-direction:column; gap:2px; }
+    .tl-statement-meta { opacity:.7; }
+    .tl-banking-kpi { border-radius:16px; border:1px solid var(--gray-200); padding:18px; height:100%; }
+    .tl-banking-kpi.teal { background:linear-gradient(135deg, var(--tl-primary-50) 0%, white 100%); border-color:var(--tl-primary-200); }
+    .tl-banking-kpi.gold { background:linear-gradient(135deg, rgba(204,160,90,.10) 0%, white 100%); border-color:rgba(204,160,90,.35); }
+    .tl-banking-kpi.success { background:linear-gradient(135deg, rgba(16,185,129,.10) 0%, white 100%); border-color:rgba(16,185,129,.35); }
+    .tl-banking-kpi.dark { background:linear-gradient(135deg, #1f2937 0%, #111827 100%); border-color:#111827; color:white; }
+    .tl-banking-kpi-label { color:var(--gray-500); font-size:12px; text-transform:uppercase; letter-spacing:.05em; }
+    .tl-banking-kpi.dark .tl-banking-kpi-label { color:rgba(255,255,255,.72); }
+    .tl-banking-kpi-value { font-size:28px; font-weight:700; line-height:1.1; }
+    body.mud-dark-mode .tl-banking-hero { background:linear-gradient(135deg, rgba(34,197,94,.10) 0%, rgba(17,24,39,.85) 100%) !important; border-color:var(--gray-300) !important; }
+    body.mud-dark-mode .tl-banking-badge { background:rgba(34,197,94,.12); color:var(--tl-primary-700); }
+    body.mud-dark-mode .tl-banking-subtitle, body.mud-dark-mode .tl-table-subtitle { color:var(--gray-600) !important; }
+    body.mud-dark-mode .tl-banking-kpi { border-color:var(--gray-300); }
+    body.mud-dark-mode .tl-banking-kpi.teal { background:linear-gradient(135deg, rgba(34,197,94,.10) 0%, var(--surface) 100%); }
+    body.mud-dark-mode .tl-banking-kpi.gold { background:linear-gradient(135deg, rgba(251,191,36,.10) 0%, var(--surface) 100%); }
+    body.mud-dark-mode .tl-banking-kpi.success { background:linear-gradient(135deg, rgba(16,185,129,.10) 0%, var(--surface) 100%); }
+    body.mud-dark-mode .tl-banking-kpi.dark { background:linear-gradient(135deg, #111827 0%, #020617 100%); }
+</style>
+
+@code {
+    private List<BankStatement> _statements = new();
+    private BankingSummary? _summary;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            _statements = await BankingSvc.ListStatementsAsync();
+            _summary    = await BankingSvc.GetSummaryAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Could not load banking: {ex.Message}", Severity.Error);
+        }
+        _loading = false;
+    }
+
+    private async Task DeleteAsync(BankStatement s)
+    {
+        var ok = await DialogService.ShowMessageBox(
+            "Delete statement",
+            $"Delete '{s.AccountName}' ({s.FromDate:d MMM yyyy} - {s.ToDate:d MMM yyyy}) and its {s.TransactionCount} transactions?",
+            yesText: "Delete", cancelText: "Cancel");
+        if (ok != true) return;
+        try { await BankingSvc.DeleteStatementAsync(s.BankStatementId); Snackbar.Add("Statement deleted.", Severity.Info); await LoadAsync(); }
+        catch (Exception ex) { Snackbar.Add($"Delete failed: {ex.Message}", Severity.Error); }
+    }
+
+    private RenderFragment Kpi(string title, string value, string icon, string tone) => @<MudPaper Elevation="0" Class="@($"tl-banking-kpi {tone}")">
+        <div class="d-flex align-center gap-3">
+            <MudIcon Icon="@icon" Color="@(tone == "dark" ? Color.Inherit : Color.Primary)" />
+            <div>
+                <div class="tl-banking-kpi-label">@title</div>
+                <div class="tl-banking-kpi-value">@value</div>
+            </div>
+        </div>
+    </MudPaper>;
+}

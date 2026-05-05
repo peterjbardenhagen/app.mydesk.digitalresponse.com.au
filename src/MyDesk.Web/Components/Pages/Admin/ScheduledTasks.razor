@@ -1,0 +1,156 @@
+@page "/admin/scheduled-tasks"
+@attribute [Authorize(Roles = "Admin,Administrator,Director")]
+@using MyDesk.Shared.Models
+@using MyDesk.Shared.Services
+@inject ScheduledTaskService TaskService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Scheduled Tasks</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <div>
+            <MudText Typo="Typo.h4">Scheduled Tasks</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Recurring jobs (Hangfire) — Ask AI prompts, weekly reports, webhooks. <MudLink Href="/hangfire" Target="_blank">Open Hangfire dashboard →</MudLink>
+            </MudText>
+        </div>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateAsync">
+            New task
+        </MudButton>
+    </div>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_tasks.Count == 0)
+    {
+        <MudPaper Class="pa-8 text-center">
+            <MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Large" Color="Color.Secondary" />
+            <MudText Typo="Typo.h6" Class="mt-2">No scheduled tasks yet</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Click "New task" to create one. Tasks run on Hangfire and persist across restarts.
+            </MudText>
+        </MudPaper>
+    }
+    else
+    {
+        <MudTable Items="@_tasks" Hover Bordered Dense>
+            <HeaderContent>
+                <MudTh>Name</MudTh>
+                <MudTh>Action</MudTh>
+                <MudTh>Schedule</MudTh>
+                <MudTh>Last run</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh Class="text-right">Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd><strong>@context.Name</strong><br/><small style="opacity:.6">@context.Description</small></MudTd>
+                <MudTd>@context.ActionType</MudTd>
+                <MudTd><code>@FriendlySchedule(context)</code></MudTd>
+                <MudTd>@(context.LastRunAt?.ToString("g") ?? "—")</MudTd>
+                <MudTd>
+                    @if (!context.IsEnabled)        { <MudChip T="string" Size="Size.Small" Color="Color.Default">Disabled</MudChip> }
+                    else if (context.LastStatus == "Success") { <MudChip T="string" Size="Size.Small" Color="Color.Success">Success</MudChip> }
+                    else if (context.LastStatus == "Error")   { <MudChip T="string" Size="Size.Small" Color="Color.Error">Error</MudChip> }
+                    else                                       { <MudChip T="string" Size="Size.Small" Color="Color.Info">Pending</MudChip> }
+                </MudTd>
+                <MudTd Class="text-right">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                   Size="Size.Small" OnClick="() => OpenEditAsync(context)" />
+                    <MudIconButton Icon="@(context.IsEnabled ? Icons.Material.Filled.Pause : Icons.Material.Filled.PlayArrow)"
+                                   Size="Size.Small" OnClick="() => ToggleAsync(context)" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
+                                   Size="Size.Small" OnClick="() => DeleteAsync(context)" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudContainer>
+
+@code {
+    private List<ScheduledTask> _tasks = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try { _tasks = await TaskService.ListAsync(); }
+        catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
+        _loading = false;
+    }
+
+    private static string FriendlySchedule(ScheduledTask t) => t.Recurrence switch
+    {
+        nameof(ScheduleRecurrence.Hourly)  => $"Every hour at :{t.MinuteOfHour:D2}",
+        nameof(ScheduleRecurrence.Daily)   => $"Daily at {t.HourOfDay:D2}:{t.MinuteOfHour:D2}",
+        nameof(ScheduleRecurrence.Weekly)  => $"Weekly {DayName(t.DayOfWeek ?? 1)} at {t.HourOfDay:D2}:{t.MinuteOfHour:D2}",
+        nameof(ScheduleRecurrence.Monthly) => $"Day {t.DayOfMonth ?? 1} at {t.HourOfDay:D2}:{t.MinuteOfHour:D2}",
+        nameof(ScheduleRecurrence.Cron)    => t.CronExpression ?? "(invalid cron)",
+        _ => t.Recurrence
+    };
+
+    private static string DayName(int d) => d switch
+    {
+        0 => "Sun", 1 => "Mon", 2 => "Tue", 3 => "Wed", 4 => "Thu", 5 => "Fri", 6 => "Sat", _ => $"DOW{d}"
+    };
+
+    private async Task OpenCreateAsync()
+    {
+        var parameters = new DialogParameters<ScheduledTaskEditDialog>
+        {
+            { x => x.Task, new ScheduledTask() }
+        };
+        var dialog = await DialogService.ShowAsync<ScheduledTaskEditDialog>("New scheduled task", parameters,
+            new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Medium, FullWidth = true });
+        var result = await dialog.Result;
+        if (result is { Canceled: false, Data: ScheduledTask t })
+        {
+            try { await TaskService.CreateAsync(t); Snackbar.Add("Task created.", Severity.Success); await LoadAsync(); }
+            catch (Exception ex) { Snackbar.Add($"Create failed: {ex.Message}", Severity.Error); }
+        }
+    }
+
+    private async Task OpenEditAsync(ScheduledTask task)
+    {
+        var copy = new ScheduledTask
+        {
+            ScheduledTaskId = task.ScheduledTaskId, TenantId = task.TenantId, Name = task.Name,
+            Description = task.Description, ActionType = task.ActionType, ParametersJson = task.ParametersJson,
+            Recurrence = task.Recurrence, HourOfDay = task.HourOfDay, MinuteOfHour = task.MinuteOfHour,
+            DayOfWeek = task.DayOfWeek, DayOfMonth = task.DayOfMonth, CronExpression = task.CronExpression,
+            TimeZoneId = task.TimeZoneId, IsEnabled = task.IsEnabled
+        };
+        var parameters = new DialogParameters<ScheduledTaskEditDialog> { { x => x.Task, copy } };
+        var dialog = await DialogService.ShowAsync<ScheduledTaskEditDialog>("Edit scheduled task", parameters,
+            new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Medium, FullWidth = true });
+        var result = await dialog.Result;
+        if (result is { Canceled: false, Data: ScheduledTask t })
+        {
+            try { await TaskService.UpdateAsync(t); Snackbar.Add("Task saved.", Severity.Success); await LoadAsync(); }
+            catch (Exception ex) { Snackbar.Add($"Save failed: {ex.Message}", Severity.Error); }
+        }
+    }
+
+    private async Task ToggleAsync(ScheduledTask task)
+    {
+        try { await TaskService.SetEnabledAsync(task.ScheduledTaskId, !task.IsEnabled); await LoadAsync(); }
+        catch (Exception ex) { Snackbar.Add($"Toggle failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task DeleteAsync(ScheduledTask task)
+    {
+        var confirmed = await DialogService.ShowMessageBox("Delete task",
+            $"Delete '{task.Name}'? This stops the recurring job and removes history.",
+            yesText: "Delete", cancelText: "Cancel");
+        if (confirmed == true)
+        {
+            try { await TaskService.DeleteAsync(task.ScheduledTaskId); Snackbar.Add("Task deleted.", Severity.Info); await LoadAsync(); }
+            catch (Exception ex) { Snackbar.Add($"Delete failed: {ex.Message}", Severity.Error); }
+        }
+    }
+}

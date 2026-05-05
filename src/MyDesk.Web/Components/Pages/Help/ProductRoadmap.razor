@@ -1,140 +1,294 @@
 @page "/help/roadmap"
+@page "/roadmap"
 @attribute [Authorize]
 @inject PlatformSettingsService PlatformSettings
 
-<PageTitle>Product Roadmap - MyDesk</PageTitle>
+<PageTitle>Product Roadmap - @PlatformSettings.GetBrandingName()</PageTitle>
 
 <div class="tl-page-header">
     <div>
         <div class="tl-breadcrumb">
             <a href="/">Dashboard</a><span class="sep">/</span>
-            <a href="/help-center">Help Center</a><span class="sep">/</span>
+            <a href="/help-center">Help Centre</a><span class="sep">/</span>
             <span>Product Roadmap</span>
         </div>
         <h1>Product Roadmap</h1>
-        <p class="tl-subtitle">The strategic direction for MyDesk AI-powered platform</p>
+        <p class="tl-subtitle">The strategic direction for @PlatformSettings.GetBrandingName() – built for Australian small and medium businesses.</p>
     </div>
 </div>
 
 <MudGrid Spacing="4" Class="mt-4">
     <MudItem xs="12" md="8">
         <MudPaper Class="pa-8 rounded-xl" Elevation="1">
-            <MudText Typo="Typo.h5" Class="mb-6 font-weight-bold">🚀 Current Status (v3.0)</MudText>
-            
-            <div class="d-flex flex-column gap-3 mb-8">
-                <div class="status-item">
-                    <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Small" />
-                    <MudText Typo="Typo.body1"><strong>AI Core:</strong> Natural language querying of operational and financial data.</MudText>
-                </div>
-                <div class="status-item">
-                    <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Small" />
-                    <MudText Typo="Typo.body1"><strong>Multi-Tenancy:</strong> Architecture support for dynamic rebranding and tenant-specific configuration.</MudText>
-                </div>
-                <div class="status-item">
-                    <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Small" />
-                    <MudText Typo="Typo.body1"><strong>Voice-to-Action:</strong> Telegram bot integration with voice transcription (Whisper) and task execution.</MudText>
-                </div>
-                <div class="status-item">
-                    <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Small" />
-                    <MudText Typo="Typo.body1"><strong>Unified Branding:</strong> Dynamic UI and PDF generation based on tenant settings.</MudText>
-                </div>
-                <div class="status-item">
-                    <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Small" />
-                    <MudText Typo="Typo.body1"><strong>Copy Supplier Quote:</strong> AI-powered PDF extraction with automatic margin markup.</MudText>
-                </div>
-                <div class="status-item">
-                    <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Small" />
-                    <MudText Typo="Typo.body1"><strong>Customer Portal:</strong> Self-service portal for customers to view quotes, invoices, and orders.</MudText>
-                </div>
-                <div class="status-item">
-                    <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Small" />
-                    <MudText Typo="Typo.body1"><strong>CSV Export:</strong> Export data from all major list pages.</MudText>
-                </div>
+
+            @* ---------------------- SHIPPED ---------------------- *@
+            <MudText Typo="Typo.h5" Class="mb-4 font-weight-bold">Shipped (v3.0 – v3.1)</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">
+                Already in production and available to all customers today.
+            </MudText>
+            <div class="d-flex flex-column gap-2 mb-8">
+                @foreach (var item in _shipped)
+                {
+                    <div class="status-item">
+                        <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                        <MudText Typo="Typo.body2"><strong>@item.Title:</strong> @item.Detail</MudText>
+                    </div>
+                }
             </div>
 
-            <MudDivider Class="my-8" />
+            <MudDivider Class="my-6" />
 
-            <MudText Typo="Typo.h5" Class="mb-6 font-weight-bold">🗺️ Future Roadmap</MudText>
+            @* ---------------------- PHASES ---------------------- *@
+            @foreach (var phase in _phases)
+            {
+                <div class="roadmap-section mb-8">
+                    <div class="d-flex align-center gap-2 mb-2">
+                        <MudIcon Icon="@phase.Icon" Color="Color.Primary" Size="Size.Medium" />
+                        <MudText Typo="Typo.h6" Class="color-primary font-weight-bold">@phase.Title</MudText>
+                    </div>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">@phase.Subtitle</MudText>
+                    <ul class="roadmap-list">
+                        @foreach (var f in phase.Features)
+                        {
+                            <li>
+                                <strong>@f.Title.</strong> @f.Detail
+                                @if (!string.IsNullOrWhiteSpace(f.Tag))
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined" Class="ml-2">@f.Tag</MudChip>
+                                }
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
 
-            <div class="roadmap-section mb-8">
-                <MudText Typo="Typo.h6" Class="mb-4 color-primary font-weight-bold">Phase 1: Financial & Compliance Deepening</MudText>
-                <ul class="roadmap-list">
-                    <li><strong>Integrated Bank Feeds:</strong> Direct connection to Australian banks (via Basiq/Yodlee) for real-time cash flow visibility and "conversational reconciliation".</li>
-                    <li><strong>ATO / STP Phase 2 Integration:</strong> Built-in payroll module supporting Single Touch Payroll requirements, allowing micro-SMEs to manage employees without separate software.</li>
-                    <li><strong>BAS Preparation Assistant:</strong> AI-driven categorization and reporting to simplify quarterly BAS lodgement.</li>
-                </ul>
-            </div>
+            <MudDivider Class="my-6" />
 
-            <div class="roadmap-section mb-8">
-                <MudText Typo="Typo.h6" Class="mb-4 color-primary font-weight-bold">Phase 2: Operations & Growth</MudText>
-                <ul class="roadmap-list">
-                    <li><strong>AI Marketing Automation:</strong> 
-                        <ul>
-                            <li>Automatic draft generation for LinkedIn/Email based on "Project Wins".</li>
-                            <li>Predictive customer nurture sequences based on purchase patterns.</li>
-                        </ul>
-                    </li>
-                    <li><strong>Inventory & Asset Tracking:</strong> 
-                        <ul>
-                            <li>"Scan to MyDesk" mobile app for QR-code based stock management.</li>
-                            <li>Warehouse heatmaps driven by AI-analyzed order frequency.</li>
-                        </ul>
-                    </li>
-                    <li><strong>Advanced Project Profitability:</strong> Real-time cross-referencing of MYOB purchase costs against MyDesk quote estimates with proactive "Overrun Alerts".</li>
-                </ul>
-            </div>
-
-            <div class="roadmap-section mb-8">
-                <MudText Typo="Typo.h6" Class="mb-4 color-primary font-weight-bold">Phase 3: Ecosystem & Platform</MudText>
-                <ul class="roadmap-list">
-                    <li><strong>White-Label Portal:</strong> A dedicated "Client Portal" where tenants can invite their own customers to view quotes, pay invoices, and talk to a restricted "Customer AI".</li>
-                    <li><strong>Integrated Payment Gateway:</strong> One-click "Pay Now" on invoices (Stripe/Square) with automatic fee reconciliation in MYOB.</li>
-                    <li><strong>Predictive Analytics:</strong> 
-                        <ul>
-                            <li>Cash flow forecasting (3-6 months).</li>
-                            <li>"Customer at Risk" detection based on order decay.</li>
-                        </ul>
-                    </li>
-                </ul>
-            </div>
-
-            <MudDivider Class="my-8" />
-
-            <MudText Typo="Typo.h5" Class="mb-6 font-weight-bold">🛠️ Infrastructure Evolution</MudText>
+            <MudText Typo="Typo.h5" Class="mb-4 font-weight-bold">Infrastructure Evolution</MudText>
             <ul class="roadmap-list">
-                <li><strong>Database Partitioning:</strong> Moving from shared schema to schema-per-tenant for high-security Australian government/medical clients.</li>
-                <li><strong>Self-Healing Data Layer:</strong> AI-monitored data integrity that automatically fixes common entry errors (e.g., incorrect ABN formats or GST mismatches).</li>
-                <li><strong>On-Premise LLM Support:</strong> Support for locally hosted models (Llama 3/Phi-3) for clients with extreme data sovereignty requirements.</li>
+                <li><strong>Schema-per-tenant.</strong> Database partitioning for high-security clients (government, medical, legal).</li>
+                <li><strong>Self-healing data layer.</strong> AI-monitored data integrity that flags incorrect ABNs, GST mismatches and duplicate records.</li>
+                <li><strong>On-premise / sovereign LLM.</strong> Locally hosted Llama 3 / Phi-3 models for clients with extreme data sovereignty requirements.</li>
+                <li><strong>Australian region hosting.</strong> All data hosted in Sydney/Melbourne Azure regions; CDR-ready architecture.</li>
+                <li><strong>Daily encrypted backups.</strong> 30-day point-in-time restore included for every tenant.</li>
             </ul>
+
         </MudPaper>
     </MudItem>
 
     <MudItem xs="12" md="4">
         <MudPaper Class="pa-6 rounded-xl sidebar-card" Elevation="0">
-            <MudText Typo="Typo.h6" Class="mb-4">Strategic Vision</MudText>
-            <MudText Typo="Typo.body2" Class="mb-4">
-                MyDesk is evolving into a <strong>one-stop-shop</strong> AI powered business management system that brings all of an Australian SMB's systems together into one easy to use platform.
+            <MudText Typo="Typo.h6" Class="mb-3">Strategic Vision</MudText>
+            <MudText Typo="Typo.body2" Class="mb-3">
+                @PlatformSettings.GetBrandingName() is evolving into a <strong>one-stop-shop AI-powered business operating system</strong> for Australian SMBs – replacing the patchwork of accounting, CRM, ops and comms tools most businesses still juggle.
             </MudText>
             <MudText Typo="Typo.body2">
-                The goal is a platform that you can <strong>talk to</strong>, and it <strong>talks to you</strong>.
+                The goal is a platform you can <strong>talk to</strong>, and that <strong>talks to you</strong>.
             </MudText>
         </MudPaper>
-        
-        <MudPaper Class="pa-6 rounded-xl mt-4" Elevation="0" Style="background: var(--gray-50);">
+
+        <MudPaper Class="pa-6 rounded-xl mt-4" Elevation="0" Style="background: #f1f5f9;">
+            <MudText Typo="Typo.subtitle2" Class="mb-2 opacity-60">BY THE NUMBERS</MudText>
+            <div class="d-flex flex-column gap-2">
+                <div><MudText Typo="Typo.h5" Class="font-weight-bold">@_shipped.Count</MudText><MudText Typo="Typo.caption">features shipped</MudText></div>
+                <div><MudText Typo="Typo.h5" Class="font-weight-bold">@_phases.Sum(p => p.Features.Count)</MudText><MudText Typo="Typo.caption">on the roadmap</MudText></div>
+                <div><MudText Typo="Typo.h5" Class="font-weight-bold">@_phases.Count</MudText><MudText Typo="Typo.caption">delivery phases</MudText></div>
+            </div>
+        </MudPaper>
+
+        <MudPaper Class="pa-6 rounded-xl mt-4" Elevation="0" Style="background: #fffbeb;">
             <MudText Typo="Typo.subtitle2" Class="mb-2 opacity-60">PREPARED BY</MudText>
             <MudText Typo="Typo.body1" Class="font-weight-bold">Digital Response</MudText>
-            <MudText Typo="Typo.caption" Class="d-block mt-1">Last Updated: April 27, 2026</MudText>
+            <MudText Typo="Typo.caption" Class="d-block mt-1">Last updated: @DateTime.Today.ToString("dd MMMM yyyy")</MudText>
+            <MudButton Class="mt-3" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Rounded.Email" Href="@($"mailto:{PlatformSettings.Current.SupportEmail}?subject=Roadmap%20feedback")">
+                Send Feedback
+            </MudButton>
         </MudPaper>
     </MudItem>
 </MudGrid>
 
 <style>
     .status-item { display: flex; align-items: flex-start; gap: 12px; }
-    .color-primary { color: var(--tl-primary-600); }
+    .color-primary { color: var(--tl-primary, #00c8c8); }
     .roadmap-list { padding-left: 20px; color: var(--gray-700); }
-    .roadmap-list li { margin-bottom: 12px; line-height: 1.5; }
-    .roadmap-list ul { margin-top: 8px; margin-left: 20px; list-style-type: circle; }
-    .sidebar-card { background: #fffbeb !important; border: 1px solid #fef3c7; }
+    .roadmap-list li { margin-bottom: 10px; line-height: 1.55; }
+    .sidebar-card { background: #f0fdfa !important; border: 1px solid #ccfbf1; }
 </style>
 
+@code {
+    private record ShippedItem(string Title, string Detail);
+    private record FeatureItem(string Title, string Detail, string Tag = "");
+    private record Phase(string Title, string Subtitle, string Icon, List<FeatureItem> Features);
 
+    private readonly List<ShippedItem> _shipped = new()
+    {
+        new("AI Core",            "Natural-language querying of operational and financial data."),
+        new("Multi-tenant SaaS",  "Dynamic rebranding and tenant-specific configuration."),
+        new("Voice-to-action",    "Telegram bot with Whisper transcription and task execution."),
+        new("Copy Supplier Quote","AI-powered PDF extraction with automatic margin markup."),
+        new("Customer Portal",    "Self-service portal for quotes, invoices and orders."),
+        new("Supplier Portal",    "Suppliers can view POs, submit RFQ responses and ASNs."),
+        new("Subscription Manager","Recurring renewals with one-click invoice raising."),
+        new("MYOB Integration",   "Bidirectional invoice and payment sync."),
+        new("Dashboard Weather",  "Configurable global weather widget per user."),
+        new("CSV Export",         "Export quotes, invoices, POs, contacts, companies and jobs."),
+        new("Aged Reconciliation","Aged debtors/creditors with one-click chase emails."),
+    };
+
+    private readonly List<Phase> _phases = new()
+    {
+        new Phase(
+            "Phase 1 – Australian Compliance & Money",
+            "Eliminate the need for separate accounting / payroll / BAS tools.",
+            Icons.Material.Rounded.AccountBalance,
+            new()
+            {
+                new("Single Touch Payroll (STP) Phase 2",   "Built-in payroll with direct ATO lodgement so micro-SMBs no longer need a separate payroll product.", "ATO"),
+                new("BAS / IAS Preparation Assistant",       "AI-driven categorisation, GST reconciliation and one-click quarterly BAS lodgement.", "ATO"),
+                new("Superannuation & SuperStream",          "Auto-calculate super guarantee, generate SuperStream messages and pay clearing-house in one click."),
+                new("PAYG Withholding & Instalments",        "Calculate PAYG withholding on payroll and PAYG instalments on income, with reminders before due."),
+                new("ABN / ACN Auto-Validation",             "Live lookup against ABR; auto-fill business name, GST status and entity type from ABN."),
+                new("Director ID Tracker",                   "Compliance reminders for directors of Australian companies (ASIC requirement)."),
+                new("Fuel Tax Credits Calculator",           "Track on-road / off-road usage and auto-claim FTC quarterly."),
+                new("Workcover Premium Estimator",           "Project workers-comp premium based on payroll forecast."),
+                new("ATO Notification Centre",               "Pull due-dates and outstanding obligations directly from the ATO portal."),
+            }
+        ),
+        new Phase(
+            "Phase 2 – Banking, Payments & Cash Flow",
+            "Get paid faster, see cash clearly, reconcile automatically.",
+            Icons.Material.Rounded.AccountBalanceWallet,
+            new()
+            {
+                new("Open Banking (CDR) Bank Feeds",         "Direct connection to CBA, NAB, ANZ, Westpac, Macquarie, Bendigo and others via CDR.", "CDR"),
+                new("PayID & PayTo Recurring Payments",      "Customers authorise PayTo agreements; subscription invoices auto-debit on renewal.", "NPP"),
+                new("BPAY Biller Integration",               "Issue invoices with BPAY biller code; auto-match payments by CRN."),
+                new("One-Click Pay Now (Stripe/Square)",     "Embedded card payment links on every invoice with auto-fee reconciliation."),
+                new("Conversational Reconciliation",         "“Match the $1,250 deposit to last week's three Acme invoices.” – the AI does it."),
+                new("12-Month Cash-Flow Forecast",           "Rolling forecast based on quotes, invoices, recurring subscriptions and seasonal patterns."),
+                new("Multi-Currency Invoicing",              "AUD, USD, NZD, EUR, GBP, SGD, HKD with daily RBA rates."),
+                new("Direct Debit & Auto-Charge",            "Set up regular direct debit on customer accounts (BECS / PayTo)."),
+                new("Late Payment Auto-Reminders",           "Cascading reminder workflow at 7 / 14 / 30 / 60 days, with optional debt-collector handover."),
+            }
+        ),
+        new Phase(
+            "Phase 3 – Sales, CRM & Customer Growth",
+            "Close more deals, retain more customers, automate the boring bits.",
+            Icons.Material.Rounded.TrendingUp,
+            new()
+            {
+                new("AI Lead Scoring",                       "Rank inbound leads by likelihood-to-close based on historical patterns."),
+                new("Visual Sales Pipeline (Kanban)",        "Drag-and-drop deal management with weighted forecast."),
+                new("Quote Follow-Up Automation",            "Auto-send polite reminders 3, 7, 14 days after a quote is issued."),
+                new("Email & SMS Campaigns",                 "Open/click tracking, A/B testing, drip sequences. Twilio for Aus numbers."),
+                new("WhatsApp Business Channel",             "Send quotes and invoices via WhatsApp; receive replies into the CRM thread."),
+                new("Customer Health Score / Churn Risk",    "Detect customers whose order frequency is decaying and trigger nurture sequences."),
+                new("NPS / Customer Satisfaction Surveys",   "Auto-send NPS after invoice paid; close-the-loop tickets for detractors."),
+                new("Territory & Quota Management",          "Assign accounts by region; track sales-rep quotas and commissions."),
+            }
+        ),
+        new Phase(
+            "Phase 4 – Operations, Inventory & Field Service",
+            "Run the business from the workshop floor or from a phone in the ute.",
+            Icons.Material.Rounded.Build,
+            new()
+            {
+                new("Mobile Field App (iOS / Android)",      "Job dispatch, time entry, photo capture, customer signatures, offline mode."),
+                new("Scan-to-MyDesk Barcodes / QR",          "QR-based stock receipt, picking, stocktake and asset checkout."),
+                new("Multi-Warehouse Stock & Transfers",     "Inter-branch stock transfers with in-transit tracking."),
+                new("Serial & Batch Tracking",               "Full traceability for warranty and recall scenarios."),
+                new("Asset Register + Depreciation",         "Track plant & equipment, depreciation schedules, service history."),
+                new("Service Ticket / Helpdesk",             "SLA tracking, customer-facing portal tickets, parts-from-stock."),
+                new("Vehicle Fleet Management",              "Rego, insurance, services, fuel cards, driver assignment, telematics import."),
+                new("Resource & Job Scheduler (Calendar)",   "Drag-and-drop technician scheduling with skills and travel-time matching."),
+                new("Manufacturing BOM",                     "Bill of materials, multi-level assemblies, work-order issuing and back-flushing."),
+                new("Construction Progress Claims",          "Schedule of rates with claim-to-date / this-claim columns and retention tracking."),
+                new("Project Profitability (Live)",          "Real-time PO costs vs quote estimate with proactive overrun alerts."),
+            }
+        ),
+        new Phase(
+            "Phase 5 – Communications & Productivity",
+            "Bring conversations into MyDesk – or push MyDesk into conversations.",
+            Icons.Material.Rounded.Forum,
+            new()
+            {
+                new("Microsoft Teams Integration",           "Open quotes / invoices / jobs from Teams; @MyDesk bot answers questions."),
+                new("Outlook / Google Calendar Sync",        "Two-way calendar sync for jobs, follow-ups and timesheet entries."),
+                new("Email-to-Quote / Email-to-Job",         "Forward an email; AI extracts the customer, the request and creates the record."),
+                new("AI Meeting Notes & Actions",            "Whisper-transcribed audio, action-item extraction, auto-link to CRM record."),
+                new("Document Signing (DocuSign / Adobe)",   "Send quotes and contracts for e-signature in one click."),
+                new("Click-to-Call (VoIP)",                  "Microsoft Teams Phone, Aircall, RingCentral integration with call logging."),
+            }
+        ),
+        new Phase(
+            "Phase 6 – Marketing & Web Presence",
+            "Generate leads automatically from your existing customers and operations.",
+            Icons.Material.Rounded.Campaign,
+            new()
+            {
+                new("Social Media Scheduler",                "LinkedIn, Facebook, Instagram, Google Business with AI caption suggestions."),
+                new("Project Wins Auto-Posts",               "When a job hits “Completed”, AI drafts a celebration post for review."),
+                new("Email Newsletter Builder",              "Drag-and-drop, brand-locked, automatic suppression list."),
+                new("Landing Page Builder",                  "No-code campaign landing pages with form-to-CRM capture."),
+                new("Google Reviews Workflow",               "Auto-request reviews after positive NPS; route negatives to support."),
+                new("Shopify / WooCommerce Sync",            "Two-way product, customer, order and stock sync."),
+            }
+        ),
+        new Phase(
+            "Phase 7 – HR & Workforce",
+            "Hire, onboard, manage and reward your team in one place.",
+            Icons.Material.Rounded.Groups,
+            new()
+            {
+                new("Employee Onboarding Workflow",          "Tax File Number declaration, super-choice, induction checklists."),
+                new("Leave Management",                      "Annual, personal, long-service, parental leave with award balances."),
+                new("Timesheet Approval Workflow",           "Manager approval, project allocation, billable / non-billable, payroll export."),
+                new("Performance Reviews & 1-on-1s",         "Cadence-based check-ins with goal tracking."),
+                new("Training & Certification Tracker",      "White cards, forklift tickets, CPD, expiry reminders."),
+                new("Roster / Shift Planner",                "Drag-and-drop rostering with award-rate compliance and SMS notifications."),
+            }
+        ),
+        new Phase(
+            "Phase 8 – Reporting, BI & Data",
+            "Answers, not spreadsheets.",
+            Icons.Material.Rounded.QueryStats,
+            new()
+            {
+                new("Drag-and-Drop Report Builder",          "Custom reports without SQL; save to dashboards or schedule by email."),
+                new("Power BI / Excel Live Connector",       "Direct OData feed for analysts who live in Excel."),
+                new("Scheduled Email Reports",               "Daily / weekly / monthly digests in PDF or Excel to chosen recipients."),
+                new("Profit & Loss by Project / Customer",   "Slice the P&L by any dimension."),
+                new("Predictive Forecasting",                "ML-based revenue, cost and demand forecasts with confidence bands."),
+                new("Benchmark vs Industry",                 "Anonymised benchmark of your KPIs vs your industry vertical."),
+            }
+        ),
+        new Phase(
+            "Phase 9 – Compliance, Security & Governance",
+            "Sleep well at night.",
+            Icons.Material.Rounded.Security,
+            new()
+            {
+                new("Two-Factor Authentication (TOTP / SMS)","Optional or enforced per role."),
+                new("SSO – Microsoft Entra ID & Google",     "SAML / OIDC single sign-on for enterprise tenants."),
+                new("Australian Privacy Principles (APP)",   "Subject access requests, retention policies, breach notification workflow."),
+                new("Audit Trail (Everything)",              "Tamper-evident log of every create / read / update / delete."),
+                new("Granular Role-Based Access (RBAC)",     "Per-module, per-record-type, per-action permissions."),
+                new("ISO 27001 Document Pack",               "Pre-built policy templates and audit evidence collection."),
+            }
+        ),
+        new Phase(
+            "Phase 10 – Platform, AI & Ecosystem",
+            "MyDesk as a foundation other tools build on.",
+            Icons.Material.Rounded.Hub,
+            new()
+            {
+                new("Public REST + GraphQL API",             "Stable versioned API for partners with token-based auth."),
+                new("Webhook Engine",                        "Subscribe to any event; outbound HTTP with retry + DLQ."),
+                new("Zapier / Make / n8n Connectors",        "Pre-built triggers and actions for the no-code ecosystem."),
+                new("Marketplace of Add-Ons",                "Third-party developers can publish modules into MyDesk."),
+                new("AI Agent Builder",                      "Define multi-step automations in plain English; the AI executes them."),
+                new("Embedded AI Chat in Every Page",        "Context-aware “co-pilot” that answers and acts on the current screen."),
+            }
+        ),
+    };
+}
