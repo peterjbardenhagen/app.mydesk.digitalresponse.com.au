@@ -2,327 +2,344 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @using System.Security.Claims
 
-<MudNavMenu Class="tl-nav">
-    @* ── Quick Access (Always Visible) ── *@
-    <div class="tl-nav-section">
-        <div class="tl-nav-section-header">
-            <MudIcon Icon="@Icons.Material.Rounded.Bolt" Size="Size.Small" Class="tl-nav-section-icon" />
-            <span>Quick Access</span>
-        </div>
-        <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Rounded.Dashboard" aria-label="Navigate to Dashboard">
-            Dashboard
-        </MudNavLink>
-        <MudNavLink Href="/activity" Icon="@Icons.Material.Rounded.History" aria-label="Navigate to Latest Activity">
-            Latest Activity
-        </MudNavLink>
-        <MudNavLink Href="/favourites" Icon="@Icons.Material.Rounded.Star" aria-label="Navigate to Favourites">
-            Favourites
-        </MudNavLink>
-        <MudNavLink Href="/files" Icon="@Icons.Material.Rounded.Folder" aria-label="Navigate to Files Library">
-            Files Library
-        </MudNavLink>
+<div class="tl-nav-col2">
+
+    <div class="tl-col2-header">
+        <MudText Typo="Typo.caption" Class="tl-col2-kicker">@SectionTitle</MudText>
     </div>
 
-    @* ── Core Business (Primary Focus) ── *@
-    <div class="tl-nav-section tl-nav-section--primary">
-        <div class="tl-nav-section-header">
-            <MudIcon Icon="@Icons.Material.Rounded.BusinessCenter" Size="Size.Small" Class="tl-nav-section-icon" />
-            <span>My Desk</span>
-        </div>
-        
-        <MudNavGroup Icon="@Icons.Material.Rounded.People" Title="CRM" Expanded="true" HideExpandIcon="false">
-            @if (NavMenuSvc.IsVisible("contacts"))
-            {
-                <MudNavLink Href="/contacts" Icon="@Icons.Material.Rounded.Person">Contacts</MudNavLink>
-            }
-            @if (NavMenuSvc.IsVisible("companies"))
-            {
-                <MudNavLink Href="/companies" Icon="@Icons.Material.Rounded.Business">Companies</MudNavLink>
-            }
-        </MudNavGroup>
+    <MudNavMenu Class="tl-nav">
 
-        <MudNavGroup Icon="@Icons.Material.Rounded.ReceiptLong" Title="Sales" Expanded="true" HideExpandIcon="false">
-            @if (NavMenuSvc.IsVisible("quotes"))
-            {
-                <MudNavLink Href="/quotes" Icon="@Icons.Material.Rounded.Description">Quotes</MudNavLink>
-            }
-            @if (NavMenuSvc.IsVisible("invoices"))
-            {
-                <MudNavLink Href="/invoices" Icon="@Icons.Material.Rounded.Receipt">Invoices</MudNavLink>
-            }
-            @if (NavMenuSvc.IsVisible("despatch"))
-            {
-                <MudNavLink Href="/despatch" Icon="@Icons.Material.Rounded.LocalShipping">Despatch</MudNavLink>
-            }
-        </MudNavGroup>
-
-        <MudNavGroup Icon="@Icons.Material.Rounded.ShoppingCart" Title="Purchasing" Expanded="true" HideExpandIcon="false">
-            @if (NavMenuSvc.IsVisible("purchase-orders"))
-            {
-                <MudNavLink Href="/purchase-orders" Icon="@Icons.Material.Rounded.ShoppingBasket">Purchase Orders</MudNavLink>
-            }
-            @if (NavMenuSvc.IsVisible("expenses"))
-            {
-                <MudNavLink Href="/expenses" Icon="@Icons.Material.Rounded.Payment">Expenses</MudNavLink>
-            }
-            @if (NavMenuSvc.IsVisible("rfq"))
-            {
-                <MudNavLink Href="/rfq" Icon="@Icons.Material.Rounded.Quiz">RFQ</MudNavLink>
-            }
-        </MudNavGroup>
-
-        @if (NavMenuSvc.IsVisible("job-orders") || NavMenuSvc.IsVisible("products") || NavMenuSvc.IsVisible("timeshets"))
+        @* ── Quick Access ── *@
+        @if (_activeSection == "quick")
         {
-            <MudNavGroup Icon="@Icons.Material.Rounded.Construction" Title="Operations" Expanded="false" HideExpandIcon="false">
-                @if (NavMenuSvc.IsVisible("job-orders"))
+            <div class="tl-nav-section">
+                <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Rounded.Dashboard">Dashboard</MudNavLink>
+                <MudNavLink Href="/activity"   Icon="@Icons.Material.Rounded.History">Latest Activity</MudNavLink>
+                <MudNavLink Href="/favourites" Icon="@Icons.Material.Rounded.Star">Favourites</MudNavLink>
+                <MudNavLink Href="/files"      Icon="@Icons.Material.Rounded.Folder">Files Library</MudNavLink>
+                <MudNavLink Href="/calendar"        Icon="@Icons.Material.Rounded.CalendarMonth">Calendar</MudNavLink>
+                @if (NavMenuSvc.IsVisible("emails")) { <MudNavLink Href="/emails" Icon="@Icons.Material.Rounded.Mail">Emails</MudNavLink> }
+                <MudNavLink Href="/search"           Icon="@Icons.Material.Rounded.Search">Search</MudNavLink>
+                @if (_isSuperAdmin)
                 {
-                    <MudNavLink Href="/job-orders" Icon="@Icons.Material.Rounded.Work">Job Orders</MudNavLink>
+                    <MudDivider Class="my-2" />
+                    <MudNavLink Href="/admin/tenants"
+                                Icon="@Icons.Material.Rounded.Domain"
+                                Style="color: var(--mud-palette-warning-dark); font-weight: 600;"
+                                Title="Super Administrator: Manage all tenants">
+                        Tenant Settings
+                    </MudNavLink>
                 }
-                @if (NavMenuSvc.IsVisible("products"))
-                {
-                    <MudNavLink Href="/products" Icon="@Icons.Material.Rounded.Category">Products</MudNavLink>
-                }
-                @if (NavMenuSvc.IsVisible("timeshets"))
-                {
-                    <MudNavLink Href="/timeshets" Icon="@Icons.Material.Rounded.Timer">Timeshets</MudNavLink>
-                }
-            </MudNavGroup>
+            </div>
         }
 
-        @* ── Accounts (Director/Admin/Accounts) ── *@
-        @if (_isAdminOrDirector || _isAccounts)
+        @* ── Core Business ── *@
+        @if (_activeSection == "desk")
         {
-            <div class="tl-nav-section tl-nav-section--accounts">
-                <div class="tl-nav-section-header">
-                    <MudIcon Icon="@Icons.Material.Rounded.AccountBalance" Size="Size.Small" Class="tl-nav-section-icon" />
-                    <span>Accounts</span>
-                </div>
-                <MudNavLink Href="/reconciliation">Aged Reconciliation</MudNavLink>
-                <MudNavLink Href="/aged-payables">Aged Payables</MudNavLink>
-                <MudNavLink Href="/banking">Banking</MudNavLink>
+            <div class="tl-nav-section tl-nav-section--primary">
+                <MudNavGroup Icon="@Icons.Material.Rounded.People" Title="CRM" Expanded="true" HideExpandIcon="true">
+                    @if (NavMenuSvc.IsVisible("contacts"))       { <MudNavLink Href="/contacts"       Icon="@Icons.Material.Rounded.Person">Contacts</MudNavLink> }
+                    @if (NavMenuSvc.IsVisible("companies"))      { <MudNavLink Href="/companies"      Icon="@Icons.Material.Rounded.Business">Companies</MudNavLink> }
+                    @if (NavMenuSvc.IsVisible("sales-projects")) { <MudNavLink Href="/sales-projects" Icon="@Icons.Material.Rounded.Assignment">Sales Projects</MudNavLink> }
+                    <MudNavLink Href="/call-reports" Icon="@Icons.Material.Rounded.PhoneCallback">Call Reports</MudNavLink>
+                </MudNavGroup>
+
+                <MudNavGroup Icon="@Icons.Material.Rounded.ReceiptLong" Title="Sales" Expanded="true" HideExpandIcon="true">
+                    @if (NavMenuSvc.IsVisible("quotes"))   { <MudNavLink Href="/quotes"               Icon="@Icons.Material.Rounded.Description">Quotes</MudNavLink> }
+                    <MudNavLink Href="/quotes/copy-supplier" Icon="@Icons.Material.Rounded.ContentCopy">Copy Supplier Quote</MudNavLink>
+                    @if (NavMenuSvc.IsVisible("invoices")) { <MudNavLink Href="/invoices"             Icon="@Icons.Material.Rounded.Receipt">Invoices</MudNavLink> }
+                    @if (NavMenuSvc.IsVisible("despatch")) { <MudNavLink Href="/despatch"             Icon="@Icons.Material.Rounded.LocalShipping">Despatch</MudNavLink> }
+                </MudNavGroup>
+
+                <MudNavGroup Icon="@Icons.Material.Rounded.ShoppingCart" Title="Purchasing" Expanded="true" HideExpandIcon="true">
+                    @if (NavMenuSvc.IsVisible("purchase-orders")) { <MudNavLink Href="/purchase-orders" Icon="@Icons.Material.Rounded.ShoppingBasket">Purchase Orders</MudNavLink> }
+                    @if (NavMenuSvc.IsVisible("expenses"))        { <MudNavLink Href="/expenses"        Icon="@Icons.Material.Rounded.Payment">Expenses</MudNavLink> }
+                    @if (NavMenuSvc.IsVisible("rfq"))             { <MudNavLink Href="/rfq"             Icon="@Icons.Material.Rounded.Quiz">RFQ</MudNavLink> }
+                </MudNavGroup>
+
+                <MudNavGroup Icon="@Icons.Material.Rounded.Construction" Title="Operations" Expanded="true" HideExpandIcon="true">
+                    @if (NavMenuSvc.IsVisible("job-orders")) { <MudNavLink Href="/job-orders" Icon="@Icons.Material.Rounded.Work">Job Orders</MudNavLink> }
+                    @if (NavMenuSvc.IsVisible("products"))   { <MudNavLink Href="/products"   Icon="@Icons.Material.Rounded.Category">Products</MudNavLink> }
+                    <MudNavLink Href="/project-management"  Icon="@Icons.Material.Rounded.AccountTree">Project Management</MudNavLink>
+                    <MudNavLink Href="/timesheets"          Icon="@Icons.Material.Rounded.AccessTime">Timesheets</MudNavLink>
+                    <MudNavLink Href="/timesheets/approve"  Icon="@Icons.Material.Rounded.FactCheck">Approve Timesheets</MudNavLink>
+                    <MudNavLink Href="/timesheets/missing"  Icon="@Icons.Material.Rounded.PersonOff">Missing Timesheets</MudNavLink>
+                    <MudNavLink Href="/approvals/pending"   Icon="@Icons.Material.Rounded.HowToReg">Pending Approvals</MudNavLink>
+                    <MudNavLink Href="/staff-whereabouts"   Icon="@Icons.Material.Rounded.LocationOn">Staff Whereabouts</MudNavLink>
+                    <MudNavLink Href="/subscriptions"       Icon="@Icons.Material.Rounded.Subscriptions">Subscriptions</MudNavLink>
+                    @if (NavMenuSvc.IsVisible("financial-extraction")) { <MudNavLink Href="/financial-extraction" Icon="@Icons.Material.Rounded.DocumentScanner">Financial Extraction</MudNavLink> }
+                </MudNavGroup>
+
+                @if (_isAdminOrDirector)
+                {
+                    <MudNavGroup Icon="@Icons.Material.Rounded.Insights" Title="Strategy" Expanded="false" HideExpandIcon="true">
+                        <MudNavLink Href="/strategy/business-goals" Icon="@Icons.Material.Rounded.Flag">Business Goals</MudNavLink>
+                        <MudNavLink Href="/strategy/valuation"      Icon="@Icons.Material.Rounded.MonetizationOn">Valuation</MudNavLink>
+                    </MudNavGroup>
+                }
+
+                @if (_isAdminOrDirector || _isAccounts)
+                {
+    <MudNavGroup Icon="@Icons.Material.Rounded.AccountBalance" Title="Accounts" Expanded="false" HideExpandIcon="true">
+        <MudNavLink Href="/accounts"            Icon="@Icons.Material.Rounded.AccountBalanceWallet">Accounts Hub</MudNavLink>
+        <MudNavLink Href="/banking"             Icon="@Icons.Material.Rounded.AccountBalance">Banking</MudNavLink>
+        <MudNavLink Href="/reconciliation"      Icon="@Icons.Material.Rounded.Sync">Reconciliation</MudNavLink>
+        <MudNavLink Href="/reconciliation/sync" Icon="@Icons.Material.Rounded.SwapHoriz">MYOB Sync</MudNavLink>
+        <MudNavLink Href="/aged-payables"       Icon="@Icons.Material.Rounded.Payments">Aged Payables</MudNavLink>
+        <MudNavLink Href="/accounting"          Icon="@Icons.Material.Rounded.Calculate">Accounting</MudNavLink>
+        <MudNavLink Href="/invoices/myob-export" Icon="@Icons.Material.Rounded.CloudUpload">MYOB Export</MudNavLink>
+    </MudNavGroup>
+                }
             </div>
         }
-    </div>
 
-    @* ── Insights ── *@
-    @if (NavMenuSvc.IsVisible("noticeboard") || NavMenuSvc.IsVisible("reports"))
-    {
-        <div class="tl-nav-section">
-            <div class="tl-nav-section-header">
-                <MudIcon Icon="@Icons.Material.Rounded.Insights" Size="Size.Small" Class="tl-nav-section-icon" />
-                <span>Insights</span>
-            </div>
-            @if (NavMenuSvc.IsVisible("reports"))
-            {
-                <MudNavLink Href="/reports" Icon="@Icons.Material.Rounded.BarChart">Reports</MudNavLink>
-            }
-            @if (NavMenuSvc.IsVisible("noticeboard"))
-            {
-                <MudNavLink Href="/noticeboard" Icon="@Icons.Material.Rounded.Campaign">Noticeboard</MudNavLink>
-            }
-        </div>
-    }
-
-    @* ── Marketing ── *@
-    @if (NavMenuSvc.IsVisible("marketing"))
-    {
-        <div class="tl-nav-section">
-            <div class="tl-nav-section-header">
-                <MudIcon Icon="@Icons.Material.Rounded.Campaign" Size="Size.Small" Class="tl-nav-section-icon" />
-                <span>Marketing</span>
-            </div>
-            <MudNavLink Href="/marketing" Icon="@Icons.Material.Rounded.Brush">Marketing Hub</MudNavLink>
-        </div>
-    }
-
-    @* ── Admin ── *@
-    <div class="tl-nav-section tl-nav-section--admin">
-        <div class="tl-nav-section-header">
-            <MudIcon Icon="@Icons.Material.Rounded.AdminPanelSettings" Size="Size.Small" Class="tl-nav-section-icon" />
-            <span>Admin</span>
-        </div>
-        
-        @if (_isAdminOrDirector)
+        @* ── Insights ── *@
+        @if (_activeSection == "insights" && (NavMenuSvc.IsVisible("noticeboard") || NavMenuSvc.IsVisible("reports")))
         {
-            <MudNavGroup Icon="@Icons.Material.Rounded.Settings" Title="System" Expanded="false" HideExpandIcon="false">
-                <MudNavLink Href="/admin/users" Icon="@Icons.Material.Rounded.People">Users</MudNavLink>
-                <MudNavLink Href="/admin/user-roles" Icon="@Icons.Material.Rounded.VerifiedUser">User Roles & Permissions</MudNavLink>
-                <MudNavLink Href="/admin/setup" Icon="@Icons.Material.Rounded.Tune">Setup</MudNavLink>
-                <MudNavLink Href="/admin/platform" Icon="@Icons.Material.Rounded.Web">Platform Settings</MudNavLink>
-                <MudNavLink Href="/admin/logs" Icon="@Icons.Material.Rounded.Description">Log Viewer</MudNavLink>
-            </MudNavGroup>
-            
-            <MudNavGroup Icon="@Icons.Material.Rounded.AccountBalance" Title="Finance" Expanded="false" HideExpandIcon="false">
-                <MudNavLink Href="/accounting">Accounting</MudNavLink>
-                <MudNavLink Href="/reconciliation">Reconciliation</MudNavLink>
-            </MudNavGroup>
-            
-            <MudNavGroup Icon="@Icons.Material.Rounded.Tune" Title="Reference Data" Expanded="false" HideExpandIcon="false">
-                <MudNavLink Href="/admin/divisions" Icon="@Icons.Material.Rounded.AccountTree">Divisions</MudNavLink>
-                <MudNavLink Href="/admin/locations" Icon="@Icons.Material.Rounded.LocationOn">Locations</MudNavLink>
-                <MudNavLink Href="/admin/quote-status" Icon="@Icons.Material.Rounded.RequestQuote">Quote Status</MudNavLink>
-                <MudNavLink Href="/admin/invoice-status" Icon="@Icons.Material.Rounded.ReceiptLong">Invoice Status</MudNavLink>
-                <MudNavLink Href="/admin/po-status" Icon="@Icons.Material.Rounded.Inventory2">PO Status</MudNavLink>
-                <MudNavLink Href="/admin/currency" Icon="@Icons.Material.Rounded.CurrencyExchange">Currency</MudNavLink>
-                <MudNavLink Href="/admin/part-codes" Icon="@Icons.Material.Rounded.Tag">Part Codes</MudNavLink>
-                <MudNavLink Href="/admin/activity-types" Icon="@Icons.Material.Rounded.Category">Activity Types</MudNavLink>
-                <MudNavLink Href="/admin/parameters" Icon="@Icons.Material.Rounded.Tune">Parameters</MudNavLink>
-                <MudNavLink Href="/admin/nav-menu" Icon="@Icons.Material.Rounded.Menu">Nav Menu</MudNavLink>
-                <MudNavLink Href="/admin/setup-menu" Icon="@Icons.Material.Rounded.DashboardCustomize">Setup Menu</MudNavLink>
-                <MudNavLink Href="/admin/brand-assets" Icon="@Icons.Material.Rounded.Style">Brand Assets</MudNavLink>
-                <MudNavLink Href="/admin/ai-audit" Icon="@Icons.Material.Rounded.AutoAwesome">AI Audit Log</MudNavLink>
-            </MudNavGroup>
-        }
-        
-        <MudNavLink Href="/integrations" Icon="@Icons.Material.Rounded.Hub">Integrations</MudNavLink>
-        <MudNavLink Href="/settings" Icon="@Icons.Material.Rounded.Settings">Settings</MudNavLink>
-    </div>
-
-    @* ── Support (Footer) ── *@
-    <div class="tl-nav-footer">
-        <div class="tl-nav-section-header tl-nav-section-header--support">
-            <MudIcon Icon="@Icons.Material.Rounded.Support" Size="Size.Small" Class="tl-nav-section-icon" />
-            <span>Support</span>
-        </div>
-        <MudNavLink Href="/ask-ai" Icon="@Icons.Material.Rounded.AutoAwesome" Class="tl-nav-link--highlight">
-            <div class="d-flex align-center gap-2">
-                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">NEW</MudChip>
-                Ask AI
+            <div class="tl-nav-section">
+                @if (NavMenuSvc.IsVisible("reports"))     { <MudNavLink Href="/reports"     Icon="@Icons.Material.Rounded.BarChart">Reports</MudNavLink> }
+                @if (NavMenuSvc.IsVisible("reports"))     { <MudNavLink Href="/reports/sales" Icon="@Icons.Material.Rounded.Insights">Sales Reports</MudNavLink> }
+                @if (NavMenuSvc.IsVisible("noticeboard")) { <MudNavLink Href="/noticeboard" Icon="@Icons.Material.Rounded.Campaign">Noticeboard</MudNavLink> }
             </div>
-        </MudNavLink>
-        <MudNavLink Href="/help" Icon="@Icons.Material.Rounded.HelpOutline">Help Centre</MudNavLink>
-        <MudNavLink Href="/about" Icon="@Icons.Material.Rounded.Info">About MyDesk</MudNavLink>
-        <MudNavLink Href="/release-notes" Icon="@Icons.Material.Rounded.NewReleases">Release Notes</MudNavLink>
-    </div>
-</MudNavMenu>
+        }
+
+        @* ── Marketing ── *@
+        @if (_activeSection == "marketing" && NavMenuSvc.IsVisible("marketing"))
+        {
+            <div class="tl-nav-section">
+                <MudNavGroup Icon="@Icons.Material.Rounded.Brush" Title="Marketing Hub" Expanded="false" HideExpandIcon="true">
+                    <MudNavLink Href="/marketing"              Icon="@Icons.Material.Rounded.Dashboard">Hub Home</MudNavLink>
+                    <MudNavLink Href="/marketing/strategy"     Icon="@Icons.Material.Rounded.LightMode">Strategy</MudNavLink>
+                    <MudNavLink Href="/marketing/campaigns"    Icon="@Icons.Material.Rounded.Email">Email Campaigns</MudNavLink>
+                    <MudNavLink Href="/marketing/assets"       Icon="@Icons.Material.Rounded.Collections">Marketing Assets</MudNavLink>
+                    <MudNavLink Href="/marketing/brand-assets" Icon="@Icons.Material.Rounded.Palette">Brand Assets</MudNavLink>
+                    <MudNavLink Href="/marketing/customers"    Icon="@Icons.Material.Rounded.PersonSearch">Customer Data</MudNavLink>
+                    <MudNavLink Href="/marketing/suppliers"    Icon="@Icons.Material.Rounded.Storefront">Supplier Data</MudNavLink>
+                    <MudNavLink Href="/marketing/ai"           Icon="@Icons.Material.Rounded.AutoAwesome">Marketing AI</MudNavLink>
+                </MudNavGroup>
+            </div>
+        }
+
+        @* ── Portals ── *@
+        @if (_activeSection == "portals")
+        {
+            <div class="tl-nav-section">
+                <MudNavLink Href="/customer-portal" Icon="@Icons.Material.Rounded.Storefront">Customer Portal</MudNavLink>
+                <MudNavLink Href="/supplier-portal" Icon="@Icons.Material.Rounded.LocalShipping">Supplier Portal</MudNavLink>
+            </div>
+        }
+
+        @* ── Admin ── *@
+        @if (_activeSection == "admin" && _isAdminOrDirector)
+        {
+            <div class="tl-nav-section tl-nav-section--admin">
+                <MudNavGroup Icon="@Icons.Material.Rounded.Settings" Title="Setup" Expanded="false" HideExpandIcon="true">
+                    <MudNavLink Href="/admin/setup"          Icon="@Icons.Material.Rounded.Tune">Setup Home</MudNavLink>
+                    <MudNavLink Href="/admin/setup-menu"     Icon="@Icons.Material.Rounded.Menu">Setup Menu</MudNavLink>
+                    @if (_isSuperAdmin)
+                    {
+                        <MudNavLink Href="/admin/tenants" Icon="@Icons.Material.Rounded.Domain">Tenant Settings</MudNavLink>
+                    }
+                    <MudNavLink Href="/admin/platform"       Icon="@Icons.Material.Rounded.AdminPanelSettings">Platform Admin</MudNavLink>
+                    <MudNavLink Href="/admin/nav-menu"       Icon="@Icons.Material.Rounded.MenuOpen">Nav Menu Settings</MudNavLink>
+                    <MudNavLink Href="/admin/parameters"     Icon="@Icons.Material.Rounded.Build">Parameters</MudNavLink>
+                    <MudNavLink Href="/admin/locations"      Icon="@Icons.Material.Rounded.Place">Locations</MudNavLink>
+                    <MudNavLink Href="/admin/divisions"      Icon="@Icons.Material.Rounded.AccountTree">Divisions</MudNavLink>
+                    <MudNavLink Href="/admin/currency"       Icon="@Icons.Material.Rounded.AttachMoney">Currencies</MudNavLink>
+                    <MudNavLink Href="/admin/financial-year" Icon="@Icons.Material.Rounded.CalendarToday">Financial Year</MudNavLink>
+                    <MudNavLink Href="/admin/activity-types" Icon="@Icons.Material.Rounded.Category">Activity Types</MudNavLink>
+                    <MudNavLink Href="/admin/part-codes"     Icon="@Icons.Material.Rounded.Inventory2">Part Codes</MudNavLink>
+                    <MudNavLink Href="/admin/brand-assets"   Icon="@Icons.Material.Rounded.Palette">Brand Assets</MudNavLink>
+                </MudNavGroup>
+
+                <MudNavGroup Icon="@Icons.Material.Rounded.SupervisorAccount" Title="Users & Status" Expanded="false" HideExpandIcon="true">
+                    <MudNavLink Href="/admin/users"             Icon="@Icons.Material.Rounded.People">Users</MudNavLink>
+                    <MudNavLink Href="/admin/users/new"         Icon="@Icons.Material.Rounded.PersonAdd">New User</MudNavLink>
+                    <MudNavLink Href="/admin/user-roles"        Icon="@Icons.Material.Rounded.Badge">User Roles</MudNavLink>
+                    <MudNavLink Href="/admin/quote-status"      Icon="@Icons.Material.Rounded.LabelImportant">Quote Status</MudNavLink>
+                    <MudNavLink Href="/admin/invoice-status"    Icon="@Icons.Material.Rounded.LabelImportant">Invoice Status</MudNavLink>
+                    <MudNavLink Href="/admin/po-status"         Icon="@Icons.Material.Rounded.LabelImportant">PO Status</MudNavLink>
+                    <MudNavLink Href="/admin/job-order-status"  Icon="@Icons.Material.Rounded.LabelImportant">Job Order Status</MudNavLink>
+                </MudNavGroup>
+
+                <MudNavGroup Icon="@Icons.Material.Rounded.Description" Title="Logs" Expanded="false" HideExpandIcon="true">
+                    <MudNavLink Href="/admin/logs"       Icon="@Icons.Material.Rounded.Description">Log Viewer</MudNavLink>
+                    <MudNavLink Href="/admin/error-logs" Icon="@Icons.Material.Rounded.BugReport">Error Logs</MudNavLink>
+                    <MudNavLink Href="/admin/ai-audit"   Icon="@Icons.Material.Rounded.PrivacyTip">AI Audit Log</MudNavLink>
+                </MudNavGroup>
+
+                <MudNavLink Href="/integrations" Icon="@Icons.Material.Rounded.Hub">Integrations</MudNavLink>
+                <MudNavLink Href="/settings"     Icon="@Icons.Material.Rounded.Settings">Settings</MudNavLink>
+                <MudNavLink Href="/profile"      Icon="@Icons.Material.Rounded.AccountCircle">My Profile</MudNavLink>
+            </div>
+        }
+
+        @* ── Support / Help ── *@
+        @if (_activeSection == "support")
+        {
+            <div class="tl-nav-footer">
+                <MudNavLink Href="/ask-ai" Icon="@Icons.Material.Rounded.AutoAwesome" Class="tl-nav-link--highlight">
+                    <div class="d-flex align-center gap-2">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">NEW</MudChip>
+                        Ask AI
+                    </div>
+                </MudNavLink>
+                <MudNavLink Href="/help-center"   Icon="@Icons.Material.Rounded.HelpOutline">Help Centre</MudNavLink>
+                <MudNavLink Href="/help/ai-guide" Icon="@Icons.Material.Rounded.SmartToy">AI User Guide</MudNavLink>
+                <MudNavLink Href="/release-notes" Icon="@Icons.Material.Rounded.NewReleases">Release Notes</MudNavLink>
+                <MudNavLink Href="/help/roadmap"  Icon="@Icons.Material.Rounded.Map">Product Roadmap</MudNavLink>
+                <MudNavLink Href="/sitemap"       Icon="@Icons.Material.Rounded.Schema">Site Map</MudNavLink>
+            </div>
+        }
+
+    </MudNavMenu>
+</div>
 
 @code {
     private bool _isAdminOrDirector;
     private bool _isAccounts;
+    private bool _isSuperAdmin;
+
+    [Parameter] public string ActiveSection { get; set; } = "quick";
+
+    private string _activeSection => ActiveSection;
+
+    private string SectionTitle => _activeSection switch
+    {
+        "quick" => "Quick Access",
+        "desk" => "My Desk",
+        "insights" => "Insights",
+        "marketing" => "Marketing",
+        "portals" => "Portals",
+        "admin" => "Admin",
+        "support" => "Support",
+        _ => "Navigation"
+    };
 
     protected override async Task OnInitializedAsync()
     {
         var auth = await AuthStateProvider.GetAuthenticationStateAsync();
-        _isAdminOrDirector = auth.User.IsInRole("Administrator") || 
+        _isSuperAdmin      = auth.User.IsInRole("SuperAdministrator");
+        _isAdminOrDirector = _isSuperAdmin ||
+                             auth.User.IsInRole("Administrator") ||
                              auth.User.IsInRole("Director") ||
                              auth.User.FindFirst("IsAdmin")?.Value == "True";
-        _isAccounts = auth.User.IsInRole("Accounts") || 
-                      auth.User.IsInRole("Administrator") || 
-                      auth.User.IsInRole("Director") ||
-                      auth.User.FindFirst("IsAccounts")?.Value == "True";
+        _isAccounts = auth.User.IsInRole("Accounts") ||
+                       auth.User.IsInRole("Administrator") ||
+                       auth.User.IsInRole("Director") ||
+                       _isSuperAdmin ||
+                       auth.User.FindFirst("IsAccounts")?.Value == "True";
     }
 }
 
 <style>
-    .tl-nav {
-        padding: 0 !important;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
+    .tl-nav-col2 { padding: 0 !important; height: 100%; display: flex; flex-direction: column; background: linear-gradient(180deg, #fbfdff 0%, #f3f7fb 100%); }
+    .tl-col2-header {
+        padding: 14px 16px 10px;
+        border-bottom: 1px solid rgba(15, 23, 42, 0.06);
     }
-
-    .tl-nav-section {
-        padding: 8px 12px;
-    }
-
-    .tl-nav-section--primary {
-        background: linear-gradient(135deg, rgba(33, 150, 243, 0.08) 0%, rgba(33, 150, 243, 0.03) 100%);
-        border-radius: 12px;
-        margin: 4px 8px;
-        padding: 12px;
-    }
-
-    .tl-nav-section--admin {
-        border-top: 1px solid rgba(255, 255, 255, 0.06);
-        padding-top: 16px;
-    }
-
-    .tl-nav-section-header {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        font-size: 11px;
-        font-weight: 600;
-        color: var(--gray-400);
+    .tl-col2-kicker {
+        font-weight: 700 !important;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
-        margin-bottom: 4px;
+        letter-spacing: .12em;
+        color: #94a3b8;
     }
-
-    .tl-nav-section-header--support {
-        color: var(--gray-500);
+    .tl-nav { padding: 0 !important; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+    .tl-nav-section { padding: 10px 10px 0; }
+    .tl-nav-section--primary {
+        background: rgba(148, 163, 184, 0.08);
+        border: 1px solid rgba(148, 163, 184, 0.10);
+        border-radius: 14px;
+        margin: 0 10px;
+        padding: 10px;
     }
-
-    .tl-nav-section-icon {
-        opacity: 0.7;
-    }
+    .tl-nav-section--admin { border-top: 1px solid rgba(15, 23, 42, 0.06); padding-top: 16px; }
 
     .tl-nav-footer {
         margin-top: auto;
         padding: 16px 12px 8px;
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
-        background: rgba(0, 0, 0, 0.2);
+        border-top: 1px solid rgba(15, 23, 42, 0.06);
     }
-
     .tl-nav-link--highlight {
         background: linear-gradient(90deg, rgba(99, 102, 241, 0.15) 0%, transparent 100%);
         border-radius: 8px;
         margin: 4px 0;
     }
 
-    /* Customize MudBlazor Nav Group */
-    :deep(.mud-navgroup) {
-        margin-bottom: 4px;
-    }
-
+    :deep(.mud-navgroup) { margin-bottom: 6px; }
     :deep(.mud-navgroup .mud-nav-group-header) {
-        padding: 8px 12px !important;
-        font-size: 13px !important;
-        font-weight: 500 !important;
-        color: var(--gray-300) !important;
+        padding: 10px 12px !important;
+        min-height: 40px;
+        font-size: 12px !important;
+        font-weight: 700 !important;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        color: #64748b !important;
+        border-radius: 10px;
     }
-
     :deep(.mud-navgroup .mud-nav-link) {
-        padding: 8px 12px 8px 36px !important;
+        padding: 9px 12px 9px 38px !important;
         font-size: 13px !important;
-        border-radius: 6px;
+        border-radius: 10px;
         margin: 2px 0;
     }
 
-    :deep(.mud-navgroup .mud-nav-link:hover) {
-        background: rgba(255, 255, 255, 0.05) !important;
-    }
-
-    /* Override default nav link style */
     :deep(.tl-nav .mud-nav-link) {
         padding: 10px 12px !important;
         font-size: 13px !important;
-        border-radius: 8px;
+        font-weight: 600;
+        border-radius: 10px;
         margin: 2px 0;
         transition: all 0.2s ease;
     }
-
-    :deep(.tl-nav .mud-nav-link:hover) {
-        background: rgba(255, 255, 255, 0.05) !important;
-        transform: translateX(2px);
+    :deep(.tl-nav .mud-nav-link:hover),
+    :deep(.mud-navgroup .mud-nav-group-header:hover) {
+        background: rgba(14, 165, 233, 0.08) !important;
     }
-
     :deep(.tl-nav .mud-nav-link.mud-nav-link-active) {
-        background: linear-gradient(90deg, rgba(33, 150, 243, 0.2) 0%, rgba(33, 150, 243, 0.1) 100%) !important;
-        border-left: 3px solid #2196F3;
+        background: rgba(45, 212, 191, 0.14) !important;
+        color: #0f766e !important;
+        border-left: 3px solid #2dd4bf;
+        box-shadow: inset 0 0 0 1px rgba(45, 212, 191, 0.08);
     }
 
-    /* Mini mode adjustments */
-    .mud-drawer-mini .tl-nav-section-header,
-    .mud-drawer-mini .tl-nav-footer {
-        display: none;
+    body.mud-dark-mode .tl-nav-col2 {
+        background: linear-gradient(180deg, #101215 0%, #0c0f12 100%) !important;
     }
-
-    .mud-drawer-mini .tl-nav-section--primary {
-        margin: 0;
-        padding: 8px;
+    body.mud-dark-mode .tl-col2-header {
+        border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+    }
+    body.mud-dark-mode .tl-col2-kicker {
+        color: #737373 !important;
+    }
+    body.mud-dark-mode :deep(.mud-navgroup .mud-nav-group-header) {
+        color: #737373 !important;
+    }
+    body.mud-dark-mode :deep(.mud-navgroup .mud-nav-link) {
+        color: #d4d4d4 !important;
+    }
+    body.mud-dark-mode :deep(.tl-nav .mud-nav-link:hover),
+    body.mud-dark-mode :deep(.mud-navgroup .mud-nav-group-header:hover) {
+        background: rgba(74, 222, 128, 0.08) !important;
+    }
+    body.mud-dark-mode :deep(.tl-nav .mud-nav-link.mud-nav-link-active) {
+        background: rgba(74, 222, 128, 0.14) !important;
+        color: #4ade80 !important;
+        border-left-color: #4ade80 !important;
+        box-shadow: inset 0 0 0 1px rgba(74, 222, 128, 0.08) !important;
+    }
+    body.mud-dark-mode .tl-nav-section--primary {
+        background: rgba(74, 222, 128, 0.04) !important;
+        border-color: rgba(74, 222, 128, 0.08) !important;
+    }
+    body.mud-dark-mode .tl-nav-section--admin {
+        border-top-color: rgba(255, 255, 255, 0.06) !important;
+    }
+    body.mud-dark-mode .tl-nav-footer {
+        border-top-color: rgba(255, 255, 255, 0.06) !important;
+    }
+    body.mud-dark-mode .tl-nav-link--highlight {
+        background: linear-gradient(90deg, rgba(74, 222, 128, 0.1) 0%, transparent 100%) !important;
     }
 </style>
-
-

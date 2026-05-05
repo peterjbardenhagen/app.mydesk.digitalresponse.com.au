@@ -10,6 +10,11 @@
 @inject SupplierQuoteParseService ParseService
 @inject CompanyService CompanyService
 @inject UserService UserService
+@inject AzureAIService AzureAI
+@inject IJSRuntime JS
+@inject IHttpClientFactory HttpFactory
+@inject Microsoft.Extensions.Options.IOptions<AzureAIOptions> AzureAIOptions
+@inject IDialogService DialogService
 @using System.Security.Claims
 @using Microsoft.AspNetCore.WebUtilities
 @using MyDesk.Web.Services
@@ -32,6 +37,22 @@
                    OnClick="SaveAsync" Disabled="@_saving">
             @(_saving ? "Saving…" : "Save Quote")
         </MudButton>
+        @if (!IsNew && AzureAI.IsConfigured)
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Tertiary"
+                        OnClick="ValidateQuoteAsync" Disabled="@_validating">
+                @if (_validating)
+                {
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" />
+                    <span>Validating...</span>
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Rounded.Verified" Class="mr-2" />
+                    <span>Validate</span>
+                }
+            </MudButton>
+        }
     </div>
 </div>
 
@@ -85,7 +106,7 @@
 @* ── Line Items ──────────────────────────────────────────────────────────── *@
 <MudPaper Class="pa-4 mb-4" Elevation="1">
     <div class="d-flex justify-space-between align-center mb-3">
-        <MudText Typo="Typo.subtitle2" Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Own Product Line Items</MudText>
+        <MudText Typo="Typo.subtitle2" Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Quote Line Items</MudText>
         <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Add"
                    OnClick="AddLine">Add Line</MudButton>
     </div>
@@ -98,6 +119,7 @@
                     <th style="text-align:left;padding:4px 6px;">Description</th>
                     <th style="text-align:right;padding:4px 6px;width:70px;">Qty</th>
                     <th style="text-align:right;padding:4px 6px;width:90px;">Unit Cost</th>
+                    <th style="text-align:right;padding:4px 6px;width:80px;">GP Margin %</th>
                     <th style="text-align:right;padding:4px 6px;width:90px;">Nett Price</th>
                     <th style="text-align:right;padding:4px 6px;width:100px;">Ext Price</th>
                     <th style="width:36px;"></th>
@@ -129,8 +151,12 @@
                             <MudNumericField @bind-Value="r.Qty" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
                         </td>
                         <td style="padding:2px 4px;">
-                            <MudNumericField Value="r.UnitCost" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" 
-                                             ValueChanged="@((decimal val) => { r.UnitCost = val; r.NettPrice = val / (1 - 0.3m); })" />
+                            <MudNumericField Value="r.UnitCost" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2"
+                                             ValueChanged="@((decimal val) => { r.UnitCost = val; RecalcFromMargin(r); })" />
+                        </td>
+                        <td style="padding:2px 4px;">
+                            <MudNumericField Value="r.GpMarginPct" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Max="99.99m" Format="N1" Suffix="%"
+                                             ValueChanged="@((decimal val) => { r.GpMarginPct = val; RecalcFromMargin(r); })" />
                         </td>
                         <td style="padding:2px 4px;">
                             <MudNumericField @bind-Value="r.NettPrice" Variant="Variant.Text" Margin="Margin.Dense" Min="0m" Format="N2" />
@@ -147,51 +173,6 @@
         </table>
     </div>
 </MudPaper>
-
-@* ── Third Party Supply ────────────────────────────────────────────────── *@
-<MudExpansionPanels MultiExpansion="true">
-    <MudExpansionPanel Text="Third-Party Supply Items" MaxHeight="600" Expanded="true">
-        <TitleContent>
-            <div class="d-flex align-center gap-2">
-                <MudIcon Icon="@Icons.Material.Rounded.ShoppingCart" Size="Size.Small" />
-                <MudText Typo="Typo.subtitle2" Style="text-transform:uppercase;">Third-Party Supply Items (@_tpLines.Count)</MudText>
-                <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Add" OnClick="AddTpLine" Class="ml-auto">Add Item</MudButton>
-            </div>
-        </TitleContent>
-        <ChildContent>
-            <div style="overflow-x:auto;">
-                <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
-                    <thead>
-                        <tr style="border-bottom:1px solid var(--mud-palette-divider);color:var(--gray-500);">
-                            <th style="text-align:left;padding:4px 6px;">Description</th>
-                            <th style="text-align:left;padding:4px 6px;">Supplier</th>
-                            <th style="text-align:right;padding:4px 6px;width:70px;">Qty</th>
-                            <th style="text-align:right;padding:4px 6px;width:90px;">Unit Cost</th>
-                            <th style="text-align:right;padding:4px 6px;width:90px;">Nett Price</th>
-                            <th style="text-align:right;padding:4px 6px;width:100px;">Ext Price</th>
-                            <th style="width:36px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var row in _tpLines)
-                        {
-                            var r = row;
-                            <tr style="border-bottom:1px solid var(--mud-palette-divider);">
-                                <td style="padding:2px 4px;"><MudTextField @bind-Value="r.Description" Margin="Margin.Dense" /></td>
-                                <td style="padding:2px 4px;"><MudTextField @bind-Value="r.Supplier" Margin="Margin.Dense" /></td>
-                                <td style="padding:2px 4px;"><MudNumericField @bind-Value="r.Qty" Margin="Margin.Dense" Min="0m" Format="N2" /></td>
-                                <td style="padding:2px 4px;"><MudNumericField @bind-Value="r.UnitCost" Margin="Margin.Dense" Min="0m" Format="N2" /></td>
-                                <td style="padding:2px 4px;"><MudNumericField @bind-Value="r.NettPrice" Margin="Margin.Dense" Min="0m" Format="N2" /></td>
-                                <td style="text-align:right;padding:2px 8px;font-weight:500;">$@r.ExtPrice.ToString("N2")</td>
-                                <td><MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small" Color="Color.Error" OnClick="@(() => RemoveTpLine(r))" /></td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </ChildContent>
-    </MudExpansionPanel>
-</MudExpansionPanels>
 
 @* ── Totals + Save ───────────────────────────────────────────────────────── *@
 <div class="d-flex justify-space-between align-start gap-4 flex-wrap mt-4">
@@ -229,15 +210,15 @@
     private List<Product> _products = new();
     private List<User> _users = new();
     private List<LineRow> _lines = new();
-    private List<TpRow> _tpLines = new();
     private bool _saving;
+    private bool _validating;
     private string? _error;
     private string _userCode = "";
     private string? _supplierKey;
     private bool _hasGST = true;
 
-    private decimal CostTotal  => _lines.Sum(l => l.CostSub)   + _tpLines.Sum(t => t.TotalCost);
-    private decimal PriceTotal => _lines.Sum(l => l.ExtPrice)  + _tpLines.Sum(t => t.ExtPrice);
+    private decimal CostTotal  => _lines.Sum(l => l.CostSub);
+    private decimal PriceTotal => _lines.Sum(l => l.ExtPrice);
     private decimal GSTAmount  => _hasGST ? PriceTotal * 0.10m : 0m;
     private decimal PriceIncGST => PriceTotal + GSTAmount;
     private decimal RealMargin  => PriceTotal > 0 ? (PriceTotal - CostTotal) / PriceTotal * 100 : 0;
@@ -306,13 +287,6 @@
                     Units = i.Units, Days = i.Days, UnitCost = i.UnitCost,
                     MinNettPrice = i.MinNettPrice, NettPrice = i.NettPrice,
                 }).ToList();
-                
-                var tpItems = await QuoteService.GetThirdPartyItemsAsync(Id!.Value);
-                _tpLines = tpItems.Select(i => new TpRow
-                {
-                    Description = i.Description ?? "", Supplier = i.Supplier ?? "",
-                    Qty = i.Quantity, UnitCost = i.UnitCost, NettPrice = i.NettPrice,
-                }).ToList();
             }
         }
     }
@@ -369,14 +343,110 @@
 
     private void AddLine()   { _lines.Add(new LineRow()); StateHasChanged(); }
     private void RemoveLine(LineRow r) { _lines.Remove(r); StateHasChanged(); }
-    private void AddTpLine() { _tpLines.Add(new TpRow()); StateHasChanged(); }
-    private void RemoveTpLine(TpRow t) { _tpLines.Remove(t); StateHasChanged(); }
+
+    private async Task ValidateQuoteAsync()
+    {
+        if (IsNew || Id == null) return;
+        _validating = true;
+        StateHasChanged();
+        try
+        {
+            var lineSummary = string.Join("\n", _lines.Select((l, i) =>
+                $"  {i + 1}. {l.Type}: {l.Description} — Qty {l.EffQty} × ${l.NettPrice:N2} = ${(l.NettPrice * l.EffQty):N2}"));
+            var marginPct = PriceTotal > 0 ? (PriceTotal - CostTotal) / PriceTotal * 100 : 0;
+
+            var systemPrompt = @"You are a pricing calibration specialist for Australian B2B service companies.
+Given a single quote's line items and totals, produce a concise validation report in HTML format.
+
+The report should have these sections:
+1. <h2>Executive Verdict</h2> — One-paragraph bottom line: is this quote fairly priced for the scope?
+2. <h2>Line-Item Audit</h2> — A <table> with columns: #, Item, Stated Price, Assessment (Under/Fair/Over), Notes. Flag any item that seems under or over-priced for Australian market.
+3. <h2>Margin Check</h2> — Comment on the overall margin. Is it healthy? Is GP% in the 25-35% typical range for Australian wholesale/services?
+4. <h2>Risk Flags</h2> — Bullet list of any scope ambiguities, under-priced items, or margin risks.
+5. <h2>Recommendation</h2> — One clear recommendation: send as-is, adjust specific lines, or re-scope.
+
+Style the HTML with inline CSS using a clean professional look:
+- Dark background header (#1a1a2e) with white text
+- Alternating row colours (#f8f9fa / white)
+- Red for under-priced, green for fair, orange for slightly low
+- Border-radius on the container
+- Maximum width 800px
+
+Output ONLY the HTML. No markdown, no explanations.";
+
+            var userMsg = $@"Quote #{Id} — {_q.Reference}
+Customer: {_selectedContact?.CompanyName ?? "N/A"}
+Prepared by: {_q.Code}
+
+Line Items:
+{lineSummary}
+
+Totals:
+- Cost ex GST: ${CostTotal:N2}
+- Price ex GST: ${PriceTotal:N2}
+- GST (10%): ${GSTAmount:N2}
+- Price inc GST: ${PriceIncGST:N2}
+- Margin: {marginPct:N1}%
+- Validity: {_q.Validity} days
+- Terms: {_q.Terms}
+
+Please validate this quote against fair market pricing for Australian SMB service/wholesale businesses.";
+
+            var messages = new[]
+            {
+                AzureChatMessage.System(systemPrompt),
+                AzureChatMessage.User(userMsg)
+            };
+
+            var reply = await AzureAI.ChatAsync(messages, maxTokens: 4000, temperature: 0.3);
+            if (!reply.IsSuccess)
+            {
+                Snackbar.Add($"AI validation failed: {reply.Content}", Severity.Error);
+                return;
+            }
+
+            var html = reply.Content.Trim();
+            if (html.StartsWith("```"))
+            {
+                var nl = html.IndexOf('\n');
+                if (nl > 0) html = html[(nl + 1)..];
+                if (html.EndsWith("```")) html = html[..^3];
+                html = html.Trim();
+            }
+
+            var parameters = new DialogParameters<MyDesk.Web.Components.Shared.HtmlPreviewDialog>
+            {
+                { x => x.Title, $"Quote #{Id} — Pricing Validation" },
+                { x => x.HtmlContent, html }
+            };
+            var options = new DialogOptions
+            {
+                CloseButton = true,
+                CloseOnEscapeKey = true,
+                BackdropClick = true,
+                MaxWidth = MaxWidth.Large,
+                FullWidth = true
+            };
+
+            Snackbar.Add("Validation report generated.", Severity.Success);
+            await DialogService.ShowAsync<MyDesk.Web.Components.Shared.HtmlPreviewDialog>(string.Empty, parameters, options);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Validation error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _validating = false;
+            StateHasChanged();
+        }
+    }
 
     private async Task SaveAsync()
     {
         _error = null;
         if (_selectedContact == null) { _error = "Please select a contact."; return; }
-        if (!_lines.Any() && !_tpLines.Any()) { _error = "Add at least one line item."; return; }
+        if (!_lines.Any()) { _error = "Add at least one line item."; return; }
 
         _q.ContactId = _selectedContact.ContactId;
         _q.CompanyId = _selectedContact.CompanyId;
@@ -391,12 +461,7 @@
             ExtNettPrice = r.ExtPrice
         }).ToList();
 
-        var tpItems = _tpLines.Select(t => new QuoteThirdPartyItem
-        {
-            Description = t.Description, Supplier = t.Supplier,
-            Quantity = t.Qty, UnitCost = t.UnitCost, NettPrice = t.NettPrice,
-            ExtNettPrice = t.ExtPrice
-        }).ToList();
+        var tpItems = new List<QuoteThirdPartyItem>();
 
         _saving = true;
         try
@@ -430,6 +495,7 @@
         public decimal Units      { get; set; }
         public decimal Days       { get; set; }
         public decimal UnitCost   { get; set; }
+        public decimal GpMarginPct { get; set; } = 30m;
         public decimal MinNettPrice { get; set; }
         public decimal NettPrice  { get; set; }
         public decimal EffQty     => Days > 0 && Units > 0 ? Units * Days : Qty;
@@ -437,15 +503,11 @@
         public decimal CostSub    => UnitCost  * EffQty;
     }
 
-    private sealed class TpRow
+    private void RecalcFromMargin(LineRow r)
     {
-        public string  Description { get; set; } = "";
-        public string  Supplier    { get; set; } = "";
-        public decimal Qty         { get; set; } = 1;
-        public decimal UnitCost    { get; set; }
-        public decimal NettPrice   { get; set; }
-        public decimal ExtPrice    => NettPrice * Qty;
-        public decimal TotalCost   => UnitCost  * Qty;
+        if (r.GpMarginPct > 0 && r.GpMarginPct < 100 && r.UnitCost > 0)
+            r.NettPrice = r.UnitCost / (1 - r.GpMarginPct / 100m);
+        StateHasChanged();
     }
 }
 

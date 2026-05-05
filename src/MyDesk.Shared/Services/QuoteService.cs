@@ -7,14 +7,16 @@ public class QuoteService
 {
     private readonly DatabaseService _db;
     private readonly ActivityService _activityService;
+    private readonly ApprovalService? _approvals;
 
-    public QuoteService(DatabaseService db, ActivityService activityService)
+    public QuoteService(DatabaseService db, ActivityService activityService, ApprovalService? approvals = null)
     {
         _db = db;
         _activityService = activityService;
+        _approvals = approvals;
     }
 
-    public async Task<List<Quote>> GetQuotesAsync(DateTime? dateFrom, DateTime? dateTo, string? customerName, int statusId, string? keyword)
+    public async Task<List<Quote>> GetQuotesAsync(DateTime? dateFrom, DateTime? dateTo, string? customerName, int? contactId, int statusId, string? keyword)
     {
         var sql = @"
             SELECT q.*,
@@ -29,6 +31,7 @@ public class QuoteService
             LEFT JOIN QuoteStatus qs ON q.QuoteStatusId = qs.QuoteStatusId
             LEFT JOIN Divisions   d  ON q.DivisionId    = d.DivisionId
             WHERE (@c IS NULL OR cco.Company LIKE '%' + @c + '%')
+              AND (@contact IS NULL OR q.ContactId = @contact)
               AND (@k IS NULL OR q.Reference LIKE '%' + @k + '%' OR q.CustomerNotes LIKE '%' + @k + '%')
               AND (@f IS NULL OR q.QuoteDate >= @f)
               AND (@t IS NULL OR q.QuoteDate <= @t)
@@ -37,6 +40,7 @@ public class QuoteService
         
         var dt = await _db.QueryAsync(sql, new() { 
             ["c"] = (object?)customerName ?? DBNull.Value,
+            ["contact"] = (object?)contactId ?? DBNull.Value,
             ["k"] = (object?)keyword ?? DBNull.Value,
             ["f"] = (object?)dateFrom ?? DBNull.Value,
             ["t"] = (object?)dateTo ?? DBNull.Value,
@@ -44,6 +48,26 @@ public class QuoteService
             ["status"] = statusId
         });
         return dt.Rows.Cast<DataRow>().Select(MapQuote).ToList();
+    }
+
+    public async Task<List<Contact>> GetContactsWithQuotesAsync()
+    {
+        var sql = @"
+            SELECT c.ContactId, c.FirstName, c.Surname, co.Company AS CompanyName
+            FROM Quotes q
+            INNER JOIN Contacts c ON q.ContactId = c.ContactId
+            LEFT JOIN Companies co ON c.CompanyId = co.CompanyId
+            GROUP BY c.ContactId, c.FirstName, c.Surname, co.Company
+            ORDER BY co.Company, c.Surname, c.FirstName";
+        
+        var dt = await _db.QueryAsync(sql);
+        return dt.Rows.Cast<DataRow>().Select(r => new Contact
+        {
+            ContactId = Convert.ToInt32(r["ContactId"]),
+            FirstName = r["FirstName"]?.ToString() ?? "",
+            Surname = r["Surname"]?.ToString() ?? "",
+            CompanyName = r["CompanyName"]?.ToString() ?? ""
+        }).ToList();
     }
 
     public async Task<Quote?> GetQuoteAsync(int id)
@@ -142,7 +166,7 @@ public class QuoteService
 
         foreach (var item in items)
         {
-            await _db.ExecuteAsync(@"
+            await _db.ExecuteNonQueryAsync(@"
                 INSERT INTO QuoteContents (Qid, Description, Quantity, NettPrice, UnitCost, ProductCode, Type, Units, Days, ExtNettPrice)
                 VALUES (@qid, @desc, @qty, @price, @cost, @prod, @type, @u, @d, @ext)",
                 new() {
@@ -165,7 +189,7 @@ public class QuoteService
 
     public async Task UpdateQuoteAsync(Quote q, List<QuoteLineItem> items, List<QuoteThirdPartyItem> tpItems, string userCode)
     {
-        await _db.ExecuteAsync(@"
+        await _db.ExecuteNonQueryAsync(@"
             UPDATE Quotes SET
                 Reference = @Ref, ContactId = @Cid, CompanyId = @Coid, DivisionId = @Did,
                 Validity = @Val, Attention = @Att, Delivery = @Del, Terms = @Terms,
@@ -188,10 +212,10 @@ public class QuoteService
                 ["Price"] = items.Sum(i => i.ExtNettPrice)
             });
 
-        await _db.ExecuteAsync("DELETE FROM QuoteContents WHERE Qid = @qid", new() { ["qid"] = q.Qid });
+        await _db.ExecuteNonQueryAsync("DELETE FROM QuoteContents WHERE Qid = @qid", new() { ["qid"] = q.Qid });
         foreach (var item in items)
         {
-            await _db.ExecuteAsync(@"
+            await _db.ExecuteNonQueryAsync(@"
                 INSERT INTO QuoteContents (Qid, Description, Quantity, NettPrice, UnitCost, ProductCode, Type, Units, Days, ExtNettPrice)
                 VALUES (@qid, @desc, @qty, @price, @cost, @prod, @type, @u, @d, @ext)",
                 new() {
@@ -224,30 +248,107 @@ public class QuoteService
         return await CreateQuoteAsync(old, items, tpItems, userCode);
     }
 
-    public async Task ApproveAsync(int id, string userCode, bool isDirectorOrFinalApprover) 
-        => await UpdateStatusAsync(id, 10, "Fully Approved", userCode);
+    /// <summary>
+    /// Records an approval at the current user's level in the chain. When the chain is
+    /// complete (no more line managers above), the quote moves to "Fully Approved" (status 10).
+    /// Otherwise it moves to "Pending Approval" (status 9) so the next manager can sign off.
+    /// </summary>
+    public async Task ApproveAsync(int id, string userCode, bool isDirectorOrFinalApprover)
+    {
+        if (_approvals != null)
+        {
+            var level = _approvals.CompletedLevels("Quote", id) + 1;
+            _approvals.RecordApproval("Quote", id, level, userCode, null, "Approved");
 
-    public async Task DeclineAsync(int id, string userCode) 
-        => await UpdateStatusAsync(id, 11, "Declined", userCode);
+            var fullyApproved = isDirectorOrFinalApprover ||
+                                await IsQuoteFullyApprovedAsync(id);
+            if (fullyApproved)
+            {
+                await UpdateStatusAsync(id, 10, "Fully Approved", userCode);
+            }
+            else
+            {
+                await UpdateStatusAsync(id, 9, "Pending Approval (next level)", userCode);
+            }
+            return;
+        }
+
+        // Fallback: legacy behaviour (no chain)
+        await UpdateStatusAsync(id, 10, "Fully Approved", userCode);
+    }
+
+    public async Task DeclineAsync(int id, string userCode)
+    {
+        if (_approvals != null)
+        {
+            var level = _approvals.CompletedLevels("Quote", id) + 1;
+            _approvals.RecordApproval("Quote", id, level, userCode, null, "Declined");
+        }
+        await UpdateStatusAsync(id, 11, "Declined", userCode);
+    }
+
+    /// <summary>
+    /// Walks the LineManagerCode chain starting from <paramref name="currentUserCode"/>,
+    /// skipping any users who have already signed off this quote, and returns the next
+    /// approver's UserCode (or null if the chain is complete).
+    /// </summary>
+    public Task<string?> GetNextQuoteApproverAsync(int quoteId, string currentUserCode)
+    {
+        if (_approvals == null) return Task.FromResult<string?>(null);
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var cursor  = currentUserCode;
+        while (!string.IsNullOrEmpty(cursor) && visited.Add(cursor))
+        {
+            var next = _approvals.NextLineManager(cursor);
+            if (string.IsNullOrEmpty(next)) return Task.FromResult<string?>(null);
+            if (!_approvals.HasApproval("Quote", quoteId, next))
+                return Task.FromResult<string?>(next);
+            cursor = next;
+        }
+        return Task.FromResult<string?>(null);
+    }
+
+    /// <summary>
+    /// True when every required approval level has signed off — i.e. there is no further
+    /// line manager above the most-recent approver who has not yet approved.
+    /// </summary>
+    public Task<bool> IsQuoteFullyApprovedAsync(int quoteId)
+    {
+        if (_approvals == null) return Task.FromResult(false);
+        var last = _approvals.LastApproval("Quote", quoteId);
+        if (last == null) return Task.FromResult(false);
+        var next = _approvals.NextLineManager(last.ApproverCode);
+        if (string.IsNullOrEmpty(next)) return Task.FromResult(true);
+        return Task.FromResult(_approvals.HasApproval("Quote", quoteId, next));
+    }
+
+    public List<ApprovalEntry> GetApprovalHistory(int quoteId) =>
+        _approvals?.GetEntries("Quote", quoteId) ?? new List<ApprovalEntry>();
+
+    /// <summary>Returns quotes that are awaiting approval (status = 9).</summary>
+    public async Task<List<Quote>> GetPendingApprovalQuotesAsync()
+    {
+        return await GetQuotesAsync(null, null, null, null, statusId: 9, keyword: null);
+    }
 
     public async Task UpdateStatusAsync(int id, int statusId, string statusName, string userCode)
     {
-        await _db.ExecuteAsync("UPDATE Quotes SET QuoteStatusId = @s WHERE Qid = @id", new() { ["s"] = statusId, ["id"] = id });
+        await _db.ExecuteNonQueryAsync("UPDATE Quotes SET QuoteStatusId = @s WHERE Qid = @id", new() { ["s"] = statusId, ["id"] = id });
         await AddAuditAsync(id, userCode, $"Status changed to {statusName}");
     }
 
     public async Task DeleteQuoteAsync(int id)
     {
-        await _db.ExecuteAsync("DELETE FROM QuoteContents WHERE Qid = @id", new() { ["id"] = id });
-        await _db.ExecuteAsync("DELETE FROM QuoteThirdPartyItems WHERE Qid = @id", new() { ["id"] = id });
-        await _db.ExecuteAsync("DELETE FROM QuoteAudit WHERE Qid = @id", new() { ["id"] = id });
-        await _db.ExecuteAsync("DELETE FROM Quotes WHERE Qid = @id", new() { ["id"] = id });
+        await _db.ExecuteNonQueryAsync("DELETE FROM QuoteContents WHERE Qid = @id", new() { ["id"] = id });
+        await _db.ExecuteNonQueryAsync("DELETE FROM QuoteThirdPartyItems WHERE Qid = @id", new() { ["id"] = id });
+        await _db.ExecuteNonQueryAsync("DELETE FROM QuoteAudit WHERE Qid = @id", new() { ["id"] = id });
+        await _db.ExecuteNonQueryAsync("DELETE FROM Quotes WHERE Qid = @id", new() { ["id"] = id });
     }
 
     private static Quote MapQuote(DataRow r)
     {
         bool HasCol(string n) => r.Table.Columns.Contains(n);
-        return new Quote
+        var quote = new Quote
         {
             Qid = Convert.ToInt32(r["Qid"]),
             Reference = r["Reference"]?.ToString() ?? "",
@@ -270,11 +371,17 @@ public class QuoteService
             CustomerNotes = HasCol("CustomerNotes") ? r["CustomerNotes"]?.ToString() : "",
             InternalNotes = HasCol("InternalNotes") ? r["InternalNotes"]?.ToString() : ""
         };
+
+        quote.Margin = CalculateMargin(quote.UnitCostTotal, quote.NettPriceTotal);
+        return quote;
     }
+
+    private static decimal CalculateMargin(decimal costTotal, decimal nettPriceTotal) =>
+        nettPriceTotal > 0 ? ((nettPriceTotal - costTotal) / nettPriceTotal) * 100m : 0m;
 
     private async Task AddAuditAsync(int qid, string code, string action)
     {
-        await _db.ExecuteAsync(
+        await _db.ExecuteNonQueryAsync(
             "INSERT INTO QuoteAudit (Qid, Code, Action, DateEntered) VALUES (@q, @c, @a, GETDATE())",
             new() { ["q"] = qid, ["c"] = code, ["a"] = action });
 

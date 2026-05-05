@@ -1,9 +1,11 @@
 @inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
 @inject PlatformSettingsService PlatformSettings
+@inject TenantService TenantSvc
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ICurrentTenantAccessor TenantAccessor
 
 <MudThemeProvider @bind-IsDarkMode="_isDarkMode" Theme="_theme" />
-<MudDialogProvider CloseButton="true" BackdropClick="true" CloseOnEscapeKey="true" FullWidth="true" MaxWidth="MaxWidth.Small" Position="DialogPosition.Center" />
 <MudSnackbarProvider />
 
 @* Global keyboard shortcut listener *@
@@ -18,8 +20,6 @@
             <div class="tl-swoosh-gold-dot tl-swoosh-gold-dot-2"></div>
             <div class="tl-swoosh-gold-dot tl-swoosh-gold-dot-3"></div>
         </div>
-
-        <MudIconButton Icon="@Icons.Material.Rounded.Menu" Color="Color.Default" Edge="Edge.Start" OnClick="DrawerToggle" aria-label="Toggle navigation menu" />
 
         <MudLink Href="/" Underline="Underline.None" Class="d-flex align-center ml-2">
             <div class="tl-logo-wrap">
@@ -51,6 +51,11 @@
                             <MudText Typo="Typo.body2">@search</MudText>
                         </div>
                     }
+                    <MudDivider Style="margin: 4px 0;" />
+                    <div class="search-history-item" @onclick="ClearSearchHistory" style="justify-content: center;">
+                        <MudIcon Icon="@Icons.Material.Rounded.DeleteSweep" Size="Size.Small" Class="mr-2" />
+                        <MudText Typo="Typo.body2" Style="color: var(--gray-500);">Clear History</MudText>
+                    </div>
                 </div>
             }
         </div>
@@ -60,24 +65,13 @@
                 <MudTooltip Text="@_aiTooltipText" Arrow="true" Placement="Placement.Bottom">
                     <MudIconButton Icon="@Icons.Material.Rounded.AutoAwesome" Color="Color.Primary" Href="/ask-ai" aria-label="Ask AI" />
                 </MudTooltip>
-...
-                <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
-                         Dense="true" Class="ml-1" aria-label="Notifications" Context="notifContext">
-                    <ActivatorContent>
-                        <div style="position:relative; display:inline-flex; align-items:center; justify-content:center;">
-                            <MudTooltip Text="Notifications" Arrow="true" Placement="Placement.Bottom">
-                                <MudIconButton Icon="@Icons.Material.Rounded.Notifications" Color="Color.Default" aria-label="Notifications" />
-                            </MudTooltip>
-                            @if (_notificationCount > 0)
-                            {
-                                <span class="notification-badge">@_notificationCount</span>
-                            }
-                        </div>
-                    </ActivatorContent>
-                    <ChildContent>
-                        ...
-                    </ChildContent>
-                </MudMenu>
+
+                @* Quick Nav launcher — replaces the stub "..." that used to live here.
+                   Opens the fuzzy-searchable command palette (Ctrl+K also works). *@
+                <MudTooltip Text="Quick Nav (Ctrl+K)" Arrow="true" Placement="Placement.Bottom">
+                    <MudIconButton Icon="@Icons.Material.Rounded.Apps" Color="Color.Default"
+                                   OnClick="OpenQuickNav" aria-label="Quick navigation — all pages (Ctrl+K)" />
+                </MudTooltip>
 
                 <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
                          Dense="true" Class="ml-1" aria-label="Notifications" Context="notifContext">
@@ -134,9 +128,7 @@
                     </ChildContent>
                 </MudMenu>
 
-                <MudTooltip Text="Keyboard shortcuts" Arrow="true" Placement="Placement.Bottom" Class="ml-2 d-none d-sm-inline-flex">
-                    <MudIconButton Icon="@Icons.Material.Rounded.Keyboard" Color="Color.Default" OnClick="OpenKeyboardShortcuts" aria-label="Keyboard shortcuts" />
-                </MudTooltip>
+                @* Quick Nav lives in the Apps icon (top-left of this button cluster) — see above. *@
 
                 <MudTooltip Text="Toggle dark mode" Arrow="true" Placement="Placement.Bottom" Class="ml-2 d-none d-sm-inline-flex">
                     <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Rounded.LightMode : Icons.Material.Rounded.DarkMode)"
@@ -157,13 +149,20 @@
                                     @authContext.User.Identity?.Name
                                 </span>
                                 <span style="font-size:11px; color:var(--gray-500);">
-                                    Signed in
+                                    @TenantAccessor.TenantName
                                 </span>
                             </div>
                             <MudIcon Icon="@Icons.Material.Rounded.KeyboardArrowDown" Size="Size.Small" Color="Color.Default" aria-hidden="true" />
                         </div>
                     </ActivatorContent>
                     <ChildContent>
+                        <div class="px-4 py-2" style="pointer-events:none;">
+                            <MudText Typo="Typo.overline" Style="color:var(--gray-400); font-size:10px; letter-spacing:.08em;">CURRENT WORKSPACE</MudText>
+                            <MudText Typo="Typo.subtitle2" Style="font-weight:600;">@TenantAccessor.TenantName</MudText>
+                        </div>
+                        <MudDivider />
+                        <MudMenuItem Icon="@Icons.Material.Rounded.SwapHoriz" OnClick="SwitchWorkspace">Switch Workspace</MudMenuItem>
+                        <MudDivider />
                         <MudMenuItem Icon="@Icons.Material.Rounded.Person" Href="/profile">Profile</MudMenuItem>
                         <MudMenuItem Icon="@Icons.Material.Rounded.Settings" Href="/settings">Settings</MudMenuItem>
                         <MudDivider />
@@ -177,11 +176,19 @@
         </AuthorizeView>
     </MudAppBar>
 
-    <MudDrawer @bind-Open="_drawerOpen" Elevation="0" ClipMode="DrawerClipMode.Docked" 
-               Variant="DrawerVariant.Mini" OpenMiniOnHover="true" 
-               Width="280px" MiniWidth="72px"
-               Class="tl-nav-drawer" role="navigation" aria-label="Main navigation">
-        <NavMenu />
+    <MudDrawer @bind-Open="_col2Open" Elevation="0" ClipMode="DrawerClipMode.Docked" 
+               Variant="DrawerVariant.Persistent" 
+               Width="208px"
+               Class="tl-nav-drawer-col2" role="navigation" aria-label="Drill-down navigation">
+        <NavMenu ActiveSection="_activeNavSection" />
+    </MudDrawer>
+
+    <MudDrawer Open="true" Elevation="0" ClipMode="DrawerClipMode.Docked"
+               Variant="DrawerVariant.Mini" OpenMiniOnHover="false"
+               MiniWidth="52px"
+               Class="tl-nav-drawer-col1 tl-col1-drawer" role="navigation" aria-label="Top-level navigation">
+        <NavColumn1 ActiveSection="_activeNavSection"
+                    OnSectionSelected="OnNavSectionSelected" />
     </MudDrawer>
 
     <MudMainContent role="main" aria-live="polite">
@@ -206,53 +213,146 @@
         },
         PaletteDark = new PaletteDark()
         {
-            Primary = "#60a5fa",
-            AppbarBackground = "#0f172a",
-            Background = "#020617",
-            Surface = "#0f172a",
-            DrawerBackground = "#0f172a",
-            TextPrimary = "#f8fafc",
-            TextSecondary = "#94a3b8",
-            ActionDefault = "#94a3b8",
-            Divider = "rgba(255, 255, 255, 0.08)",
-            TableLines = "rgba(255, 255, 255, 0.08)",
-            LinesDefault = "rgba(255, 255, 255, 0.08)",
+            Primary = "#4ade80",
+            AppbarBackground = "#0a0a0a",
+            Background = "#0a0a0a",
+            Surface = "#111111",
+            DrawerBackground = "#0a0a0a",
+            TextPrimary = "#e5e5e5",
+            TextSecondary = "#737373",
+            ActionDefault = "#a3a3a3",
+            Divider = "rgba(255, 255, 255, 0.06)",
+            TableLines = "rgba(255, 255, 255, 0.06)",
+            LinesDefault = "rgba(255, 255, 255, 0.06)",
+            TextDisabled = "#525252",
+            ActionDisabled = "#525252",
+            ActionDisabledBackground = "#1a1a1a",
+            Info = "#22d3ee",
+            Success = "#4ade80",
+            Warning = "#fbbf24",
+            Error = "#f87171",
+            Dark = "#0a0a0a",
         }
     };
 
     bool _drawerOpen = true;
     private bool _isDarkMode;
+    private bool _col2Open = true;
+    private string _activeNavSection = "quick";
     private string _searchQuery = "";
-    private string _moduleSearchQuery = "";
-    private bool _moduleSwitcherOpen;
     private List<string> _searchHistory = new();
     private bool _showSearchHistory = false;
+    private List<MyDesk.Shared.Models.TenantMembership> _tenantMemberships = new();
     
-    private record ModuleLink(string Title, string Href);
+    private record ModuleLink(string Group, string Title, string Href);
     private List<ModuleLink> GetAllModules() => new()
     {
-        new("Dashboard", "/"),
-        new("Latest Activity", "/activity"),
-        new("Favourites", "/favourites"),
-        new("Files Library", "/files"),
-        new("Contacts", "/contacts"),
-        new("Companies", "/companies"),
-        new("Quotes", "/quotes"),
-        new("Invoices", "/invoices"),
-        new("Despatch", "/despatch"),
-        new("Purchase Orders", "/purchase-orders"),
-        new("Expenses", "/expenses"),
-        new("Job Orders", "/job-orders"),
-        new("Products", "/products"),
-        new("Reports", "/reports"),
-        new("Noticeboard", "/noticeboard"),
-        new("Marketing Hub", "/marketing"),
-        new("Setup", "/admin/setup"),
-        new("Users", "/admin/users"),
-        new("Integrations", "/integrations"),
-        new("Settings", "/settings"),
-        new("Ask AI", "/ask-ai"),
-        new("Profile", "/profile"),
+        // ── Accounts ──
+        new("Accounts", "Accounting", "/accounting"),
+        new("Accounts", "Accounts Hub", "/accounts"),
+        new("Accounts", "Aged Payables", "/aged-payables"),
+        new("Accounts", "Banking", "/banking"),
+        new("Accounts", "Banking — Upload Statement", "/banking/upload"),
+        new("Accounts", "Currencies", "/admin/currency"),
+        new("Accounts", "Financial Year", "/admin/financial-year"),
+        new("Accounts", "MYOB Export", "/invoices/myob-export"),
+        new("Accounts", "MYOB Sync", "/reconciliation/sync"),
+        new("Accounts", "Reconciliation", "/reconciliation"),
+
+        // ── Admin ──
+        new("Admin", "Activity Types", "/admin/activity-types"),
+        new("Admin", "Brand Assets", "/admin/brand-assets"),
+        new("Admin", "Divisions", "/admin/divisions"),
+        new("Admin", "Error Logs", "/admin/error-logs"),
+        new("Admin", "Integrations", "/integrations"),
+        new("Admin", "Invoice Status", "/admin/invoice-status"),
+        new("Admin", "Job Order Status", "/admin/job-order-status"),
+        new("Admin", "Locations", "/admin/locations"),
+        new("Admin", "Log Viewer", "/admin/logs"),
+        new("Admin", "Nav Menu Settings", "/admin/nav-menu"),
+        new("Admin", "New User", "/admin/users/new"),
+        new("Admin", "Parameters", "/admin/parameters"),
+        new("Admin", "Part Codes", "/admin/part-codes"),
+        new("Admin", "Platform Admin", "/admin/platform"),
+        new("Admin", "PO Status", "/admin/po-status"),
+        new("Admin", "Quote Status", "/admin/quote-status"),
+        new("Admin", "Settings", "/settings"),
+        new("Admin", "Setup Home", "/admin/setup"),
+        new("Admin", "Setup Menu", "/admin/setup-menu"),
+        new("Admin", "Tenant Settings", "/admin/tenants"),
+        new("Admin", "User Roles", "/admin/user-roles"),
+        new("Admin", "Users", "/admin/users"),
+
+        // ── AI ──
+        new("AI", "AI Audit Log", "/admin/ai-audit"),
+        new("AI", "AI User Guide", "/help/ai-guide"),
+        new("AI", "Ask AI", "/ask-ai"),
+        new("AI", "Marketing AI", "/marketing/ai"),
+
+        // ── CRM ──
+        new("CRM", "Call Reports", "/call-reports"),
+        new("CRM", "Companies", "/companies"),
+        new("CRM", "Contacts", "/contacts"),
+        new("CRM", "Customer Portal", "/customer-portal"),
+        new("CRM", "Sales Projects", "/sales-projects"),
+
+        // ── Marketing ──
+        new("Marketing", "Brand Assets", "/marketing/brand-assets"),
+        new("Marketing", "Customer Data", "/marketing/customers"),
+        new("Marketing", "Email Campaigns", "/marketing/campaigns"),
+        new("Marketing", "Marketing Assets", "/marketing/assets"),
+        new("Marketing", "Marketing Hub", "/marketing"),
+        new("Marketing", "Strategy", "/marketing/strategy"),
+        new("Marketing", "Supplier Data", "/marketing/suppliers"),
+
+        // ── Operations ──
+        new("Operations", "Approvals", "/approvals/pending"),
+        new("Operations", "Despatch", "/despatch"),
+        new("Operations", "Expenses", "/expenses"),
+        new("Operations", "Financial Extraction", "/financial-extraction"),
+        new("Operations", "Job Orders", "/job-orders"),
+        new("Operations", "Products", "/products"),
+        new("Operations", "Project Management", "/project-management"),
+        new("Operations", "Purchase Orders", "/purchase-orders"),
+        new("Operations", "RFQ", "/rfq"),
+        new("Operations", "Staff Whereabouts", "/staff-whereabouts"),
+        new("Operations", "Subscriptions", "/subscriptions"),
+        new("Operations", "Supplier Portal", "/supplier-portal"),
+        new("Operations", "Timesheets", "/timesheets"),
+        new("Operations", "Timesheets — Approve", "/timesheets/approve"),
+        new("Operations", "Timesheets — Missing", "/timesheets/missing"),
+
+        // ── Quick Access ──
+        new("Quick Access", "Calendar", "/calendar"),
+        new("Quick Access", "Dashboard", "/"),
+        new("Quick Access", "Emails", "/emails"),
+        new("Quick Access", "Favourites", "/favourites"),
+        new("Quick Access", "Files Library", "/files"),
+        new("Quick Access", "Latest Activity", "/activity"),
+        new("Quick Access", "Search", "/search"),
+
+        // ── Reports ──
+        new("Reports", "Noticeboard", "/noticeboard"),
+        new("Reports", "Reports", "/reports"),
+        new("Reports", "Sales Reports", "/reports/sales"),
+
+        // ── Sales ──
+        new("Sales", "Copy Supplier Quote", "/quotes/copy-supplier"),
+        new("Sales", "Invoices", "/invoices"),
+        new("Sales", "Quotes", "/quotes"),
+
+        // ── Strategy ──
+        new("Strategy", "Business Goals", "/strategy/business-goals"),
+        new("Strategy", "Valuation", "/strategy/valuation"),
+
+        // ── Support ──
+        new("Support", "Help Centre", "/help-center"),
+        new("Support", "Product Roadmap", "/help/roadmap"),
+        new("Support", "Release Notes", "/release-notes"),
+        new("Support", "Site Map", "/sitemap"),
+
+        // ── User ──
+        new("User", "My Profile", "/profile"),
     };
     
     private int _notificationCount => _notifications.Count;
@@ -275,12 +375,32 @@
         public string? Url { get; set; }
     }
 
-    void DrawerToggle() => _drawerOpen = !_drawerOpen;
+    async Task DrawerToggle()
+    {
+        _col2Open = !_col2Open;
+        await PersistDrawerState();
+    }
+
+    private async Task OnNavSectionSelected(string section)
+    {
+        _activeNavSection = section;
+        // Selecting a section always reveals the drilldown.
+        _col2Open = true;
+        await PersistDrawerState();
+        StateHasChanged();
+    }
 
     private async Task ToggleDarkMode()
     {
         _isDarkMode = !_isDarkMode;
-        await JS.InvokeVoidAsync("localStorage.setItem", "darkMode", _isDarkMode);
+        if (_isDarkMode)
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", "mydesk_dark_mode", "1");
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("localStorage.removeItem", "mydesk_dark_mode");
+        }
         ApplyDarkMode();
     }
 
@@ -295,31 +415,52 @@
 
     private void OnGlobalKeyDown(KeyboardEventArgs e)
     {
-        // Support ALT key shortcuts as requested
+        // Ctrl+K (or Cmd+K on Mac) opens the Quick Nav command palette.
+        if ((e.CtrlKey || e.MetaKey) && e.Key.Equals("k", StringComparison.OrdinalIgnoreCase))
+        {
+            _ = InvokeAsync(OpenQuickNav);
+            return;
+        }
+
+        // Alt-key shortcuts.
         if (e.AltKey)
         {
             switch (e.Key.ToLower())
             {
-                case "k": 
-                    // Open search
+                case "k":
                     NavigationManager.NavigateTo("/search");
                     break;
-                case "h": 
+                case "h":
                     NavigationManager.NavigateTo("/");
                     break;
-                case "b": 
-                    DrawerToggle();
+                case "b":
+                    _ = InvokeAsync(DrawerToggle);
                     break;
             }
         }
         else if (e.Key == "?")
         {
-            OpenKeyboardShortcuts();
+            _ = InvokeAsync(OpenKeyboardShortcuts);
         }
     }
 
     protected override async Task OnInitializedAsync()
     {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userIdClaim = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var userId))
+            {
+                _tenantMemberships = await TenantSvc.GetUserTenantsAsync(userId);
+            }
+        }
+        catch { }
+    }
+
+    private void SwitchWorkspace()
+    {
+        NavigationManager.NavigateTo("/login/select-tenant", forceLoad: true);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -327,6 +468,8 @@
         if (firstRender)
         {
             await LoadSearchHistory();
+            await RestoreDrawerStateAsync();
+            await RestoreDarkModeAsync();
         }
     }
 
@@ -334,7 +477,7 @@
     {
         try
         {
-            var historyJson = await JS.InvokeAsync<string>("localStorage.getItem", "searchHistory");
+            var historyJson = await JS.InvokeAsync<string>("localStorage.getItem", "mydesk_search_history");
             if (!string.IsNullOrWhiteSpace(historyJson))
             {
                 _searchHistory = System.Text.Json.JsonSerializer.Deserialize<List<string>>(historyJson) ?? new();
@@ -342,14 +485,20 @@
         }
         catch
         {
-            // JS interop not available during prerendering
         }
     }
 
     private async Task SaveSearchHistory()
     {
         var historyJson = System.Text.Json.JsonSerializer.Serialize(_searchHistory);
-        await JS.InvokeVoidAsync("localStorage.setItem", "searchHistory", historyJson);
+        await JS.InvokeVoidAsync("localStorage.setItem", "mydesk_search_history", historyJson);
+    }
+
+    private async Task ClearSearchHistory()
+    {
+        _searchHistory.Clear();
+        _showSearchHistory = false;
+        await JS.InvokeVoidAsync("localStorage.removeItem", "mydesk_search_history");
     }
 
     private async Task OnSearchFocus()
@@ -440,6 +589,102 @@
         var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
         await DialogService.ShowAsync<KeyboardShortcutsDialog>("Keyboard Shortcuts", options);
     }
+
+    /// <summary>
+    /// Opens the Quick Nav command palette (header icon + Ctrl+K). Items come from
+    /// <see cref="GetAllModules"/> so there is one canonical list shared with the side nav.
+    /// </summary>
+    private async Task OpenQuickNav()
+    {
+        var allItems = GetAllModules()
+            .Select(m => new MyDesk.Web.Components.Shared.QuickNavDialog.QuickNavItem(m.Title, m.Href, GetIconForHref(m.Href), m.Group))
+            .ToList();
+
+        var parameters = new DialogParameters<MyDesk.Web.Components.Shared.QuickNavDialog>
+        {
+            { x => x.AllItems, allItems }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseButton = false,
+            CloseOnEscapeKey = true,
+            BackdropClick = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true,
+            NoHeader = true
+        };
+        await DialogService.ShowAsync<MyDesk.Web.Components.Shared.QuickNavDialog>(string.Empty, parameters, options);
+    }
+
+    private static string? GetIconForHref(string href) => href switch
+    {
+        "/"                    => Icons.Material.Rounded.Dashboard,
+        "/activity"            => Icons.Material.Rounded.History,
+        "/favourites"          => Icons.Material.Rounded.Star,
+        "/files"               => Icons.Material.Rounded.Folder,
+        "/emails"              => Icons.Material.Rounded.Mail,
+        "/contacts"            => Icons.Material.Rounded.Person,
+        "/companies"           => Icons.Material.Rounded.Business,
+        "/accounts"            => Icons.Material.Rounded.AccountBalanceWallet,
+        "/quotes"              => Icons.Material.Rounded.Description,
+        "/quotes/copy-supplier"=> Icons.Material.Rounded.ContentCopy,
+        "/invoices"            => Icons.Material.Rounded.Receipt,
+        "/despatch"            => Icons.Material.Rounded.LocalShipping,
+        "/purchase-orders"     => Icons.Material.Rounded.ShoppingBasket,
+        "/expenses"            => Icons.Material.Rounded.Payment,
+        "/banking"             => Icons.Material.Rounded.AccountBalance,
+        "/banking/upload"      => Icons.Material.Rounded.UploadFile,
+        "/job-orders"          => Icons.Material.Rounded.Build,
+        "/products"            => Icons.Material.Rounded.Inventory,
+        "/reports"             => Icons.Material.Rounded.Assessment,
+        "/noticeboard"         => Icons.Material.Rounded.Campaign,
+        "/marketing"           => Icons.Material.Rounded.AutoGraph,
+        "/admin/setup"         => Icons.Material.Rounded.Settings,
+        "/admin/users"         => Icons.Material.Rounded.PeopleAlt,
+        "/integrations"        => Icons.Material.Rounded.Hub,
+        "/settings"            => Icons.Material.Rounded.Tune,
+        "/ask-ai"              => Icons.Material.Rounded.AutoAwesome,
+        "/profile"             => Icons.Material.Rounded.AccountCircle,
+        _                      => Icons.Material.Rounded.ArrowForward
+    };
+
+    /// <summary>Persist side-nav drawer state so user pref survives reloads.</summary>
+    private async Task PersistDrawerState()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", "mydesk_col2_open",   _col2Open ? "1" : "0");
+        }
+        catch { /* JS interop unavailable during prerender */ }
+    }
+
+    private async Task RestoreDarkModeAsync()
+    {
+        try
+        {
+            var darkPref = await JS.InvokeAsync<string?>("localStorage.getItem", "mydesk_dark_mode");
+            if (darkPref == "1")
+            {
+                _isDarkMode = true;
+                ApplyDarkMode();
+                StateHasChanged();
+            }
+        }
+        catch { }
+    }
+
+    private async Task RestoreDrawerStateAsync()
+    {
+        try
+        {
+            var open   = await JS.InvokeAsync<string?>("localStorage.getItem", "mydesk_col2_open");
+            // Default to OPEN unless localStorage explicitly says "0".
+            _col2Open   = open   != "0";
+            StateHasChanged();
+        }
+        catch { /* JS interop unavailable during prerender */ }
+    }
 }
 
 <style>
@@ -501,26 +746,172 @@
         .mud-main-content { padding-top: 56px !important; }
     }
 
-    /* Global Dark Mode fixes */
+    /* Global Dark Mode — Opencode-inspired: dark charcoal bg, green accent */
     .mud-dark-mode {
-        --gray-50: #020617;
-        --gray-100: #0f172a;
-        --gray-200: #1e293b;
-        --gray-900: #f8fafc;
+        --gray-50: #0a0a0a;
+        --gray-100: #111111;
+        --gray-200: #1a1a1a;
+        --gray-300: #262626;
+        --gray-400: #404040;
+        --gray-500: #525252;
+        --gray-600: #737373;
+        --gray-700: #a3a3a3;
+        --gray-800: #d4d4d4;
+        --gray-900: #e5e5e5;
+        --tl-primary: #4ade80;
+        --tl-primary-25: #052e16;
+        --tl-primary-50: #052e16;
+        --tl-primary-100: #14532d;
+        --tl-primary-200: #166534;
+        --tl-primary-300: #15803d;
+        --tl-primary-400: #22c55e;
+        --tl-primary-500: #4ade80;
+        --tl-primary-600: #4ade80;
+        --tl-primary-700: #86efac;
+        --tl-primary-800: #bbf7d0;
+        --tl-primary-900: #dcfce7;
+        --tl-accent: #4ade80;
+        --tl-accent-light: #86efac;
+        --tl-accent-dark: #22c55e;
+        --tl-dark: #000000;
+        --tl-dark-2: #0a0a0a;
+        --tl-dark-3: #141414;
+        --surface: #111111;
+        --surface-sunken: #0a0a0a;
+        --surface-hover: #1a1a1a;
+        --shadow-xs: 0 1px 2px rgba(0,0,0,0.3);
+        --shadow-sm: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+        --shadow-md: 0 4px 8px -2px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.3);
     }
-    .mud-dark-mode .mud-table { background-color: var(--gray-50) !important; }
-    .mud-dark-mode .tl-nav-drawer { 
-        background: linear-gradient(180deg, #0f172a 0%, #020617 100%) !important;
-        border-right: 1px solid rgba(255,255,255,0.05) !important;
-    }
+
+    /* ── Dark Mode: Every element ── */
+    .mud-dark-mode .mud-table { background-color: var(--gray-50) !important; color: var(--gray-900) !important; }
+    .mud-dark-mode .mud-table-head { background-color: var(--gray-100) !important; }
+    .mud-dark-mode .mud-table-head .mud-table-cell { color: var(--gray-600) !important; border-bottom: 1px solid var(--gray-300) !important; }
+    .mud-dark-mode .mud-table-cell { border-bottom: 1px solid var(--gray-200) !important; color: var(--gray-800) !important; }
+    .mud-dark-mode .mud-table-row:hover { background-color: var(--gray-200) !important; }
+    .mud-dark-mode .mud-table-row.mud-table-row-selected { background-color: var(--tl-primary-25) !important; }
+
+    .mud-dark-mode .mud-paper { background-color: var(--surface) !important; border-color: var(--gray-300) !important; color: var(--gray-900) !important; }
+    .mud-dark-mode .mud-paper-outlined { border-color: var(--gray-300) !important; }
+
+    .mud-dark-mode .tl-nav-drawer-col1 { background: var(--gray-50) !important; border-right: 1px solid var(--gray-200) !important; }
+    .mud-dark-mode .tl-nav-drawer-col2 { background: var(--gray-100) !important; border-right: 1px solid var(--gray-200) !important; }
     .mud-dark-mode .mud-drawer { background-color: var(--gray-100) !important; }
-    .mud-dark-mode .mud-appbar { 
-        background-color: var(--gray-100) !important;
-        border-bottom: 1px solid rgba(255,255,255,0.05) !important; 
-    }
+    .mud-dark-mode .mud-appbar { background-color: var(--gray-50) !important; border-bottom: 1px solid var(--gray-200) !important; color: var(--gray-900) !important; }
+
+    .mud-dark-mode .mud-nav-link { color: var(--gray-700) !important; }
+    .mud-dark-mode .mud-nav-link:hover { background-color: var(--gray-200) !important; }
+    .mud-dark-mode .mud-nav-link.mud-nav-link-active { background: var(--tl-primary-25) !important; color: var(--tl-primary-400) !important; }
+    .mud-dark-mode .mud-nav-link-icon { color: var(--gray-600) !important; }
+    .mud-dark-mode .mud-nav-group .mud-nav-link-text { color: var(--gray-600) !important; }
+
+    .mud-dark-mode .tl-col2-header { border-bottom-color: var(--gray-200) !important; }
+    .mud-dark-mode .tl-nav-section--primary { background: linear-gradient(135deg, rgba(74,222,128,0.06) 0%, rgba(74,222,128,0.02) 100%) !important; }
+    .mud-dark-mode .tl-nav-section--admin { border-top-color: var(--gray-200) !important; }
+    .mud-dark-mode .tl-nav-footer { border-top-color: var(--gray-200) !important; background: rgba(0,0,0,0.3) !important; }
+    .mud-dark-mode .tl-nav-link--highlight { background: linear-gradient(90deg, rgba(74,222,128,0.1) 0%, transparent 100%) !important; }
+
+    .mud-dark-mode .mud-button-outlined { border-color: var(--gray-400) !important; color: var(--gray-800) !important; background: var(--surface) !important; }
+    .mud-dark-mode .mud-button-outlined:hover { background-color: var(--gray-200) !important; }
+    .mud-dark-mode .mud-button-filled-primary { background: var(--tl-primary-400) !important; color: #000 !important; }
+    .mud-dark-mode .mud-button-filled-primary:hover { background: var(--tl-primary-500) !important; }
+
+    .mud-dark-mode .mud-input-outlined .mud-input-outlined-border { border-color: var(--gray-400) !important; }
+    .mud-dark-mode .mud-input-outlined:hover .mud-input-outlined-border { border-color: var(--gray-500) !important; }
+    .mud-dark-mode .mud-input-label { color: var(--gray-700) !important; }
+    .mud-dark-mode .mud-input { color: var(--gray-900) !important; }
+
+    .mud-dark-mode .mud-select { color: var(--gray-900) !important; }
+    .mud-dark-mode .mud-popover { background-color: var(--surface) !important; border: 1px solid var(--gray-300) !important; }
+
+    .mud-dark-mode .mud-chip { color: var(--gray-800) !important; }
+    .mud-dark-mode .mud-chip-filled { background-color: var(--gray-300) !important; color: var(--gray-900) !important; }
+    .mud-dark-mode .mud-chip-outlined { border-color: var(--gray-400) !important; color: var(--gray-700) !important; }
+
+    .mud-dark-mode .mud-alert { border-color: var(--gray-300) !important; }
+    .mud-dark-mode .mud-alert-info { background-color: rgba(34,211,238,0.08) !important; color: #22d3ee !important; }
+    .mud-dark-mode .mud-alert-success { background-color: rgba(74,222,128,0.08) !important; color: #4ade80 !important; }
+    .mud-dark-mode .mud-alert-warning { background-color: rgba(251,191,36,0.08) !important; color: #fbbf24 !important; }
+    .mud-dark-mode .mud-alert-error { background-color: rgba(248,113,113,0.08) !important; color: #f87171 !important; }
+
+    .mud-dark-mode .mud-divider { border-color: var(--gray-300) !important; }
+
     .mud-dark-mode .tl-logo-brand { color: #fff !important; }
-    .mud-dark-mode .tl-logo-product { color: #94a3b8 !important; }
+    .mud-dark-mode .tl-logo-product { color: var(--tl-primary-400) !important; }
     .mud-dark-mode .tl-logo-mark { content: url('/images/mydesk-logo-white-text.svg'); }
+
+    .mud-dark-mode .tl-page-header h1 { color: var(--gray-900) !important; }
+    .mud-dark-mode .tl-breadcrumb a { color: var(--gray-600) !important; }
+    .mud-dark-mode .tl-breadcrumb span { color: var(--gray-700) !important; }
+    .mud-dark-mode .tl-subtitle { color: var(--gray-600) !important; }
+
+    .mud-dark-mode .tl-kpi-card { background: var(--gray-100) !important; border-color: var(--gray-300) !important; }
+    .mud-dark-mode .tl-kpi-value { color: var(--gray-900) !important; }
+    .mud-dark-mode .tl-kpi-label { color: var(--gray-600) !important; }
+    .mud-dark-mode .tl-kpi-footer { color: var(--gray-600) !important; }
+
+    .mud-dark-mode .mud-dialog { background-color: var(--surface) !important; color: var(--gray-900) !important; }
+    .mud-dark-mode .mud-dialog-title { color: var(--gray-900) !important; border-bottom: 1px solid var(--gray-300) !important; }
+    .mud-dark-mode .mud-dialog-content { color: var(--gray-800) !important; }
+    .mud-dark-mode .mud-dialog-actions { border-top: 1px solid var(--gray-300) !important; }
+
+    .mud-dark-mode .mud-tabs { background-color: var(--gray-100) !important; }
+    .mud-dark-mode .mud-tab { color: var(--gray-600) !important; }
+    .mud-dark-mode .mud-tab.mud-tab-active { color: var(--tl-primary-400) !important; }
+    .mud-dark-mode .mud-tab:hover { color: var(--gray-800) !important; }
+
+    .mud-dark-mode .mud-switch-unchecked { background-color: var(--gray-400) !important; }
+    .mud-dark-mode .mud-switch-checked { background-color: var(--tl-primary-400) !important; }
+
+    .mud-dark-mode .mud-checkbox-unchecked { color: var(--gray-500) !important; }
+    .mud-dark-mode .mud-checkbox-checked { color: var(--tl-primary-400) !important; }
+
+    .mud-dark-mode .mud-typography { color: var(--gray-900) !important; }
+    .mud-dark-mode .mud-typography-color-primary { color: var(--tl-primary-400) !important; }
+    .mud-dark-mode .mud-typography-color-secondary { color: var(--gray-600) !important; }
+    .mud-dark-mode .mud-text-secondary { color: var(--gray-600) !important; }
+
+    .mud-dark-mode .mud-data-grid { background-color: var(--gray-50) !important; color: var(--gray-900) !important; }
+    .mud-dark-mode .mud-data-grid-header { background-color: var(--gray-100) !important; }
+    .mud-dark-mode .mud-data-grid-row { border-bottom: 1px solid var(--gray-200) !important; }
+    .mud-dark-mode .mud-data-grid-row:hover { background-color: var(--gray-200) !important; }
+
+    .mud-dark-mode .notification-badge { border-color: var(--gray-50) !important; }
+    .mud-dark-mode .search-history-dropdown { background: var(--surface) !important; border-color: var(--gray-300) !important; }
+    .mud-dark-mode .search-history-item:hover { background: var(--gray-200) !important; }
+
+    .mud-dark-mode .tl-experience-section { background: var(--gray-100) !important; }
+    .mud-dark-mode .tl-brand-swoosh .tl-swoosh-accent-line { background: var(--tl-primary-400) !important; }
+    .mud-dark-mode .tl-brand-swoosh .tl-swoosh-gold-dot { background: var(--tl-primary-400) !important; opacity: 0.4; }
+
+    .mud-dark-mode .mud-avatar { background-color: var(--gray-300) !important; color: var(--gray-900) !important; }
+    .mud-dark-mode .mud-avatar-color-primary { background-color: var(--tl-primary-400) !important; color: #000 !important; }
+
+    .mud-dark-mode .mud-tooltip { background-color: var(--gray-300) !important; color: var(--gray-900) !important; }
+
+    .mud-dark-mode .mud-list { background-color: transparent !important; }
+    .mud-dark-mode .mud-list-item { color: var(--gray-800) !important; }
+    .mud-dark-mode .mud-list-item:hover { background-color: var(--gray-200) !important; }
+
+    .mud-dark-mode .mud-progress-linear { background-color: var(--gray-300) !important; }
+    .mud-dark-mode .mud-progress-linear .mud-progress-linear-bar { background-color: var(--tl-primary-400) !important; }
+
+    .mud-dark-mode .mud-icon-button { color: var(--gray-700) !important; }
+    .mud-dark-mode .mud-icon-button:hover { background-color: var(--gray-200) !important; }
+
+    .mud-dark-mode .mud-link { color: var(--tl-primary-400) !important; }
+
+    .mud-dark-mode .mud-picker { background-color: var(--surface) !important; }
+    .mud-dark-mode .mud-picker-content { background-color: var(--surface) !important; }
+    .mud-dark-mode .mud-picker-toolbar { background-color: var(--gray-100) !important; }
+
+    .mud-dark-mode ::-webkit-scrollbar-thumb { background-color: var(--gray-400); }
+    .mud-dark-mode ::-webkit-scrollbar-thumb:hover { background-color: var(--gray-500); }
+
+    .mud-dark-mode .tl-col1-nav .mud-icon-button:hover { background: rgba(74,222,128,0.1) !important; }
+    .mud-dark-mode .tl-col1-logo { border-bottom-color: var(--gray-200) !important; }
+    .mud-dark-mode .tl-col1-footer { border-top-color: var(--gray-200) !important; }
     
     /* Light mode nav drawer styling */
     .tl-nav-drawer {
@@ -535,6 +926,9 @@
     .mud-dialog {
         cursor: default;
     }
+
+    .tl-col1-drawer { overflow: visible !important; }
+    .tl-col1-drawer .mud-drawer-content { overflow: visible !important; }
 </style>
 
 

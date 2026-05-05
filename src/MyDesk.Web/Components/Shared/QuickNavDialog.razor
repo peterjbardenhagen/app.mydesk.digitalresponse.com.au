@@ -1,0 +1,221 @@
+@using Microsoft.AspNetCore.Components.Web
+@inject NavigationManager Nav
+
+@*
+    Quick Nav — a fuzzy-searchable command palette for jumping to any module.
+    Opened by the keyboard icon in the header and by Ctrl+K / Cmd+K.
+
+    Items come from the parent (so the same canonical module list in MainLayout
+    is used both here and in the side nav).
+*@
+
+<MudDialog Class="quick-nav-dialog" Style="padding:0;">
+    <DialogContent>
+        <div class="quick-nav-wrap">
+            <div class="quick-nav-search">
+                <MudIcon Icon="@Icons.Material.Rounded.Search" Color="Color.Default" />
+                <input @ref="_searchInput"
+                       type="text"
+                       class="quick-nav-input"
+                       value="@_query"
+                       @oninput="OnSearchInput"
+                       @onkeydown="OnKey"
+                       placeholder="Jump to a page, action or report…"
+                       autocomplete="off" />
+                <span class="quick-nav-hint">esc</span>
+            </div>
+
+            @if (Filtered.Count == 0)
+            {
+                <div class="quick-nav-empty">
+                    <MudIcon Icon="@Icons.Material.Rounded.SearchOff" Size="Size.Large" />
+                    <MudText Typo="Typo.body2">Nothing matches "@_query"</MudText>
+                </div>
+            }
+            else
+            {
+                <div class="quick-nav-list" role="listbox">
+                    @{ var rowIndex = 0; }
+                    @foreach (var group in GroupedFiltered)
+                    {
+                        <div class="quick-nav-group-label">@group.Key</div>
+                        @foreach (var item in group)
+                        {
+                            var idx = rowIndex;
+                            <button class="quick-nav-row @(idx == _selected ? "selected" : "")"
+                                    @onclick="() => GoTo(item)"
+                                    @onmouseenter="() => _selected = idx"
+                                    role="option">
+                                <MudIcon Icon="@(item.Icon ?? Icons.Material.Rounded.ArrowForward)" Size="Size.Small" />
+                                <span class="quick-nav-row-title">@item.Title</span>
+                                <span class="quick-nav-row-href">@item.Href</span>
+                            </button>
+                            rowIndex++;
+                        }
+                    }
+                </div>
+            }
+
+            <div class="quick-nav-footer">
+                <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+                <span><kbd>Enter</kbd> open</span>
+                <span><kbd>Esc</kbd> close</span>
+                <span style="margin-left:auto; opacity:.6;">@Filtered.Count of @AllItems.Count items</span>
+            </div>
+        </div>
+    </DialogContent>
+</MudDialog>
+
+<style>
+    .quick-nav-dialog .mud-dialog { padding: 0; border-radius: 12px; overflow: hidden; }
+    .quick-nav-wrap { display: flex; flex-direction: column; min-height: 360px; max-height: 70vh; }
+
+    .quick-nav-search {
+        display: flex; align-items: center; gap: 12px;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--mud-palette-divider);
+    }
+    .quick-nav-input {
+        flex: 1; border: 0; outline: 0; background: transparent;
+        font-size: 16px; color: inherit;
+    }
+    .quick-nav-hint {
+        padding: 2px 8px; border-radius: 4px;
+        background: var(--mud-palette-action-default-hover);
+        font-size: 11px; opacity: .7;
+    }
+
+    .quick-nav-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+    .quick-nav-group-label {
+        padding: 10px 20px 6px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        color: var(--mud-palette-text-secondary);
+    }
+    .quick-nav-row {
+        display: flex; align-items: center; gap: 12px;
+        width: 100%; padding: 10px 20px; border: 0; background: transparent;
+        cursor: pointer; text-align: left; color: inherit;
+    }
+    .quick-nav-row:hover, .quick-nav-row.selected {
+        background: var(--mud-palette-action-default-hover);
+    }
+    .quick-nav-row.selected {
+        box-shadow: inset 3px 0 0 var(--mud-palette-primary);
+    }
+    .quick-nav-row-title { flex: 1; font-weight: 500; }
+    .quick-nav-row-href { opacity: .55; font-size: 12px; font-family: 'Cascadia Code', Consolas, monospace; }
+
+    .quick-nav-empty {
+        display: flex; flex-direction: column; align-items: center;
+        justify-content: center; padding: 48px 20px; gap: 12px; opacity: .6;
+        flex: 1;
+    }
+
+    .quick-nav-footer {
+        display: flex; gap: 16px; align-items: center;
+        padding: 10px 20px; border-top: 1px solid var(--mud-palette-divider);
+        font-size: 12px; opacity: .8;
+    }
+    .quick-nav-footer kbd {
+        padding: 2px 6px; border-radius: 4px;
+        background: var(--mud-palette-action-default-hover);
+        font-size: 10px; margin-right: 4px;
+    }
+
+    body.mud-dark-mode .quick-nav-wrap { background: #111111; color: #e5e5e5; }
+    body.mud-dark-mode .quick-nav-search,
+    body.mud-dark-mode .quick-nav-footer { border-color: rgba(255,255,255,.08); }
+    body.mud-dark-mode .quick-nav-row:hover,
+    body.mud-dark-mode .quick-nav-row.selected { background: rgba(74,222,128,.08); }
+    body.mud-dark-mode .quick-nav-row.selected { box-shadow: inset 3px 0 0 #4ade80; }
+    body.mud-dark-mode .quick-nav-row-href,
+    body.mud-dark-mode .quick-nav-group-label { color: #94a3b8; }
+    body.mud-dark-mode .quick-nav-hint,
+    body.mud-dark-mode .quick-nav-footer kbd { background: rgba(255,255,255,.06); color: #cbd5e1; }
+</style>
+
+@code {
+    [CascadingParameter] private MudDialogInstance? MudDialog { get; set; }
+
+    /// <summary>The full menu list (passed in from MainLayout).</summary>
+    [Parameter, EditorRequired] public List<QuickNavItem> AllItems { get; set; } = new();
+
+    public record QuickNavItem(string Title, string Href, string? Icon = null, string? Group = null);
+
+    private string _query = "";
+    private int _selected = 0;
+    private ElementReference _searchInput;
+    private bool _firstRender = true;
+
+    private List<QuickNavItem> Filtered =>
+        string.IsNullOrWhiteSpace(_query)
+            ? AllItems.OrderBy(i => i.Group).ThenBy(i => i.Title).ToList()
+            : AllItems
+                .Select(i => new { i, score = Score(i, _query) })
+                .Where(x => x.score > 0)
+                .OrderByDescending(x => x.score)
+                .ThenBy(x => x.i.Group)
+                .ThenBy(x => x.i.Title)
+                .Select(x => x.i)
+                .ToList();
+
+    private IEnumerable<IGrouping<string, QuickNavItem>> GroupedFiltered =>
+        Filtered.GroupBy(i => string.IsNullOrWhiteSpace(i.Group) ? "Other" : i.Group!);
+
+    private static int Score(QuickNavItem item, string q)
+    {
+        var t = item.Title.ToLowerInvariant();
+        q = q.ToLowerInvariant();
+        if (t == q) return 1000;
+        if (t.StartsWith(q)) return 800;
+        if (t.Contains(q)) return 500;
+
+        // fuzzy: every char of q appears in order in t
+        int qi = 0;
+        foreach (var ch in t) { if (qi < q.Length && ch == q[qi]) qi++; }
+        return qi == q.Length ? 100 + qi : 0;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _firstRender = false;
+            try { await _searchInput.FocusAsync(); } catch { }
+        }
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        _query = e.Value?.ToString() ?? "";
+        if (_selected >= Filtered.Count) _selected = 0;
+    }
+
+    private void OnKey(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                _selected = Math.Min(_selected + 1, Math.Max(0, Filtered.Count - 1));
+                break;
+            case "ArrowUp":
+                _selected = Math.Max(0, _selected - 1);
+                break;
+            case "Enter":
+                if (Filtered.Count > 0) GoTo(Filtered[_selected]);
+                break;
+            case "Escape":
+                MudDialog?.Cancel();
+                break;
+        }
+    }
+
+    private void GoTo(QuickNavItem item)
+    {
+        MudDialog?.Close(DialogResult.Ok(item.Href));
+        Nav.NavigateTo(item.Href);
+    }
+}

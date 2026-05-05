@@ -1,0 +1,64 @@
+@page "/accounts"
+@attribute [Authorize(Roles = "Administrator,Director,Accounts")]
+@inject PlatformSettingsService PlatformSettings
+@inject NavigationManager Nav
+
+<PageTitle>Accounts - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <span>Accounts</span>
+        </div>
+        <h1>Accounts</h1>
+        <p class="tl-subtitle">A single hub for everything finance-related: reconciliation, payables, MYOB sync, banking and accounting.</p>
+    </div>
+</div>
+
+<MudGrid Spacing="3" Class="mt-2">
+    @foreach (var card in _cards.OrderBy(c => c.Title))
+    {
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Class="pa-5 rounded-xl h-100 acct-card" Elevation="0" @onclick="() => Nav.NavigateTo(card.Route)">
+                <div class="d-flex align-center gap-3 mb-3">
+                    <div class="acct-icon" style="background: @(card.Tint);">
+                        <MudIcon Icon="@card.Icon" Color="Color.Inherit" />
+                    </div>
+                    <MudText Typo="Typo.h6" Class="font-weight-bold">@card.Title</MudText>
+                </div>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">@card.Description</MudText>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Rounded.ArrowForward" Size="Size.Small">Open</MudButton>
+            </MudPaper>
+        </MudItem>
+    }
+</MudGrid>
+
+<style>
+    .acct-card { cursor: pointer; border: 1px solid var(--gray-200); transition: all .2s ease; }
+    .acct-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.08); border-color: var(--tl-primary, #00c8c8); }
+    .acct-icon {
+        width: 44px; height: 44px; border-radius: 10px;
+        display: inline-flex; align-items: center; justify-content: center;
+        color: white;
+    }
+    .h-100 { height: 100%; }
+</style>
+
+@code {
+    private record Card(string Title, string Description, string Icon, string Route, string Tint);
+
+    private readonly List<Card> _cards = new()
+    {
+        new("Aged Reconciliation",   "Match incoming payments to invoices and chase outstanding debt with one click.", Icons.Material.Rounded.Sync,           "/reconciliation",          "#0ea5e9"),
+        new("Aged Payables",         "See who you owe, group by ageing bucket, schedule supplier payments.",            Icons.Material.Rounded.Payments,       "/aged-payables",           "#f59e0b"),
+        new("MYOB Sync",             "Bidirectional invoice and payment sync with MYOB AccountRight Live.",             Icons.Material.Rounded.SwapHoriz,      "/reconciliation/sync",     "#10b981"),
+        new("MYOB Export",           "Bulk export new invoices to MYOB-compatible CSV/XML.",                            Icons.Material.Rounded.CloudUpload,    "/invoices/myob-export",    "#8b5cf6"),
+        new("Banking",               "Import statements, review transactions and track reconciliation progress.",         Icons.Material.Rounded.AccountBalance, "/banking",                 "#14b8a6"),
+        new("Accounting",            "P&L, balance sheet, trial balance and chart of accounts.",                        Icons.Material.Rounded.Calculate,      "/accounting",              "#ef4444"),
+        new("Subscriptions",         "Recurring revenue: hosting, O365, domains, support contracts.",                   Icons.Material.Rounded.Subscriptions,  "/subscriptions",           "#06b6d4"),
+        new("Expenses",              "Capture supplier bills (PDF upload), categorise GST and submit reports.",         Icons.Material.Rounded.Payment,        "/expenses",                "#a855f7"),
+        new("Reports",               "Sales, profitability, cash and BAS reports.",                                     Icons.Material.Rounded.BarChart,       "/reports",                 "#0284c7"),
+        new("Integrations",          "Configure MYOB, Xero, OpenAI, Stripe, OpenWeather and more.",                     Icons.Material.Rounded.Hub,            "/integrations",            "#475569"),
+    };
+}

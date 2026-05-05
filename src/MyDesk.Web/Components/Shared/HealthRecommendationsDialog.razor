@@ -1,0 +1,61 @@
+@* Business health recommendations summary dialog *@
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Rounded.MonitorHeart" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">Business Health Recommendations</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">
+            Review the current warnings and recommendations generated from live operational and financial data.
+        </MudText>
+
+        @if (Warnings.Any())
+        {
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Warnings</MudText>
+            <MudList T="RecItem" Dense="true" Class="mb-4">
+                @foreach (var item in Warnings)
+                {
+                    <MudListItem T="RecItem" Icon="@Icons.Material.Rounded.WarningAmber" IconColor="Color.Warning">
+                        <div class="d-flex flex-column">
+                            <MudText Typo="Typo.subtitle2" Class="font-weight-bold">@item.Title</MudText>
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">@item.Description</MudText>
+                        </div>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+
+        @if (Recommendations.Any())
+        {
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Recommendations</MudText>
+            <MudList T="RecItem" Dense="true">
+                @foreach (var item in Recommendations)
+                {
+                    <MudListItem T="RecItem" Icon="@Icons.Material.Rounded.AutoAwesome" IconColor="Color.Primary">
+                        <div class="d-flex flex-column">
+                            <MudText Typo="Typo.subtitle2" Class="font-weight-bold">@item.Title</MudText>
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">@item.Description</MudText>
+                        </div>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudDialogInstance MudDialog { get; set; } = default!;
+
+    private record RecItem(string Title, string Detail, string Icon, Color Color);
+
+    [Parameter] public List<BusinessWarning> Warnings { get; set; } = new();
+    [Parameter] public List<BusinessRecommendation> Recommendations { get; set; } = new();
+
+    private void Close() => MudDialog.Close(DialogResult.Ok(true));
+}

@@ -1,0 +1,115 @@
+@inject NavMenuService NavMenuSvc
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+@using System.Security.Claims
+
+<div class="tl-col1-nav">
+    <div class="tl-col1-logo">
+        <MudTooltip Text="Dashboard" Placement="Placement.Right" Arrow="true">
+            <MudIconButton Icon="@Icons.Material.Rounded.Dashboard" Href="/" Color="Color.Default" />
+        </MudTooltip>
+    </div>
+
+    <div class="tl-col1-items">
+        <MudTooltip Text="Favourites" Placement="Placement.Right" Arrow="true">
+            <MudIconButton Icon="@Icons.Material.Rounded.Star" Href="/favourites" Color="Color.Default" />
+        </MudTooltip>
+        <MudTooltip Text="Contacts" Placement="Placement.Right" Arrow="true">
+            <MudIconButton Icon="@Icons.Material.Rounded.People" Href="/contacts" Color="Color.Default" />
+        </MudTooltip>
+        @if (NavMenuSvc.IsVisible("accounts") || NavMenuSvc.IsVisible("banking"))
+        {
+            <MudTooltip Text="Accounts Hub" Placement="Placement.Right" Arrow="true">
+                <MudIconButton Icon="@Icons.Material.Rounded.AccountBalanceWallet" Href="/accounts" Color="Color.Default" />
+            </MudTooltip>
+        }
+        @if (NavMenuSvc.IsVisible("quotes"))
+        {
+            <MudTooltip Text="Quotes" Placement="Placement.Right" Arrow="true">
+                <MudIconButton Icon="@Icons.Material.Rounded.Description" Href="/quotes" Color="Color.Default" />
+            </MudTooltip>
+        }
+        @if (NavMenuSvc.IsVisible("invoices"))
+        {
+            <MudTooltip Text="Invoices" Placement="Placement.Right" Arrow="true">
+                <MudIconButton Icon="@Icons.Material.Rounded.Receipt" Href="/invoices" Color="Color.Default" />
+            </MudTooltip>
+        }
+        @if (NavMenuSvc.IsVisible("purchase-orders"))
+        {
+            <MudTooltip Text="Purchase Orders" Placement="Placement.Right" Arrow="true">
+                <MudIconButton Icon="@Icons.Material.Rounded.ShoppingBasket" Href="/purchase-orders" Color="Color.Default" />
+            </MudTooltip>
+        }
+        @if (NavMenuSvc.IsVisible("despatch"))
+        {
+            <MudTooltip Text="Despatch" Placement="Placement.Right" Arrow="true">
+                <MudIconButton Icon="@Icons.Material.Rounded.LocalShipping" Href="/despatch" Color="Color.Default" />
+            </MudTooltip>
+        }
+        <MudTooltip Text="Site Map" Placement="Placement.Right" Arrow="true">
+            <MudIconButton Icon="@Icons.Material.Rounded.Schema" Href="/sitemap" Color="Color.Default" />
+        </MudTooltip>
+    </div>
+
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.CompletedTask;
+    }
+}
+
+<style>
+    .tl-col1-nav {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        height: 100%;
+        padding: 10px 0 8px;
+        gap: 6px;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    }
+    .tl-col1-logo {
+        padding: 6px 0 12px;
+        border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+        margin-bottom: 6px;
+    }
+    .tl-col1-items {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+    .tl-col1-nav .mud-icon-button {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+    }
+    .tl-col1-nav .mud-icon-button:hover {
+        background: rgba(14, 165, 233, 0.08);
+    }
+    .tl-col1-nav .mud-icon-button.mud-icon-button-color-primary {
+        background: rgba(45, 212, 191, 0.14) !important;
+        color: #0f766e !important;
+        box-shadow: inset 0 0 0 1px rgba(45, 212, 191, 0.10);
+    }
+    body.mud-dark-mode .tl-col1-nav {
+        background: linear-gradient(180deg, #101215 0%, #0c0f12 100%) !important;
+    }
+    body.mud-dark-mode .tl-col1-logo {
+        border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+    }
+    body.mud-dark-mode .tl-col1-nav .mud-icon-button:hover {
+        background: rgba(74, 222, 128, 0.1) !important;
+    }
+    body.mud-dark-mode .tl-col1-nav .mud-icon-button.mud-icon-button-color-primary {
+        background: rgba(74, 222, 128, 0.14) !important;
+        color: #4ade80 !important;
+        box-shadow: inset 0 0 0 1px rgba(74, 222, 128, 0.10) !important;
+    }
+</style>

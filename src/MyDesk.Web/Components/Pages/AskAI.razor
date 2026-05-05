@@ -6,7 +6,9 @@
 @inject AuthenticationStateProvider AuthState
 @inject IJSRuntime JsRuntime
 @inject AIFunctionExecutor FuncExecutor
+@inject MyDesk.Web.AI.AskAiAgentService Agent
 @using MyDesk.Web.Services
+@using MyDesk.Web.AI
 @using MyDesk.Shared.Services
 @using System.Security.Claims
 @using Microsoft.JSInterop
@@ -39,12 +41,12 @@
     </MudAlert>
 }
 
-<MudPaper Elevation="1" Class="pa-4 mb-3"
-          Style="min-height:420px;max-height:520px;overflow-y:auto;background:var(--mud-palette-background);"
+<MudPaper Elevation="1" Class="pa-4 mb-3 tl-chat-container"
           @ref="_chatBox">
+    <div class="tl-chat-messages">
     @if (!_history.Any())
     {
-        <div class="d-flex flex-column align-center justify-center" style="height:360px;opacity:.45;">
+        <div class="tl-chat-empty-state">
             <MudIcon Icon="@Icons.Material.Rounded.AutoAwesome" Style="font-size:3rem;" />
             <MudText Typo="Typo.body1" Class="mt-3">Ask anything about your quotes, invoices, customers, or sales data.</MudText>
             <MudText Typo="Typo.caption">Ctrl+Enter to send</MudText>
@@ -53,23 +55,50 @@
     @foreach (var msg in _history)
     {
         <div class="@(msg.IsUser ? "d-flex justify-end" : "d-flex justify-start") mb-3">
-            <div style="max-width:80%;padding:12px 16px;border-radius:12px;font-size:.875rem;white-space:pre-wrap;
+            <div class="@(msg.IsUser ? "tl-chat-bubble-user" : "tl-chat-bubble-ai")" style="max-width:80%;padding:12px 16px;border-radius:12px;font-size:.875rem;white-space:pre-wrap;
                         background:@(msg.IsUser ? "var(--tl-primary)" : "var(--mud-palette-surface)");
                         color:@(msg.IsUser ? "#fff" : "inherit");
                         border:@(msg.IsUser ? "none" : "1px solid var(--gray-200)");">
                 @msg.Content
             </div>
         </div>
+        @if (!msg.IsUser && msg.Renderables.Count > 0)
+        {
+            <div class="d-flex justify-start mb-3" style="margin-left:0;max-width:90%;">
+                <div style="flex:1;">
+                    @foreach (var r in msg.Renderables)
+                    {
+                        <MyDesk.Web.Components.Shared.AiRenderableView Item="@r" />
+                    }
+                </div>
+            </div>
+        }
+        @if (!msg.IsUser && msg.ToolTrace.Count > 0)
+        {
+            <div class="d-flex justify-start mb-3">
+                <MudExpansionPanels Elevation="0" Style="background:transparent;flex:1;max-width:90%;">
+                    <MudExpansionPanel Text="@($"Tools used ({msg.ToolTrace.Count})")">
+                        @foreach (var t in msg.ToolTrace)
+                        {
+                            <MudText Typo="Typo.caption" Style="font-family:monospace;display:block;opacity:.8;">
+                                @(t.Success ? "✓" : "✗") <strong>@t.ToolName</strong> @t.ArgsJson
+                            </MudText>
+                        }
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
+            </div>
+        }
     }
     @if (_thinking)
     {
         <div class="d-flex justify-start mb-3">
-            <div style="padding:12px 16px;border-radius:12px;border:1px solid var(--gray-200);">
+            <div class="tl-chat-thinking" style="padding:12px 16px;border-radius:12px;border:1px solid var(--gray-200);">
                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" />
                 <span style="margin-left:8px;font-size:.875rem;color:var(--gray-500);">Thinking…</span>
             </div>
         </div>
     }
+    </div>
 </MudPaper>
 
 @if (!_history.Any())
@@ -88,7 +117,7 @@
     </MudPaper>
 }
 
-<MudPaper Elevation="1" Class="pa-3">
+<MudPaper Elevation="1" Class="tl-chat-input-wrap pa-3">
     <div class="d-flex align-center gap-2 mb-2">
         <MudText Typo="Typo.caption" Style="color:var(--gray-500);">Add to context:</MudText>
         <MudCheckBox @bind-Value="_includeMyDeskData" Size="Size.Small" Label="MyDesk Data" Color="Color.Primary" Dense="true" />
@@ -120,7 +149,18 @@
     private bool _thinking;
     private MudPaper? _chatBox;
 
-    private record UiMessage(bool IsUser, string Content);
+    private record UiMessage(
+        bool IsUser,
+        string Content,
+        IReadOnlyList<AiRenderable> Renderables,
+        IReadOnlyList<AskAiToolTrace> ToolTrace)
+    {
+        public static UiMessage User(string content)         => new(true, content, Array.Empty<AiRenderable>(), Array.Empty<AskAiToolTrace>());
+        public static UiMessage Assistant(string content,
+            IReadOnlyList<AiRenderable>? r = null,
+            IReadOnlyList<AskAiToolTrace>? t = null) =>
+            new(false, content, r ?? Array.Empty<AiRenderable>(), t ?? Array.Empty<AskAiToolTrace>());
+    }
     private readonly List<UiMessage> _history = new();
 
     private readonly List<AzureChatMessage> _apiMessages = new();
@@ -131,18 +171,15 @@
 
     private readonly string[] _suggestedPrompts = new[]
     {
+        "How many quotes have we won this month vs lost? Show me a chart.",
+        "Show our revenue trend for the last 12 months as a line chart.",
+        "What's in our open pipeline by ageing?",
+        "Schedule a weekly pipeline summary email to peter@bardenhagen.xyz every Monday at 9am.",
+        "Compare quotes won vs lost this quarter — pie chart.",
+        "How is the pipeline trending this month?",
+        "Set up a daily reminder to file timesheets at 5pm.",
         "What's our cash position?",
-        "Who owes us money over 30 days?",
-        "Show quotes pending approval over $10,000",
-        "End-of-month summary",
-        "Find unsynced invoices to MYOB",
-        "Compare this month's revenue to last year",
-        "Brief me on today",
-        "Any GST mismatches?",
-        "Show me recent quotes",
-        "List outstanding invoices",
-        "Get company list",
-        "Show expenses this month"
+        "Show me invoiced revenue YTD."
     };
 
     /// <summary>
@@ -198,7 +235,7 @@ Be concise, practical, and focus on actionable business insights."));
         var question = _input.Trim();
         if (string.IsNullOrEmpty(question) || _thinking) return;
 
-        _history.Add(new UiMessage(true, question));
+        _history.Add(UiMessage.User(question));
         _input = "";
         _thinking = true;
         StateHasChanged();
@@ -214,47 +251,19 @@ Be concise, practical, and focus on actionable business insights."));
                 throw new InvalidOperationException("Azure OpenAI is not configured. Please set Azure:OpenAIEndpoint, Azure:OpenAIModel, Azure:OpenAIApiVersion, and Azure:OpenAIApiKey in appsettings.json");
             }
 
-            // Load context on first query
-            if (!_contextLoaded)
-            {
-                var stats = await FuncExecutor.GetDashboardStatsAsync();
-                _apiMessages.Add(AzureChatMessage.System($"Current business stats: {System.Text.Json.JsonSerializer.Serialize(stats)}"));
-                _contextLoaded = true;
-            }
-
-            _apiMessages.Add(AzureChatMessage.User(question));
-
-            // Try to execute functions based on the question
-            var functionResult = await TryExecuteFunctionAsync(question);
-            if (functionResult != null)
-            {
-                var resultJson = System.Text.Json.JsonSerializer.Serialize(functionResult, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-                _apiMessages.Add(AzureChatMessage.System($"Function result: {resultJson}"));
-                
-                // Get AI to interpret the results
-                var reply = await AI.ChatAsync(_apiMessages);
-                replyContent = reply.Content;
-                success = reply.IsSuccess;
-                _history.Add(new UiMessage(false, reply.Content));
-                if (reply.IsSuccess)
-                    _apiMessages.Add(AzureChatMessage.Assistant(reply.Content));
-            }
-            else
-            {
-                // No function matched, just chat
-                var reply = await AI.ChatAsync(_apiMessages);
-                replyContent = reply.Content;
-                success = reply.IsSuccess;
-                _history.Add(new UiMessage(false, reply.Content));
-                if (reply.IsSuccess)
-                    _apiMessages.Add(AzureChatMessage.Assistant(reply.Content));
-            }
+            // Use the AskAiAgentService — it has access to typed tools (quotes / invoices /
+            // pipeline summaries with chart specs, schedule_recurring_task, etc.) and runs
+            // a multi-turn tool-calling loop. Tools execute inside this request scope so
+            // tenant isolation (RLS + EF filter) applies automatically.
+            var reply = await Agent.AskAsync(question);
+            replyContent = reply.Text;
+            _history.Add(UiMessage.Assistant(reply.Text, reply.Renderables, reply.Trace));
         }
         catch (Exception ex)
         {
             success = false;
             replyContent = $"Error: {ex.Message}";
-            _history.Add(new UiMessage(false, replyContent));
+            _history.Add(UiMessage.Assistant(replyContent));
         }
         finally
         {
@@ -334,7 +343,8 @@ Be concise, practical, and focus on actionable business insights."));
     private void Clear()
     {
         _history.Clear();
-        _apiMessages.RemoveRange(1, _apiMessages.Count - 1); // keep system message
+        // Keep the system priming message (index 0) — used only by the legacy chat path.
+        if (_apiMessages.Count > 1) _apiMessages.RemoveRange(1, _apiMessages.Count - 1);
         _input = "";
     }
 
@@ -359,7 +369,7 @@ Be concise, practical, and focus on actionable business insights."));
         catch (Exception ex)
         {
             _listening = false;
-            _history.Add(new UiMessage(false, $"Voice input not available: {ex.Message}"));
+            _history.Add(UiMessage.Assistant($"Voice input not available: {ex.Message}"));
         }
     }
 
@@ -380,5 +390,33 @@ Be concise, practical, and focus on actionable business insights."));
 
 }
 
-
-
+<style>
+    .tl-chat-container {
+        height: calc(100vh - 340px);
+        min-height: 460px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: var(--mud-palette-background);
+    }
+    .tl-chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-right: 4px;
+    }
+    .tl-chat-empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        min-height: 360px;
+        opacity: 0.45;
+    }
+    body.mud-dark-mode .tl-chat-bubble-ai { background: var(--gray-200) !important; border-color: var(--gray-400) !important; color: var(--gray-900) !important; }
+    body.mud-dark-mode .tl-chat-bubble-user { background: var(--tl-primary-400) !important; color: #000 !important; }
+    body.mud-dark-mode .tl-chat-thinking { border-color: var(--gray-400) !important; background: var(--gray-100); }
+    body.mud-dark-mode .tl-chat-input-wrap { background: var(--gray-100) !important; border-color: var(--gray-300) !important; }
+    body.mud-dark-mode .tl-chat-container { background: var(--gray-50) !important; }
+</style>

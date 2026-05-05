@@ -15,7 +15,7 @@
         <div class="tl-login-hero-inner">
             <div class="tl-login-hero-brand">
                 <a href="@PlatformSettings.Current.CompanyWebsite" target="_blank" rel="noreferrer">
-                    <img src="@PlatformSettings.Current.LoginLogoUrl" alt="@PlatformSettings.Current.PlatformName" class="hero-logo" />
+                    <img src="@PlatformSettings.Current.LoginLogoUrl" alt="@PlatformSettings.Current.PlatformName" class="hero-logo" onerror="this.onerror=null;this.src='/images/mydesk-logo-white-text.svg';" />
                 </a>
             </div>
 
@@ -71,7 +71,7 @@
                 </div>
                 <div class="tl-form-header">
                     <div class="tl-mark-container">
-                        <img src="@PlatformSettings.Current.LoginMarkUrl" alt="" class="tl-form-mark" />
+                        <img src="@PlatformSettings.Current.LoginMarkUrl" alt="" class="tl-form-mark" onerror="this.onerror=null;this.src='/images/techlight-mark.svg';" />
                     </div>
                     <h1>Customer Portal</h1>
                     <p class="sub-text">Sign in to access your quotes, invoices and files</p>
@@ -130,9 +130,13 @@
                     <MudText Typo="Typo.caption" Color="Color.Default" Align="Align.Center">
                         Are you a supplier?
                     </MudText>
-                    <div class="d-flex justify-center gap-3 mt-2">
+                    <div class="d-flex justify-center gap-2 align-center mt-2">
                         <MudLink Href="/supplier-login" Color="Color.Primary" Underline="Underline.Hover">
                             Supplier Portal
+                        </MudLink>
+                        <MudText Typo="Typo.body2" Style="color:var(--gray-400);">|</MudText>
+                        <MudLink Href="/login" Color="Color.Primary" Underline="Underline.Hover">
+                            Staff Login
                         </MudLink>
                     </div>
                 </div>

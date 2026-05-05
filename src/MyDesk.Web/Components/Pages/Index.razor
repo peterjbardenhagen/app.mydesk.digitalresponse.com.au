@@ -1,4 +1,5 @@
 @page "/"
+@using MudBlazor
 @attribute [Authorize]
 @inject DashboardService DashboardService
 @inject AuthenticationStateProvider AuthStateProvider
@@ -140,11 +141,11 @@ else
                     <div class="tl-kpi-icon-wrap @GetHealthIconClass(_metrics.OverallHealthScore)">
                         <MudIcon Icon="@Icons.Material.Rounded.HealthAndSafety" Size="Size.Medium" />
                     </div>
-                    @if (_metrics.Warnings?.Any() == true)
+                    @if (HealthItemCount > 0)
                     {
                         <div class="tl-kpi-badge warning">
                             <MudIcon Icon="@Icons.Material.Rounded.Warning" Size="Size.Small" />
-                            <span>@_metrics.Warnings.Count</span>
+                            <span>@HealthItemCount</span>
                         </div>
                     }
                 </div>
@@ -154,10 +155,10 @@ else
                 </div>
                 <div class="tl-kpi-footer">
                     <span>@GetHealthStatusText(_metrics.OverallHealthScore)</span>
-                    @if (_metrics.Recommendations?.Any() == true)
+                    @if (HealthItemCount > 0)
                     {
                         <span class="tl-kpi-divider">|</span>
-                        <span>@_metrics.Recommendations.Count recommendations</span>
+                        <span>@HealthItemCount items</span>
                     }
                 </div>
                 <div class="tl-kpi-glow"></div>
@@ -326,40 +327,6 @@ else
             }
         </MudGrid>
     }
-
-    @* ── AI & Telegram Promos ─────────────────────────────────────────── *@
-    <div class="tl-promo-section mt-4 mb-8">
-        <MudGrid Spacing="4">
-            <MudItem xs="12" md="6">
-                <MudPaper Elevation="0" Class="pa-6 rounded-xl tl-promo-card-modern ai">
-                    <div class="d-flex align-center gap-3 mb-4">
-                        <div class="tl-promo-icon-wrap ai">
-                            <MudIcon Icon="@Icons.Material.Rounded.AutoAwesome" Size="Size.Medium" />
-                        </div>
-                        <MudText Typo="Typo.h6" Class="font-weight-bold">Ask MyDesk AI</MudText>
-                    </div>
-                    <div class="tl-chat-preview">
-                        <div class="tl-chat-bubble bot">What's our most profitable product category this quarter?</div>
-                        <div class="tl-chat-bubble human">Lighting components are leading with a 42% average margin.</div>
-                    </div>
-                </MudPaper>
-            </MudItem>
-            <MudItem xs="12" md="6">
-                <MudPaper Elevation="0" Class="pa-6 rounded-xl tl-promo-card-modern telegram">
-                    <div class="d-flex align-center gap-3 mb-4">
-                        <div class="tl-promo-icon-wrap telegram">
-                            <MudIcon Icon="@Icons.Custom.Brands.Telegram" Size="Size.Medium" />
-                        </div>
-                        <MudText Typo="Typo.h6" Class="font-weight-bold">Business on Telegram</MudText>
-                    </div>
-                    <div class="tl-chat-preview">
-                        <div class="tl-chat-bubble bot">Voice: "Create a quote for ABC Corp for 10x LED panels"</div>
-                        <div class="tl-chat-bubble human">Draft Quote #4282 created for ABC Corp. Ready for review.</div>
-                    </div>
-                </MudPaper>
-            </MudItem>
-        </MudGrid>
-    </div>
 
     @* ── Client Experience Section ─────────────────────────────────────────── *@
     <div class="tl-experience-section mt-8 pa-8 rounded-2xl mb-8">
@@ -773,10 +740,17 @@ else
         _ => "Performance metrics"
     };
 
+    private int HealthItemCount => (_metrics.Warnings?.Count ?? 0) + (_metrics.Recommendations?.Count ?? 0);
+
     private async Task ShowHealthRecommendations()
     {
+        var parameters = new DialogParameters<HealthRecommendationsDialog>
+        {
+            { x => x.Warnings, _metrics.Warnings ?? new() },
+            { x => x.Recommendations, _metrics.Recommendations ?? new() }
+        };
         var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Medium };
-        await DialogService.ShowAsync<HealthRecommendationsDialog>("", options);
+        await DialogService.ShowAsync<HealthRecommendationsDialog>("", parameters, options);
     }
 }
 
@@ -826,6 +800,21 @@ else
     .tl-user-select {
         min-width: 180px;
     }
+
+    body.mud-dark-mode .tl-user-kpi-section { background: var(--gray-100); border-color: var(--gray-300); }
+    body.mud-dark-mode .tl-user-kpi-card:hover { background: var(--gray-200); }
+    body.mud-dark-mode .tl-alerts-panel { background: var(--gray-100); border-color: var(--gray-300); }
+    body.mud-dark-mode .tl-alerts-header.warning { background: linear-gradient(135deg, rgba(251,191,36,0.08) 0%, var(--gray-100) 100%); border-bottom-color: var(--gray-300); }
+    body.mud-dark-mode .tl-alerts-header.info { background: linear-gradient(135deg, rgba(34,211,238,0.08) 0%, var(--gray-100) 100%); border-bottom-color: var(--gray-300); }
+    body.mud-dark-mode .tl-alert-item:hover { background: var(--gray-200); }
+    body.mud-dark-mode .tl-alert-card { background: var(--gray-100); border-color: var(--gray-300); }
+    body.mud-dark-mode .tl-dashboard-period-selector { background: linear-gradient(135deg, var(--gray-100) 0%, var(--gray-50) 100%); border-color: var(--gray-300); }
+    body.mud-dark-mode .tl-period-label { color: var(--gray-700); }
+    body.mud-dark-mode .tl-performance-selector { background: linear-gradient(135deg, var(--tl-primary-25) 0%, var(--gray-100) 100%); border-color: var(--gray-300); }
+    body.mud-dark-mode .tl-selector-label { color: var(--gray-700); }
+    body.mud-dark-mode .tl-quick-btn.mud-button-outlined { background: var(--gray-100) !important; border-color: var(--gray-400) !important; }
+    body.mud-dark-mode .tl-quick-btn-label { color: var(--gray-900); }
+    body.mud-dark-mode .tl-quick-btn-hint { color: var(--gray-600); }
 </style>
 
 
