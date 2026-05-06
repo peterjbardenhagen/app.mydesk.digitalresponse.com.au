@@ -281,7 +281,7 @@ body.mud-dark-mode .mud-layout { background: transparent; }
 /* Page header */
 .tl-page-header {
   display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 16px; margin-bottom: 24px; padding-bottom: 20px;
+  gap: 16px; margin-bottom: 12px; padding-bottom: 8px;
 }
 .tl-page-header h1 { margin: 0; font-size: 28px; font-weight: 700; color: var(--gray-900); letter-spacing: -0.02em; }
 .tl-page-header .tl-subtitle { margin: 4px 0 0 0; font-size: 14px; color: var(--gray-600); }
@@ -290,6 +290,10 @@ body.mud-dark-mode .mud-layout { background: transparent; }
 .tl-breadcrumb { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--gray-500); margin-bottom: 6px; }
 .tl-breadcrumb a { color: var(--gray-500); text-decoration: none; }
 .tl-breadcrumb a:hover { color: var(--tl-primary-700); }
+
+/* Standard link — Navy with underline on hover */
+.tl-link { color: var(--gray-700); text-decoration: none; cursor: pointer; transition: all 150ms var(--ease); }
+.tl-link:hover { color: var(--gray-900); text-decoration: underline; }
 .tl-breadcrumb .sep { color: var(--gray-300); }
 
 /* -------- STAT CARDS (KPI) -------- */
@@ -1850,8 +1854,8 @@ body.mud-dark-mode .mud-layout { background: transparent; }
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--gray-200);
 }
 .tl-breadcrumb {

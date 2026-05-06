@@ -66,53 +66,62 @@
         <MudButton OnClick="ExportCsv" Variant="Variant.Outlined" Color="Color.Default"
                    StartIcon="@Icons.Material.Rounded.Download">Export CSV</MudButton>
         <MudButton OnClick="ShowBulkEmailDialog" Variant="Variant.Outlined" Color="Color.Primary"
-                   StartIcon="@Icons.Material.Rounded.Email">Bulk Email</MudButton>
+                   StartIcon="@Icons.Material.Rounded.Email" Disabled="@(!_invoices.Any(i => i.IsSelected))">Bulk Email</MudButton>
         <MudButton OnClick="ShowBulkStatusDialog" Variant="Variant.Outlined" Color="Color.Secondary"
-                   StartIcon="@Icons.Material.Rounded.Update">Bulk Status</MudButton>
+                   StartIcon="@Icons.Material.Rounded.Update" Disabled="@(!_invoices.Any(i => i.IsSelected))">Bulk Status</MudButton>
     </div>
 </MudPaper>
 
-<MudDataGrid T="Invoice" Items="@_invoices" Loading="@_loading" Dense="true" Hover="true"
-             SortMode="@SortMode.Multiple" Virtualize="true" FixedHeader="true" Height="600px" Class="tl-compact-grid"
-             RowClicked="OnInvoiceRowClicked">
-    <Columns>
-        <PropertyColumn Property="x => x.InvoiceId"   Title="#"         InitialDirection="SortDirection.Descending" />
-        <PropertyColumn Property="x => x.InvoiceNum"  Title="Invoice #" />
-        <PropertyColumn Property="x => x.CCompany"    Title="Customer" />
-        <PropertyColumn Property="x => x.DivisionName" Title="Division" />
-        <PropertyColumn Property="x => x.InvoiceDate" Title="Date"      Format="yyyy-MM-dd" />
-        <PropertyColumn Property="x => x.NettPriceTotal" Title="Ex GST"  Format="C2" />
-        <PropertyColumn Property="x => x.TotalIncGST"   Title="Inc GST"  Format="C2" />
-        <PropertyColumn Property="x => x.InvoicedBy"  Title="By" />
-        <TemplateColumn Title="Status" Sortable="false">
-            <CellTemplate>
-                <MudChip T="string" Size="Size.Small" Color="@StatusColour(context.Item.StatusName)">
-                    @context.Item.StatusName
-                </MudChip>
-            </CellTemplate>
-        </TemplateColumn>
-        <TemplateColumn Title="" Sortable="false" CellStyle="width:180px;">
-            <CellTemplate>
-                <div class="d-flex gap-1">
-                    <MudIconButton Icon="@Icons.Material.Rounded.Visibility" Size="Size.Small" Color="Color.Info"
-                                   Href="@($"/invoices/{context.Item.InvoiceId}")" title="View" />
-                    <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" Color="Color.Primary"
-                                   Href="@($"/invoices/{context.Item.InvoiceId}/edit")" title="Edit" />
-                    <MudIconButton Icon="@Icons.Material.Rounded.PictureAsPdf" Size="Size.Small" Color="Color.Secondary"
-                                   Href="@($"/api/pdf/invoice/{context.Item.InvoiceId}")" target="_blank" title="Print PDF" />
-                    <MudIconButton Icon="@Icons.Material.Rounded.Email" Size="Size.Small" Color="Color.Default"
-                                   Href="@($"/invoices/{context.Item.InvoiceId}")" title="Email" />
-                    @if (_isAdmin)
-                    {
-                        <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
-                                       OnClick="@(() => DeleteAsync(context.Item))" title="Delete" />
-                    }
-                </div>
-            </CellTemplate>
-        </TemplateColumn>
-    </Columns>
-    <PagerContent><MudDataGridPager T="Invoice" /></PagerContent>
-</MudDataGrid>
+<MudPaper Class="pa-0" Elevation="1" Style="margin-bottom: 10px;">
+    <MudDataGrid T="Invoice" Items="@_invoices" Loading="@_loading" Dense="true" Hover="true"
+                 SortMode="@SortMode.Multiple" Virtualize="true" FixedHeader="true" Height="calc(100vh - 365px)" Class="tl-compact-grid tl-invoice-grid">
+        <Columns>
+            <TemplateColumn Title="" Sortable="false" CellStyle="width:56px;">
+                <HeaderTemplate>
+                    <MudCheckBox T="bool" Value="@_allSelected" ValueChanged="ToggleSelectAll" Label="" />
+                </HeaderTemplate>
+                <CellTemplate>
+                    <MudCheckBox T="bool" Value="@context.Item.IsSelected" ValueChanged="@(v => ToggleSelection(context.Item, v))" Label="" />
+                </CellTemplate>
+            </TemplateColumn>
+            <PropertyColumn Property="x => x.InvoiceId"   Title="#"         InitialDirection="SortDirection.Descending" />
+            <PropertyColumn Property="x => x.InvoiceNum"  Title="Invoice #" />
+            <PropertyColumn Property="x => x.CCompany"    Title="Customer" />
+            <PropertyColumn Property="x => x.DivisionName" Title="Division" />
+            <PropertyColumn Property="x => x.InvoiceDate" Title="Date"      Format="yyyy-MM-dd" />
+            <PropertyColumn Property="x => x.NettPriceTotal" Title="Ex GST"  Format="C2" />
+            <PropertyColumn Property="x => x.TotalIncGST"   Title="Inc GST"  Format="C2" />
+            <PropertyColumn Property="x => x.InvoicedBy"  Title="By" />
+            <TemplateColumn Title="Status" Sortable="false">
+                <CellTemplate>
+                    <MudChip T="string" Size="Size.Small" Color="@StatusColour(context.Item.StatusName)">
+                        @context.Item.StatusName
+                    </MudChip>
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="" Sortable="false" CellStyle="width:180px;">
+                <CellTemplate>
+                    <div class="d-flex gap-1">
+                        <MudIconButton Icon="@Icons.Material.Rounded.Visibility" Size="Size.Small" Color="Color.Info"
+                                       Href="@($"/invoices/{context.Item.InvoiceId}")" title="View" />
+                        <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" Color="Color.Primary"
+                                       Href="@($"/invoices/{context.Item.InvoiceId}/edit")" title="Edit" />
+                        <MudIconButton Icon="@Icons.Material.Rounded.PictureAsPdf" Size="Size.Small" Color="Color.Secondary"
+                                       Href="@($"/api/pdf/invoice/{context.Item.InvoiceId}")" target="_blank" title="Print PDF" />
+                        <MudIconButton Icon="@Icons.Material.Rounded.Email" Size="Size.Small" Color="Color.Default"
+                                       Href="@($"/invoices/{context.Item.InvoiceId}")" title="Email" />
+                        @if (_isAdmin)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
+                                           OnClick="@(() => DeleteAsync(context.Item))" title="Delete" />
+                        }
+                    </div>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <PagerContent><MudDataGridPager T="Invoice" /></PagerContent>
+    </MudDataGrid>
+</MudPaper>
 
 @code {
     private List<Invoice>       _invoices = new();
@@ -128,6 +137,7 @@
     private DateTime? _dateTo;
     private int     _statusId = 0;
     private string  _userCode = "";
+    private bool    _allSelected;
 
     protected override async Task OnInitializedAsync()
     {
@@ -164,8 +174,22 @@
             _invoices = await InvoiceService.GetInvoicesAsync(
                 _dateFrom, _dateTo, _search, _statusId,
                 string.IsNullOrEmpty(_userCode) ? null : _userCode);
+            _allSelected = _invoices.Any() && _invoices.All(i => i.IsSelected);
         }
         finally { _loading = false; }
+    }
+
+    private void ToggleSelection(Invoice invoice, bool selected)
+    {
+        invoice.IsSelected = selected;
+        _allSelected = _invoices.Any() && _invoices.All(i => i.IsSelected);
+    }
+
+    private void ToggleSelectAll(bool selected)
+    {
+        _allSelected = selected;
+        foreach (var invoice in _invoices)
+            invoice.IsSelected = selected;
     }
 
     private async Task ResetFilter()
@@ -289,6 +313,18 @@
         Nav.NavigateTo($"/invoices/{args.Item.InvoiceId}");
     }
 }
+
+<style>
+    .tl-invoice-grid {
+        min-height: 420px;
+    }
+
+    @@media (max-height: 900px) {
+        .tl-invoice-grid {
+            min-height: 360px;
+        }
+    }
+</style>
 
 
 

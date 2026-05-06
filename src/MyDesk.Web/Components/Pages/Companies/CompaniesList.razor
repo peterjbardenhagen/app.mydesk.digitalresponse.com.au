@@ -18,7 +18,7 @@
             <span style="color:var(--gray-700);font-weight:500;">Companies</span>
         </div>
         <h1>Companies</h1>
-        <p class="tl-subtitle">Customer and supplier organisations. <a href="/contacts" class="tl-link-secondary">View Contacts →</a></p>
+         <p class="tl-subtitle">Customer and supplier organisations. <a href="/contacts" class="tl-link">View Contacts →</a></p>
     </div>
     <div class="d-flex gap-2">
         <MudButton Variant="Variant.Filled" Color="Color.Primary"
@@ -50,9 +50,9 @@
     </div>
 </MudPaper>
 
-<MudPaper Class="pa-0" Elevation="1">
-    <MudDataGrid T="Company" Items="@_companies" Loading="@_loading" Dense="true" Hover="true"
-                 FixedHeader="true" Height="600px" Elevation="0">
+<MudPaper Class="pa-0" Elevation="1" Style="margin-bottom: 40px;">
+     <MudDataGrid T="Company" Items="@_companies" Loading="@_loading" Dense="true" Hover="true"
+                  FixedHeader="true" Height="600px" Elevation="0">
         <Columns>
             <PropertyColumn Property="x => x.CompanyId" Title="#" CellStyle="width:70px;" />
             <TemplateColumn Title="Company">

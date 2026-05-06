@@ -229,8 +229,7 @@ else
     private async Task LoadCompaniesAndProjects()
     {
         _companies = await CompanySvc.GetCompaniesForDropdownAsync();
-        // Load projects - assuming GetProjectsForDropdownAsync exists or similar
-        // _projects = await ProjectSvc.GetProjectsForDropdownAsync();
+        _projects = await ProjectSvc.GetProjectsAsync("Active");
     }
 
     private async Task LoadTimesheets()
@@ -238,7 +237,8 @@ else
         _loading = true;
         try
         {
-            _timesheets = await TimesheetSvc.GetTimesheetsAsync(_currentUserId, null, 1, 50);
+            var all = await TimesheetSvc.GetTimesheetsAsync(_currentUserId, null, 1, 200);
+            _timesheets = all.Where(t => t.WeekStartDate.Date == _currentWeek.Date).ToList();
         }
         catch (Exception ex)
         {
@@ -250,16 +250,16 @@ else
         }
     }
 
-    private void PreviousWeek()
+    private async Task PreviousWeek()
     {
         _currentWeek = _currentWeek.AddDays(-7);
-        LoadTimesheets().ConfigureAwait(false);
+        await LoadTimesheets();
     }
 
-    private void NextWeek()
+    private async Task NextWeek()
     {
         _currentWeek = _currentWeek.AddDays(7);
-        LoadTimesheets().ConfigureAwait(false);
+        await LoadTimesheets();
     }
 
     private void ShowStopwatchDialog()
@@ -353,10 +353,12 @@ else
         return newTimesheet;
     }
 
-    private void CreateNewTimesheet()
+    private async Task CreateNewTimesheet()
     {
-        // Navigate to create timesheet or show dialog
-        Snackbar.Add("Create new timesheet feature coming soon", Severity.Info);
+        var timesheet = await GetOrCreateTimesheet();
+        _selectedTimesheet = await TimesheetSvc.GetTimesheetAsync(timesheet.TimesheetId) ?? timesheet;
+        await LoadTimesheets();
+        Snackbar.Add("Draft timesheet ready.", Severity.Success);
     }
 
     private async Task ViewTimesheet(int timesheetId)
