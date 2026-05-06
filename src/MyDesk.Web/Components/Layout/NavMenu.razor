@@ -1,5 +1,6 @@
 @inject NavMenuService NavMenuSvc
 @inject AuthenticationStateProvider AuthStateProvider
+@inject PlatformSettingsService PlatformSettings
 @using System.Security.Claims
 
 <div class="tl-nav-col2">
@@ -18,6 +19,7 @@
                 <MudNavLink Href="/activity"   Icon="@Icons.Material.Rounded.History">Latest Activity</MudNavLink>
                 <MudNavLink Href="/favourites" Icon="@Icons.Material.Rounded.Star">Favourites</MudNavLink>
                 <MudNavLink Href="/files"      Icon="@Icons.Material.Rounded.Folder">Files Library</MudNavLink>
+                @if (_oneDriveConnected) { <MudNavLink Href="/onedrive" Icon="@Icons.Material.Rounded.CloudUpload" Class="tl-nav-link--highlight">OneDrive</MudNavLink> }
                 <MudNavLink Href="/calendar"        Icon="@Icons.Material.Rounded.CalendarMonth">Calendar</MudNavLink>
                 @if (NavMenuSvc.IsVisible("emails")) { <MudNavLink Href="/emails" Icon="@Icons.Material.Rounded.Mail">Emails</MudNavLink> }
                 <MudNavLink Href="/search"           Icon="@Icons.Material.Rounded.Search">Search</MudNavLink>
@@ -200,6 +202,7 @@
     private bool _isAdminOrDirector;
     private bool _isAccounts;
     private bool _isSuperAdmin;
+    private bool _oneDriveConnected = false;
 
     [Parameter] public string ActiveSection { get; set; } = "quick";
 
@@ -230,6 +233,22 @@
                        auth.User.IsInRole("Director") ||
                        _isSuperAdmin ||
                        auth.User.FindFirst("IsAccounts")?.Value == "True";
+
+        // Check if OneDrive integration is connected
+        try
+        {
+            var settings = PlatformSettings.Current;
+            if (settings?.MyOutlookUserConnections != null)
+            {
+                var userCodeClaim = auth.User.FindFirst("user_code")?.Value;
+                if (!string.IsNullOrWhiteSpace(userCodeClaim) && 
+                    settings.MyOutlookUserConnections.TryGetValue(userCodeClaim, out var conn))
+                {
+                    _oneDriveConnected = conn.Enabled && conn.SyncDrive;
+                }
+            }
+        }
+        catch { /* Silently fail if OneDrive check fails */ }
     }
 }
 

@@ -1,6 +1,9 @@
 @page "/contacts/{Id:int}"
 @attribute [Authorize]
 @inject ContactService ContactService
+@inject InvoiceService InvoiceService
+@inject QuoteService QuoteService
+@inject PurchaseOrderService PurchaseOrderService
 @inject NavigationManager Nav
 @inject IJSRuntime JsRuntime
 @inject PlatformSettingsService PlatformSettings
@@ -47,14 +50,160 @@ else
             <MudItem xs="6"><strong>Supplier Code:</strong> @(_contact.SupplierCode ?? "-")</MudItem>
         </MudGrid>
     </MudPaper>
+
+    @* Related MyDesk Records Section *@
+    @if (!string.IsNullOrWhiteSpace(_contact.CompanyName) && _contact.CompanyId > 0)
+    {
+        <div class="mt-6">
+            <div class="d-flex justify-space-between align-center mb-4">
+                <MudText Typo="Typo.h5" Class="font-weight-bold">Related Records</MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Rounded.ViewWeek" 
+                           Href="@($"/company-records/{_contact.CompanyId}")">
+                    View All for @_contact.CompanyName
+                </MudButton>
+            </div>
+
+            @if (_loadingRelated)
+            {
+                <div class="d-flex justify-center pa-4">
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" />
+                </div>
+            }
+            else
+            {
+                <MudGrid>
+                    @if (_invoices?.Count > 0)
+                    {
+                        <MudItem xs="12" md="4">
+                            <MudPaper Elevation="1" Class="pa-4">
+                                <MudText Typo="Typo.h6" Class="mb-3">
+                                    <MudIcon Icon="@Icons.Material.Rounded.Receipt" Size="Size.Small" Class="mr-2" />
+                                    Invoices
+                                </MudText>
+                                <MudText Typo="Typo.body2" Class="text-muted mb-3">@_invoices.Count recent invoices</MudText>
+                                <div class="d-flex flex-column gap-2">
+                                    @foreach (var inv in _invoices.Take(5))
+                                    {
+                                        <MudLink Href="@($"/invoices/{inv.InvoiceId}")">
+                                            <MudText Typo="Typo.body2" Class="text-truncate">@inv.InvoiceNum (@inv.InvoiceDate.ToString("MMM dd, yyyy"))</MudText>
+                                        </MudLink>
+                                    }
+                                    @if (_invoices.Count > 5)
+                                    {
+                                        <MudLink Href="@($"/invoices?company={Uri.EscapeDataString(_contact.CompanyName)}")">
+                                            <MudText Typo="Typo.body2" Class="text-muted">+@(_invoices.Count - 5) more</MudText>
+                                        </MudLink>
+                                    }
+                                </div>
+                            </MudPaper>
+                        </MudItem>
+                    }
+
+                    @if (_quotes?.Count > 0)
+                    {
+                        <MudItem xs="12" md="4">
+                            <MudPaper Elevation="1" Class="pa-4">
+                                <MudText Typo="Typo.h6" Class="mb-3">
+                                    <MudIcon Icon="@Icons.Material.Rounded.Assignment" Size="Size.Small" Class="mr-2" />
+                                    Quotes
+                                </MudText>
+                                <MudText Typo="Typo.body2" Class="text-muted mb-3">@_quotes.Count recent quotes</MudText>
+                                <div class="d-flex flex-column gap-2">
+                                    @foreach (var quote in _quotes.Take(5))
+                                    {
+                                        <MudLink Href="@($"/quotes/{quote.Qid}")">
+                                            <MudText Typo="Typo.body2" Class="text-truncate">@quote.Reference (@quote.QuoteDate.ToString("MMM dd, yyyy"))</MudText>
+                                        </MudLink>
+                                    }
+                                    @if (_quotes.Count > 5)
+                                    {
+                                        <MudLink Href="@($"/quotes?customer={Uri.EscapeDataString(_contact.CompanyName)}")">
+                                            <MudText Typo="Typo.body2" Class="text-muted">+@(_quotes.Count - 5) more</MudText>
+                                        </MudLink>
+                                    }
+                                </div>
+                            </MudPaper>
+                        </MudItem>
+                    }
+
+                    @if (_purchaseOrders?.Count > 0)
+                    {
+                        <MudItem xs="12" md="4">
+                            <MudPaper Elevation="1" Class="pa-4">
+                                <MudText Typo="Typo.h6" Class="mb-3">
+                                    <MudIcon Icon="@Icons.Material.Rounded.ShoppingCart" Size="Size.Small" Class="mr-2" />
+                                    Purchase Orders
+                                </MudText>
+                                <MudText Typo="Typo.body2" Class="text-muted mb-3">@_purchaseOrders.Count recent POs</MudText>
+                                <div class="d-flex flex-column gap-2">
+                                    @foreach (var po in _purchaseOrders.Take(5))
+                                    {
+                                        <MudLink Href="@($"/purchase-orders/{po.POid}")">
+                                            <MudText Typo="Typo.body2" Class="text-truncate">@po.Project (@po.PODate.ToString("MMM dd, yyyy"))</MudText>
+                                        </MudLink>
+                                    }
+                                    @if (_purchaseOrders.Count > 5)
+                                    {
+                                        <MudLink Href="@($"/purchase-orders?supplier={Uri.EscapeDataString(_contact.CompanyName)}")">
+                                            <MudText Typo="Typo.body2" Class="text-muted">+@(_purchaseOrders.Count - 5) more</MudText>
+                                        </MudLink>
+                                    }
+                                </div>
+                            </MudPaper>
+                        </MudItem>
+                    }
+
+                    @if ((_invoices?.Count ?? 0) == 0 && (_quotes?.Count ?? 0) == 0 && (_purchaseOrders?.Count ?? 0) == 0)
+                    {
+                        <MudItem xs="12">
+                            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                                No invoices, quotes, or purchase orders found for @_contact.CompanyName.
+                            </MudAlert>
+                        </MudItem>
+                    }
+                </MudGrid>
+            }
+        </div>
+    }
 }
 
 @code {
     [Parameter] public int Id { get; set; }
     private Contact? _contact;
+    private List<Invoice>? _invoices;
+    private List<Quote>? _quotes;
+    private List<PurchaseOrder>? _purchaseOrders;
+    private bool _loadingRelated = false;
 
     protected override async Task OnInitializedAsync()
-        => _contact = await ContactService.GetContactAsync(Id);
+    {
+        _contact = await ContactService.GetContactAsync(Id);
+        if (_contact?.CompanyId > 0 && !string.IsNullOrWhiteSpace(_contact.CompanyName))
+        {
+            await LoadRelatedRecordsAsync();
+        }
+    }
+
+    private async Task LoadRelatedRecordsAsync()
+    {
+        _loadingRelated = true;
+        try
+        {
+            // Load invoices, quotes, and purchase orders for the contact's company
+            _invoices = await InvoiceService.GetInvoicesAsync(customer: _contact!.CompanyName, limit: 50) ?? new();
+            _quotes = await QuoteService.GetQuotesAsync(null, null, _contact.CompanyName, null, 0, null) ?? new();
+            _purchaseOrders = await PurchaseOrderService.GetPurchaseOrdersAsync(null, null, _contact.CompanyName, 0, limit: 50) ?? new();
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't fail the page
+            Console.WriteLine($"Error loading related records: {ex.Message}");
+        }
+        finally
+        {
+            _loadingRelated = false;
+        }
+    }
 
     private async Task DownloadVcf()
     {
