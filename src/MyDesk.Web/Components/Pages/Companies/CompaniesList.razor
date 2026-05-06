@@ -52,7 +52,7 @@
 
 <MudPaper Class="pa-0" Elevation="1" Style="margin-bottom: 40px;">
      <MudDataGrid T="Company" Items="@_companies" Loading="@_loading" Dense="true" Hover="true"
-                  FixedHeader="true" Height="600px" Elevation="0">
+                  FixedHeader="true" Height="calc(100vh - 365px)" Elevation="0">
         <Columns>
             <PropertyColumn Property="x => x.CompanyId" Title="#" CellStyle="width:70px;" />
             <TemplateColumn Title="Company">

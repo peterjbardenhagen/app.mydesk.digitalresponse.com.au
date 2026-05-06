@@ -5,22 +5,54 @@
 @inject LookupService LookupService
 @inject AuthenticationStateProvider AuthStateProvider
 
-<MudDialog>
+<MudDialog Class="tl-dialog">
     <DialogContent>
-        <MudText Typo="Typo.h6" Class="mb-4">Bulk Update Invoice Status</MudText>
-        <MudText Typo="Typo.body2" Class="mb-4">Update status for @SelectedCount selected invoice(s).</MudText>
-        <MudSelect T="int" @bind-Value="_newStatusId" Label="New Status" Variant="Variant.Outlined" FullWidth>
-            @foreach (var s in _statuses)
-            {
-                <MudSelectItem T="int" Value="@s.InvoiceStatusId">@s.StatusName</MudSelectItem>
-            }
-        </MudSelect>
+        <div class="tl-dialog-header">
+            <MudText Typo="Typo.h6">Update Status</MudText>
+            <MudText Typo="Typo.body2" Class="tl-dialog-subtitle">Change status for @SelectedCount selected invoice(s).</MudText>
+        </div>
+        <div class="tl-dialog-body">
+            <MudSelect T="int" @bind-Value="_newStatusId" Label="New Status" Variant="Variant.Outlined" FullWidth>
+                <MudSelectItem T="int" Value="0">Select a status</MudSelectItem>
+                @foreach (var s in _statuses)
+                {
+                    <MudSelectItem T="int" Value="@s.InvoiceStatusId">@s.StatusName</MudSelectItem>
+                }
+            </MudSelect>
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Cancel</MudButton>
         <MudButton Color="Color.Primary" OnClick="UpdateStatus" Disabled="@(_newStatusId == 0)">Update Status</MudButton>
     </DialogActions>
 </MudDialog>
+
+<style>
+    .tl-dialog .mud-dialog {
+        border-radius: 12px;
+    }
+    
+    .tl-dialog-header {
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--gray-200);
+        margin-bottom: 16px;
+    }
+    
+    .tl-dialog-header :deep(.mud-typography-h6) {
+        margin: 0;
+        color: var(--gray-900);
+        font-weight: 700;
+    }
+    
+    .tl-dialog-subtitle {
+        margin-top: 4px;
+        color: var(--gray-600);
+    }
+    
+    .tl-dialog-body {
+        padding: 16px 0;
+    }
+</style>
 
 @code {
     [CascadingParameter] public MudDialogInstance? Dialog { get; set; }

@@ -74,7 +74,7 @@
 
 <MudPaper Class="pa-0" Elevation="1" Style="margin-bottom: 40px;">
     <MudDataGrid T="PurchaseOrder" Items="@_pos" Loading="@_loading" Dense="true" Hover="true"
-                 SortMode="@SortMode.Multiple" Virtualize="true" FixedHeader="true" Height="600px" Class="tl-compact-grid"
+                 SortMode="@SortMode.Multiple" Virtualize="true" FixedHeader="true" Height="calc(100vh - 365px)" Class="tl-compact-grid"
                  RowClicked="OnPORowClicked">
     <Columns>
         <PropertyColumn Property="x => x.POid"         Title="#"         InitialDirection="SortDirection.Descending" />

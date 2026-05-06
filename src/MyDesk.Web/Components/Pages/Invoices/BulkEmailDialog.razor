@@ -5,18 +5,49 @@
 @inject EmailService EmailService
 @inject AuthenticationStateProvider AuthStateProvider
 
-<MudDialog>
+<MudDialog Class="tl-dialog">
     <DialogContent>
-        <MudText Typo="Typo.h6" Class="mb-4">Bulk Email Invoices</MudText>
-        <MudText Typo="Typo.body2" Class="mb-4">Send email to customers for @SelectedCount selected invoice(s).</MudText>
-        <MudTextField @bind-Value="_subject" Label="Subject" Variant="Variant.Outlined" FullWidth Class="mb-3" />
-        <MudTextField @bind-Value="_message" Label="Message" Lines="4" Variant="Variant.Outlined" FullWidth />
+        <div class="tl-dialog-header">
+            <MudText Typo="Typo.h6">Send Emails</MudText>
+            <MudText Typo="Typo.body2" Class="tl-dialog-subtitle">Send to customers for @SelectedCount selected invoice(s).</MudText>
+        </div>
+        <div class="tl-dialog-body">
+            <MudTextField @bind-Value="_subject" Label="Subject" Variant="Variant.Outlined" FullWidth Class="mb-3" />
+            <MudTextField @bind-Value="_message" Label="Message" Lines="4" Variant="Variant.Outlined" FullWidth />
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Cancel</MudButton>
         <MudButton Color="Color.Primary" OnClick="SendEmails" Disabled="@(string.IsNullOrWhiteSpace(_subject))">Send Emails</MudButton>
     </DialogActions>
 </MudDialog>
+
+<style>
+    .tl-dialog .mud-dialog {
+        border-radius: 12px;
+    }
+    
+    .tl-dialog-header {
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--gray-200);
+        margin-bottom: 16px;
+    }
+    
+    .tl-dialog-header :deep(.mud-typography-h6) {
+        margin: 0;
+        color: var(--gray-900);
+        font-weight: 700;
+    }
+    
+    .tl-dialog-subtitle {
+        margin-top: 4px;
+        color: var(--gray-600);
+    }
+    
+    .tl-dialog-body {
+        padding: 16px 0;
+    }
+</style>
 
 @code {
     [CascadingParameter] public MudDialogInstance? Dialog { get; set; }

@@ -84,7 +84,7 @@
 
 <MudPaper Class="pa-0" Elevation="1" Style="margin-bottom: 40px;">
 <MudDataGrid T="Quote" Items="@_quotes" Dense="true" Hover="true" Elevation="0"
-             SortMode="SortMode.Multiple" Filterable="false" Class="tl-compact-grid"
+             SortMode="SortMode.Multiple" Filterable="false" Class="tl-compact-grid" Height="calc(100vh - 365px)"
              RowClicked="OnQuoteRowClicked">
         <Columns>
             <PropertyColumn Property="x => x.Qid" Title="#" CellStyle="width:70px;font-weight:600;" />

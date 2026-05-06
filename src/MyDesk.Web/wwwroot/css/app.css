@@ -253,9 +253,15 @@ body.mud-dark-mode .mud-layout { background: transparent; }
   text-transform: uppercase;
   letter-spacing: .04em;
   border-bottom: 1px solid var(--gray-200) !important;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
 }
 .mud-table-row:hover { background: var(--gray-25) !important; }
-.mud-table-cell { border-bottom: 1px solid var(--gray-100) !important; }
+.mud-table-cell {
+  border-bottom: 1px solid var(--gray-100) !important;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}
 
 /* Data grid */
 .mud-table-container table { border-collapse: separate; }
@@ -753,12 +759,25 @@ body.mud-dark-mode .mud-layout { background: transparent; }
 .tl-action-btn {
   background: linear-gradient(135deg, var(--tl-primary-500) 0%, var(--tl-primary-600) 100%) !important;
   box-shadow: 0 4px 16px rgba(0, 200, 200, 0.3) !important;
+  transition: all 200ms ease !important;
+}
+.tl-action-btn:hover {
+  background: linear-gradient(135deg, var(--tl-primary-400) 0%, var(--tl-primary-500) 100%) !important;
+  box-shadow: 0 6px 20px rgba(0, 200, 200, 0.4) !important;
+  transform: translateY(-1px);
 }
 
 .tl-action-btn-secondary {
   background: rgba(255, 255, 255, 0.1) !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
   color: white !important;
+  transition: all 200ms ease !important;
+}
+.tl-action-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
 }
 
 /* Loading State */
