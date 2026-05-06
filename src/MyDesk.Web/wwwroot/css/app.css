@@ -2623,3 +2623,218 @@ body.mud-dark-mode .tl-kpi-badge {
     color: var(--gray-900);
 }
 
+/* ========================================================================
+   INTEGRATIONS PAGE DARK MODE
+   ======================================================================== */
+.mud-dark-mode .tl-integration-icon,
+body.mud-dark-mode .tl-integration-icon {
+    background: var(--gray-100);
+    border-radius: 12px;
+}
+
+.mud-dark-mode .tl-status-card,
+body.mud-dark-mode .tl-status-card {
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+}
+
+.mud-dark-mode .tl-status-item,
+body.mud-dark-mode .tl-status-item {
+    background: transparent;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.mud-dark-mode .tl-status-dot,
+body.mud-dark-mode .tl-status-dot {
+    background: var(--gray-400);
+}
+
+.mud-dark-mode .tl-status-dot.connected,
+body.mud-dark-mode .tl-status-dot.connected {
+    background: #4ade80;
+}
+
+.mud-dark-mode .tl-integration-card,
+body.mud-dark-mode .tl-integration-card {
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+}
+
+/* ========================================================================
+   STAFF WHEREABOUTS PAGE DARK MODE
+   ======================================================================== */
+.mud-dark-mode .tl-staff-card,
+body.mud-dark-mode .tl-staff-card {
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+}
+
+.mud-dark-mode .tl-staff-status,
+body.mud-dark-mode .tl-staff-status {
+    background: var(--gray-200);
+    color: var(--gray-900);
+}
+
+.mud-dark-mode .mud-chip,
+body.mud-dark-mode .mud-chip {
+    background: var(--gray-300);
+    color: var(--gray-900);
+}
+
+.mud-dark-mode .mud-chip.mud-chip-outlined,
+body.mud-dark-mode .mud-chip.mud-chip-outlined {
+    border: 1px solid var(--gray-400);
+    background: transparent;
+    color: var(--gray-800);
+}
+
+.mud-dark-mode .tl-whereabouts-grid,
+body.mud-dark-mode .tl-whereabouts-grid {
+    gap: 16px;
+}
+
+/* ========================================================================
+   LOG VIEWER PAGE DARK MODE
+   ======================================================================== */
+.mud-dark-mode .tl-log-entry,
+body.mud-dark-mode .tl-log-entry {
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+    color: var(--gray-900);
+}
+
+.mud-dark-mode .tl-log-level-error,
+body.mud-dark-mode .tl-log-level-error {
+    background: rgba(239,68,68,0.12);
+    color: #f87171;
+}
+
+.mud-dark-mode .tl-log-level-warning,
+body.mud-dark-mode .tl-log-level-warning {
+    background: rgba(245,158,11,0.12);
+    color: #fbbf24;
+}
+
+.mud-dark-mode .tl-log-level-info,
+body.mud-dark-mode .tl-log-level-info {
+    background: rgba(34,211,238,0.12);
+    color: #22d3ee;
+}
+
+.mud-dark-mode .tl-log-filter,
+body.mud-dark-mode .tl-log-filter {
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+}
+
+.mud-dark-mode .tl-log-table,
+body.mud-dark-mode .tl-log-table {
+    background: var(--gray-50);
+    color: var(--gray-900);
+}
+
+/* ========================================================================
+   CUSTOMER PORTAL LAYOUT DARK MODE
+   ======================================================================== */
+.mud-dark-mode .tl-customer-header,
+body.mud-dark-mode .tl-customer-header {
+    background: var(--gray-100);
+    border-bottom: 1px solid var(--gray-300);
+    color: var(--gray-900);
+}
+
+.mud-dark-mode .tl-customer-nav,
+body.mud-dark-mode .tl-customer-nav {
+    background: var(--gray-100);
+}
+
+.mud-dark-mode .tl-customer-content,
+body.mud-dark-mode .tl-customer-content {
+    background: #0a0a0a;
+}
+
+.mud-dark-mode .tl-customer-card,
+body.mud-dark-mode .tl-customer-card {
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+}
+
+/* ========================================================================
+   SUPPLIER PORTAL LAYOUT DARK MODE
+   ======================================================================== */
+.mud-dark-mode .tl-supplier-header,
+body.mud-dark-mode .tl-supplier-header {
+    background: var(--gray-100);
+    border-bottom: 1px solid var(--gray-300);
+    color: var(--gray-900);
+}
+
+.mud-dark-mode .tl-supplier-nav,
+body.mud-dark-mode .tl-supplier-nav {
+    background: var(--gray-100);
+}
+
+.mud-dark-mode .tl-supplier-content,
+body.mud-dark-mode .tl-supplier-content {
+    background: #0a0a0a;
+}
+
+.mud-dark-mode .tl-supplier-card,
+body.mud-dark-mode .tl-supplier-card {
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+}
+
+.mud-dark-mode .tl-supplier-form,
+body.mud-dark-mode .tl-supplier-form {
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+}
+
+/* ========================================================================
+   ONEDRIVE PAGE DARK MODE
+   ======================================================================== */
+.mud-dark-mode .tl-onedrive-container,
+body.mud-dark-mode .tl-onedrive-container {
+    background: #0a0a0a;
+}
+
+.mud-dark-mode .tl-onedrive-breadcrumb,
+body.mud-dark-mode .tl-onedrive-breadcrumb {
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+}
+
+.mud-dark-mode .tl-onedrive-file-item,
+body.mud-dark-mode .tl-onedrive-file-item {
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+    color: var(--gray-900);
+}
+
+.mud-dark-mode .tl-onedrive-file-item:hover,
+body.mud-dark-mode .tl-onedrive-file-item:hover {
+    background: var(--gray-200);
+}
+
+/* ========================================================================
+   CONTACTS AND COMPANY RECORDS DARK MODE
+   ======================================================================== */
+.mud-dark-mode .tl-contact-card,
+body.mud-dark-mode .tl-contact-card {
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+}
+
+.mud-dark-mode .tl-company-records-table,
+body.mud-dark-mode .tl-company-records-table {
+    background: var(--gray-50);
+    color: var(--gray-900);
+}
+
+.mud-dark-mode .tl-related-records,
+body.mud-dark-mode .tl-related-records {
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+}
+

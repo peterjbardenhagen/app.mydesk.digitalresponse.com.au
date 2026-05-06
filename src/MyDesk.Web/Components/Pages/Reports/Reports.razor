@@ -28,14 +28,14 @@
                     <MudText Typo="Typo.subtitle2" Class="mb-4" Style="color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;">Report Configuration</MudText>
                     
                     <MudSelect T="ReportType" Label="Report Category" @bind-Value="_reportType" Variant="Variant.Outlined" Class="mb-4" AnchorOrigin="Origin.BottomCenter">
+                        <MudSelectItem Value="ReportType.Banking">Banking</MudSelectItem>
                         <MudSelectItem Value="ReportType.Contacts">Contacts Catalog</MudSelectItem>
                         <MudSelectItem Value="ReportType.DeliveryNotes">Delivery Notes</MudSelectItem>
+                        <MudSelectItem Value="ReportType.Expenses">Expenses</MudSelectItem>
                         <MudSelectItem Value="ReportType.Invoices">Invoices</MudSelectItem>
                         <MudSelectItem Value="ReportType.Profitability">Profitability</MudSelectItem>
                         <MudSelectItem Value="ReportType.PurchaseOrders">Purchase Orders</MudSelectItem>
                         <MudSelectItem Value="ReportType.Quotes">Quotes</MudSelectItem>
-                        <MudSelectItem Value="ReportType.Expenses">Expenses</MudSelectItem>
-                        <MudSelectItem Value="ReportType.Banking">Banking</MudSelectItem>
                     </MudSelect>
 
                     <MudSelect T="DateFilter" Label="Period" @bind-Value="_dateFilter" Variant="Variant.Outlined" Class="mb-4" AnchorOrigin="Origin.BottomCenter">
@@ -135,7 +135,7 @@
                 {
                     <div class="pa-12 text-center" style="border: 2px dashed var(--gray-200); border-radius: 16px; background: var(--gray-50);">
                         <MudIcon Icon="@Icons.Material.Rounded.BarChart" Size="Size.Large" Color="Color.Info" Class="mb-4" />
-                        <MudText Typo="Typo.h6" Class="mb-2">Ready to analyze</MudText>
+                        <MudText Typo="Typo.h6" Class="mb-2">Ready to analyse</MudText>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">Select a report type and filter from the left to begin.</MudText>
                     </div>
                 }

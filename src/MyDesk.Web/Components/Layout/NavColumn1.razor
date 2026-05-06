@@ -53,6 +53,12 @@
                 <MudIconButton Icon="@Icons.Material.Rounded.CalendarMonth" Href="/calendar" Color="Color.Default" />
             </MudTooltip>
         }
+        @if (NavMenuSvc.IsVisible("reports"))
+        {
+            <MudTooltip Text="Reports" Placement="Placement.Right" Arrow="true">
+                <MudIconButton Icon="@Icons.Material.Rounded.Assessment" Href="/reports" Color="Color.Default" />
+            </MudTooltip>
+        }
         <MudTooltip Text="Site Map" Placement="Placement.Right" Arrow="true">
             <MudIconButton Icon="@Icons.Material.Rounded.Schema" Href="/sitemap" Color="Color.Default" />
         </MudTooltip>
