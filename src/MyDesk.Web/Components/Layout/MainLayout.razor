@@ -2,8 +2,8 @@
 @inject NavigationManager NavigationManager
 @inject PlatformSettingsService PlatformSettings
 @inject TenantService TenantSvc
-@inject AuthenticationStateProvider AuthStateProvider
 @inject ICurrentTenantAccessor TenantAccessor
+@inject AuthenticationStateProvider AuthStateProvider
 
 <MudThemeProvider @bind-IsDarkMode="_isDarkMode" Theme="_theme" />
 <MudSnackbarProvider />
@@ -176,10 +176,10 @@
         </AuthorizeView>
     </MudAppBar>
 
-    <MudDrawer @bind-Open="_col2Open" Elevation="0" ClipMode="DrawerClipMode.Docked" 
-               Variant="DrawerVariant.Persistent" 
-               Width="208px"
-               Class="tl-nav-drawer-col2" role="navigation" aria-label="Drill-down navigation">
+    <MudDrawer @bind-Open="_col2Open" Elevation="0" ClipMode="DrawerClipMode.Docked"
+               Variant="DrawerVariant.Persistent"
+               Width="50px"
+               Class="tl-nav-drawer-col2" role="navigation" aria-label="Drill-down navigation" Style="width:50px !important; min-width:50px !important; max-width:50px !important; overflow:hidden;">
         <NavMenu ActiveSection="_activeNavSection" />
     </MudDrawer>
 
@@ -254,7 +254,7 @@
         new("Accounts", "Banking", "/banking"),
         new("Accounts", "Banking — Upload Statement", "/banking/upload"),
         new("Accounts", "Currencies", "/admin/currency"),
-        new("Accounts", "Financial Year", "/admin/financial-year"),
+
         new("Accounts", "MYOB Export", "/invoices/myob-export"),
         new("Accounts", "MYOB Sync", "/reconciliation/sync"),
         new("Accounts", "Reconciliation", "/reconciliation"),
@@ -458,9 +458,18 @@
         catch { }
     }
 
-    private void SwitchWorkspace()
+    private async Task SwitchWorkspace()
     {
-        NavigationManager.NavigateTo("/login/select-tenant", forceLoad: true);
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            CloseOnEscapeKey = true,
+            BackdropClick = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+        var dialog = await DialogService.ShowAsync<SwitchWorkspaceDialog>("Switch Workspace", options);
+        await dialog.Result;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

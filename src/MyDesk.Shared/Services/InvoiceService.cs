@@ -90,7 +90,7 @@ public class InvoiceService
                    ISNULL(ProductCode, '') AS ProductCode,
                    ISNULL(Description, '') AS Description,
                    ISNULL(NettPrice, 0)    AS NettPrice,
-                   ISNULL(ExtNettPrice,0)  AS ExtNettPrice
+                   ISNULL(ExtNetPrice,0)  AS ExtNetPrice
             FROM InvoiceContents
             WHERE InvoiceId = @Id
             ORDER BY InvoiceItemId",
@@ -103,24 +103,24 @@ public class InvoiceService
             ProductCode = r["ProductCode"]?.ToString(),
             Description = r["Description"]?.ToString() ?? "",
             NettPrice   = Convert.ToDecimal(r["NettPrice"]),
-            ExtNettPrice= Convert.ToDecimal(r["ExtNettPrice"]),
+            ExtNettPrice = Convert.ToDecimal(r["ExtNetPrice"]),
         });
     }
 
     // ── Create ─────────────────────────────────────────────────────────────
 
-    public async Task<int> CreateInvoiceAsync(Invoice inv, List<InvoiceLineItem> lines, string userCode)
-    {
-        var id = await _db.InsertAsync(@"
-            INSERT INTO Invoices (InvoiceDate, Code, InvoiceStatusId, DivisionId,
-                Qid, CompanyId, InvCompany, DelCompany,
-                InvAddress, DelAddress, CustomerPO, Attention, Account,
-                Terms, CustomerNotes, InternalNotes, NettPriceTotal, GSTTotal)
-            VALUES (@InvoiceDate, @Code, 1, @DivisionId,
-                @Qid, @CompanyId, @InvCompany, @DelCompany,
-                @InvAddress, @DelAddress, @CustomerPO, @Attention, @Account,
-                @Terms, @CustomerNotes, @InternalNotes, @NettPriceTotal, @GSTTotal)",
-            BuildParams(inv, userCode));
+        public async Task<int> CreateInvoiceAsync(Invoice inv, List<InvoiceLineItem> lines, string userCode)
+        {
+            var id = await _db.InsertAsync(@"
+                INSERT INTO Invoices (InvoiceDate, Code, InvoiceStatusId, DivisionId,
+                    Qid, CompanyId, InvCompany, DelCompany,
+                    InvAddress, DelAddress, CustomerPO, Attention, Account,
+                    Terms, CustomerNotes, InternalNotes, NettPriceTotal, GSTTotal)
+                VALUES (@InvoiceDate, @Code, 1, @DivisionId,
+                    @Qid, @CompanyId, @InvCompany, @DelCompany,
+                    @InvAddress, @DelAddress, @CustomerPO, @Attention, @Account,
+                    @Terms, @CustomerNotes, @InternalNotes, @NettPriceTotal, @GSTTotal)",
+                BuildParams(inv, userCode));
 
         foreach (var line in lines.Where(l => l.Quantity > 0))
             await InsertLineAsync(id, line);
@@ -144,7 +144,7 @@ public class InvoiceService
                 CustomerPO = @CustomerPO, Attention = @Attention, Account = @Account,
                 Terms = @Terms, CustomerNotes = @CustomerNotes, InternalNotes = @InternalNotes,
                 NettPriceTotal = @NettPriceTotal, GSTTotal = @GSTTotal
-            WHERE InvoiceId = @InvoiceId", p);
+             WHERE InvoiceId = @InvoiceId", p);
 
         await _db.ExecuteNonQueryAsync("DELETE FROM InvoiceContents WHERE InvoiceId = @Id",
             new() { ["Id"] = inv.InvoiceId });
@@ -375,7 +375,7 @@ public class InvoiceService
                    COALESCE(NULLIF(co.Company, ''), NULLIF(i.InvCompany, ''), NULLIF(i.DelCompany, ''), '') AS Company,
                    '' AS FirstName,
                    '' AS LastName,
-                   ISNULL(i.NettPriceTotal,0) AS PriceExGST
+                   ISNULL(i.NetPriceTotal,0) AS PriceExGST
             FROM Invoices i
             LEFT JOIN Companies co ON i.CompanyId = co.CompanyId
             WHERE i.InvoiceDate >= @F AND i.InvoiceDate <= @T
@@ -420,9 +420,9 @@ public class InvoiceService
     private Task InsertLineAsync(int invoiceId, InvoiceLineItem l) =>
         _db.InsertAsync(@"
             INSERT INTO InvoiceContents
-                (InvoiceId, Quantity, BackOrder, Ordered, Units, Days, ProductCode, Description, NettPrice, ExtNettPrice)
+                (InvoiceId, Quantity, BackOrder, Ordered, Units, Days, ProductCode, Description, NettPrice, ExtNetPrice)
             VALUES
-                (@InvoiceId, @Qty, 0, @Qty, @Qty, 0, @ProductCode, @Description, @NettPrice, @ExtNettPrice)",
+                (@InvoiceId, @Qty, 0, @Qty, @Qty, 0, @ProductCode, @Description, @NettPrice, @ExtNetPrice)",
             new()
             {
                 ["InvoiceId"]   = invoiceId,
@@ -430,7 +430,7 @@ public class InvoiceService
                 ["ProductCode"] = (object?)l.ProductCode ?? DBNull.Value,
                 ["Description"] = l.Description,
                 ["NettPrice"]   = l.NettPrice,
-                ["ExtNettPrice"]= l.ExtNettPrice,
+                ["ExtNetPrice"]= l.ExtNettPrice,
             });
 
     private async Task WriteAuditAsync(int invoiceId, string code, string action)
@@ -499,3 +499,5 @@ public class InvoiceService
         ExportedDate   = r["ExportedDate"] == DBNull.Value ? null : Convert.ToDateTime(r["ExportedDate"]),
     };
 }
+
+

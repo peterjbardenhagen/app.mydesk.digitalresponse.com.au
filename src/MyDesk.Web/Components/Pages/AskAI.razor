@@ -41,6 +41,7 @@
     </MudAlert>
 }
 
+<div class="tl-askai-shell">
 <MudPaper Elevation="1" Class="pa-4 mb-3 tl-chat-container"
           @ref="_chatBox">
     <div class="tl-chat-messages">
@@ -143,6 +144,7 @@
         Ctrl+Enter to send · 🎤 to speak · All interactions are logged for compliance
     </MudText>
 </MudPaper>
+</div>
 
 @code {
     private string _input = "";
@@ -391,9 +393,33 @@ Be concise, practical, and focus on actionable business insights."));
 }
 
 <style>
+    /* Shell that fits the visible viewport — chat scrolls internally,
+        suggestions + input bar stay pinned at the bottom regardless of how
+        many suggestion chips wrap onto extra rows.
+        The header above us in MainLayout is ~64px and the page-header inside
+        AskAI is ~120px, so we subtract those plus some breathing room. */
+    .tl-askai-shell {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 220px);
+        min-height: 480px;
+    }
+    
+    /* Ensure input bar is always visible and sticky at bottom */
+    .tl-askai-shell > .tl-chat-input-wrap {
+        position: sticky;
+        bottom: 0;
+        background: var(--surface);
+        z-index: 10;
+        margin-top: auto;
+    }
+    body.mud-dark-mode .tl-askai-shell > .tl-chat-input-wrap {
+        background: var(--gray-100) !important;
+        border-top: 1px solid var(--gray-300);
+    }
     .tl-chat-container {
-        height: calc(100vh - 340px);
-        min-height: 460px;
+        flex: 1 1 auto;
+        min-height: 0;          /* allow children to shrink so flex scrolling works */
         display: flex;
         flex-direction: column;
         overflow: hidden;
@@ -411,9 +437,14 @@ Be concise, practical, and focus on actionable business insights."));
         align-items: center;
         justify-content: center;
         height: 100%;
-        min-height: 360px;
+        min-height: 200px;
         opacity: 0.45;
     }
+    /* Suggestions + input pinned at bottom of the shell */
+    .tl-askai-shell > .tl-chat-input-wrap {
+        flex: 0 0 auto;
+    }
+
     body.mud-dark-mode .tl-chat-bubble-ai { background: var(--gray-200) !important; border-color: var(--gray-400) !important; color: var(--gray-900) !important; }
     body.mud-dark-mode .tl-chat-bubble-user { background: var(--tl-primary-400) !important; color: #000 !important; }
     body.mud-dark-mode .tl-chat-thinking { border-color: var(--gray-400) !important; background: var(--gray-100); }

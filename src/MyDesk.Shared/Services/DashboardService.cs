@@ -18,14 +18,16 @@ public class DashboardService
     private readonly ActivityService _activity;
     private readonly ILogger<DashboardService> _logger;
     private readonly IMemoryCache _cache;
+    private readonly ICurrentTenantAccessor _currentTenantAccessor;
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
 
-    public DashboardService(DatabaseService db, ActivityService activity, ILogger<DashboardService> logger, IMemoryCache cache)
+    public DashboardService(DatabaseService db, ActivityService activity, ILogger<DashboardService> logger, IMemoryCache cache, ICurrentTenantAccessor currentTenantAccessor)
     {
         _db       = db;
         _activity = activity;
         _logger   = logger;
         _cache    = cache;
+        _currentTenantAccessor = currentTenantAccessor;
     }
 
     public async Task<DashboardMetrics> GetMetricsAsync(string? originatorCode = null)
@@ -35,7 +37,8 @@ public class DashboardService
 
     public async Task<DashboardMetrics> GetMetricsAsync(ChartPeriod period, string? originatorCode = null)
     {
-        var cacheKey = $"dashboard_metrics_{period}_{originatorCode ?? "all"}";
+        var tenantId = _currentTenantAccessor?.TenantId ?? Guid.Empty;
+        var cacheKey = $"dashboard_metrics_{period}_{originatorCode ?? "all"}_{tenantId}";
         if (_cache.TryGetValue(cacheKey, out DashboardMetrics? cached) && cached != null)
             return cached;
 
@@ -91,7 +94,7 @@ public class DashboardService
 
             // Row 2: Last period quotes won
             var row2 = await _db.QueryAsync(
-                "SELECT COUNT(*) FROM Quotes WHERE QuoteDate >= @LPS AND QuoteDate <= @LPE AND QuoteStatusId IN (4,10)",
+                "SELECT COUNT(*) FROM Quotes WHERE QuoteDate >= @LPS AND QuoteDate <= @LPE AND QuoteStatusId = 4",
                 new() { ["LPS"] = lastPeriodStartVal, ["LPE"] = lastPeriodEndVal });
             if (row2.Rows.Count > 0)
                 m.LastMonthQuotesWon = Convert.ToInt32(row2.Rows[0][0]);
@@ -135,7 +138,7 @@ public class DashboardService
             // Row 7: YTD quotes won + value
             var row7 = await _db.QueryAsync(@"
                 SELECT COUNT(*) AS YtdQuotesWon, ISNULL(SUM(NettPriceTotal),0) AS YtdQuotesValue, ISNULL(SUM(UnitCostTotal),0) AS YtdQuotesCost
-                FROM Quotes WHERE QuoteDate >= @YS AND QuoteStatusId IN (4,10)",
+                FROM Quotes WHERE QuoteDate >= @YS AND QuoteStatusId = 4",
                 new() { ["YS"] = ytdStart });
             if (row7.Rows.Count > 0)
             {
@@ -157,7 +160,7 @@ public class DashboardService
 
             // Row 9: Last YTD comparison
             var row9 = await _db.QueryAsync(
-                "SELECT ISNULL(SUM(NettPriceTotal),0) FROM Quotes WHERE QuoteDate >= @LYS AND QuoteDate <= @LYE AND QuoteStatusId IN (4,10)",
+                "SELECT ISNULL(SUM(NettPriceTotal),0) FROM Quotes WHERE QuoteDate >= @LYS AND QuoteDate <= @LYE AND QuoteStatusId = 4",
                 new() { ["LYS"] = lastYtdStart, ["LYE"] = lastYtdEnd });
             if (row9.Rows.Count > 0)
                 m.LastYearYtdQuotesValue = Convert.ToDecimal(row9.Rows[0][0]);
@@ -168,8 +171,8 @@ public class DashboardService
                     (SELECT COUNT(*) FROM Quotes WHERE QuoteStatusId IN (1,2) AND QuoteDate < @TDA) AS PendingQuotesOver30,
                     (SELECT COUNT(*) FROM Invoices WHERE InvoiceStatusId = 2 AND InvoiceDate < @TDA) AS InvoicesOverdue,
                     (SELECT COUNT(*) FROM PurchaseOrders WHERE POStatusId = 2) AS PendingApprovalPOs,
-                    (SELECT COUNT(*) FROM Quotes WHERE QuoteStatusId IN (1, 2, 9)) AS OpenQuotes,
-                    ISNULL((SELECT SUM(NettPriceTotal) FROM Quotes q LEFT JOIN QuoteStatus qs ON qs.QuoteStatusId = q.QuoteStatusId WHERE q.QuoteStatusId IN (1, 2, 9) AND (qs.QuoteStatus IS NULL OR qs.QuoteStatus NOT LIKE '%lost%')), 0) AS PipelineValue",
+                    (SELECT COUNT(*) FROM Quotes WHERE QuoteStatusId IN (1, 2, 3, 6, 7, 8)) AS OpenQuotes,
+                    ISNULL((SELECT SUM(NettPriceTotal) FROM Quotes q LEFT JOIN QuoteStatus qs ON qs.QuoteStatusId = q.QuoteStatusId WHERE q.QuoteStatusId IN (1, 2, 3, 6, 7, 8) AND (qs.QuoteStatus IS NULL OR qs.QuoteStatus NOT LIKE '%declined%' AND qs.QuoteStatus NOT LIKE '%reject%')), 0) AS PipelineValue",
                 new() { ["TDA"] = thirtyDaysAgo });
             if (row10.Rows.Count > 0)
             {
@@ -192,11 +195,11 @@ public class DashboardService
             m.MonthlyQuotesThisYear   = await GetMonthlyTotals("Quotes", "QuoteDate",
                 "t.NettPriceTotal", now.Year,
                 join: "LEFT JOIN QuoteStatus qs ON qs.QuoteStatusId = t.QuoteStatusId",
-                extraWhere: "(qs.QuoteStatus IS NULL OR qs.QuoteStatus NOT LIKE '%lost%')");
+                extraWhere: "(qs.QuoteStatus IS NULL OR qs.QuoteStatus NOT LIKE '%declined%' AND qs.QuoteStatus NOT LIKE '%reject%')");
             m.MonthlyQuotesLastYear   = await GetMonthlyTotals("Quotes", "QuoteDate",
                 "t.NettPriceTotal", now.Year - 1,
                 join: "LEFT JOIN QuoteStatus qs ON qs.QuoteStatusId = t.QuoteStatusId",
-                extraWhere: "(qs.QuoteStatus IS NULL OR qs.QuoteStatus NOT LIKE '%lost%')");
+                extraWhere: "(qs.QuoteStatus IS NULL OR qs.QuoteStatus NOT LIKE '%declined%' AND qs.QuoteStatus NOT LIKE '%reject%')");
             m.MonthlyInvoicesThisYear = await GetMonthlyTotals("Invoices", "InvoiceDate", "t.NettPriceTotal", now.Year);
             m.MonthlyPOsThisYear      = await GetMonthlyTotals("PurchaseOrders", "PODate", "t.PriceExTotal", now.Year);
 
@@ -240,7 +243,7 @@ public class DashboardService
             // Gross Profit Margin - fetch YTD cost via query
             var ytdValue = m.YtdQuotesValue;
             var ytdCostDt = await _db.QueryAsync(
-                "SELECT ISNULL(SUM(UnitCostTotal),0) AS YtdCost FROM Quotes WHERE QuoteDate >= @YS AND QuoteStatusId IN (4,10)",
+                "SELECT ISNULL(SUM(UnitCostTotal),0) AS YtdCost FROM Quotes WHERE QuoteDate >= @YS AND QuoteStatusId = 4",
                 new() { ["YS"] = ytdStart });
             var ytdCost = ytdCostDt.Rows.Count > 0 ? Convert.ToDecimal(ytdCostDt.Rows[0]["YtdCost"]) : 0m;
             m.GrossProfitMargin = ytdValue > 0 ? ((ytdValue - ytdCost) / ytdValue) * 100 : 0;
@@ -342,10 +345,10 @@ public class DashboardService
             var quotes = await _db.QueryAsync(@"
                 SELECT Code, 
                     COUNT(*) AS QuotesRaised,
-                    SUM(CASE WHEN QuoteStatusId IN (4,10) THEN 1 ELSE 0 END) AS QuotesWon,
+                    SUM(CASE WHEN QuoteStatusId = 4 THEN 1 ELSE 0 END) AS QuotesWon,
                     ISNULL(SUM(NettPriceTotal),0) AS QuoteValue,
-                    SUM(CASE WHEN QuoteStatusId IN (1,2) THEN 1 ELSE 0 END) AS PendingQuotes,
-                    SUM(CASE WHEN QuoteStatusId IN (1,2) AND QuoteDate < DATEADD(day,-30,GETDATE()) THEN 1 ELSE 0 END) AS OverdueQuotes
+                    SUM(CASE WHEN QuoteStatusId IN (1,2,3,6,7,8) THEN 1 ELSE 0 END) AS PendingQuotes,
+                    SUM(CASE WHEN QuoteStatusId IN (1,2,3,6,7,8) AND QuoteDate < DATEADD(day,-30,GETDATE()) THEN 1 ELSE 0 END) AS OverdueQuotes
                 FROM Quotes WHERE QuoteDate >= @PS AND QuoteDate <= @PE
                 GROUP BY Code", new() { ["PS"] = periodStart, ["PE"] = periodEnd });
 
@@ -599,7 +602,8 @@ public class DashboardService
 
     public async Task<DashboardChartData> GetChartDataAsync(ChartPeriod period)
     {
-        var cacheKey = $"dashboard_chart_{period}";
+        var tenantId = _currentTenantAccessor?.TenantId ?? Guid.Empty;
+        var cacheKey = $"dashboard_chart_{period}_{tenantId}";
         if (_cache.TryGetValue(cacheKey, out DashboardChartData? cached) && cached != null)
             return cached;
 
@@ -666,7 +670,7 @@ public class DashboardService
     {
         var quotes   = await GetMonthlyTotals("Quotes", "QuoteDate", "t.NettPriceTotal", year,
             join: "LEFT JOIN QuoteStatus qs ON qs.QuoteStatusId = t.QuoteStatusId",
-            extraWhere: "(qs.QuoteStatus IS NULL OR qs.QuoteStatus NOT LIKE '%lost%')");
+            extraWhere: "(qs.QuoteStatus IS NULL OR qs.QuoteStatus NOT LIKE '%declined%' AND qs.QuoteStatus NOT LIKE '%reject%')");
         var invoices = await GetMonthlyTotals("Invoices", "InvoiceDate", "t.NettPriceTotal", year);
         var pos      = await GetMonthlyTotals("PurchaseOrders", "PODate", "t.PriceExTotal", year);
         return new(quotes, invoices, pos, new[]{"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"});
@@ -684,7 +688,7 @@ public class DashboardService
         var spansYears = months.Select(m => m.Year).Distinct().Count() > 1;
         string Label((int Year, int Month) m) => spansYears ? $"{new DateTime(m.Year, m.Month, 1):MMM}'{m.Year % 100:D2}" : new DateTime(m.Year, m.Month, 1).ToString("MMM");
         var qMap = await GetMonthlyTotalsInRange("Quotes", "QuoteDate", "t.NettPriceTotal", fyStart, fyEnd,
-            join: "LEFT JOIN QuoteStatus qs ON qs.QuoteStatusId = t.QuoteStatusId", extraWhere: "(qs.QuoteStatus IS NULL OR qs.QuoteStatus NOT LIKE '%lost%')");
+            join: "LEFT JOIN QuoteStatus qs ON qs.QuoteStatusId = t.QuoteStatusId", extraWhere: "(qs.QuoteStatus IS NULL OR qs.QuoteStatus NOT LIKE '%declined%' AND qs.QuoteStatus NOT LIKE '%reject%')");
         var iMap = await GetMonthlyTotalsInRange("Invoices", "InvoiceDate", "t.NettPriceTotal", fyStart, fyEnd);
         var pMap = await GetMonthlyTotalsInRange("PurchaseOrders", "PODate", "t.PriceExTotal", fyStart, fyEnd);
         return new(months.Select(m => qMap.GetValueOrDefault(m)).ToArray(), months.Select(m => iMap.GetValueOrDefault(m)).ToArray(), months.Select(m => pMap.GetValueOrDefault(m)).ToArray(), months.Select(Label).ToArray());
@@ -694,7 +698,7 @@ public class DashboardService
     {
         var quotes = await GetAnnualTotals("Quotes", "QuoteDate", "t.NettPriceTotal",
             join: "LEFT JOIN QuoteStatus qs ON qs.QuoteStatusId = t.QuoteStatusId",
-            extraWhere: "(qs.QuoteStatus IS NULL OR qs.QuoteStatus NOT LIKE '%lost%')");
+            extraWhere: "(qs.QuoteStatus IS NULL OR qs.QuoteStatus NOT LIKE '%declined%' AND qs.QuoteStatus NOT LIKE '%reject%')");
         var invoices = await GetAnnualTotals("Invoices", "InvoiceDate", "t.NettPriceTotal");
         var pos = await GetAnnualTotals("PurchaseOrders", "PODate", "t.PriceExTotal");
         var allYears = quotes.Keys.Union(invoices.Keys).Union(pos.Keys).OrderBy(y => y).ToArray();

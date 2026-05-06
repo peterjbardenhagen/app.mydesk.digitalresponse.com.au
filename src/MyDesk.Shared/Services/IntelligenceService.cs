@@ -126,7 +126,7 @@ public class IntelligenceService
                         "SELECT COUNT(*) FROM Quotes WHERE Code=@C AND QuoteDate>=@S",
                         new() { ["C"] = code, ["S"] = monthStart }),
                     QuotesWonThisMonth = await _db.ScalarAsync<int>(
-                        "SELECT COUNT(*) FROM Quotes WHERE Code=@C AND QuoteDate>=@S AND QuoteStatusId IN (4,10)",
+                        "SELECT COUNT(*) FROM Quotes WHERE Code=@C AND QuoteDate>=@S AND QuoteStatusId = 4",
                         new() { ["C"] = code, ["S"] = monthStart }),
                     QuoteValueThisMonth = await _db.ScalarAsync<decimal>(
                         "SELECT ISNULL(SUM(NettPriceTotal),0) FROM Quotes WHERE Code=@C AND QuoteDate>=@S",
@@ -144,10 +144,10 @@ public class IntelligenceService
                         "SELECT ISNULL(SUM(NettPriceTotal),0) FROM Invoices WHERE Code=@C AND InvoiceDate>=@S",
                         new() { ["C"] = code, ["S"] = yearStart }),
                     PendingQuotes = await _db.ScalarAsync<int>(
-                        "SELECT COUNT(*) FROM Quotes WHERE Code=@C AND QuoteStatusId IN (1,2)",
+                        "SELECT COUNT(*) FROM Quotes WHERE Code=@C AND QuoteStatusId IN (1,2,3,6,7,8)",
                         new() { ["C"] = code }),
                     OverdueQuotes = await _db.ScalarAsync<int>(
-                        "SELECT COUNT(*) FROM Quotes WHERE Code=@C AND QuoteStatusId IN (1,2) AND QuoteDate < DATEADD(day,-30,GETDATE())",
+                        "SELECT COUNT(*) FROM Quotes WHERE Code=@C AND QuoteStatusId IN (1,2,3,6,7,8) AND QuoteDate < DATEADD(day,-30,GETDATE())",
                         new() { ["C"] = code })
                 };
 
@@ -249,7 +249,7 @@ public class IntelligenceService
                         c.CompanyId,
                         COUNT(DISTINCT q.Qid) AS QuoteCount,
                         ISNULL(SUM(q.NettPriceTotal), 0) AS QuoteValue,
-                        SUM(CASE WHEN q.QuoteStatusId IN (4,10) THEN 1 ELSE 0 END) AS WonQuotes
+                        SUM(CASE WHEN q.QuoteStatusId = 4 THEN 1 ELSE 0 END) AS WonQuotes
                     FROM Companies c
                     LEFT JOIN Contacts ct ON ct.CompanyId = c.CompanyId
                     LEFT JOIN Quotes   q  ON q.ContactId  = ct.ContactId

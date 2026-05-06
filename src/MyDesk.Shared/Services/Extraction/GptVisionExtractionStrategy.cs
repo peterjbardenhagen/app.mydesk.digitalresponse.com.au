@@ -22,9 +22,11 @@ public class GptVisionExtractionStrategy : IDocumentExtractionStrategy
     public bool CanHandle(string contentType, long sizeBytes, bool digitallyGenerated)
     {
         if (!_vision.IsConfigured) return false;
-        return contentType is "image/jpeg" or "image/jpg" or "image/png"
-            || (contentType == "application/pdf" && !digitallyGenerated)
-            || (contentType == "application/pdf" && sizeBytes < 8 * 1024 * 1024);
+        // Azure OpenAI's chat-completion image_url part REJECTS application/pdf
+        // ("Expected base64-encoded data URL with an image MIME type"), so this
+        // strategy can only handle real image MIME types. Use DocIntelExtractionStrategy
+        // for PDFs and scanned receipts.
+        return contentType is "image/jpeg" or "image/jpg" or "image/png" or "image/webp";
     }
 
     private const string SystemPrompt = """

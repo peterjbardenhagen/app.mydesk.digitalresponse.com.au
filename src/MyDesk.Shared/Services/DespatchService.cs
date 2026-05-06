@@ -13,7 +13,8 @@ public class DespatchService
     public async Task<List<DespatchRow>> GetAllAsync(int limit = 500)
     {
         var sql = $@"
-            SELECT TOP {limit} d.DespatchId, d.DespatchDate, d.Carrier, d.CarrierRef AS TrackingNumber, d.PackageDetails AS Notes,
+            SELECT TOP {limit} d.DespatchId, d.DespatchDate, d.Carrier, d.CarrierRef AS TrackingNumber,
+                   ISNULL(d.PackageDetails, '') AS Notes,
                    COALESCE(NULLIF(co.Company, ''), NULLIF(i.InvCompany, ''), NULLIF(i.DelCompany, ''), 'No Customer') AS CompanyName,
                    i.InvoiceId, ISNULL(i.InvoiceNumber, '') AS InvoiceNum
             FROM Despatch d

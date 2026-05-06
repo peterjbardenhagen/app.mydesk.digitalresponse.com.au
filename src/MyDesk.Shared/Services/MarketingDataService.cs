@@ -49,7 +49,7 @@ public class MarketingDataService
                     SELECT ct.CompanyId,
                            COUNT(q.Qid) AS QCount,
                            ISNULL(SUM(q.NettPriceTotal), 0) AS QValue,
-                           SUM(CASE WHEN q.QuoteStatusId IN (4,10) THEN 1 ELSE 0 END) AS QWon
+                           SUM(CASE WHEN q.QuoteStatusId = 4 THEN 1 ELSE 0 END) AS QWon
                     FROM Contacts ct
                     LEFT JOIN Quotes q ON q.ContactId = ct.ContactId
                     GROUP BY ct.CompanyId

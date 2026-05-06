@@ -1,4 +1,5 @@
 @using MudBlazor
+@using MyDesk.Shared.Models
 @inject NavigationManager Nav
 @inject TenantService TenantSvc
 @inject ICurrentTenantAccessor TenantAccessor
@@ -6,49 +7,197 @@
 
 <MudDialog>
     <DialogContent>
-        <MudText Typo="Typo.h6" Class="mb-4">Switch Workspace</MudText>
-        <MudList T="TenantMembership">
-            @foreach (var t in _workspaces)
-            {
-                <MudListItem T="TenantMembership" Item="t" OnClick="@(() => SwitchTo(t.TenantId))" Class="cursor-pointer pa-3 hover:bg-light">
-                    <MudListItemText>
-                        <MudText Typo="Typo.subtitle1">@t.TenantName</MudText>
-                        <MudText Typo="Typo.caption" Style="color:var(--gray-500);">@t.TenantSlug</MudText>
-                    </MudListItemText>
-                    @if (t.TenantId == _currentTenantId)
-                    {
-                        <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Small" />
-                    }
-                </MudListItem>
-            }
-        </MudList>
+        <MudText Typo="Typo.h6" Class="mb-2">Switch Workspace</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4" Style="color:var(--gray-600);">
+            Choose which tenant to operate in.
+        </MudText>
+
+        @if (_loading)
+        {
+            <div class="d-flex justify-center pa-4">
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" />
+            </div>
+        }
+        else if (_workspaces.Count == 0)
+        {
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                You only have access to one workspace, or your memberships could not be loaded.
+            </MudAlert>
+        }
+        else
+        {
+            <div class="tl-workspace-list">
+                @foreach (var t in _workspaces)
+                {
+                    var isCurrent = t.TenantId == _currentTenantId;
+                    <button type="button"
+                            class="tl-workspace-item @(isCurrent ? "current" : "")"
+                            disabled="@isCurrent"
+                            @onclick="@(() => SwitchTo(t.TenantId))">
+                        <div class="tl-workspace-avatar">
+                            @InitialsOf(t.TenantName)
+                        </div>
+                        <div class="tl-workspace-meta">
+                            <div class="tl-workspace-name">
+                                @(string.IsNullOrWhiteSpace(t.TenantName) ? t.TenantSlug : t.TenantName)
+                                @if (t.IsDefault)
+                                {
+                                    <span class="tl-workspace-pill default">Default</span>
+                                }
+                            </div>
+                            <div class="tl-workspace-sub">
+                                <span>@t.TenantSlug</span>
+                                @if (t.IsActive)
+                                {
+                                    <span>·</span>
+                                    <span>Active</span>
+                                }
+                            </div>
+                        </div>
+                        @if (isCurrent)
+                        {
+                            <span class="tl-workspace-pill current">Current</span>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Rounded.ArrowForward" Size="Size.Small" />
+                        }
+                    </button>
+                }
+            </div>
+        }
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Cancel</MudButton>
     </DialogActions>
 </MudDialog>
 
+<style>
+    .tl-workspace-list { display: flex; flex-direction: column; gap: 8px; }
+    .tl-workspace-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 12px 16px;
+        border-radius: 12px;
+        border: 1px solid var(--gray-200);
+        background: var(--surface, #fff);
+        cursor: pointer;
+        text-align: left;
+        font: inherit;
+        color: inherit;
+        transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+    }
+    .tl-workspace-item:hover:not(:disabled) {
+        background: var(--gray-50);
+        border-color: var(--tl-primary-300, #5eead4);
+        transform: translateY(-1px);
+    }
+    .tl-workspace-item.current {
+        border-color: var(--tl-primary, #00a8b0);
+        background: var(--tl-primary-25, #f0fdfa);
+        cursor: default;
+    }
+    .tl-workspace-item:disabled { opacity: 0.85; }
+    .tl-workspace-avatar {
+        width: 40px; height: 40px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--tl-primary-100, #ccfbf1) 0%, var(--tl-primary-300, #5eead4) 100%);
+        color: #0f172a;
+        font-weight: 700; font-size: 14px;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .tl-workspace-meta { flex: 1; min-width: 0; }
+    .tl-workspace-name {
+        font-weight: 600; color: var(--gray-900);
+        display: flex; align-items: center; gap: 8px;
+    }
+    .tl-workspace-sub {
+        font-size: 12px; color: var(--gray-500);
+        display: flex; align-items: center; gap: 6px;
+        margin-top: 2px;
+    }
+    .tl-workspace-pill {
+        font-size: 11px; font-weight: 600;
+        padding: 2px 8px; border-radius: 999px;
+    }
+    .tl-workspace-pill.current { background: rgba(16,185,129,0.18); color: #059669; }
+    .tl-workspace-pill.default { background: var(--gray-100); color: var(--gray-700); }
+
+    /* Dark mode */
+    body.mud-dark-mode .tl-workspace-item,
+    .mud-dark-mode .tl-workspace-item {
+        background: var(--gray-100);
+        border-color: var(--gray-300);
+        color: var(--gray-900);
+    }
+    body.mud-dark-mode .tl-workspace-item:hover:not(:disabled),
+    .mud-dark-mode .tl-workspace-item:hover:not(:disabled) {
+        background: var(--gray-200);
+    }
+    body.mud-dark-mode .tl-workspace-item.current,
+    .mud-dark-mode .tl-workspace-item.current {
+        background: rgba(74,222,128,0.10);
+        border-color: rgba(74,222,128,0.45);
+    }
+    body.mud-dark-mode .tl-workspace-pill.current,
+    .mud-dark-mode .tl-workspace-pill.current { background: rgba(16,185,129,0.20); color: #6ee7b7; }
+    body.mud-dark-mode .tl-workspace-pill.default,
+    .mud-dark-mode .tl-workspace-pill.default { background: var(--gray-200); color: var(--gray-700); }
+</style>
+
 @code {
     [CascadingParameter] public MudDialogInstance? Dialog { get; set; }
+
     private List<TenantMembership> _workspaces = new();
     private Guid? _currentTenantId;
+    private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        _currentTenantId = TenantAccessor.TenantId;
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var userIdClaim = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-        if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var userId))
+        try
         {
-            _workspaces = await TenantSvc.GetUserTenantsAsync(userId);
+            _currentTenantId = TenantAccessor.TenantId;
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userIdClaim = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var userId))
+            {
+                _workspaces = await TenantSvc.GetUserTenantsAsync(userId);
+
+                // Surface the current workspace at the top of the list for clarity.
+                _workspaces = _workspaces
+                    .OrderByDescending(t => t.TenantId == _currentTenantId)
+                    .ThenByDescending(t => t.IsDefault)
+                    .ThenBy(t => t.TenantName, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
+        }
+        finally
+        {
+            _loading = false;
         }
     }
 
     private void SwitchTo(Guid tenantId)
     {
+        if (tenantId == _currentTenantId) return;
+        // /login/select-tenant?switchTo=<id> consumes the existing cookie session
+        // and re-issues with the new tenant claim. forceLoad ensures the SignalR
+        // circuit and PlatformSettings reload with the new tenant context.
         Nav.NavigateTo($"/login/select-tenant?switchTo={tenantId}", forceLoad: true);
         Dialog?.Close(DialogResult.Ok(true));
     }
 
     private void Cancel() => Dialog?.Cancel();
+
+    private static string InitialsOf(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Trim().Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) return "?";
+        if (parts.Length == 1) return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpperInvariant();
+        return $"{char.ToUpperInvariant(parts[0][0])}{char.ToUpperInvariant(parts[1][0])}";
+    }
 }

@@ -15,7 +15,7 @@ public class ContactService
         _logger = logger;
     }
 
-    public async Task<List<Contact>> GetContactsAsync(string? search = null, int limit = 500)
+    public async Task<List<Contact>> GetContactsAsync(string? search = null, int limit = 500, bool onlyWithRecords = false)
     {
         var sql = $@"
             SELECT TOP {limit} c.ContactId,
@@ -33,6 +33,17 @@ public class ContactService
             WHERE 1=1";
 
         var parameters = new Dictionary<string, object?>();
+
+        if (onlyWithRecords)
+        {
+            sql += @" AND EXISTS (
+                SELECT 1 FROM Invoices i WHERE (i.Attention = c.FirstName + ' ' + c.Surname OR i.ContactId = c.ContactId)
+                UNION
+                SELECT 1 FROM Quotes q WHERE q.ContactId = c.ContactId
+                UNION
+                SELECT 1 FROM PurchaseOrders po WHERE po.ContactId = c.ContactId
+            )";
+        }
 
         if (!string.IsNullOrEmpty(search))
         {

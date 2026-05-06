@@ -33,7 +33,7 @@ public class PipelineSummaryTool : IAiTool
     {
         var chartType = args.TryGetProperty("chartType", out var c) ? c.GetString() ?? "donut" : "donut";
 
-        // Status 1=Draft, 2=Sent are "open"; 10=Won, 11=Lost are closed.
+        // Status 1,2,3,6,7,8 are "open"; 4=Accepted, 5/9/10=Declined/Rejected are closed.
         var dt = await _db.QueryAsync(@"
 SELECT
     SUM(CASE WHEN DATEDIFF(DAY, QuoteDate, GETDATE()) BETWEEN 0  AND 7  THEN 1 ELSE 0 END) AS B07,
@@ -43,7 +43,7 @@ SELECT
     COUNT(*)                                  AS Cnt,
     ISNULL(SUM(NettPriceTotal), 0)            AS Total
 FROM Quotes
-WHERE QuoteStatusId IN (1, 2);");
+WHERE QuoteStatusId IN (1, 2, 3, 6, 7, 8);");
 
         var row = dt.Rows.Count > 0 ? dt.Rows[0] : null;
         int b07   = row != null && row["B07"]   != DBNull.Value ? Convert.ToInt32(row["B07"])   : 0;

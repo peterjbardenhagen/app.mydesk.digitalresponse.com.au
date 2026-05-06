@@ -153,6 +153,18 @@
         return false;
     };
 
+    private static string MapCategory(string? documentType, string? supplier)
+    {
+        var s = (supplier ?? "").ToLowerInvariant();
+        if (s.Contains("officeworks") || s.Contains("staples")) return "Office Supplies";
+        if (s.Contains("bunnings") || s.Contains("mitre 10") || s.Contains("masters")) return "Hardware";
+        if (s.Contains("kogan") || s.Contains("jb hi-fi") || s.Contains("harvey norman") || s.Contains("dick smith")) return "Equipment";
+        if (s.Contains("uber") || s.Contains("taxi") || s.Contains("cabcharge") || s.Contains("13cabs")) return "Travel";
+        if (s.Contains("shell") || s.Contains("bp ") || s.Contains("caltex") || s.Contains("7-eleven") || s.Contains("ampol")) return "Fuel";
+        if (s.Contains("telstra") || s.Contains("optus") || s.Contains("vodafone")) return "Telecommunications";
+        return "General";
+    }
+
     private Color GetStatusColor(string status) => status switch
     {
         "Approved" => Color.Success,
@@ -182,21 +194,40 @@
                 await using var readStream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
                 var extracted = await ExtractionService.ProcessAsync(readStream, file.ContentType, file.Name);
 
-                var totalAmount = extracted.TotalAmount ?? 0;
+                var totalAmount = extracted.TotalAmount ?? extracted.Subtotal ?? 0;
+                var supplier = string.IsNullOrWhiteSpace(extracted.SupplierName)
+                    ? Path.GetFileNameWithoutExtension(file.Name)
+                    : extracted.SupplierName;
+
+                string description;
+                if (extracted.LineItems.Count > 0)
+                {
+                    description = string.Join("; ", extracted.LineItems
+                        .Where(li => !string.IsNullOrWhiteSpace(li.Description))
+                        .Take(3)
+                        .Select(li => li.Description!.Trim()));
+                }
+                else
+                {
+                    description = $"Receipt: {Path.GetFileNameWithoutExtension(file.Name)}";
+                }
+                if (string.IsNullOrWhiteSpace(description))
+                    description = $"Receipt: {Path.GetFileNameWithoutExtension(file.Name)}";
+
                 var expense = new Expense
                 {
                     Date = extracted.DocumentDate ?? DateTime.Today,
-                    Description = extracted.LineItems.Count > 0
-                        ? string.Join("; ", extracted.LineItems.Take(3).Select(li => li.Description))
-                        : $"AI Processed: {file.Name}",
+                    Description = description,
                     Amount = totalAmount,
                     Total = totalAmount,
                     TaxAmount = extracted.GstAmount ?? 0,
-                    SupplierName = extracted.SupplierName,
+                    SupplierName = supplier,
                     FileName = file.Name,
                     FilePath = $"/uploads/expenses/{fileName}",
                     Status = "Pending",
-                    Category = extracted.DocumentType ?? "General"
+                    // Document type maps to a coarse category bucket. Users can re-categorise
+                    // in the edit dialog. Default to General for retail receipts.
+                    Category = MapCategory(extracted.DocumentType, supplier)
                 };
 
                 if (!extracted.AuditPassed && extracted.Discrepancies.Count > 0)
@@ -316,16 +347,57 @@
 
     private async Task OnDeleteExpense(Expense expense)
     {
-        var parameters = new DialogParameters<AttentionRow> { { "Content", "Are you sure you want to delete this expense record?" } };
-        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.ExtraSmall };
-        var dialog = await DialogService.ShowAsync<MudDialog>("Delete Expense", parameters, options);
-        var result = await dialog.Result;
-        
-        if (result != null && !result.Canceled)
+        // Build a friendly confirmation summary so the user knows exactly which row is going.
+        var supplier = string.IsNullOrWhiteSpace(expense.SupplierName) ? "(no supplier)" : expense.SupplierName;
+        var amount = expense.Total > 0 ? expense.Total.ToString("C") : "$0.00";
+        var message = $"Delete expense \"{expense.Description}\" from {supplier} ({amount}, {expense.Date:dd MMM yyyy})? This cannot be undone.";
+
+        var parameters = new DialogParameters
+        {
+            { nameof(MudMessageBox.Message),    message },
+            { nameof(MudMessageBox.YesText),    "Delete" },
+            { nameof(MudMessageBox.NoText),     string.Empty },
+            { nameof(MudMessageBox.CancelText), "Cancel" }
+        };
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            CloseOnEscapeKey = true,
+            BackdropClick = true,
+            MaxWidth = MaxWidth.ExtraSmall,
+            FullWidth = true
+        };
+        var handle = await DialogService.ShowAsync<MudMessageBox>("Delete Expense", parameters, options);
+        var ok = (await handle.Result)?.Data as bool?;
+        if (ok != true) return;
+
+        try
         {
             await ExpenseService.DeleteExpenseAsync(expense.ExpenseId);
+
+            // Best-effort cleanup of the uploaded receipt file. Failures here are non-fatal —
+            // the expense row is already gone and orphaned files are tolerable.
+            if (!string.IsNullOrWhiteSpace(expense.FilePath) &&
+                expense.FilePath.StartsWith("/uploads/expenses/", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var rel = expense.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+                    var diskPath = Path.Combine("wwwroot", rel);
+                    if (File.Exists(diskPath)) File.Delete(diskPath);
+                }
+                catch { /* swallowed — see comment above */ }
+            }
+
+            // Remove from in-memory list immediately for a snappy UI; LoadExpenses also
+            // refreshes the totals/pending counters from the source of truth.
+            _expenses.RemoveAll(e => e.ExpenseId == expense.ExpenseId);
             await LoadExpenses();
-            Snackbar.Add("Expense deleted", Severity.Success);
+            Snackbar.Add($"Deleted expense \"{expense.Description}\".", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Delete failed: {ex.Message}", Severity.Error);
         }
     }
 }

@@ -54,15 +54,17 @@
         </MudItem>
         <MudItem xs="12" sm="3">
             <MudSelect T="int" @bind-Value="_statusId" Label="Status" Variant="Variant.Outlined" Margin="Margin.Dense">
-                <MudSelectItem T="int" Value="555">All Active (excl. Won/Lost)</MudSelectItem>
-                <MudSelectItem T="int" Value="0">All (including Won &amp; Lost)</MudSelectItem>
+                <MudSelectItem T="int" Value="555">All Active (excl. Accepted/Declined)</MudSelectItem>
+                <MudSelectItem T="int" Value="0">All</MudSelectItem>
                 <MudSelectItem T="int" Value="1">Draft</MudSelectItem>
-                <MudSelectItem T="int" Value="9">Pending Approval</MudSelectItem>
-                <MudSelectItem T="int" Value="10">Fully Approved</MudSelectItem>
-                <MudSelectItem T="int" Value="2">Issued</MudSelectItem>
-                <MudSelectItem T="int" Value="4">Accepted / Won</MudSelectItem>
-                <MudSelectItem T="int" Value="5">Lost</MudSelectItem>
-                <MudSelectItem T="int" Value="11">Declined</MudSelectItem>
+                <MudSelectItem T="int" Value="7">Pending Manager Approval</MudSelectItem>
+                <MudSelectItem T="int" Value="8">Manager Approved</MudSelectItem>
+                <MudSelectItem T="int" Value="2">Issued to Client</MudSelectItem>
+                <MudSelectItem T="int" Value="3">Revised (Client)</MudSelectItem>
+                <MudSelectItem T="int" Value="4">Client Accepted</MudSelectItem>
+                <MudSelectItem T="int" Value="5">Client Rejected</MudSelectItem>
+                <MudSelectItem T="int" Value="9">Manager Declined</MudSelectItem>
+                <MudSelectItem T="int" Value="10">Client Declined</MudSelectItem>
             </MudSelect>
         </MudItem>
     </MudGrid>
@@ -81,8 +83,9 @@
 }
 
 <MudPaper Class="pa-0" Elevation="1">
-    <MudDataGrid T="Quote" Items="@_quotes" Dense="true" Hover="true" Elevation="0"
-                 SortMode="SortMode.Multiple" Filterable="false" Class="tl-compact-grid">
+<MudDataGrid T="Quote" Items="@_quotes" Dense="true" Hover="true" Elevation="0"
+             SortMode="SortMode.Multiple" Filterable="false" Class="tl-compact-grid"
+             RowClicked="OnQuoteRowClicked">
         <Columns>
             <PropertyColumn Property="x => x.Qid" Title="#" CellStyle="width:70px;font-weight:600;" />
             <PropertyColumn Property="x => x.CompanyName" Title="Customer" />
@@ -311,6 +314,11 @@
         var base64 = Convert.ToBase64String(bytes);
         var url = $"data:text/csv;base64,{base64}";
         await JsRuntime.InvokeVoidAsync("window.open", url, "_blank");
+    }
+
+    private void OnQuoteRowClicked(DataGridRowClickEventArgs<Quote> args)
+    {
+        Nav.NavigateTo($"/quotes/{args.Item.Qid}");
     }
 }
 

@@ -217,18 +217,35 @@
     </MudContainer>
 </div>
 
-<style>
-    .legal-page {
-        min-height: 100vh;
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    }
-    .legal-content {
-        background: white;
-        border-radius: 12px;
-    }
-    .legal-section {
-        margin-bottom: 2rem;
-    }
-</style>
+    <style>
+        .legal-page {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        .legal-content {
+            background: white;
+            border-radius: 12px;
+        }
+        .legal-section {
+            margin-bottom: 2rem;
+        }
+        
+        /* Dark mode overrides */
+        body.mud-dark-mode .legal-page {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+        }
+        body.mud-dark-mode .legal-content {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+        }
+        body.mud-dark-mode .legal-content h3,
+        body.mud-dark-mode .legal-content h5 {
+            color: #f1f5f9 !important;
+        }
+        body.mud-dark-mode .legal-content p,
+        body.mud-dark-mode .legal-content li {
+            color: #cbd5e1 !important;
+        }
+    </style>
 
 

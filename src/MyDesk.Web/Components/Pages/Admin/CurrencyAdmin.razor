@@ -119,10 +119,33 @@ else
             c.Name = _editingName;
             c.Rate = _editingRate;
             await Svc.SaveCurrencyRateAsync(c);
+
+            // Auto-calculate reciprocal rate: if AUD is saved, update USD to 1/AUD rate and vice versa
+            await AutoCalculateReciprocalAsync(c);
+
             Snackbar.Add("Saved", Severity.Success);
             Cancel(); await Reload();
         }
         catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task AutoCalculateReciprocalAsync(CurrencyRate saved)
+    {
+        if (_items == null) return;
+        var isAud = string.Equals(saved.Code, "AUD", StringComparison.OrdinalIgnoreCase);
+        var isUsd = string.Equals(saved.Code, "USD", StringComparison.OrdinalIgnoreCase);
+        if (!isAud && !isUsd) return;
+
+        var otherCode = isAud ? "USD" : "AUD";
+        var other = _items.FirstOrDefault(x => string.Equals(x.Code, otherCode, StringComparison.OrdinalIgnoreCase));
+        if (other == null) return;
+
+        var reciprocalRate = saved.Rate > 0 ? Math.Round(1m / saved.Rate, 4, MidpointRounding.AwayFromZero) : 1m;
+        if (other.Rate != reciprocalRate)
+        {
+            other.Rate = reciprocalRate;
+            await Svc.SaveCurrencyRateAsync(other);
+        }
     }
 
     private async Task AddNew()

@@ -58,14 +58,6 @@
                 <div class="tl-setup-stat-value">@_stats.Sum(s => s.RowCount).ToString("N0")</div>
                 <div class="tl-setup-stat-label">Total Records</div>
             </div>
-            <div class="tl-setup-stat-card">
-                <div class="tl-setup-stat-icon dark">
-                    <MudIcon Icon="@Icons.Material.Rounded.Storage" Size="Size.Small" />
-                </div>
-                <div class="tl-setup-stat-value">@_largest.Table</div>
-                <div class="tl-setup-stat-sublabel">@_largest.RowCount.ToString("N0") rows</div>
-                <div class="tl-setup-stat-label">Largest Table</div>
-            </div>
         }
     </div>
 </div>
@@ -673,7 +665,6 @@
 
 @code {
     private List<(string Table, int RowCount)>? _stats;
-    private (string Table, int RowCount) _largest = ("—", 0);
     private List<SetupMenuService.SetupTile> _tiles = new();
     private List<string> _visibleGroups = new();
     private string? _searchTerm;
@@ -690,7 +681,6 @@
         try
         {
             _stats = await SystemSvc.GetTableStatsAsync();
-            if (_stats?.Count > 0) _largest = _stats.OrderByDescending(s => s.RowCount).First();
         }
         catch { /* non-critical */ }
     }
@@ -730,6 +720,18 @@
 
     private string GetTileGradient(SetupMenuService.SetupTile tile) => "";
 }
+
+<style>
+    /* Dark mode overrides for SetupHome */
+    body.mud-dark-mode .tl-setup-hero { background: var(--tl-dark); }
+    body.mud-dark-mode .tl-setup-hero-title { color: #f1f5f9 !important; }
+    body.mud-dark-mode .tl-setup-hero-subtitle { color: #94a3b8 !important; }
+    body.mud-dark-mode .tl-setup-stat-card { background: #1e293b !important; border-color: #334155 !important; }
+    body.mud-dark-mode .tl-setup-stat-value { color: #f1f5f9 !important; }
+    body.mud-dark-mode .tl-setup-stat-label { color: #94a3b8 !important; }
+    body.mud-dark-mode .tl-setup-search-bar { background: #1e293b !important; border-color: #334155 !important; }
+    body.mud-dark-mode .tl-setup-quick-actions .mud-button { color: #cbd5e1 !important; border-color: #334155 !important; }
+</style>
 
 
 

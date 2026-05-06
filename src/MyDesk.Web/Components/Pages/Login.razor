@@ -238,3 +238,167 @@
         }
     });
 </script>
+
+<style>
+    /* Google Fonts Import */
+    @@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
+
+    /* Theme Variables */
+    :root {
+        --tl-primary: @PlatformSettings.Current.LoginPrimaryColor;
+        --tl-accent: @PlatformSettings.Current.LoginAccentColor;
+        --tl-login-bg: @PlatformSettings.Current.LoginBackgroundColor;
+    }
+
+    .tl-login-root {
+        display: grid;
+        grid-template-columns: 1fr;
+        min-height: 100vh;
+        background: #f8fafc;
+        font-family: 'Outfit', 'Inter', sans-serif;
+    }
+
+    @@media (min-width: 1024px) {
+        .tl-login-root { grid-template-columns: 1.1fr 0.9fr; }
+    }
+
+    /* Hero Section */
+    .tl-login-hero {
+        display: none;
+        position: relative;
+        background-color: var(--tl-login-bg);
+        background-image:
+            radial-gradient(at 0% 0%, var(--tl-primary)22 0, transparent 50%),
+            radial-gradient(at 100% 100%, var(--tl-accent)1a 0, transparent 50%);
+        color: white;
+        padding: 64px;
+        overflow: hidden;
+    }
+
+    @@media (min-width: 1024px) {
+        .tl-login-hero { display: flex; flex-direction: column; }
+    }
+
+    .tl-login-hero-inner {
+        position: relative;
+        z-index: 10;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .hero-logo { height: 48px; width: auto; }
+
+    .tl-login-quote-wrap { max-width: 520px; margin-top: -60px; }
+    .tl-quote-icon { margin-bottom: 24px; color: var(--tl-primary); opacity: 0.8; }
+    .tl-login-quote-text {
+        font-size: 38px;
+        font-weight: 700;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+        margin-bottom: 24px;
+        color: white;
+        background: linear-gradient(to bottom right, #fff 10%, #cbd5e1 90%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .tl-login-quote-author { font-size: 16px; color: #94a3b8; font-weight: 500; }
+    .accent-text { color: var(--tl-primary); font-weight: 600; }
+
+    .legal-links-white .mud-link { color: #64748b !important; font-weight: 500; }
+    .legal-links-white .mud-link:hover { color: white !important; }
+    .copyright-text { margin-top: 12px; font-size: 12px; color: #475569; }
+
+    /* Decorative Blobs */
+    .hero-blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        z-index: 1;
+        opacity: 0.4;
+    }
+    .blob-1 { top: -10%; left: -10%; width: 400px; height: 400px; background: var(--tl-primary); }
+    .blob-2 { bottom: -5%; right: -5%; width: 350px; height: 350px; background: var(--tl-accent); opacity: 0.2; }
+    .hero-grid-pattern {
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+        background-size: 32px 32px;
+        mask-image: radial-gradient(ellipse at center, black, transparent 80%);
+        opacity: 0.5;
+    }
+
+    /* Form Section */
+    .tl-login-form-area {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 24px;
+    }
+
+    .tl-login-form-container { width: 100%; max-width: 440px; }
+
+    .tl-form-card {
+        background: white;
+        padding: 40px;
+        border-radius: 24px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+        border: 1px solid #f1f5f9;
+        transition: all 0.3s ease;
+    }
+
+    .tl-mark-container { margin-bottom: 32px; }
+    .tl-form-mark { height: 56px; }
+
+    .tl-form-header h1 { font-size: 32px; font-weight: 700; color: #0f172a; margin-bottom: 8px; letter-spacing: -0.01em; }
+    .sub-text { font-size: 16px; color: #64748b; margin-bottom: 32px; }
+
+    .field-wrap label { font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 4px; display: block; }
+
+    .submit-btn {
+        font-weight: 700 !important;
+        letter-spacing: 0.02em !important;
+        box-shadow: 0 10px 15px -3px rgba(0, 200, 200, 0.25) !important;
+        transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    }
+    .submit-btn:hover { transform: translateY(-2px); }
+    .submit-btn:active { transform: translateY(0); }
+
+    .tl-form-footer { margin-top: 32px; text-align: center; font-size: 14px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 24px; }
+
+    /* Custom Transitions */
+    .tl-form-card {
+        animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @@keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* MudBlazor Adjustment */
+    .mud-input-outlined-border { border-width: 1.5px !important; }
+    .mud-input-control { margin-top: 0 !important; margin-bottom: 0 !important; }
+
+    /* ── Dark Mode ─────────────────────────────────────────── */
+    body.mud-dark-mode .tl-login-root { background: linear-gradient(135deg, #0a0a0a 0%, #111827 100%); }
+    body.mud-dark-mode .tl-login-form-area { background: #1e1e1e; color: #e0e0e0; }
+    body.mud-dark-mode .tl-form-card { background: #1e1e1e; border-color: #334155; }
+    body.mud-dark-mode .tl-form-header h1 { color: #f1f5f9; }
+    body.mud-dark-mode .sub-text { color: #94a3b8; }
+    body.mud-dark-mode .field-wrap label { color: #cbd5e1; }
+    body.mud-dark-mode .tl-form-footer { color: #94a3b8; border-top-color: #334155; }
+    body.mud-dark-mode .mud-input-outlined .mud-input { color: #e0e0e0; }
+    body.mud-dark-mode .mud-input-outlined-border { border-color: #475569 !important; }
+    body.mud-dark-mode .mud-input-outlined:hover .mud-input-outlined-border { border-color: #94a3b8 !important; }
+    body.mud-dark-mode .mud-input-label { color: #94a3b8 !important; }
+    body.mud-dark-mode .mud-input-adornment .mud-icon-root { color: var(--tl-primary) !important; }
+    body.mud-dark-mode .mud-checkbox .mud-button-root { color: #94a3b8 !important; }
+    body.mud-dark-mode .mud-text { color: #94a3b8 !important; }
+    body.mud-dark-mode .mud-divider { border-color: #334155 !important; }
+    body.mud-dark-mode .mud-icon-button { color: #94a3b8 !important; }
+    body.mud-dark-mode .mud-icon-button:hover { background: rgba(255,255,255,0.05) !important; color: #f1f5f9 !important; }
+    body.mud-dark-mode .portal-links-section .mud-typography { color: #64748b !important; }
+</style>

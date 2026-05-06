@@ -97,6 +97,47 @@ ELSE
         }
     }
 
+    /// <summary>
+    /// Get login page color scheme from Tenants table columns
+    /// </summary>
+    public async Task<LoginColorScheme> GetLoginColorSchemeAsync(Guid? tenantId = null)
+    {
+        var tid = tenantId ?? _tenantAccessor.TenantId ?? _resolvedTenantId;
+        if (tid is null) return new LoginColorScheme();
+        
+        var dt = await _db.QueryAsync(@"
+            SELECT LoginPrimaryColor, LoginAccentColor, LoginBackgroundColor, 
+                   LoginHeading, LoginSubheading, LoginCopyrightText, LoginSupportEmail, LoginSupportPhone
+            FROM Tenants WHERE TenantId = @Tid",
+            new() { ["Tid"] = tid });
+            
+        if (dt.Rows.Count == 0) return new LoginColorScheme();
+        var row = dt.Rows[0];
+        return new LoginColorScheme
+        {
+            PrimaryColor = row["LoginPrimaryColor"]?.ToString() ?? "#1e40af",
+            AccentColor = row["LoginAccentColor"]?.ToString() ?? "#0ea5e9",
+            BackgroundColor = row["LoginBackgroundColor"]?.ToString() ?? "#0a0a0a",
+            Heading = row["LoginHeading"]?.ToString() ?? "Welcome to MyDesk",
+            Subheading = row["LoginSubheading"]?.ToString() ?? "Sign in to access your dashboard",
+            CopyrightText = row["LoginCopyrightText"]?.ToString() ?? "Digital Response. All rights reserved.",
+            SupportEmail = row["LoginSupportEmail"]?.ToString() ?? "support@digitalresponse.com.au",
+            SupportPhone = row["LoginSupportPhone"]?.ToString() ?? ""
+        };
+    }
+
+    public class LoginColorScheme
+    {
+        public string PrimaryColor { get; set; } = "#1e40af";
+        public string AccentColor { get; set; } = "#0ea5e9";
+        public string BackgroundColor { get; set; } = "#0a0a0a";
+        public string Heading { get; set; } = "Welcome to MyDesk";
+        public string Subheading { get; set; } = "Sign in to access your dashboard";
+        public string CopyrightText { get; set; } = "Digital Response. All rights reserved.";
+        public string SupportEmail { get; set; } = "support@digitalresponse.com.au";
+        public string SupportPhone { get; set; } = "";
+    }
+
     private PlatformSettings ResolveInitial()
     {
         // 1) Authenticated user's tenant claim.

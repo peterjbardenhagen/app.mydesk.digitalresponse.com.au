@@ -243,6 +243,7 @@
         if (firstRender)
         {
             _firstRender = false;
+            await Task.Delay(50); // let DOM settle
             try { await _searchInput.FocusAsync(); } catch { }
         }
     }

@@ -1,7 +1,12 @@
 @page "/Error"
 @layout EmptyLayout
 @using System.Diagnostics
+@using Microsoft.AspNetCore.Diagnostics
 @inject PlatformSettingsService PlatformSettings
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IWebHostEnvironment Environment
+@inject ISnackbar Snackbar
+@inject IJSRuntime JsRuntime
 
 <PageTitle>Error - @PlatformSettings.GetBrandingName()</PageTitle>
 
@@ -21,8 +26,72 @@
                     <MudText Typo="Typo.caption" Class="tl-request-id">
                         <MudIcon Icon="@Icons.Material.Rounded.Fingerprint" Size="Size.Small" />
                         Request ID: <code>@RequestId</code>
+                        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary"
+                                   OnClick="CopyRequestId" Class="ml-2" Style="min-width:auto;padding:4px 8px;">
+                            <MudIcon Icon="@Icons.Material.Rounded.ContentCopy" Size="Size.Small" />
+                        </MudButton>
                     </MudText>
                 </div>
+            }
+
+            @if (HasExceptionDetails)
+            {
+                <div class="tl-error-toggle-row">
+                    <MudButton Variant="Variant.Text"
+                               Color="Color.Default"
+                               Size="Size.Small"
+                               StartIcon="@(_showDetails ? Icons.Material.Rounded.ExpandLess : Icons.Material.Rounded.ExpandMore)"
+                               OnClick="@(() => _showDetails = !_showDetails)">
+                        @(_showDetails ? "Hide error details" : "View error details")
+                    </MudButton>
+                </div>
+
+                <MudCollapse Expanded="_showDetails">
+                    <div class="tl-error-stack">
+                        @if (!string.IsNullOrWhiteSpace(_exceptionType))
+                        {
+                            <div class="tl-error-stack-row">
+                                <span class="tl-error-stack-label">Type</span>
+                                <code>@_exceptionType</code>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(_exceptionPath))
+                        {
+                            <div class="tl-error-stack-row">
+                                <span class="tl-error-stack-label">Path</span>
+                                <code>@_exceptionPath</code>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(_exceptionMessage))
+                        {
+                            <div class="tl-error-stack-row">
+                                <span class="tl-error-stack-label">Message</span>
+                                <code>@_exceptionMessage</code>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(_innerExceptionMessage))
+                        {
+                            <div class="tl-error-stack-row">
+                                <span class="tl-error-stack-label">Inner</span>
+                                <code>@_innerExceptionMessage</code>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(_stackTrace))
+                        {
+                            <div class="tl-error-stack-row">
+                                <span class="tl-error-stack-label">Stack trace</span>
+                                <pre class="tl-error-stack-trace">@_stackTrace</pre>
+                            </div>
+                        }
+                        @if (!isDevelopment)
+                        {
+                            <MudText Typo="Typo.caption" Class="mt-2" Style="opacity:0.7;">
+                                Production builds redact sensitive details. Full stack traces are available in
+                                Admin → Setup → Error Logs.
+                            </MudText>
+                        }
+                    </div>
+                </MudCollapse>
             }
 
             <div class="tl-error-actions">
@@ -226,15 +295,125 @@
         from { opacity: 0; transform: translateY(20px); }
         to { opacity: 1; transform: translateY(0); }
     }
+
+    /* Collapsible error-details panel */
+    .tl-error-toggle-row {
+        margin-top: 12px;
+        text-align: center;
+    }
+    .tl-error-stack {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px;
+        margin-top: 12px;
+        text-align: left;
+        font-size: 12px;
+        color: #1f2937;
+    }
+    .tl-error-stack-row + .tl-error-stack-row { margin-top: 10px; }
+    .tl-error-stack-label {
+        display: inline-block;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-size: 10px;
+        font-weight: 700;
+        color: #64748b;
+        margin-right: 8px;
+    }
+    .tl-error-stack code {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        padding: 2px 6px;
+        word-break: break-word;
+    }
+    .tl-error-stack-trace {
+        margin: 4px 0 0 0;
+        padding: 12px;
+        background: #0f172a;
+        color: #e2e8f0;
+        border-radius: 8px;
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 11px;
+        line-height: 1.5;
+        max-height: 320px;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    body.mud-dark-mode .tl-error-stack {
+        background: #0f172a;
+        border-color: #334155;
+        color: #e2e8f0;
+    }
+    body.mud-dark-mode .tl-error-stack code {
+        background: #1e293b;
+        border-color: #334155;
+        color: #f1f5f9;
+    }
+    body.mud-dark-mode .tl-error-stack-label { color: #94a3b8; }
+    body.mud-dark-mode .tl-error-stack-trace {
+        background: #020617;
+        color: #cbd5e1;
+    }
 </style>
 
 @code {
     [CascadingParameter]
-    private HttpContext? HttpContext { get; set; }
+    private HttpContext? CascadedHttpContext { get; set; }
 
     private string? RequestId { get; set; }
-    private bool isDevelopment => Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
+    private bool _showDetails;
 
-    protected override void OnInitialized() =>
-        RequestId = global::System.Diagnostics.Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
+    private string? _exceptionType;
+    private string? _exceptionMessage;
+    private string? _innerExceptionMessage;
+    private string? _stackTrace;
+    private string? _exceptionPath;
+
+    private bool isDevelopment => Environment.IsDevelopment();
+    private bool HasExceptionDetails =>
+        !string.IsNullOrWhiteSpace(_exceptionMessage) ||
+        !string.IsNullOrWhiteSpace(_stackTrace);
+
+    protected override void OnInitialized()
+    {
+        // Resolve current HttpContext from either the cascading parameter (Blazor)
+        // or the IHttpContextAccessor (server-side prerender / static page).
+        var ctx = CascadedHttpContext ?? HttpContextAccessor.HttpContext;
+        RequestId = global::System.Diagnostics.Activity.Current?.Id ?? ctx?.TraceIdentifier;
+
+        // The global `app.UseExceptionHandler("/Error")` middleware re-executes
+        // this page with the original Exception parked on IExceptionHandlerFeature.
+        // We surface the *type*, *message*, and (in development only) the stack
+        // trace so power users can self-diagnose without digging through the log
+        // file. Production hides the stack trace to avoid leaking internals.
+        var feature = ctx?.Features.Get<IExceptionHandlerFeature>()
+                   ?? ctx?.Features.Get<IExceptionHandlerPathFeature>() as IExceptionHandlerFeature;
+        var pathFeature = ctx?.Features.Get<IExceptionHandlerPathFeature>();
+        var ex = feature?.Error;
+
+        if (ex != null)
+        {
+            _exceptionType = ex.GetType().FullName;
+            _exceptionMessage = ex.Message;
+            _innerExceptionMessage = ex.InnerException?.Message;
+            _stackTrace = isDevelopment ? ex.ToString() : null;
+        }
+        _exceptionPath = pathFeature?.Path;
+    }
+
+    private async Task CopyRequestId()
+    {
+        if (!string.IsNullOrEmpty(RequestId))
+        {
+            await JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", RequestId);
+            Snackbar.Add("Request ID copied to clipboard", Severity.Success, options =>
+            {
+                options.SnackbarVariant = Variant.Filled;
+                options.ShowCloseIcon = true;
+            });
+        }
+    }
 }

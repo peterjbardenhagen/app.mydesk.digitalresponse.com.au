@@ -1,0 +1,52 @@
+@using MudBlazor
+@using MyDesk.Web.Components.Pages
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Add New Event</MudText>
+        <MudTextField @bind-Value="_title" Label="Event Title" Variant="Variant.Outlined" Class="mb-3" />
+        <MudTextField @bind-Value="_description" Label="Description" Variant="Variant.Outlined" Lines="3" Class="mb-3" />
+        <MudDatePicker @bind-Date="_eventDate" Label="Event Date" Variant="Variant.Outlined" Class="mb-3" />
+        <MudSelect T="string" @bind-Value="_eventType" Label="Event Type" Variant="Variant.Outlined">
+            <MudSelectItem T="string" Value="@("followup")">Follow-up</MudSelectItem>
+            <MudSelectItem T="string" Value="@("invoice")">Invoice</MudSelectItem>
+            <MudSelectItem T="string" Value="@("quote")">Quote</MudSelectItem>
+            <MudSelectItem T="string" Value="@("po")">Purchase Order</MudSelectItem>
+            <MudSelectItem T="string" Value="@("other")">Other</MudSelectItem>
+        </MudSelect>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Save">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public MudDialogInstance? Dialog { get; set; }
+    [Parameter] public EventCallback<CalendarEvent> OnSave { get; set; }
+
+    private string _title = "";
+    private string _description = "";
+    private DateTime? _eventDate = DateTime.Today;
+    private string _eventType = "followup";
+
+    private void Cancel()
+    {
+        Dialog?.Close(DialogResult.Cancel());
+    }
+
+    private async Task Save()
+    {
+        var evt = new CalendarEvent
+        {
+            Title = _title,
+            Description = _description,
+            Date = _eventDate ?? DateTime.Today,
+            Type = _eventType,
+            CssClass = _eventType,
+            Link = null
+        };
+        await OnSave.InvokeAsync(evt);
+        Dialog?.Close(DialogResult.Ok(evt));
+    }
+}

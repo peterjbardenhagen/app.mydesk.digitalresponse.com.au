@@ -68,16 +68,40 @@ public class DocumentExtractionService
                 result.Confidence, result.AuditPassed);
         }
 
-        // -------- Tier 2: AI Vision --------
+        // -------- Tier 2: Azure Document Intelligence + OpenAI --------
+        // Preferred for PDFs (digital, scanned, password-free) and image receipts.
+        // Mirrors the proven SupplierQuoteParseService pipeline used by Copy Supplier Quote.
         var tier2 = _strategies.FirstOrDefault(s =>
-            s.Kind == ExtractionStrategyKind.GptVision &&
+            s.Kind == ExtractionStrategyKind.AzureDocumentIntelligence &&
             s.CanHandle(contentType, buffered.Length, digitallyGenerated));
 
         if (tier2 != null)
         {
-            _logger?.LogInformation("Triage Tier 2 (GPT Vision) attempt for {File}", fileName);
+            _logger?.LogInformation("Triage Tier 2 (Document Intelligence + OpenAI) attempt for {File}", fileName);
             buffered.Position = 0;
             var result = await tier2.ExtractAsync(buffered, contentType, fileName, cancellationToken);
+
+            // If DocIntel produced something usable, return it (caller decides on confidence).
+            // Otherwise fall through to vision (only useful for true images, since GptVision
+            // refuses PDFs).
+            if (result.Confidence > 0 || result.LineItems.Count > 0 || result.TotalAmount.HasValue)
+            {
+                return result;
+            }
+
+            _logger?.LogInformation("Tier 2 (DocIntel) yielded no usable data - trying Tier 3 (GPT Vision)");
+        }
+
+        // -------- Tier 3: AI Vision (images only) --------
+        var tier3 = _strategies.FirstOrDefault(s =>
+            s.Kind == ExtractionStrategyKind.GptVision &&
+            s.CanHandle(contentType, buffered.Length, digitallyGenerated));
+
+        if (tier3 != null)
+        {
+            _logger?.LogInformation("Triage Tier 3 (GPT Vision) attempt for {File}", fileName);
+            buffered.Position = 0;
+            var result = await tier3.ExtractAsync(buffered, contentType, fileName, cancellationToken);
             return result;
         }
 

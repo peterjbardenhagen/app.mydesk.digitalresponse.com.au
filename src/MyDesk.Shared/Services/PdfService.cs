@@ -41,10 +41,10 @@ public class PdfService
         _settings = settings;
     }
 
-    private string BrandDark => _settings?.PdfDarkBackground ?? DefaultDark;
-    private string BrandPrimary => _settings?.PdfPrimaryColor ?? DefaultPrimary;
-    private string BrandPrimaryLight => _settings?.PdfPrimaryColorLight ?? "#00a0a0";
-    private string BrandAccent => _settings?.PdfAccentColor ?? DefaultAccent;
+    private string BrandDark => !string.IsNullOrWhiteSpace(_settings?.PdfDarkBackground) ? _settings.PdfDarkBackground : DefaultDark;
+    private string BrandPrimary => !string.IsNullOrWhiteSpace(_settings?.PdfPrimaryColor) ? _settings.PdfPrimaryColor : DefaultPrimary;
+    private string BrandPrimaryLight => !string.IsNullOrWhiteSpace(_settings?.PdfPrimaryColorLight) ? _settings.PdfPrimaryColorLight : "#00a0a0";
+    private string BrandAccent => !string.IsNullOrWhiteSpace(_settings?.PdfAccentColor) ? _settings.PdfAccentColor : DefaultAccent;
 
     private string CompanyName => _settings?.CompanyName ?? "MyDesk Customer";
     private string CompanyAddress => _settings?.PdfAddress1 ?? "";
@@ -378,7 +378,7 @@ public class PdfService
                    ISNULL(p.PriceIncTotal,0)         AS Amount,
                    ISNULL(p.Project,'')              AS Reference,
                    ISNULL(ps.POStatus,'')            AS StatusName,
-                   COALESCE(NULLIF(s.Company,''), NULLIF(LTRIM(RTRIM(CONCAT(ISNULL(c.FirstName,''), ' ', ISNULL(cn.Surname,'')))), ''), '') AS SupplierName,
+                    COALESCE(NULLIF(s.Company,''), NULLIF(LTRIM(RTRIM(CONCAT(ISNULL(cn.FirstName,''), ' ', ISNULL(cn.Surname,'')))), ''), '') AS SupplierName,
                    ISNULL(u.Name,'')                 AS OriginatorName,
                    ISNULL(u.Email,'')                AS OriginatorEmail,
                    ISNULL(d.Logo, '')                AS DivisionLogo

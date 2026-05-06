@@ -143,8 +143,8 @@ public class SalesReportsService
     {
         var sql = @"
             SELECT YEAR(QuoteDate) AS Y, MONTH(QuoteDate) AS M,
-                   SUM(CASE WHEN QuoteStatusId IN (1,2,9)  THEN NettPriceTotal ELSE 0 END) AS Pending,
-                   SUM(CASE WHEN QuoteStatusId IN (4,10)   THEN NettPriceTotal ELSE 0 END) AS Won
+                   SUM(CASE WHEN QuoteStatusId IN (1,2,3,6,7,8)  THEN NettPriceTotal ELSE 0 END) AS Pending,
+                   SUM(CASE WHEN QuoteStatusId = 4   THEN NettPriceTotal ELSE 0 END) AS Won
             FROM Quotes
             WHERE QuoteDate BETWEEN @F AND @T
             GROUP BY YEAR(QuoteDate), MONTH(QuoteDate)

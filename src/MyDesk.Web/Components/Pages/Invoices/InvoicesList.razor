@@ -73,7 +73,8 @@
 </MudPaper>
 
 <MudDataGrid T="Invoice" Items="@_invoices" Loading="@_loading" Dense="true" Hover="true"
-             SortMode="@SortMode.Multiple" Virtualize="true" FixedHeader="true" Height="600px" Class="tl-compact-grid">
+             SortMode="@SortMode.Multiple" Virtualize="true" FixedHeader="true" Height="600px" Class="tl-compact-grid"
+             RowClicked="OnInvoiceRowClicked">
     <Columns>
         <PropertyColumn Property="x => x.InvoiceId"   Title="#"         InitialDirection="SortDirection.Descending" />
         <PropertyColumn Property="x => x.InvoiceNum"  Title="Invoice #" />
@@ -229,14 +230,50 @@
         Snackbar.Add($"Exported {_invoices.Count} invoices", Severity.Success);
     }
 
-    private void ShowBulkEmailDialog()
+    private async Task ShowBulkEmailDialog()
     {
-        Snackbar.Add("Bulk email feature coming soon.", Severity.Info);
+        var selected = _invoices.Where(i => i.IsSelected).ToList();
+        if (!selected.Any())
+        {
+            Snackbar.Add("No invoices selected.", Severity.Warning);
+            return;
+        }
+        
+        var parameters = new DialogParameters
+        {
+            { "Invoices", selected.Cast<Invoice>().ToList() },
+            { "SelectedCount", selected.Count }
+        };
+        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await Dialog.ShowAsync<BulkEmailDialog>("Bulk Email", parameters, options);
+        var result = await dialog.Result;
+        if (result?.Data is bool ok && ok)
+        {
+            await LoadAsync();
+        }
     }
 
-    private void ShowBulkStatusDialog()
+    private async Task ShowBulkStatusDialog()
     {
-        Snackbar.Add("Bulk status update feature coming soon.", Severity.Info);
+        var selected = _invoices.Where(i => i.IsSelected).Select(i => i.InvoiceId).ToList();
+        if (!selected.Any())
+        {
+            Snackbar.Add("No invoices selected.", Severity.Warning);
+            return;
+        }
+        
+        var parameters = new DialogParameters
+        {
+            { "InvoiceIds", selected },
+            { "SelectedCount", selected.Count }
+        };
+        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await Dialog.ShowAsync<BulkStatusDialog>("Bulk Status Update", parameters, options);
+        var result = await dialog.Result;
+        if (result?.Data is bool ok && ok)
+        {
+            await LoadAsync();
+        }
     }
 
     private async Task DownloadFile(string fileName, string content)
@@ -245,6 +282,11 @@
         var base64 = Convert.ToBase64String(bytes);
         var url = $"data:text/csv;base64,{base64}";
         await JsRuntime.InvokeVoidAsync("window.open", url, "_blank");
+    }
+
+    private void OnInvoiceRowClicked(DataGridRowClickEventArgs<Invoice> args)
+    {
+        Nav.NavigateTo($"/invoices/{args.Item.InvoiceId}");
     }
 }
 

@@ -1,4 +1,5 @@
 @inject NavigationManager NavigationManager
+@inject ILogger<CustomErrorBoundary> Logger
 
 <CascadingValue Value="this">
     <ErrorBoundary OnErrorAsync="HandleErrorAsync">
@@ -56,11 +57,14 @@
     private string? _errorMessage;
     private bool _showDetails = false;
 
-    private async Task HandleErrorAsync(Exception exception)
+    private Task HandleErrorAsync(Exception exception)
     {
         _errorMessage = exception.Message;
-        // Log the error to your logging service
-        await Task.CompletedTask;
+        // Surface the failure in the application log so it's captured in
+        // Logs/errors-*.log AND the database ErrorLog table — but the boundary
+        // contains it so the SignalR circuit / page stays alive.
+        Logger.LogError(exception, "Component error caught by CustomErrorBoundary at {Uri}", NavigationManager.Uri);
+        return Task.CompletedTask;
     }
 
     private void Reload()

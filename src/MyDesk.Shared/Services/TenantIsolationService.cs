@@ -112,11 +112,13 @@ public class TenantIsolationService
 SELECT t.TABLE_NAME
 FROM INFORMATION_SCHEMA.TABLES t
 INNER JOIN INFORMATION_SCHEMA.COLUMNS c
-    ON c.TABLE_NAME = t.TABLE_NAME AND c.TABLE_SCHEMA = t.TABLE_SCHEMA
+    ON c.TABLE_NAME = t.TABLE_NAME
+    AND c.TABLE_SCHEMA = t.TABLE_SCHEMA
 WHERE t.TABLE_TYPE = 'BASE TABLE'
   AND t.TABLE_SCHEMA = 'dbo'
   AND c.COLUMN_NAME = 'TenantId'
   AND c.DATA_TYPE = 'uniqueidentifier'
+GROUP BY t.TABLE_NAME
 ORDER BY t.TABLE_NAME;");
         var result = new List<string>();
         foreach (DataRow r in dt.Rows) result.Add(r["TABLE_NAME"].ToString()!);

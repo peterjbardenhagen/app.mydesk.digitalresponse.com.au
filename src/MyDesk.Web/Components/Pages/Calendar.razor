@@ -3,6 +3,8 @@
 @inject LookupService LookupService
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
 @using System.Security.Claims
 @using System.Data;
 
@@ -52,9 +54,11 @@
 @* Calendar Grid *@
 <div class="calendar-container">
     <div class="calendar-header">
+        <MudIconButton Icon="@Icons.Material.Rounded.KeyboardDoubleArrowLeft" OnClick="PrevYear" />
         <MudIconButton Icon="@Icons.Material.Rounded.ChevronLeft" OnClick="PrevMonth" />
         <MudText Typo="Typo.h5">@_currentMonth.ToString("MMMM yyyy")</MudText>
         <MudIconButton Icon="@Icons.Material.Rounded.ChevronRight" OnClick="NextMonth" />
+        <MudIconButton Icon="@Icons.Material.Rounded.KeyboardDoubleArrowRight" OnClick="NextYear" />
         <MudButton Variant="Variant.Text" Class="ml-4" OnClick="GoToToday">Today</MudButton>
     </div>
 
@@ -86,29 +90,9 @@
     </div>
 </div>
 
-<MudDialog @bind-Visible="_showAddEventDialog" Options="@(new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true })">
-    <DialogContent>
-        <MudText Typo="Typo.h6" Class="mb-4">Add New Event</MudText>
-        <MudTextField @bind-Value="_newEventTitle" Label="Event Title" FullWidth Class="mb-3" />
-        <MudTextField @bind-Value="_newEventDescription" Label="Description" Lines="3" FullWidth Class="mb-3" />
-        <MudDatePicker @bind-Date="_newEventDate" Label="Event Date" FullWidth Class="mb-3" />
-        <MudSelect @bind-Value="_newEventType" Label="Event Type" FullWidth>
-            <MudSelectItem Value="@("invoice")">Invoice</MudSelectItem>
-            <MudSelectItem Value="@("quote")">Quote</MudSelectItem>
-            <MudSelectItem Value="@("po")">Purchase Order</MudSelectItem>
-            <MudSelectItem Value="@("followup")">Follow-up</MudSelectItem>
-        </MudSelect>
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@(() => _showAddEventDialog = false)">Cancel</MudButton>
-        <MudButton Color="Color.Primary" OnClick="SaveNewEvent">Save Event</MudButton>
-    </DialogActions>
-</MudDialog>
-
 @code {
     private DateTime _currentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
     private List<CalendarDay> _calendarDays = new();
-    private CalendarEvent? _selectedEvent;
     private bool _showFilters = true;
     private bool _showInvoices = true;
     private bool _showQuotes = true;
@@ -130,11 +114,9 @@
     private async Task LoadEvents()
     {
         _allEvents = new List<CalendarEvent>();
-
         var currentUser = (await AuthStateProvider.GetAuthenticationStateAsync()).User;
         var userCode = currentUser.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
 
-        // Load invoice due dates
         if (_showInvoices)
         {
             var dt = await LookupService.GetOverdueInvoicesAsync(userCode);
@@ -152,7 +134,6 @@
             }
         }
 
-        // Load stale quotes
         if (_showQuotes)
         {
             var dt = await LookupService.GetStaleQuotesAsync(userCode);
@@ -161,7 +142,7 @@
                 _allEvents.Add(new CalendarEvent
                 {
                     Title = $"Quote {row["QuoteNumber"]}",
-                    Date = row["ValidUntil"] != DBNull.Value ? Convert.ToDateTime(row["ValidUntil"]) : DateTime.Today,
+                    Date = row["Validity"] != DBNull.Value ? Convert.ToDateTime(row["Validity"]) : DateTime.Today,
                     Description = $"Customer: {row["QuoteCompany"]}",
                     CssClass = "quote",
                     Link = $"/quotes/{row["Qid"]}",
@@ -170,7 +151,6 @@
             }
         }
 
-        // Load open POs
         if (_showPOs)
         {
             var dt = await LookupService.GetOpenPOsAsync(userCode);
@@ -188,7 +168,6 @@
             }
         }
 
-        // Load follow-ups from database
         if (_showFollowUps)
         {
             var dt = await LookupService.GetFollowUpsAsync(userCode);
@@ -198,7 +177,7 @@
                 {
                     Title = $"Follow-up: {row["Summary"]}",
                     Date = row["FollowUpDate"] != DBNull.Value ? Convert.ToDateTime(row["FollowUpDate"]) : DateTime.Today,
-                    Description = $"Company: {row["CompanyName"]}",
+                    Description = $"Company ID: {row["CompanyId"]}",
                     CssClass = "followup",
                     Link = $"/call-reports/{row["Id"]}",
                     Type = "Follow-up"
@@ -210,16 +189,14 @@
     private void GenerateCalendarDays()
     {
         _calendarDays = new List<CalendarDay>();
-
         var firstDay = _currentMonth;
-        var startDay = firstDay.AddDays(-(int)firstDay.DayOfWeek + 1); // Monday as first day
+        var startDay = firstDay.AddDays(-(int)firstDay.DayOfWeek + 1);
         if (startDay > firstDay) startDay = startDay.AddDays(-7);
 
         for (int i = 0; i < 42; i++)
         {
             var date = startDay.AddDays(i);
             var dayEvents = _allEvents.Where(e => e.Date.Date == date.Date).ToList();
-
             _calendarDays.Add(new CalendarDay
             {
                 Date = date,
@@ -230,32 +207,31 @@
         }
     }
 
-    private void PrevMonth() { _currentMonth = _currentMonth.AddMonths(-1); GenerateCalendarDays(); }
-    private void NextMonth() { _currentMonth = _currentMonth.AddMonths(1); GenerateCalendarDays(); }
-    private void GoToToday() { _currentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1); GenerateCalendarDays(); }
+    private async Task PrevMonth() { _currentMonth = _currentMonth.AddMonths(-1); await LoadEvents(); GenerateCalendarDays(); }
+    private async Task NextMonth() { _currentMonth = _currentMonth.AddMonths(1); await LoadEvents(); GenerateCalendarDays(); }
+    private async Task PrevYear() { _currentMonth = _currentMonth.AddYears(-1); await LoadEvents(); GenerateCalendarDays(); }
+    private async Task NextYear() { _currentMonth = _currentMonth.AddYears(1); await LoadEvents(); GenerateCalendarDays(); }
+    private async Task GoToToday() { _currentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1); await LoadEvents(); GenerateCalendarDays(); }
 
-    private void OnEventClick(CalendarEvent evt) { _selectedEvent = evt; }
-    private void ShowAddEventDialog() { _showAddEventDialog = true; }
-    
-    private void SaveNewEvent()
+    private void OnEventClick(CalendarEvent evt)
     {
-        if (string.IsNullOrWhiteSpace(_newEventTitle) || _newEventDate == null) return;
-        
-        _allEvents.Add(new CalendarEvent
+        if (!string.IsNullOrWhiteSpace(evt.Link))
+            Nav.NavigateTo(evt.Link);
+    }
+
+    private void ShowAddEventDialog()
+    {
+        var parameters = new DialogParameters
         {
-            Title = _newEventTitle,
-            Date = _newEventDate.Value,
-            Description = _newEventDescription,
-            CssClass = _newEventType,
-            Type = _newEventType
-        });
-        
-        GenerateCalendarDays();
-        _showAddEventDialog = false;
-        _newEventTitle = "";
-        _newEventDescription = "";
-        _newEventDate = DateTime.Today;
-        _newEventType = "followup";
+            { "OnSave", EventCallback.Factory.Create<CalendarEvent>(this, async evt => {
+                evt.CssClass = string.IsNullOrWhiteSpace(evt.CssClass) ? (evt.Type ?? "other").ToLowerInvariant() : evt.CssClass;
+                _allEvents.Add(evt);
+                Snackbar.Add("Event saved successfully", Severity.Success);
+                GenerateCalendarDays();
+                StateHasChanged();
+            }) }
+        };
+        DialogService.Show<AddEventDialog>("Add Event", parameters);
     }
 }
 

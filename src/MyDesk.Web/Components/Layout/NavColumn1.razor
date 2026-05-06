@@ -59,11 +59,14 @@
     </div>
 
     <div class="tl-col1-footer">
-        <MudTooltip Text="Switch Workspace" Placement="Placement.Right" Arrow="true">
-            <MudIconButton Icon="@Icons.Material.Rounded.SwapHoriz" OnClick="SwitchWorkspace" Color="Color.Default" />
+        <MudTooltip Text="Log Off" Placement="Placement.Right" Arrow="true">
+            <MudIconButton Icon="@Icons.Material.Rounded.Logout" OnClick="LogOff" Color="Color.Default" />
         </MudTooltip>
         <MudTooltip Text="User Profile" Placement="Placement.Right" Arrow="true">
             <MudIconButton Icon="@Icons.Material.Rounded.Person" Href="/profile" Color="Color.Default" />
+        </MudTooltip>
+        <MudTooltip Text="Staff Whereabouts" Placement="Placement.Right" Arrow="true">
+            <MudIconButton Icon="@Icons.Material.Rounded.LocationOn" Href="/staff-whereabouts" Color="Color.Default" />
         </MudTooltip>
     </div>
 </div>
@@ -72,9 +75,9 @@
     [Parameter] public string ActiveSection { get; set; } = "";
     [Parameter] public EventCallback<string> OnSectionSelected { get; set; }
 
-    private void SwitchWorkspace()
+    private void LogOff()
     {
-        Nav.NavigateTo("/login/select-tenant", forceLoad: true);
+        Nav.NavigateTo("/logout", forceLoad: true);
     }
 }
 

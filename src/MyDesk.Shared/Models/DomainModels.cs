@@ -164,11 +164,14 @@ public class Invoice
     public string? Terms { get; set; }
     public string? CustomerNotes { get; set; }
     public string? InternalNotes { get; set; }
-    public decimal NettPriceTotal { get; set; }          // ex-GST total
+    public decimal NettPriceTotal { get; set; }         // ex-GST total (matches SQL column 'NettPriceTotal')
     public decimal GSTTotal { get; set; }
     public decimal TotalIncGST => NettPriceTotal + GSTTotal;
     public bool ExportedToMYOB { get; set; }
     public DateTime? ExportedDate { get; set; }
+    // UI-only properties for selection and email
+    public bool IsSelected { get; set; }
+    public string? Email { get; set; }
 }
 
 public class InvoiceLineItem

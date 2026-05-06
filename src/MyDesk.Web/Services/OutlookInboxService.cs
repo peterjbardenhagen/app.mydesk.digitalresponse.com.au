@@ -11,15 +11,18 @@ public class OutlookInboxService
     private readonly IHttpClientFactory _httpFactory;
     private readonly AzureAIOptions _aiOptions;
     private readonly ILogger<OutlookInboxService> _logger;
+    private readonly IHttpContextAccessor _http;
 
     public OutlookInboxService(
         IHttpClientFactory httpFactory,
         IOptions<AzureAIOptions> aiOptions,
-        ILogger<OutlookInboxService> logger)
+        ILogger<OutlookInboxService> logger,
+        IHttpContextAccessor http)
     {
         _httpFactory = httpFactory;
         _aiOptions = aiOptions.Value;
         _logger = logger;
+        _http = http;
     }
 
     public async Task<OutlookInboxSnapshot> GetSnapshotAsync(PlatformSettings settings, CancellationToken ct = default)
@@ -72,8 +75,17 @@ public class OutlookInboxService
         }
     }
 
-    private static ConnectedMailbox? SelectMailbox(PlatformSettings settings)
+    private ConnectedMailbox? SelectMailbox(PlatformSettings settings)
     {
+        var userCode = _http.HttpContext?.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!string.IsNullOrWhiteSpace(userCode)
+            && settings.MyOutlookUserConnections.TryGetValue(userCode, out var myMailbox)
+            && (myMailbox.Enabled || myMailbox.IsConnected)
+            && !string.IsNullOrWhiteSpace(myMailbox.AccessToken))
+        {
+            return new ConnectedMailbox("My Outlook", myMailbox);
+        }
+
         var mailboxes = new[]
         {
             new ConnectedMailbox("My Outlook", settings.MyOutlook),

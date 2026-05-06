@@ -90,6 +90,7 @@ public class PlatformSettings
     public IntegrationSettings QuickBooks { get; set; } = new();
     public IntegrationSettings Outlook { get; set; } = new();
     public IntegrationSettings MyOutlook { get; set; } = new();
+    public Dictionary<string, IntegrationSettings> MyOutlookUserConnections { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public IntegrationSettings Google { get; set; } = new();
     public IntegrationSettings Weather { get; set; } = new();
 

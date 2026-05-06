@@ -41,7 +41,8 @@
 </MudPaper>
 
 <MudDataGrid T="Contact" Items="@_contacts" Loading="@_loading" Dense="true" Hover="true"
-             SortMode="@SortMode.Multiple" Virtualize="true" FixedHeader="true" Height="600px">
+             SortMode="@SortMode.Multiple" Virtualize="true" FixedHeader="true" Height="600px"
+             RowClicked="OnContactRowClicked">
     <Columns>
         <PropertyColumn Property="x => x.ContactId" Title="#" />
         <PropertyColumn Property="x => x.CompanyName" Title="Company" />
@@ -82,7 +83,7 @@
     private async Task LoadAsync()
     {
         _loading = true;
-        try { _contacts = await ContactService.GetContactsAsync(_search); }
+        try { _contacts = await ContactService.GetContactsAsync(_search, onlyWithRecords: _showOnlyWithRecords); }
         catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
         finally { _loading = false; }
     }
@@ -180,6 +181,11 @@
         {
             Snackbar.Add("Contact is not associated with a company. Cannot track billable time.", Severity.Warning);
         }
+    }
+
+    private void OnContactRowClicked(DataGridRowClickEventArgs<Contact> args)
+    {
+        Nav.NavigateTo($"/contacts/{args.Item.ContactId}");
     }
 }
 

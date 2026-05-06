@@ -160,15 +160,36 @@ public class LookupService
     /// </summary>
     public async Task<DataTable> GetOverdueInvoicesAsync(string userCode)
     {
+        // Schema reality: Invoices has InvoiceStatusId (int) and stores the customer's name
+        // in the denormalised InvCompany column; there is no DueDate column — due date is
+        // derived from InvoiceDate + Terms (defaults to 30 days when unparseable).
+        // Status IDs that mean "unsettled" are everything except 4 (Paid) and 5 (Cancelled).
         var sql = @"
-            SELECT i.InvoiceId, i.InvoiceNumber, i.InvoiceDate, i.DueDate, c.CompanyName AS InvCompany
-            FROM Invoices i
-            LEFT JOIN Companies c ON i.CompanyId = c.CompanyId
-            WHERE i.InvoiceStatus NOT IN ('Paid', 'Cancelled')
-            AND i.DueDate < GETDATE()
-            ORDER BY i.DueDate";
-        
-        return await _db.QueryAsync(sql);
+            SELECT InvoiceId,
+                   InvoiceNumber,
+                   InvoiceDate,
+                   DATEADD(day,
+                           ISNULL(TRY_CAST(NULLIF(LTRIM(RTRIM(REPLACE(REPLACE(REPLACE(Terms,'days',''),'NET',''),'Net',''))),'') AS INT), 30),
+                           InvoiceDate) AS DueDate,
+                   ISNULL(InvCompany, '') AS InvCompany
+            FROM Invoices
+            WHERE ISNULL(InvoiceStatusId, 0) NOT IN (4, 5)
+              AND DATEADD(day,
+                          ISNULL(TRY_CAST(NULLIF(LTRIM(RTRIM(REPLACE(REPLACE(REPLACE(Terms,'days',''),'NET',''),'Net',''))),'') AS INT), 30),
+                          InvoiceDate) < GETDATE()
+            ORDER BY InvoiceDate";
+
+        try
+        {
+            return await _db.QueryAsync(sql);
+        }
+        catch (Exception ex)
+        {
+            // Schema variance is real — never let a calendar/dashboard widget take down a circuit.
+            // Return an empty result and let the page render gracefully.
+            System.Diagnostics.Debug.WriteLine($"[LookupService] GetOverdueInvoicesAsync swallowed: {ex.Message}");
+            return new DataTable();
+        }
     }
 
     /// <summary>
@@ -177,10 +198,10 @@ public class LookupService
     public async Task<DataTable> GetStaleQuotesAsync(string userCode)
     {
         var sql = @"
-            SELECT q.Qid, q.QuoteNumber, q.QuoteDate, q.ValidUntil, c.CompanyName AS QuoteCompany
+            SELECT q.Qid, q.QuoteNumber, q.QuoteDate, q.Validity, c.Company AS QuoteCompany
             FROM Quotes q
             LEFT JOIN Companies c ON q.CompanyId = c.CompanyId
-            WHERE q.QuoteStatusId NOT IN (4, 10) -- Not Won or Lost
+            WHERE q.QuoteStatusId NOT IN (4, 5, 9, 10) -- Not Accepted/Rejected/Declined
             AND q.QuoteDate < DATEADD(day, -30, GETDATE())
             ORDER BY q.QuoteDate";
         
@@ -214,9 +235,8 @@ public class LookupService
     public async Task<DataTable> GetFollowUpsAsync(string userCode)
     {
         var sql = @"
-            SELECT cr.Id, cr.Summary, cr.FollowUpDate, cr.CompanyId, c.CompanyName
+            SELECT cr.Id, cr.Summary, cr.FollowUpDate, cr.CompanyId
             FROM CallReports cr
-            LEFT JOIN Companies c ON cr.CompanyId = c.CompanyId
             WHERE cr.FollowUpDate IS NOT NULL 
               AND ISNULL(cr.FollowUpComplete, 0) = 0
               AND cr.FollowUpDate >= DATEADD(month, -1, GETDATE())

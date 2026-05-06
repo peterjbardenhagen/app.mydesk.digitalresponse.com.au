@@ -15,6 +15,9 @@ using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Diagnostics;
+using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
 using Serilog;
 using Serilog.Events;
 
@@ -289,6 +292,7 @@ builder.Services.AddScoped<AzureAiVisionClientAdapter>();
 builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.IAiVisionClient>(sp =>
     sp.GetRequiredService<AzureAiVisionClientAdapter>());
 builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.IDocumentExtractionStrategy, MyDesk.Shared.Services.Extraction.PdfPigExtractionStrategy>();
+builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.IDocumentExtractionStrategy, MyDesk.Web.Services.Extraction.DocIntelExtractionStrategy>();
 builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.IDocumentExtractionStrategy, MyDesk.Shared.Services.Extraction.GptVisionExtractionStrategy>();
 builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.DocumentExtractionService>();
 builder.Services.AddScoped<SupplierQuoteParseService>();
@@ -345,9 +349,20 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Razor Components
+// Razor Components — DetailedErrors helps developers see what broke without
+// having to dig through logs; the circuit handler logs lifecycle events.
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents(options =>
+    {
+        options.DetailedErrors = builder.Environment.IsDevelopment();
+        // Don't crater the user's session over a transient JS interop hiccup —
+        // give them a chance to reconnect for 3 minutes (default is 3 mins, kept explicit).
+        options.DisconnectedCircuitMaxRetained = 100;
+        options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromMinutes(3);
+        options.JSInteropDefaultCallTimeout = TimeSpan.FromMinutes(1);
+        options.MaxBufferedUnacknowledgedRenderBatches = 10;
+    });
+builder.Services.AddScoped<Microsoft.AspNetCore.Components.Server.Circuits.CircuitHandler, ResilientCircuitHandler>();
 
 var app = builder.Build();
 
@@ -1038,6 +1053,122 @@ app.MapGet("/logout", async (HttpContext ctx) =>
     return Results.Redirect("/login");
 });
 
+app.MapGet("/integrations/microsoft/connect", (HttpContext ctx, PlatformSettingsService settingsSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false))
+        return Results.Redirect("/login");
+
+    var settings = settingsSvc.Current;
+    var cfg = settings.MyOutlook;
+
+    if (string.IsNullOrWhiteSpace(cfg.ClientId) || string.IsNullOrWhiteSpace(cfg.ClientSecret))
+        return Results.Redirect("/integrations?error=microsoft-not-configured");
+
+    var userCode = ctx.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+    if (string.IsNullOrWhiteSpace(userCode))
+        return Results.Redirect("/integrations?error=user-not-found");
+
+    var redirectUri = !string.IsNullOrWhiteSpace(cfg.RedirectUri)
+        ? cfg.RedirectUri!
+        : $"{ctx.Request.Scheme}://{ctx.Request.Host}/integrations/microsoft/callback";
+
+    var scope = Uri.EscapeDataString("offline_access openid profile User.Read Mail.Read Mail.ReadWrite Mail.Send Calendars.ReadWrite Files.ReadWrite");
+    var statePayload = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{userCode}|{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}"));
+    var authUrl =
+        $"https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id={Uri.EscapeDataString(cfg.ClientId!)}" +
+        $"&response_type=code&redirect_uri={Uri.EscapeDataString(redirectUri)}&response_mode=query&scope={scope}" +
+        $"&state={Uri.EscapeDataString(statePayload)}&prompt=select_account";
+
+    return Results.Redirect(authUrl);
+}).RequireAuthorization();
+
+app.MapGet("/integrations/microsoft/callback", async (HttpContext ctx, PlatformSettingsService settingsSvc, IHttpClientFactory httpFactory) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false))
+        return Results.Redirect("/login");
+
+    var code = ctx.Request.Query["code"].ToString();
+    var state = ctx.Request.Query["state"].ToString();
+    if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(state))
+        return Results.Redirect("/integrations?error=missing-auth-code");
+
+    var settings = settingsSvc.Current;
+    var cfg = settings.MyOutlook;
+    if (string.IsNullOrWhiteSpace(cfg.ClientId) || string.IsNullOrWhiteSpace(cfg.ClientSecret))
+        return Results.Redirect("/integrations?error=microsoft-not-configured");
+
+    string stateUserCode;
+    try
+    {
+        var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(Uri.UnescapeDataString(state)));
+        stateUserCode = decoded.Split('|', StringSplitOptions.RemoveEmptyEntries)[0];
+    }
+    catch
+    {
+        return Results.Redirect("/integrations?error=invalid-state");
+    }
+
+    var userCode = ctx.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+    if (!string.Equals(userCode, stateUserCode, StringComparison.OrdinalIgnoreCase))
+        return Results.Redirect("/integrations?error=state-user-mismatch");
+
+    var redirectUri = !string.IsNullOrWhiteSpace(cfg.RedirectUri)
+        ? cfg.RedirectUri!
+        : $"{ctx.Request.Scheme}://{ctx.Request.Host}/integrations/microsoft/callback";
+
+    var form = new Dictionary<string, string>
+    {
+        ["client_id"] = cfg.ClientId!,
+        ["client_secret"] = cfg.ClientSecret!,
+        ["grant_type"] = "authorization_code",
+        ["code"] = code,
+        ["redirect_uri"] = redirectUri,
+        ["scope"] = "offline_access openid profile User.Read Mail.Read Mail.ReadWrite Mail.Send Calendars.ReadWrite Files.ReadWrite"
+    };
+
+    var http = httpFactory.CreateClient();
+    using var tokenResponse = await http.PostAsync(
+        "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+        new FormUrlEncodedContent(form));
+
+    var tokenJson = await tokenResponse.Content.ReadAsStringAsync();
+    if (!tokenResponse.IsSuccessStatusCode)
+    {
+        Log.Warning("Microsoft token exchange failed: {Status} {Body}", tokenResponse.StatusCode, tokenJson);
+        return Results.Redirect("/integrations?error=token-exchange-failed");
+    }
+
+    using var tokenDoc = JsonDocument.Parse(tokenJson);
+    var accessToken = tokenDoc.RootElement.TryGetProperty("access_token", out var a) ? a.GetString() : null;
+    var refreshToken = tokenDoc.RootElement.TryGetProperty("refresh_token", out var r) ? r.GetString() : null;
+    var expiresIn = tokenDoc.RootElement.TryGetProperty("expires_in", out var e) ? e.GetInt32() : 3600;
+
+    if (string.IsNullOrWhiteSpace(accessToken))
+        return Results.Redirect("/integrations?error=missing-access-token");
+
+    if (!settings.MyOutlookUserConnections.TryGetValue(userCode, out var conn))
+    {
+        conn = new IntegrationSettings();
+    }
+
+    conn.Enabled = true;
+    conn.IsConnected = true;
+    conn.AccessToken = accessToken;
+    conn.RefreshToken = refreshToken;
+    conn.TokenExpiry = DateTime.UtcNow.AddSeconds(Math.Max(60, expiresIn - 60));
+    conn.LastSyncTime = DateTime.UtcNow;
+    conn.Status = "Connected";
+    conn.SyncCalendar = conn.SyncCalendar || settings.MyOutlook.SyncCalendar;
+    conn.SyncContacts = conn.SyncContacts || settings.MyOutlook.SyncContacts;
+    conn.SyncEmail = conn.SyncEmail || settings.MyOutlook.SyncEmail;
+    conn.SyncDrive = true;
+
+    settings.MyOutlookUserConnections[userCode] = conn;
+    await settingsSvc.SaveAsync();
+
+    return Results.Redirect("/integrations?connected=microsoft");
+}).RequireAuthorization();
+
 Log.Information("Application configured. Environment={Env}, URLs={Urls}",
     app.Environment.EnvironmentName, string.Join(", ", app.Urls.DefaultIfEmpty("default")));
 
@@ -1049,22 +1180,22 @@ app.MapGet("/quotes/{id:int}/action/{action}", async (int id, string action, Quo
 
     string resultMessage = "";
 
-    // 1. Validate status: Don't let customer click Decline after Approved
-    if (quote.QuoteStatusId == 10 && action.Equals("decline", StringComparison.OrdinalIgnoreCase))
+    // 1. Validate status: Don't let customer click Decline after Accepted
+    if (quote.QuoteStatusId == 4 && action.Equals("decline", StringComparison.OrdinalIgnoreCase))
     {
-        return Results.BadRequest("Cannot decline an already approved quote.");
+        return Results.BadRequest("Cannot decline an already accepted quote.");
     }
 
     if (action.Equals("approve", StringComparison.OrdinalIgnoreCase))
     {
-        if (quote.QuoteStatusId == 10) return Results.BadRequest("Quote is already approved.");
-        await quoteSvc.UpdateStatusAsync(id, 10, "Approved via Email", "Customer");
-        await activitySvc.LogAsync("Customer", "Quote", id, "Approved via Email", quote.Reference);
-        resultMessage = "Quote has been approved successfully.";
+        if (quote.QuoteStatusId == 4) return Results.BadRequest("Quote is already accepted.");
+        await quoteSvc.UpdateStatusAsync(id, 4, "Accepted via Email", "Customer");
+        await activitySvc.LogAsync("Customer", "Quote", id, "Accepted via Email", quote.Reference);
+        resultMessage = "Quote has been accepted successfully.";
     }
     else if (action.Equals("decline", StringComparison.OrdinalIgnoreCase))
     {
-        await quoteSvc.UpdateStatusAsync(id, 11, "Declined via Email", "Customer");
+        await quoteSvc.UpdateStatusAsync(id, 10, "Declined via Email", "Customer");
         await activitySvc.LogAsync("Customer", "Quote", id, "Declined via Email", quote.Reference);
         resultMessage = "Quote has been declined.";
     }

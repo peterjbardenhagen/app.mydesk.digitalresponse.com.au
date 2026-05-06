@@ -8,7 +8,8 @@ namespace MyDesk.Web.AI.Tools;
 /// returns a chart spec the UI can render.
 ///
 /// Status ids (from QuoteStatus lookup):
-///   1 = Draft, 2 = Sent, 10 = Approved (Won), 11 = Declined (Lost)
+///   1 = Draft, 2 = Sent, 4 = Client Accepted, 5 = Client Rejected,
+///   7 = Pending Manager Approval, 8 = Manager Approved, 9 = Manager Declined, 10 = Client Declined
 /// </summary>
 public class QuotesSummaryTool : IAiTool
 {
@@ -68,9 +69,9 @@ GROUP BY QuoteStatusId",
         decimal TotalFor(int id) => byStatus.TryGetValue(id, out var v) ? v.Total : 0m;
 
         // Map to friendly labels — these match the existing QuoteStatus FK values.
-        var labels  = new[] { "Draft", "Sent", "Won", "Lost" };
-        var counts  = new double[] { CountFor(1), CountFor(2), CountFor(10), CountFor(11) };
-        var totals  = new double[] { (double)TotalFor(1), (double)TotalFor(2), (double)TotalFor(10), (double)TotalFor(11) };
+        var labels  = new[] { "Draft", "Sent", "Manager Approved", "Manager Declined" };
+        var counts  = new double[] { CountFor(1), CountFor(2), CountFor(8), CountFor(9) };
+        var totals  = new double[] { (double)TotalFor(1), (double)TotalFor(2), (double)TotalFor(8), (double)TotalFor(9) };
 
         var summary = new
         {

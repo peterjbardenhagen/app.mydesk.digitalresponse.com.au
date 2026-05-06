@@ -66,7 +66,7 @@ else
     <div class="tl-kpi-section">
         <div class="tl-kpi-grid">
             @* Revenue Card *@
-            <a href="/invoices?filter=thismonth" class="tl-kpi-card tl-kpi-revenue">
+            <a href="@($"/invoices?filter={_chartPeriod.ToString().ToLower()}")" class="tl-kpi-card tl-kpi-revenue">
                 <div class="tl-kpi-header">
                     <div class="tl-kpi-icon-wrap gold">
                         <MudIcon Icon="@Icons.Material.Rounded.AttachMoney" Size="Size.Medium" />
@@ -89,7 +89,7 @@ else
             </a>
 
             @* Quotes Card *@
-            <a href="/quotes?filter=thismonth" class="tl-kpi-card tl-kpi-quotes">
+            <a href="@($"/quotes?filter={_chartPeriod.ToString().ToLower()}")" class="tl-kpi-card tl-kpi-quotes">
                 <div class="tl-kpi-header">
                     <div class="tl-kpi-icon-wrap teal">
                         <MudIcon Icon="@Icons.Material.Rounded.RequestQuote" Size="Size.Medium" />
@@ -101,7 +101,7 @@ else
                 </div>
                 <div class="tl-kpi-body">
                     <div class="tl-kpi-value">@Fmt(_metrics.ThisMonthQuotesWon)</div>
-                    <div class="tl-kpi-label">Quotes Won</div>
+                    <div class="tl-kpi-label">Quotes Accepted</div>
                 </div>
                 <div class="tl-kpi-footer">
                     <span>@_metrics.QuoteToInvoiceConversionRate.ToString("N1")% conversion</span>
@@ -460,7 +460,7 @@ else
             </div>
             <div class="tl-user-kpi-value">@kpi.QuotesRaisedThisMonth</div>
             <div class="tl-user-kpi-label">Quotes Raised</div>
-            <div class="tl-user-kpi-sub">@kpi.QuotesWonThisMonth won (@kpi.WinRate.ToString("N0")%)</div>
+            <div class="tl-user-kpi-sub">@kpi.QuotesWonThisMonth accepted (@kpi.WinRate.ToString("N0")%)</div>
         </div>
         <div class="tl-user-kpi-card">
             <div class="tl-user-kpi-icon gold">

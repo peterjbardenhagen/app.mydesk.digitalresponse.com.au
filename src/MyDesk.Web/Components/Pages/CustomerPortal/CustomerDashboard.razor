@@ -179,10 +179,10 @@
 
     private Color GetStatusColor(int statusId) => statusId switch
     {
-        4 or 10 => Color.Success,
-        2 => Color.Primary,
-        9 => Color.Warning,
-        5 or 11 => Color.Error,
+        4 => Color.Success,
+        7 => Color.Warning,
+        5 or 10 or 9 => Color.Error,
+        2 or 3 => Color.Primary,
         _ => Color.Default
     };
 

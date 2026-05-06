@@ -98,6 +98,25 @@ html, body {
   padding: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
+}
+
+/* Settings button hover fix - light mode */
+html:not(.mud-dark-mode) .mud-menu-item:hover {
+  color: #344054 !important;
+  background: #f2f4f7 !important;
+}
+html:not(.mud-dark-mode) .mud-menu-item:hover .mud-icon-root {
+  color: #344054 !important;
+}
+
+/* Dark mode menu item hover */
+.mud-dark-mode .mud-menu-item:hover {
+  color: #e5e5e5 !important;
+  background: rgba(255,255,255,0.08) !important;
+}
+.mud-dark-mode .mud-menu-item:hover .mud-icon-root {
+  color: #e5e5e5 !important;
+}
   line-height: 1.5;
   color: var(--gray-900);
   background: var(--surface-sunken);
@@ -111,6 +130,23 @@ html.dark-mode, body.dark-mode {
   height: 100%;
   background-color: var(--tl-dark);
 }
+
+/* `mud-dark-mode` lives on <body>, but custom-property scoping means <html>
+   doesn't see the redefined `--surface-sunken`. Without this rule the html
+   element keeps its default (white-ish) background and bleeds through below
+   short pages — visible as a white band when scrolling on dark mode. */
+html:has(body.mud-dark-mode),
+html.mud-dark-mode {
+  background: #0a0a0a;
+}
+body.mud-dark-mode {
+  background: #0a0a0a !important;
+  min-height: 100vh;
+}
+.mud-dark-mode .mud-main-content,
+body.mud-dark-mode .mud-main-content,
+.mud-dark-mode .mud-layout,
+body.mud-dark-mode .mud-layout { background: transparent; }
 
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -1984,7 +2020,7 @@ body.mud-dark-mode {
 }
 
 .mud-dark-mode .tl-page-header h1 {
-  color: var(--gray-900) !important;
+  color: var(--gray-100) !important;
 }
 
 .mud-dark-mode .tl-subtitle {
@@ -1992,11 +2028,11 @@ body.mud-dark-mode {
 }
 
 .mud-dark-mode .tl-breadcrumb a {
-  color: var(--gray-600) !important;
+  color: var(--gray-400) !important;
 }
 
 .mud-dark-mode .tl-breadcrumb span {
-  color: var(--gray-700) !important;
+  color: var(--gray-500) !important;
 }
 
 .mud-dark-mode .tl-upload-zone-active {
@@ -2251,4 +2287,339 @@ body.mud-dark-mode {
 }
 .tl-chat-bubble.bot { background: white; border: 1px solid #e2e8f0; align-self: flex-start; border-bottom-left-radius: 2px; }
 .tl-chat-bubble.human { background: #e0f2fe; color: #0369a1; align-self: flex-end; border-bottom-right-radius: 2px; font-weight: 500; }
+
+/* ========================================================================
+   DARK MODE OVERRIDES — Dashboard target cards, leaderboard, alert cards
+   ------------------------------------------------------------------------
+   The light-mode designs use very pale gradients (#ecfeff, #fefce8, #fef9c3)
+   and `var(--warning-50) / --error-50 / --info-50` washes that disappear
+   on a dark surface. These overrides re-tint the same accents at low alpha
+   over the dark background and bump foreground colours back into legibility.
+   They target both `.mud-dark-mode` (when the class lives on a parent like
+   <html>) and `body.mud-dark-mode` (when it lives on body) for safety.
+   ======================================================================== */
+
+/* --- Target cards (Monthly / Quarterly / Yearly) ---------------------- */
+.mud-dark-mode .tl-target-card,
+body.mud-dark-mode .tl-target-card {
+    background: linear-gradient(135deg, var(--gray-100) 0%, var(--gray-50) 100%);
+    border-color: var(--gray-300);
+    color: var(--gray-900);
+}
+.mud-dark-mode .tl-target-card.teal,
+body.mud-dark-mode .tl-target-card.teal {
+    background: linear-gradient(135deg, rgba(34,211,238,0.12) 0%, var(--gray-100) 100%);
+    border-color: rgba(34,211,238,0.35);
+}
+.mud-dark-mode .tl-target-card.gold,
+body.mud-dark-mode .tl-target-card.gold {
+    background: linear-gradient(135deg, rgba(245,158,11,0.14) 0%, var(--gray-100) 100%);
+    border-color: rgba(245,158,11,0.35);
+}
+.mud-dark-mode .tl-target-card.dark,
+body.mud-dark-mode .tl-target-card.dark {
+    /* Already a dark gradient by design, keep it but bump contrast a touch. */
+    background: linear-gradient(135deg, #0b1220 0%, #1f2937 100%);
+    border-color: #334155;
+}
+.mud-dark-mode .tl-target-card-period,
+body.mud-dark-mode .tl-target-card-period { color: var(--gray-600); }
+.mud-dark-mode .tl-target-card-target,
+body.mud-dark-mode .tl-target-card-target { color: var(--gray-600); }
+.mud-dark-mode .tl-target-card-meta,
+body.mud-dark-mode .tl-target-card-meta { color: var(--gray-700); }
+.mud-dark-mode .tl-target-card-actual,
+body.mud-dark-mode .tl-target-card-actual { color: var(--gray-900); }
+.mud-dark-mode .tl-target-card-pct,
+body.mud-dark-mode .tl-target-card-pct { color: var(--gray-900); }
+.mud-dark-mode .tl-target-card-forecast,
+body.mud-dark-mode .tl-target-card-forecast { color: var(--gray-700); }
+
+/* Status badges — keep the colour identity but darken text/background */
+.mud-dark-mode .tl-target-card-badge.on-track,
+body.mud-dark-mode .tl-target-card-badge.on-track { background: rgba(16,185,129,0.18); color: #6ee7b7; }
+.mud-dark-mode .tl-target-card-badge.at-risk,
+body.mud-dark-mode .tl-target-card-badge.at-risk  { background: rgba(245,158,11,0.20); color: #fcd34d; }
+.mud-dark-mode .tl-target-card-badge.behind,
+body.mud-dark-mode .tl-target-card-badge.behind   { background: rgba(239,68,68,0.20);  color: #fca5a5; }
+
+.mud-dark-mode .tl-target-card-bar-track,
+body.mud-dark-mode .tl-target-card-bar-track { background: rgba(148,163,184,0.25); }
+
+/* --- Leaderboard rows (Sales Team Target Tracking) --------------------- */
+.mud-dark-mode .tl-target-row,
+body.mud-dark-mode .tl-target-row {
+    background: var(--gray-100);
+    border-color: var(--gray-300);
+}
+.mud-dark-mode .tl-target-row-name,
+body.mud-dark-mode .tl-target-row-name { color: var(--gray-900); }
+.mud-dark-mode .tl-target-rank,
+body.mud-dark-mode .tl-target-rank {
+    background: var(--gray-300);
+    color: var(--gray-900);
+}
+.mud-dark-mode .tl-target-bar-track,
+body.mud-dark-mode .tl-target-bar-track { background: var(--gray-300); }
+.mud-dark-mode .tl-target-actual,
+body.mud-dark-mode .tl-target-actual { color: var(--gray-900); }
+.mud-dark-mode .tl-target-target,
+body.mud-dark-mode .tl-target-target { color: var(--gray-600); }
+.mud-dark-mode .tl-target-pct.on-track,
+.mud-dark-mode .tl-target-pct.exceeding,
+body.mud-dark-mode .tl-target-pct.on-track,
+body.mud-dark-mode .tl-target-pct.exceeding { background: rgba(16,185,129,0.18); color: #6ee7b7; }
+.mud-dark-mode .tl-target-pct.at-risk,
+body.mud-dark-mode .tl-target-pct.at-risk { background: rgba(245,158,11,0.20); color: #fcd34d; }
+.mud-dark-mode .tl-target-pct.behind,
+body.mud-dark-mode .tl-target-pct.behind { background: rgba(239,68,68,0.20); color: #fca5a5; }
+
+/* --- Alert items / cards (Warnings + Recommendations) ------------------ */
+.mud-dark-mode .tl-alert-item,
+body.mud-dark-mode .tl-alert-item {
+    background: var(--gray-100);
+    color: var(--gray-900);
+}
+.mud-dark-mode .tl-alert-item.critical,
+body.mud-dark-mode .tl-alert-item.critical {
+    background: rgba(239,68,68,0.12);
+}
+.mud-dark-mode .tl-alert-item:hover,
+body.mud-dark-mode .tl-alert-item:hover {
+    background: var(--gray-200);
+    box-shadow: none;
+}
+.mud-dark-mode .tl-alert-title,
+body.mud-dark-mode .tl-alert-title { color: var(--gray-900); }
+.mud-dark-mode .tl-alert-desc,
+body.mud-dark-mode .tl-alert-desc { color: var(--gray-700); }
+.mud-dark-mode .tl-alert-metric,
+body.mud-dark-mode .tl-alert-metric { color: #fcd34d; }
+.mud-dark-mode .tl-alert-metric.rec,
+body.mud-dark-mode .tl-alert-metric.rec { color: #67e8f9; }
+.mud-dark-mode .tl-alert-icon,
+body.mud-dark-mode .tl-alert-icon { background: rgba(245,158,11,0.20); color: #fcd34d; }
+.mud-dark-mode .tl-alert-icon.rec,
+body.mud-dark-mode .tl-alert-icon.rec { background: rgba(34,211,238,0.20); color: #67e8f9; }
+
+/* Alert cards (the alternate card layout) */
+.mud-dark-mode .tl-alert-card,
+body.mud-dark-mode .tl-alert-card {
+    background: var(--gray-100);
+    border-color: var(--gray-300);
+}
+.mud-dark-mode .tl-alert-card.critical,
+body.mud-dark-mode .tl-alert-card.critical { background: rgba(239,68,68,0.12); }
+.mud-dark-mode .tl-alert-card-title,
+body.mud-dark-mode .tl-alert-card-title { color: var(--gray-900); }
+.mud-dark-mode .tl-alert-card-desc,
+body.mud-dark-mode .tl-alert-card-desc { color: var(--gray-700); }
+.mud-dark-mode .tl-alert-card-icon.warning,
+body.mud-dark-mode .tl-alert-card-icon.warning { background: rgba(245,158,11,0.20); color: #fcd34d; }
+.mud-dark-mode .tl-alert-card-icon.critical,
+body.mud-dark-mode .tl-alert-card-icon.critical { background: rgba(239,68,68,0.20); color: #fca5a5; }
+.mud-dark-mode .tl-alert-card-icon.recommendation,
+body.mud-dark-mode .tl-alert-card-icon.recommendation { background: rgba(34,211,238,0.20); color: #67e8f9; }
+
+/* --- Period & performance pickers above the dashboard ------------------ */
+.mud-dark-mode .tl-dashboard-period-selector,
+body.mud-dark-mode .tl-dashboard-period-selector {
+    background: linear-gradient(135deg, var(--gray-100) 0%, var(--gray-50) 100%);
+    border-color: var(--gray-300);
+}
+.mud-dark-mode .tl-period-label,
+.mud-dark-mode .tl-selector-label,
+body.mud-dark-mode .tl-period-label,
+body.mud-dark-mode .tl-selector-label { color: var(--gray-700); }
+.mud-dark-mode .tl-performance-selector,
+body.mud-dark-mode .tl-performance-selector {
+    background: linear-gradient(135deg, rgba(0,168,176,0.10) 0%, var(--gray-100) 100%);
+    border-color: rgba(0,168,176,0.35);
+}
+
+/* --- Empty/no-warnings state ------------------------------------------ */
+.mud-dark-mode .tl-no-warnings,
+body.mud-dark-mode .tl-no-warnings { color: var(--gray-600); }
+
+/* --- Chat bubbles in the AI sidebar ----------------------------------- */
+.mud-dark-mode .tl-chat-bubble.bot,
+body.mud-dark-mode .tl-chat-bubble.bot {
+    background: var(--gray-100);
+    border-color: var(--gray-300);
+    color: var(--gray-900);
+}
+.mud-dark-mode .tl-chat-bubble.human,
+body.mud-dark-mode .tl-chat-bubble.human {
+    background: rgba(34,211,238,0.18);
+    color: #67e8f9;
+}
+
+/* ========================================================================
+   DARK MODE — Wave 2 overrides (audit-driven, May 2026)
+   Covers gaps in: Customer Intelligence, Profile, Marketing, KPI health
+   gradients, brand assets, header logo text, dashboard promo/chat preview,
+   and the dashboard alert-item.critical wash.
+   ======================================================================== */
+
+/* --- KPI health cards (gradient stops to white) ----------------------- */
+/* Source rules at app.css:941-959 fade light tints to `white`, producing
+   a solid white band on dark surfaces. Re-tint the white stop with the
+   dark surface colour while keeping the same coloured headlight. */
+.mud-dark-mode .tl-kpi-health.excellent,
+body.mud-dark-mode .tl-kpi-health.excellent {
+    background: linear-gradient(135deg, rgba(16,185,129,0.16) 0%, var(--gray-100) 100%);
+    border-color: rgba(16,185,129,0.35);
+}
+.mud-dark-mode .tl-kpi-health.good,
+body.mud-dark-mode .tl-kpi-health.good {
+    background: linear-gradient(135deg, rgba(34,211,238,0.14) 0%, var(--gray-100) 100%);
+    border-color: rgba(34,211,238,0.30);
+}
+.mud-dark-mode .tl-kpi-health.warning,
+body.mud-dark-mode .tl-kpi-health.warning {
+    background: linear-gradient(135deg, rgba(245,158,11,0.16) 0%, var(--gray-100) 100%);
+    border-color: rgba(245,158,11,0.35);
+}
+.mud-dark-mode .tl-kpi-health.critical,
+body.mud-dark-mode .tl-kpi-health.critical {
+    background: linear-gradient(135deg, rgba(239,68,68,0.16) 0%, var(--gray-100) 100%);
+    border-color: rgba(239,68,68,0.35);
+}
+
+/* KPI status pill (sometimes appears with hard-coded warning/critical wash) */
+.mud-dark-mode .tl-kpi-status.warning,
+body.mud-dark-mode .tl-kpi-status.warning { background: rgba(245,158,11,0.18); color: #fcd34d; }
+.mud-dark-mode .tl-kpi-status.critical,
+body.mud-dark-mode .tl-kpi-status.critical { background: rgba(239,68,68,0.20); color: #fca5a5; }
+
+/* --- Dashboard alert-item.critical wash ------------------------------- */
+.mud-dark-mode .tl-alert-item.critical,
+body.mud-dark-mode .tl-alert-item.critical { background: rgba(239,68,68,0.12); }
+.mud-dark-mode .tl-alert-card.critical,
+body.mud-dark-mode .tl-alert-card.critical { background: rgba(239,68,68,0.12); }
+
+/* --- Customer Intelligence panel -------------------------------------- */
+.mud-dark-mode .tl-mini-stat,
+body.mud-dark-mode .tl-mini-stat {
+    background: var(--gray-100);
+    border-color: var(--gray-300);
+    color: var(--gray-900);
+}
+.mud-dark-mode .tl-customer-row,
+body.mud-dark-mode .tl-customer-row {
+    background: var(--gray-100);
+    border-color: var(--gray-300);
+}
+.mud-dark-mode .tl-customer-rank,
+body.mud-dark-mode .tl-customer-rank {
+    background: var(--gray-300);
+    color: var(--gray-900);
+}
+/* Customer rating chips — reuse the colour identity at lower alpha */
+.mud-dark-mode .tl-customer-badge.rating-diamond,
+body.mud-dark-mode .tl-customer-badge.rating-diamond { background: rgba(34,211,238,0.20); color: #67e8f9; }
+.mud-dark-mode .tl-customer-badge.rating-gold,
+body.mud-dark-mode .tl-customer-badge.rating-gold     { background: rgba(245,158,11,0.20); color: #fcd34d; }
+.mud-dark-mode .tl-customer-badge.rating-silver,
+body.mud-dark-mode .tl-customer-badge.rating-silver   { background: rgba(148,163,184,0.25); color: #e2e8f0; }
+.mud-dark-mode .tl-customer-badge.rating-bronze,
+body.mud-dark-mode .tl-customer-badge.rating-bronze   { background: rgba(251,146,60,0.20); color: #fdba74; }
+.mud-dark-mode .tl-customer-badge.rating-watch,
+body.mud-dark-mode .tl-customer-badge.rating-watch    { background: rgba(239,68,68,0.20); color: #fca5a5; }
+.mud-dark-mode .tl-customer-badge.rating-new,
+body.mud-dark-mode .tl-customer-badge.rating-new      { background: rgba(96,165,250,0.20); color: #93c5fd; }
+
+/* --- Profile page rank cards & KPIs ----------------------------------- */
+.mud-dark-mode .tl-rank-card,
+body.mud-dark-mode .tl-rank-card {
+    background: linear-gradient(135deg, rgba(0,168,176,0.12) 0%, var(--gray-100) 100%);
+    border-color: rgba(0,168,176,0.30);
+    color: var(--gray-900);
+}
+.mud-dark-mode .tl-profile-kpi,
+body.mud-dark-mode .tl-profile-kpi {
+    background: var(--gray-100);
+    border-color: var(--gray-300);
+    color: var(--gray-900);
+}
+.mud-dark-mode .tl-profile-target-pct.exceeding,
+.mud-dark-mode .tl-profile-target-pct.on-track,
+body.mud-dark-mode .tl-profile-target-pct.exceeding,
+body.mud-dark-mode .tl-profile-target-pct.on-track { background: rgba(16,185,129,0.18); color: #6ee7b7; }
+.mud-dark-mode .tl-profile-target-pct.at-risk,
+body.mud-dark-mode .tl-profile-target-pct.at-risk { background: rgba(245,158,11,0.20); color: #fcd34d; }
+.mud-dark-mode .tl-profile-target-pct.behind,
+body.mud-dark-mode .tl-profile-target-pct.behind { background: rgba(239,68,68,0.20); color: #fca5a5; }
+
+/* --- Marketing module ------------------------------------------------- */
+.mud-dark-mode .tl-mkt-stat-card,
+body.mud-dark-mode .tl-mkt-stat-card {
+    background: var(--gray-100);
+    border-color: var(--gray-300);
+    color: var(--gray-900);
+}
+.mud-dark-mode .tl-asset-card,
+body.mud-dark-mode .tl-asset-card {
+    background: var(--gray-100);
+    border-color: var(--gray-300);
+}
+.mud-dark-mode .tl-asset-preview,
+body.mud-dark-mode .tl-asset-preview {
+    background: linear-gradient(135deg, var(--gray-200) 0%, var(--gray-100) 100%);
+}
+.mud-dark-mode .tl-brand-asset-card,
+body.mud-dark-mode .tl-brand-asset-card {
+    background: var(--gray-100);
+    border-color: var(--gray-300);
+    color: var(--gray-900);
+}
+/* Marketing segment chips — preserve colour identity at low alpha */
+.mud-dark-mode .tl-mkt-segment-chip.champion,
+body.mud-dark-mode .tl-mkt-segment-chip.champion       { background: rgba(16,185,129,0.18); color: #6ee7b7; }
+.mud-dark-mode .tl-mkt-segment-chip.loyal,
+body.mud-dark-mode .tl-mkt-segment-chip.loyal          { background: rgba(34,211,238,0.18); color: #67e8f9; }
+.mud-dark-mode .tl-mkt-segment-chip.promising,
+body.mud-dark-mode .tl-mkt-segment-chip.promising      { background: rgba(245,158,11,0.20); color: #fcd34d; }
+.mud-dark-mode .tl-mkt-segment-chip.at-risk,
+body.mud-dark-mode .tl-mkt-segment-chip.at-risk        { background: rgba(239,68,68,0.20); color: #fca5a5; }
+.mud-dark-mode .tl-mkt-segment-chip.lost,
+body.mud-dark-mode .tl-mkt-segment-chip.lost           { background: rgba(148,163,184,0.20); color: #e2e8f0; }
+.mud-dark-mode .tl-mkt-segment-chip.strategic,
+body.mud-dark-mode .tl-mkt-segment-chip.strategic      { background: rgba(167,139,250,0.20); color: #c4b5fd; }
+.mud-dark-mode .tl-mkt-segment-chip.preferred,
+body.mud-dark-mode .tl-mkt-segment-chip.preferred      { background: rgba(96,165,250,0.20); color: #93c5fd; }
+.mud-dark-mode .tl-mkt-segment-chip.transactional,
+body.mud-dark-mode .tl-mkt-segment-chip.transactional  { background: rgba(148,163,184,0.18); color: #cbd5e1; }
+.mud-dark-mode .tl-mkt-segment-chip.trial,
+body.mud-dark-mode .tl-mkt-segment-chip.trial          { background: rgba(34,211,238,0.16); color: #67e8f9; }
+.mud-dark-mode .tl-confidential,
+body.mud-dark-mode .tl-confidential { background: rgba(245,158,11,0.20); color: #fcd34d; }
+
+/* --- Dashboard promo cards & chat preview ----------------------------- */
+.mud-dark-mode .tl-promo-card-modern,
+body.mud-dark-mode .tl-promo-card-modern {
+    background: var(--gray-100) !important;
+    border-color: var(--gray-300);
+    color: var(--gray-900);
+}
+.mud-dark-mode .tl-chat-preview,
+body.mud-dark-mode .tl-chat-preview {
+    background: var(--gray-100);
+    border-color: var(--gray-300);
+}
+
+/* --- Header logo text -------------------------------------------------- */
+/* The hero panel logo dark-on-light pair was hard-coded with greys that
+   disappear on dark backgrounds. */
+.mud-dark-mode .tl-logo-text--dark .tl-logo-brand,
+body.mud-dark-mode .tl-logo-text--dark .tl-logo-brand { color: var(--gray-900); }
+.mud-dark-mode .tl-logo-text--dark .tl-logo-product,
+body.mud-dark-mode .tl-logo-text--dark .tl-logo-product { color: var(--gray-600); }
+
+/* --- KPI badge generic ------------------------------------------------- */
+.mud-dark-mode .tl-kpi-badge,
+body.mud-dark-mode .tl-kpi-badge {
+    background: var(--gray-200);
+    color: var(--gray-900);
+}
 

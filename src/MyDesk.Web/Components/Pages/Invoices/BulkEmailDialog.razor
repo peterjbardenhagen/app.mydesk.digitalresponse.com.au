@@ -1,0 +1,60 @@
+@using MudBlazor
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject InvoiceService InvoiceService
+@inject EmailService EmailService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Bulk Email Invoices</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4">Send email to customers for @SelectedCount selected invoice(s).</MudText>
+        <MudTextField @bind-Value="_subject" Label="Subject" Variant="Variant.Outlined" FullWidth Class="mb-3" />
+        <MudTextField @bind-Value="_message" Label="Message" Lines="4" Variant="Variant.Outlined" FullWidth />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="SendEmails" Disabled="@(string.IsNullOrWhiteSpace(_subject))">Send Emails</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public MudDialogInstance? Dialog { get; set; }
+    
+    [Parameter] public List<Invoice> Invoices { get; set; } = new();
+    [Parameter] public int SelectedCount { get; set; }
+
+    private string _subject = "";
+    private string _message = "";
+    
+    private async Task SendEmails()
+    {
+        if (string.IsNullOrWhiteSpace(_subject)) return;
+
+        try
+        {
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var senderCode = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "SYSTEM";
+
+            int sent = 0, skipped = 0;
+            foreach (var inv in Invoices)
+            {
+                if (string.IsNullOrEmpty(inv.Email)) { skipped++; continue; }
+
+                var bodyMessage = $"{_message}\n\nInvoice: {inv.InvoiceNum}\nAmount: {inv.NettPriceTotal:C}";
+                var ok = await EmailService.EmailInvoiceAsync(inv.InvoiceId, inv.Email, _subject, bodyMessage, senderCode, pdfBytes: null);
+                if (ok) sent++;
+            }
+
+            var msg = $"Sent {sent} email(s)." + (skipped > 0 ? $" Skipped {skipped} without an email address." : "");
+            Snackbar.Add(msg, sent > 0 ? Severity.Success : Severity.Warning);
+            Dialog?.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Email failed: {ex.Message}", Severity.Error);
+        }
+    }
+    
+    private void Cancel() => Dialog?.Cancel();
+}

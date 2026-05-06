@@ -35,7 +35,7 @@ public class QuoteService
               AND (@k IS NULL OR q.Reference LIKE '%' + @k + '%' OR q.CustomerNotes LIKE '%' + @k + '%')
               AND (@f IS NULL OR q.QuoteDate >= @f)
               AND (@t IS NULL OR q.QuoteDate <= @t)
-              AND (@s = 0 OR q.QuoteStatusId = @status OR (@s = 555 AND q.QuoteStatusId NOT IN (4,5,11)))
+              AND (@s = 0 OR q.QuoteStatusId = @status OR (@s = 555 AND q.QuoteStatusId NOT IN (4, 5, 9, 10)))
             ORDER BY q.Qid DESC";
         
         var dt = await _db.QueryAsync(sql, new() { 
@@ -250,8 +250,8 @@ public class QuoteService
 
     /// <summary>
     /// Records an approval at the current user's level in the chain. When the chain is
-    /// complete (no more line managers above), the quote moves to "Fully Approved" (status 10).
-    /// Otherwise it moves to "Pending Approval" (status 9) so the next manager can sign off.
+    /// complete (no more line managers above), the quote moves to "Manager Approved" (status 8).
+    /// Otherwise it moves to "Pending Manager Approval" (status 7) so the next manager can sign off.
     /// </summary>
     public async Task ApproveAsync(int id, string userCode, bool isDirectorOrFinalApprover)
     {
@@ -264,17 +264,17 @@ public class QuoteService
                                 await IsQuoteFullyApprovedAsync(id);
             if (fullyApproved)
             {
-                await UpdateStatusAsync(id, 10, "Fully Approved", userCode);
+                await UpdateStatusAsync(id, 8, "Manager Approved", userCode);
             }
             else
             {
-                await UpdateStatusAsync(id, 9, "Pending Approval (next level)", userCode);
+                await UpdateStatusAsync(id, 7, "Pending Manager Approval", userCode);
             }
             return;
         }
 
         // Fallback: legacy behaviour (no chain)
-        await UpdateStatusAsync(id, 10, "Fully Approved", userCode);
+        await UpdateStatusAsync(id, 8, "Manager Approved", userCode);
     }
 
     public async Task DeclineAsync(int id, string userCode)
@@ -284,7 +284,7 @@ public class QuoteService
             var level = _approvals.CompletedLevels("Quote", id) + 1;
             _approvals.RecordApproval("Quote", id, level, userCode, null, "Declined");
         }
-        await UpdateStatusAsync(id, 11, "Declined", userCode);
+        await UpdateStatusAsync(id, 9, "Manager Declined", userCode);
     }
 
     /// <summary>

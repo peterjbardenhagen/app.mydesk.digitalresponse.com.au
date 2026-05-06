@@ -5,6 +5,8 @@
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IConfiguration Configuration
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Integrations - MyDesk</PageTitle>
 
@@ -62,8 +64,8 @@
                         }
                         else
                         {
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="() => OpenSettingsDialog(integration)">
-                                Connect @integration.Name
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="() => ConnectIntegration(integration)">
+                                @(IsPerUserMicrosoftIntegration(integration) ? "Connect Account" : $"Connect {integration.Name}")
                             </MudButton>
                         }
                     </div>
@@ -141,13 +143,16 @@
                     <MudSwitch T="bool" @bind-Value="_selectedIntegration.Connected" Label="Enabled" Color="Color.Primary" />
                 </MudItem>
                 
-                <MudItem xs="12">
-                    <MudTextField @bind-Value="_selectedIntegration.Settings.ClientId" Label="Client ID" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudItem>
-                
-                <MudItem xs="12">
-                    <MudTextField @bind-Value="_selectedIntegration.Settings.ClientSecret" Label="Client Secret" Variant="Variant.Outlined" Margin="Margin.Dense" InputType="InputType.Password" />
-                </MudItem>
+                @if (!IsPerUserMicrosoftIntegration(_selectedIntegration))
+                {
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_selectedIntegration.Settings.ClientId" Label="Client ID" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_selectedIntegration.Settings.ClientSecret" Label="Client Secret" Variant="Variant.Outlined" Margin="Margin.Dense" InputType="InputType.Password" />
+                    </MudItem>
+                }
                 
                 @if (_selectedIntegration.Key is "MYOB" or "Xero" or "QuickBooks")
                 {
@@ -211,6 +216,12 @@
                     </MudItem>
                     <MudItem xs="12" sm="4">
                         <MudCheckBox T="bool" @bind-Value="_selectedIntegration.Settings.MoveToCompanyFolder" Label="Move to Company folder if read &amp; 1 day elapsed" Color="Color.Primary" />
+                    </MudItem>
+                }
+                else if (_selectedIntegration.Key == "MyOneDrive")
+                {
+                    <MudItem xs="12" sm="4">
+                        <MudSwitch @bind-Value="_selectedIntegration.Settings.SyncDrive" Label="OneDrive Files" Color="Color.Primary" Margin="Margin.Dense" />
                     </MudItem>
                 }
                 else if (_selectedIntegration.Key == "Google")
@@ -289,17 +300,21 @@
     private List<IntegrationItem> _integrations = new();
     private bool _showSettingsDialog;
     private IntegrationItem? _selectedIntegration;
+    private string _currentUserCode = string.Empty;
 
     private string GetAIModel() => Configuration["Azure:OpenAIModel"] ?? "GPT-5";
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        _currentUserCode = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
         LoadIntegrations();
     }
 
     private void LoadIntegrations()
     {
         var s = SettingsSvc.Current;
+        var myUserGraph = GetCurrentUserMicrosoftConnection(s);
         _integrations = new List<IntegrationItem>
         {
             new ("MYOB", "Business management software (AU)", Icons.Material.Rounded.Business, "#FF6600", "MYOB")
@@ -372,18 +387,32 @@
             },
             new ("My Outlook", "Personal email & calendar (uses your profile email)", Icons.Material.Rounded.Mail, "#00B4D8", "MyOutlook")
             {
-                Connected = s.MyOutlook.Enabled,
+                Connected = myUserGraph.Enabled || myUserGraph.IsConnected,
                 Settings = new IntegrationSettingsModel
                 {
                     ClientId = s.MyOutlook.ClientId,
                     ClientSecret = s.MyOutlook.ClientSecret,
                     RedirectUri = s.MyOutlook.RedirectUri,
                     AuthEndpoint = s.MyOutlook.AuthEndpoint,
-                    SyncCalendar = s.MyOutlook.SyncCalendar,
-                    SyncContacts = s.MyOutlook.SyncContacts,
-                    SyncEmail = s.MyOutlook.SyncEmail,
-                    LastSyncTime = s.MyOutlook.LastSyncTime,
-                    Status = s.MyOutlook.Status?.ToString()
+                    SyncCalendar = myUserGraph.SyncCalendar,
+                    SyncContacts = myUserGraph.SyncContacts,
+                    SyncEmail = myUserGraph.SyncEmail,
+                    LastSyncTime = myUserGraph.LastSyncTime,
+                    Status = myUserGraph.Status?.ToString()
+                }
+            },
+            new ("My OneDrive", "Personal OneDrive files (Microsoft 365)", Icons.Material.Rounded.CloudUpload, "#2563EB", "MyOneDrive")
+            {
+                Connected = myUserGraph.Enabled || myUserGraph.IsConnected,
+                Settings = new IntegrationSettingsModel
+                {
+                    ClientId = s.MyOutlook.ClientId,
+                    ClientSecret = s.MyOutlook.ClientSecret,
+                    RedirectUri = s.MyOutlook.RedirectUri,
+                    AuthEndpoint = s.MyOutlook.AuthEndpoint,
+                    SyncDrive = myUserGraph.SyncDrive,
+                    LastSyncTime = myUserGraph.LastSyncTime,
+                    Status = myUserGraph.Status?.ToString()
                 }
             },
             new ("Google Cloud", "Drive, Gmail & Docs", Icons.Material.Rounded.Cloud, "#4285F4", "Google")
@@ -410,6 +439,44 @@
         _showSettingsDialog = true;
     }
 
+    private bool IsPerUserMicrosoftIntegration(IntegrationItem integration)
+        => integration.Key is "MyOutlook" or "MyOneDrive";
+
+    private void ConnectIntegration(IntegrationItem integration)
+    {
+        if (IsPerUserMicrosoftIntegration(integration))
+        {
+            Nav.NavigateTo("/integrations/microsoft/connect", forceLoad: true);
+            return;
+        }
+
+        OpenSettingsDialog(integration);
+    }
+
+    private IntegrationSettings GetCurrentUserMicrosoftConnection(PlatformSettings settings)
+    {
+        if (!string.IsNullOrWhiteSpace(_currentUserCode)
+            && settings.MyOutlookUserConnections.TryGetValue(_currentUserCode, out var existing))
+        {
+            return existing;
+        }
+
+        return new IntegrationSettings
+        {
+            SyncCalendar = settings.MyOutlook.SyncCalendar,
+            SyncContacts = settings.MyOutlook.SyncContacts,
+            SyncEmail = settings.MyOutlook.SyncEmail,
+            SyncDrive = true,
+            Status = "Not Connected"
+        };
+    }
+
+    private void SaveCurrentUserMicrosoftConnection(PlatformSettings settings, IntegrationSettings value)
+    {
+        if (string.IsNullOrWhiteSpace(_currentUserCode)) return;
+        settings.MyOutlookUserConnections[_currentUserCode] = value;
+    }
+
     private async Task TestConnectionAsync(IntegrationItem integration)
     {
         if (string.IsNullOrEmpty(integration.Settings.ClientId) || string.IsNullOrEmpty(integration.Settings.ClientSecret))
@@ -433,8 +500,14 @@
     private async Task SyncNow(IntegrationItem integration)
     {
         Snackbar.Add($"Starting sync with {integration.Name}...", Severity.Info);
-        
+
         integration.Settings.LastSyncTime = DateTime.UtcNow;
+        if (IsPerUserMicrosoftIntegration(integration))
+        {
+            var conn = GetCurrentUserMicrosoftConnection(SettingsSvc.Current);
+            conn.LastSyncTime = integration.Settings.LastSyncTime;
+            SaveCurrentUserMicrosoftConnection(SettingsSvc.Current, conn);
+        }
         await SettingsSvc.SaveAsync();
         LoadIntegrations();
         
@@ -490,13 +563,24 @@
                 s.OutlookMoveToCompanyFolder = _selectedIntegration.Settings.MoveToCompanyFolder;
                 break;
             case "MyOutlook":
-                s.MyOutlook.Enabled = _selectedIntegration.Connected;
-                s.MyOutlook.ClientId = _selectedIntegration.Settings.ClientId;
-                s.MyOutlook.ClientSecret = _selectedIntegration.Settings.ClientSecret;
-                s.MyOutlook.RedirectUri = _selectedIntegration.Settings.RedirectUri;
-                s.MyOutlook.SyncCalendar = _selectedIntegration.Settings.SyncCalendar;
-                s.MyOutlook.SyncContacts = _selectedIntegration.Settings.SyncContacts;
-                s.MyOutlook.SyncEmail = _selectedIntegration.Settings.SyncEmail;
+                {
+                    var userConn = GetCurrentUserMicrosoftConnection(s);
+                    userConn.Enabled = _selectedIntegration.Connected;
+                    userConn.SyncCalendar = _selectedIntegration.Settings.SyncCalendar;
+                    userConn.SyncContacts = _selectedIntegration.Settings.SyncContacts;
+                    userConn.SyncEmail = _selectedIntegration.Settings.SyncEmail;
+                    userConn.Status = userConn.Enabled ? "Connected" : "Disabled";
+                    SaveCurrentUserMicrosoftConnection(s, userConn);
+                }
+                break;
+            case "MyOneDrive":
+                {
+                    var userConn = GetCurrentUserMicrosoftConnection(s);
+                    userConn.Enabled = _selectedIntegration.Connected;
+                    userConn.SyncDrive = _selectedIntegration.Settings.SyncDrive;
+                    userConn.Status = userConn.Enabled ? "Connected" : "Disabled";
+                    SaveCurrentUserMicrosoftConnection(s, userConn);
+                }
                 break;
             case "Google":
                 s.Google.Enabled = _selectedIntegration.Connected;
@@ -525,7 +609,11 @@
             case "Xero": s.Xero.Enabled = false; break;
             case "QuickBooks": s.QuickBooks.Enabled = false; break;
             case "Outlook": s.Outlook.Enabled = false; break;
-            case "MyOutlook": s.MyOutlook.Enabled = false; break;
+            case "MyOutlook":
+            case "MyOneDrive":
+                if (!string.IsNullOrWhiteSpace(_currentUserCode))
+                    s.MyOutlookUserConnections.Remove(_currentUserCode);
+                break;
             case "Google": s.Google.Enabled = false; break;
         }
         

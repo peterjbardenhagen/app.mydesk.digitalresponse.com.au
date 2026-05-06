@@ -73,7 +73,8 @@
 </MudPaper>
 
 <MudDataGrid T="PurchaseOrder" Items="@_pos" Loading="@_loading" Dense="true" Hover="true"
-             SortMode="@SortMode.Multiple" Virtualize="true" FixedHeader="true" Height="600px" Class="tl-compact-grid">
+             SortMode="@SortMode.Multiple" Virtualize="true" FixedHeader="true" Height="600px" Class="tl-compact-grid"
+             RowClicked="OnPORowClicked">
     <Columns>
         <PropertyColumn Property="x => x.POid"         Title="#"         InitialDirection="SortDirection.Descending" />
         <PropertyColumn Property="x => x.SupplierName" Title="Supplier" />
@@ -240,6 +241,11 @@
         var base64 = Convert.ToBase64String(bytes);
         var url = $"data:text/csv;base64,{base64}";
         await JsRuntime.InvokeVoidAsync("window.open", url, "_blank");
+    }
+
+    private void OnPORowClicked(DataGridRowClickEventArgs<PurchaseOrder> args)
+    {
+        Nav.NavigateTo($"/purchase-orders/{args.Item.POid}");
     }
 }
 

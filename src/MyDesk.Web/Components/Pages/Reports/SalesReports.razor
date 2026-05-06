@@ -44,7 +44,7 @@
     <MudItem xs="12" md="6">
         <MudPaper Class="pa-4" Elevation="1">
             <MudText Typo="Typo.h6" Class="mb-2">Sales by Rep</MudText>
-            <MudText Typo="Typo.caption" Style="color:var(--gray-500);">Won quotes by owner, in selected range.</MudText>
+            <MudText Typo="Typo.caption" Style="color:var(--gray-500);">Accepted quotes by owner, in selected range.</MudText>
             <div class="d-flex flex-wrap align-center justify-center gap-4 mt-2">
                 <MudChart ChartType="ChartType.Pie"
                           InputData="@_byRepData"
@@ -67,7 +67,7 @@
     <MudItem xs="12" md="6">
         <MudPaper Class="pa-4" Elevation="1">
             <MudText Typo="Typo.h6" Class="mb-2">Sales by Division</MudText>
-            <MudText Typo="Typo.caption" Style="color:var(--gray-500);">Won quotes split by division.</MudText>
+            <MudText Typo="Typo.caption" Style="color:var(--gray-500);">Accepted quotes split by division.</MudText>
             <MudChart ChartType="ChartType.Donut"
                       InputData="@_byDivisionData"
                       InputLabels="@_byDivisionLabels"
@@ -91,8 +91,8 @@
 
     <MudItem xs="12">
         <MudPaper Class="pa-4" Elevation="1">
-            <MudText Typo="Typo.h6" Class="mb-2">Pending vs Won Quotes</MudText>
-            <MudText Typo="Typo.caption" Style="color:var(--gray-500);">Stacked monthly view — pending pipeline + closed-won.</MudText>
+            <MudText Typo="Typo.h6" Class="mb-2">Pending vs Accepted Quotes</MudText>
+            <MudText Typo="Typo.caption" Style="color:var(--gray-500);">Stacked monthly view — pending pipeline + closed accepted.</MudText>
             <MudChart ChartType="ChartType.StackedBar"
                       ChartSeries="@_pendingWonSeries"
                       XAxisLabels="@_pendingWonLabels"
@@ -176,8 +176,8 @@
             _pendingWonLabels = _pendingWon.Labels;
             _pendingWonSeries = new()
             {
-                new ChartSeries { Name = "Pending", Data = _pendingWon.Pending.Select(v => (double)v).ToArray() },
-                new ChartSeries { Name = "Won",     Data = _pendingWon.Won.Select(v => (double)v).ToArray() },
+                new ChartSeries { Name = "Pending",      Data = _pendingWon.Pending.Select(v => (double)v).ToArray() },
+                new ChartSeries { Name = "Client Accepted", Data = _pendingWon.Won.Select(v => (double)v).ToArray() },
             };
         }
         catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
