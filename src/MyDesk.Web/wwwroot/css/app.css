@@ -301,6 +301,8 @@ body.mud-dark-mode .mud-layout { background: transparent; }
 .tl-link { color: var(--gray-700); text-decoration: none; cursor: pointer; transition: all 150ms var(--ease); }
 .tl-link:hover { color: var(--gray-900); text-decoration: underline; }
 .tl-breadcrumb .sep { color: var(--gray-300); }
+.tl-breadcrumb span:last-child { color: var(--tl-primary-700); text-decoration: none; cursor: pointer; font-weight: 500; }
+.tl-breadcrumb span:last-child:hover { text-decoration: underline; }
 
 /* -------- STAT CARDS (KPI) -------- */
 .tl-stat-card {

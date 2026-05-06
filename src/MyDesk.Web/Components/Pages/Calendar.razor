@@ -139,10 +139,28 @@
             var dt = await LookupService.GetStaleQuotesAsync(userCode);
             foreach (DataRow row in dt.Rows)
             {
+                DateTime quoteDate;
+                if (row["Validity"] != DBNull.Value)
+                {
+                    var validityVal = row["Validity"];
+                    if (validityVal is DateTime dtVal)
+                        quoteDate = dtVal;
+                    else if (DateTime.TryParse(validityVal.ToString(), out var parsedDt))
+                        quoteDate = parsedDt;
+                    else if (int.TryParse(validityVal.ToString(), out var days))
+                        quoteDate = (row["QuoteDate"] != DBNull.Value ? Convert.ToDateTime(row["QuoteDate"]) : DateTime.Today).AddDays(days);
+                    else
+                        quoteDate = DateTime.Today;
+                }
+                else
+                {
+                    quoteDate = DateTime.Today;
+                }
+
                 _allEvents.Add(new CalendarEvent
                 {
                     Title = $"Quote {row["QuoteNumber"]}",
-                    Date = row["Validity"] != DBNull.Value ? Convert.ToDateTime(row["Validity"]) : DateTime.Today,
+                    Date = quoteDate,
                     Description = $"Customer: {row["QuoteCompany"]}",
                     CssClass = "quote",
                     Link = $"/quotes/{row["Qid"]}",

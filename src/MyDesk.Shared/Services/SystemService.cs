@@ -21,10 +21,11 @@ public class SystemService
     // ---------- Divisions ----------
     public async Task<List<Division>> GetDivisionsAsync()
     {
-        var dt = await _db.QueryAsync("SELECT DivisionId, Division AS DivisionName FROM Divisions ORDER BY Division");
+        var dt = await _db.QueryAsync("SELECT DivisionId, TenantId, Division AS DivisionName FROM Divisions ORDER BY Division");
         return dt.Map(r => new Division
         {
             DivisionId = (int)r["DivisionId"],
+            TenantId = r["TenantId"] is DBNull ? Guid.Empty : (Guid)r["TenantId"],
             DivisionName = r["DivisionName"]?.ToString() ?? ""
         }).ToList();
     }
@@ -333,5 +334,69 @@ public class SystemService
             r["TableName"]!.ToString()!,
             Convert.ToInt32(r["RowCount"])
         )).ToList();
+    }
+
+    // ---------- Super Admin: Tenants and Logging ----------
+    public async Task<List<Tenant>> GetAllTenantsAsync()
+    {
+        var dt = await _db.QueryAsync(
+            "SELECT TenantId, ISNULL(Name, '') AS Name, ISNULL(Slug, '') AS Slug, IsActive, IsSuspended FROM Tenants ORDER BY Name");
+        return dt.Map(r => new Tenant
+        {
+            TenantId = (Guid)r["TenantId"],
+            Name = r["Name"]?.ToString() ?? "",
+            Slug = r["Slug"]?.ToString() ?? "",
+            IsActive = r["IsActive"] is DBNull ? false : (bool)r["IsActive"],
+            IsSuspended = r["IsSuspended"] is DBNull ? false : (bool)r["IsSuspended"]
+        }).ToList();
+    }
+
+    public async Task<List<ApplicationLog>> GetApplicationLogsAsync(string? filterLevel = null)
+    {
+        var sql = "SELECT TOP 1000 LogId, TenantId, LogLevel, LogCategory, Message, UserCode, CreatedAt FROM ApplicationLogs";
+        if (!string.IsNullOrWhiteSpace(filterLevel))
+        {
+            sql += " WHERE LogLevel = @level";
+        }
+        sql += " ORDER BY CreatedAt DESC";
+        
+        var dt = await _db.QueryAsync(sql, 
+            string.IsNullOrWhiteSpace(filterLevel) ? new() : new() { ["level"] = filterLevel });
+        return dt.Map(r => new ApplicationLog
+        {
+            LogId = (long)r["LogId"],
+            TenantId = (Guid)r["TenantId"],
+            LogLevel = r["LogLevel"]?.ToString() ?? "",
+            LogCategory = r["LogCategory"]?.ToString(),
+            Message = r["Message"]?.ToString() ?? "",
+            UserCode = r["UserCode"]?.ToString(),
+            CreatedAt = (DateTime)r["CreatedAt"]
+        }).ToList();
+    }
+
+    public async Task ClearOldApplicationLogsAsync(int retentionDays)
+    {
+        var sql = @"DELETE FROM ApplicationLogs 
+                   WHERE CreatedAt < DATEADD(day, -@days, GETUTCDATE())";
+        await _db.ExecuteNonQueryAsync(sql, new() { ["days"] = retentionDays });
+    }
+
+    public async Task EnforceDatabaseSchemaAsync()
+    {
+        // Placeholder: In production, this would trigger TenantIsolationService.EnforceAsync()
+        // and other schema enforcement routines
+        await Task.CompletedTask;
+    }
+
+    public async Task ResetRLSPoliciesAsync()
+    {
+        // Placeholder: In production, this would reset/re-enable RLS policies
+        await Task.CompletedTask;
+    }
+
+    public async Task SetLogRetentionAsync(int days)
+    {
+        // Placeholder: Store retention config (could be in PlatformSettings)
+        await Task.CompletedTask;
     }
 }

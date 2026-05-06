@@ -24,56 +24,126 @@
 }
 else
 {
-    <MudPaper Class="pa-0">
-        <MudDataGrid T="Location" Items="_items" Dense="true" Hover="true" Elevation="0">
-            <Columns>
-                <PropertyColumn Property="x => x.LocationId" Title="#" CellStyle="width:80px;" />
-                <TemplateColumn Title="Name">
-                    <CellTemplate>
-                        @if (_editingId == context.Item.LocationId)
-                        {
-                            <MudTextField @bind-Value="_editingName" Immediate="true" Margin="Margin.Dense"
-                                          Variant="Variant.Outlined" AutoFocus="true" />
-                        }
-                        else { @context.Item.LocationName }
-                    </CellTemplate>
-                </TemplateColumn>
-                <TemplateColumn Title="Actions" CellStyle="width:160px;">
-                    <CellTemplate>
-                        @if (_editingId == context.Item.LocationId)
-                        {
-                            <MudIconButton Icon="@Icons.Material.Rounded.Check" Color="Color.Success" Size="Size.Small"
-                                           OnClick="@(() => Save(context.Item))" />
-                            <MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small" OnClick="Cancel" />
-                        }
-                        else
-                        {
-                            <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" Color="Color.Primary"
-                                           OnClick="@(() => BeginEdit(context.Item))" />
-                            <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
-                                           OnClick="@(() => Delete(context.Item))" />
-                        }
-                    </CellTemplate>
-                </TemplateColumn>
-            </Columns>
-        </MudDataGrid>
-    </MudPaper>
+<MudPaper Class="pa-6">
+         <MudGrid Spacing="3">
+             @foreach (var item in _items)
+             {
+                 var isEditing = _editingId == item.LocationId;
+                 <MudItem xs="12">
+                     <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-divider); border-radius: 4px;">
+                         <MudGrid Spacing="2">
+                             <MudItem xs="12" sm="6">
+                                 @if (isEditing)
+                                 {
+                                     <MudTextField @bind-Value="_editingName" Label="Location Name *" Variant="Variant.Outlined" AutoFocus="true" />
+                                 }
+                                 else
+                                 {
+                                     <div>
+                                         <MudText Typo="Typo.subtitle2" Style="font-weight: 600; margin-bottom: 4px;">@item.LocationName</MudText>
+                                         <MudText Typo="Typo.caption" Style="color: var(--gray-500);">ID: @item.LocationId</MudText>
+                                     </div>
+                                 }
+                             </MudItem>
+                             <MudItem xs="12" sm="6">
+                                 <div class="d-flex gap-2 justify-end">
+                                     @if (isEditing)
+                                     {
+                                         <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" 
+                                                    StartIcon="@Icons.Material.Rounded.Check" OnClick="@(() => Save(item))">Save</MudButton>
+                                         <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="Cancel">Cancel</MudButton>
+                                     }
+                                     else
+                                     {
+                                         <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary"
+                                                    StartIcon="@Icons.Material.Rounded.Edit" OnClick="@(() => BeginEdit(item))">Edit</MudButton>
+                                         <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Error"
+                                                    StartIcon="@Icons.Material.Rounded.Delete" OnClick="@(() => Delete(item))">Delete</MudButton>
+                                     }
+                                 </div>
+                             </MudItem>
+                             @if (isEditing)
+                             {
+                                 <MudItem xs="12" sm="6">
+                                     <MudTextField @bind-Value="_editingAddress1" Label="Address Line 1" Variant="Variant.Outlined" />
+                                 </MudItem>
+                                 <MudItem xs="12" sm="6">
+                                     <MudTextField @bind-Value="_editingAddress2" Label="Address Line 2" Variant="Variant.Outlined" />
+                                 </MudItem>
+                                 <MudItem xs="12" sm="4">
+                                     <MudTextField @bind-Value="_editingSuburb" Label="Suburb / City" Variant="Variant.Outlined" />
+                                 </MudItem>
+                                 <MudItem xs="12" sm="4">
+                                     <MudTextField @bind-Value="_editingState" Label="State" Variant="Variant.Outlined" MaxLength="3" />
+                                 </MudItem>
+                                 <MudItem xs="12" sm="4">
+                                     <MudTextField @bind-Value="_editingPostCode" Label="Post Code" Variant="Variant.Outlined" />
+                                 </MudItem>
+                             }
+                             else if (!string.IsNullOrWhiteSpace(item.FullAddress))
+                             {
+                                 <MudItem xs="12">
+                                     <MudText Typo="Typo.body2" Style="color: var(--gray-600);">@item.FullAddress</MudText>
+                                 </MudItem>
+                             }
+                         </MudGrid>
+                     </MudPaper>
+                 </MudItem>
+             }
+         </MudGrid>
+     </MudPaper>
 }
 
 @code {
     private List<Location>? _items;
     private int? _editingId;
     private string _editingName = "";
+    private string? _editingAddress1;
+    private string? _editingAddress2;
+    private string? _editingSuburb;
+    private string? _editingState;
+    private string? _editingPostCode;
 
     protected override async Task OnInitializedAsync() => await Reload();
     private async Task Reload() => _items = await Svc.GetLocationsAsync();
 
-    private void BeginEdit(Location l) { _editingId = l.LocationId; _editingName = l.LocationName; }
-    private void Cancel() { _editingId = null; _editingName = ""; }
+    private void BeginEdit(Location l)
+    {
+        _editingId = l.LocationId;
+        _editingName = l.LocationName;
+        _editingAddress1 = l.Address1;
+        _editingAddress2 = l.Address2;
+        _editingSuburb = l.Suburb;
+        _editingState = l.State;
+        _editingPostCode = l.PostCode;
+    }
+
+    private void Cancel()
+    {
+        _editingId = null;
+        _editingName = "";
+        _editingAddress1 = null;
+        _editingAddress2 = null;
+        _editingSuburb = null;
+        _editingState = null;
+        _editingPostCode = null;
+    }
 
     private async Task Save(Location l)
     {
-        try { l.LocationName = _editingName; await Svc.SaveLocationAsync(l); Snackbar.Add("Saved", Severity.Success); Cancel(); await Reload(); }
+        try
+        {
+            l.LocationName = _editingName;
+            l.Address1 = _editingAddress1;
+            l.Address2 = _editingAddress2;
+            l.Suburb = _editingSuburb;
+            l.State = _editingState;
+            l.PostCode = _editingPostCode;
+            await Svc.SaveLocationAsync(l);
+            Snackbar.Add("Location saved", Severity.Success);
+            Cancel();
+            await Reload();
+        }
         catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
     }
 
@@ -86,7 +156,7 @@ else
 
     private async Task Delete(Location l)
     {
-        try { await Svc.DeleteLocationAsync(l.LocationId); Snackbar.Add("Deleted", Severity.Success); await Reload(); }
+        try { await Svc.DeleteLocationAsync(l.LocationId); Snackbar.Add("Location deleted", Severity.Success); await Reload(); }
         catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
     }
 }

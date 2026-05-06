@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Diagnostics;
 using System.Security.Claims;
 using System.Text;
@@ -109,7 +110,12 @@ builder.Services.AddRateLimiter(options =>
 
 builder.Services.AddMemoryCache();
 
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+var azureAdClientId = builder.Configuration["AzureAd:ClientId"] ?? builder.Configuration["AZURE_AD_CLIENT_ID"];
+var azureAdClientSecret = builder.Configuration["AzureAd:ClientSecret"] ?? builder.Configuration["AZURE_AD_CLIENT_SECRET"];
+var azureAdTenantId = builder.Configuration["AzureAd:TenantId"] ?? builder.Configuration["AZURE_AD_TENANT_ID"];
+var azureAdConfigured = !string.IsNullOrWhiteSpace(azureAdClientId) && !string.IsNullOrWhiteSpace(azureAdTenantId);
+
+var authBuilder = builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
         options.LoginPath = "/login";
@@ -120,9 +126,98 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Lax;
-    })
-    .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, MyDesk.Web.Api.ApiKeyAuthenticationHandler>(
-        MyDesk.Web.Api.ApiKeyAuthenticationHandler.SchemeName, _ => { });
+    });
+
+if (azureAdConfigured)
+{
+    authBuilder.AddOpenIdConnect("AzureAd", options =>
+    {
+        options.Authority = $"https://login.microsoftonline.com/{azureAdTenantId}/v2.0";
+        options.ClientId = azureAdClientId!;
+        options.ClientSecret = azureAdClientSecret ?? "";
+        options.CallbackPath = "/signin-oidc";
+        options.SignedOutCallbackPath = "/signout-callback-oidc";
+        options.ResponseType = "code";
+        options.Scope.Add("openid");
+        options.Scope.Add("profile");
+        options.Scope.Add("email");
+        options.SaveTokens = true;
+        options.GetClaimsFromUserInfoEndpoint = true;
+        options.Events = new OpenIdConnectEvents
+        {
+            OnTokenValidated = async ctx =>
+            {
+                var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                var userService = ctx.HttpContext.RequestServices.GetRequiredService<UserService>();
+                var tenantService = ctx.HttpContext.RequestServices.GetRequiredService<TenantService>();
+
+                var oid = ctx.Principal?.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value
+                          ?? ctx.Principal?.FindFirst("oid")?.Value;
+                var email = ctx.Principal?.FindFirst("preferred_username")?.Value
+                            ?? ctx.Principal?.FindFirst("email")?.Value
+                            ?? ctx.Principal?.FindFirst("upn")?.Value
+                            ?? ctx.Principal?.FindFirst(ClaimTypes.Email)?.Value;
+                var name = ctx.Principal?.FindFirst("name")?.Value ?? email;
+
+                if (string.IsNullOrEmpty(email))
+                {
+                    logger.LogWarning("Azure AD login succeeded but no email claim found for OID {Oid}", oid);
+                    ctx.Fail("Unable to identify user from Azure AD claims.");
+                    return;
+                }
+
+                try
+                {
+                    var user = await userService.GetByEmailAsync(email);
+                    if (user == null)
+                    {
+                        logger.LogWarning("Azure AD user {Email} not found in MyDesk — access denied", email);
+                        ctx.Fail("No matching MyDesk account found for {Email}. Contact your administrator to set up access.".Replace("{Email}", email));
+                        return;
+                    }
+
+                    var memberships = await tenantService.GetUserTenantsAsync(user.UserId);
+                    if (memberships.Count == 0)
+                    {
+                        logger.LogWarning("Azure AD user {Email} has no tenant memberships", email);
+                        ctx.Fail("No workspace access configured. Contact your administrator.");
+                        return;
+                    }
+
+                    var defaultMembership = memberships.FirstOrDefault(m => m.IsDefault) ?? memberships[0];
+                    var claims = new List<Claim>
+                    {
+                        new(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+                        new(ClaimTypes.Name, user.Name),
+                        new(ClaimTypes.Email, user.Email),
+                        new("tenant_id", defaultMembership.TenantId.ToString()),
+                        new("azure_oid", oid ?? ""),
+                        new(ClaimTypes.Role, "Administrator"),
+                    };
+
+                    var appIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                    ctx.Principal?.AddIdentity(appIdentity);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Azure AD token validation failed for user {Email}", email);
+                    ctx.Fail("Failed to resolve MyDesk account. Contact support.");
+                }
+            },
+            OnAuthenticationFailed = ctx =>
+            {
+                var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                logger.LogError(ctx.Exception, "Azure AD authentication failed");
+                ctx.Response.Redirect("/login?error=azure");
+                ctx.HandleResponse();
+                return Task.CompletedTask;
+            }
+        };
+    });
+}
+
+authBuilder.AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, MyDesk.Web.Api.ApiKeyAuthenticationHandler>(
+    MyDesk.Web.Api.ApiKeyAuthenticationHandler.SchemeName, _ => { });
 builder.Services.AddAuthorization(options =>
 {
     options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder(
@@ -1049,7 +1144,14 @@ app.MapDelete("/api/logs", (HttpContext ctx) =>
 app.MapGet("/logout", async (HttpContext ctx) =>
 {
     Log.Information("Logout: {User}", ctx.User?.Identity?.Name ?? "anonymous");
+    var hasAzureSession = ctx.User?.Claims.Any(c => c.Type == "azure_oid") ?? false;
     await ctx.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+    if (hasAzureSession && azureAdConfigured)
+    {
+        var props = new AuthenticationProperties { RedirectUri = "/login" };
+        await ctx.SignOutAsync("AzureAd", props);
+        return Results.Empty;
+    }
     return Results.Redirect("/login");
 });
 

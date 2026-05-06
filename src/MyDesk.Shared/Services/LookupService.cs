@@ -20,10 +20,11 @@ public class LookupService
 
     public async Task<List<Division>> GetDivisionsAsync()
     {
-        var dt = await _db.QueryAsync("SELECT DivisionId, ISNULL(Division, '') AS DivisionName FROM Divisions ORDER BY Division");
+        var dt = await _db.QueryAsync("SELECT DivisionId, TenantId, ISNULL(Division, '') AS DivisionName FROM Divisions ORDER BY Division");
         return dt.Map(r => new Division
         {
             DivisionId = Convert.ToInt32(r["DivisionId"]),
+            TenantId = r["TenantId"] is DBNull ? Guid.Empty : (Guid)r["TenantId"],
             DivisionName = r["DivisionName"]?.ToString() ?? ""
         });
     }
@@ -102,13 +103,14 @@ public class LookupService
     public async Task<List<Location>> GetLocationsAsync()
     {
         var dt = await _db.QueryAsync(@"
-            SELECT LocationId, 
+            SELECT LocationId, TenantId,
                    ISNULL(Company,'') AS LocationName,
                    Address1, Address2, Suburb, State, PostCode
             FROM Locations ORDER BY Company");
         return dt.Map(r => new Location
         {
             LocationId   = Convert.ToInt32(r["LocationId"]),
+            TenantId     = r["TenantId"] is DBNull ? Guid.Empty : (Guid)r["TenantId"],
             LocationName = r["LocationName"]?.ToString() ?? "",
             Address1     = r["Address1"]?.ToString(),
             Address2     = r["Address2"]?.ToString(),

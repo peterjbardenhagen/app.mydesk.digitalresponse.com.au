@@ -438,6 +438,7 @@ public class ReportResult
 public class Division
 {
     public int DivisionId { get; set; }
+    public Guid TenantId { get; set; }
     public string DivisionName { get; set; } = string.Empty;
     public string? Logo { get; set; }
     public decimal GSTRate { get; set; } = 10.0m;
@@ -453,6 +454,7 @@ public class Division
 public class Location
 {
     public int LocationId { get; set; }
+    public Guid TenantId { get; set; }
     public string LocationName { get; set; } = string.Empty;
     public string? Address1 { get; set; }
     public string? Address2 { get; set; }
@@ -928,5 +930,19 @@ public class CustomerFile
     public string FileSize { get; set; } = "";
     public DateTime UploadedDate { get; set; }
     public int CompanyId { get; set; }
+}
+
+public class ApplicationLog
+{
+    public long LogId { get; set; }
+    public Guid TenantId { get; set; }
+    public string LogLevel { get; set; } = "INFO";      // INFO, WARNING, ERROR, CRITICAL
+    public string? LogCategory { get; set; }
+    public string Message { get; set; } = "";
+    public string? StackTrace { get; set; }
+    public string? UserCode { get; set; }
+    public string? IpAddress { get; set; }
+    public string? RequestPath { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 

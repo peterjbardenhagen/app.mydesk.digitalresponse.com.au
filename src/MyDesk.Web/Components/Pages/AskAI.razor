@@ -50,7 +50,7 @@
         <div class="tl-chat-empty-state">
             <MudIcon Icon="@Icons.Material.Rounded.AutoAwesome" Style="font-size:3rem;" />
             <MudText Typo="Typo.body1" Class="mt-3">Ask anything about your quotes, invoices, customers, or sales data.</MudText>
-            <MudText Typo="Typo.caption">Ctrl+Enter to send</MudText>
+            <MudText Typo="Typo.caption">Press Enter to send</MudText>
         </div>
     }
     @foreach (var msg in _history)
@@ -140,9 +140,9 @@
             Send
         </MudButton>
     </div>
-    <MudText Typo="Typo.caption" Class="mt-1" Style="color:var(--gray-500);">
-        Ctrl+Enter to send · 🎤 to speak · All interactions are logged for compliance
-    </MudText>
+        <MudText Typo="Typo.caption" Class="mt-1" Style="color:var(--gray-500);">
+            Enter to send · Shift+Enter for new line · 🎤 to speak · All interactions are logged for compliance
+        </MudText>
 </MudPaper>
 </div>
 
@@ -229,7 +229,7 @@ Be concise, practical, and focus on actionable business insights."));
 
     private async Task OnKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter" && e.CtrlKey) await SendAsync();
+        if (e.Key == "Enter" && !e.ShiftKey) { await SendAsync(); }
     }
 
     private async Task SendAsync()

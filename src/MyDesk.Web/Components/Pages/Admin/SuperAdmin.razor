@@ -1,0 +1,253 @@
+@page "/admin/super-admin"
+@attribute [Authorize]
+@inject SystemService Svc
+@inject ISnackbar Snackbar
+
+<PageTitle>Super Administrator - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/admin/setup">Admin</a><span class="sep">/</span>
+            <span style="color:var(--gray-700); font-weight:500;">Super Administrator</span>
+        </div>
+        <h1>Super Administrator Panel</h1>
+        <p class="tl-subtitle">Platform-wide configuration, tenant management, and system logs.</p>
+    </div>
+</div>
+
+<MudTabs Elevation="1" Rounded="true" ApplyEffectsToContainer="true">
+    <MudTabPanel Text="Tenant Management" Icon="@Icons.Material.Rounded.Business">
+        <MudPaper Class="pa-6 mt-4">
+            @if (_tenants == null)
+            {
+                <MudProgressCircular Indeterminate="true" />
+            }
+            else
+            {
+                <MudTable Items="_tenants" Hover="true" Striped="true" Dense="true">
+                    <HeaderContent>
+                        <MudTh>Tenant ID</MudTh>
+                        <MudTh>Name</MudTh>
+                        <MudTh>Slug</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Users</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Tenant ID">
+                            <MudText Typo="Typo.caption" Style="font-family: monospace; color: var(--gray-600);">
+                                @context.TenantId.ToString().Substring(0, 8)...
+                            </MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Name">@context.Name</MudTd>
+                        <MudTd DataLabel="Slug">@context.Slug</MudTd>
+                        <MudTd DataLabel="Status">
+                            @if (context.IsActive && !context.IsSuspended)
+                            {
+                                <MudChip T="string" Color="Color.Success" Icon="@Icons.Material.Rounded.CheckCircle" Size="Size.Small">Active</MudChip>
+                            }
+                            else if (context.IsSuspended)
+                            {
+                                <MudChip T="string" Color="Color.Error" Icon="@Icons.Material.Rounded.Block" Size="Size.Small">Suspended</MudChip>
+                            }
+                            else
+                            {
+                                <MudChip T="string" Color="Color.Warning" Icon="@Icons.Material.Rounded.Warning" Size="Size.Small">Inactive</MudChip>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Users">
+                            <MudText Typo="Typo.body2">@(_userCounts.ContainsKey(context.TenantId) ? _userCounts[context.TenantId] : 0)</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudButton Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">View</MudButton>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudPaper>
+    </MudTabPanel>
+
+    <MudTabPanel Text="System Logs" Icon="@Icons.Material.Rounded.Description">
+        <MudPaper Class="pa-6 mt-4">
+            <MudGrid Spacing="2" Class="mb-4">
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" @bind-Value="_selectedLogLevel" Label="Filter by Level" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                        <MudSelectItem Value="@("")">All Levels</MudSelectItem>
+                        <MudSelectItem Value="@("INFO")">INFO</MudSelectItem>
+                        <MudSelectItem Value="@("WARNING")">WARNING</MudSelectItem>
+                        <MudSelectItem Value="@("ERROR")">ERROR</MudSelectItem>
+                        <MudSelectItem Value="@("CRITICAL")">CRITICAL</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6" Class="d-flex gap-2 align-end">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RefreshLogs">Refresh</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="ClearLogs">Clear Old Logs</MudButton>
+                </MudItem>
+            </MudGrid>
+
+            @if (_logs == null)
+            {
+                <MudProgressCircular Indeterminate="true" />
+            }
+            else if (_logs.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info">No logs found.</MudAlert>
+            }
+            else
+            {
+                <div style="overflow-x: auto; max-height: 70vh;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--mud-palette-divider); background-color: var(--mud-palette-background-grey);">
+                                <th style="text-align: left; padding: 8px; font-weight: 600;">Time</th>
+                                <th style="text-align: left; padding: 8px; font-weight: 600;">Level</th>
+                                <th style="text-align: left; padding: 8px; font-weight: 600;">Category</th>
+                                <th style="text-align: left; padding: 8px; font-weight: 600;">Message</th>
+                                <th style="text-align: left; padding: 8px; font-weight: 600;">User</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var log in _logs)
+                            {
+                                var bgColor = log.LogLevel switch
+                                {
+                                    "ERROR" => "rgba(211, 47, 47, 0.05)",
+                                    "WARNING" => "rgba(251, 140, 0, 0.05)",
+                                    "CRITICAL" => "rgba(156, 39, 176, 0.05)",
+                                    _ => "transparent"
+                                };
+                                <tr style="border-bottom: 1px solid var(--mud-palette-divider); background-color: @bgColor;">
+                                    <td style="padding: 8px; white-space: nowrap;">@log.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                    <td style="padding: 8px;">
+                                        <MudChip T="string" Size="Size.Small" Color="@GetLogLevelColor(log.LogLevel)">@log.LogLevel</MudChip>
+                                    </td>
+                                    <td style="padding: 8px; color: var(--gray-600);">@(log.LogCategory ?? "—")</td>
+                                    <td style="padding: 8px; max-width: 400px;">@log.Message</td>
+                                    <td style="padding: 8px; color: var(--gray-600);">@(log.UserCode ?? "System")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </MudPaper>
+    </MudTabPanel>
+
+    <MudTabPanel Text="Technical Config" Icon="@Icons.Material.Rounded.Settings">
+        <MudPaper Class="pa-6 mt-4">
+            <MudText Typo="Typo.h6" Class="mb-4">Database Configuration</MudText>
+            <MudGrid Spacing="3">
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Info">
+                        <strong>Note:</strong> Database schema enforcement runs automatically on application startup.
+                        Use the controls below to manually trigger maintenance operations.
+                    </MudAlert>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" OnClick="EnforceSchema">
+                        Enforce Schema
+                    </MudButton>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudButton Variant="Variant.Filled" Color="Color.Warning" FullWidth="true" OnClick="ResetRLS">
+                        Reset RLS Policies
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+
+            <MudDivider Class="my-6" />
+
+            <MudText Typo="Typo.h6" Class="mb-4">Log Retention</MudText>
+            <MudGrid Spacing="3">
+                <MudItem xs="12" sm="6">
+                    <MudNumericField @bind-Value="_retentionDays" Label="Retention Period (days)" Variant="Variant.Outlined" Min="1" Max="365" />
+                </MudItem>
+                <MudItem xs="12" sm="6" Class="d-flex align-end">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" OnClick="UpdateRetention">
+                        Update Retention
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+    </MudTabPanel>
+</MudTabs>
+
+@code {
+    private List<Tenant>? _tenants;
+    private List<ApplicationLog> _logs = new();
+    private Dictionary<Guid, int> _userCounts = new();
+    private string _selectedLogLevel = "";
+    private int _retentionDays = 30;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTenants();
+        await RefreshLogs();
+    }
+
+    private async Task LoadTenants()
+    {
+        _tenants = await Svc.GetAllTenantsAsync();
+        // TODO: Load user counts per tenant
+    }
+
+    private async Task RefreshLogs()
+    {
+        _logs = await Svc.GetApplicationLogsAsync(_selectedLogLevel);
+    }
+
+    private async Task ClearLogs()
+    {
+        await Svc.ClearOldApplicationLogsAsync(_retentionDays);
+        Snackbar.Add("Old logs cleared", Severity.Success);
+        await RefreshLogs();
+    }
+
+    private async Task EnforceSchema()
+    {
+        try
+        {
+            await Svc.EnforceDatabaseSchemaAsync();
+            Snackbar.Add("Schema enforcement completed", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Schema enforcement failed: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ResetRLS()
+    {
+        try
+        {
+            await Svc.ResetRLSPoliciesAsync();
+            Snackbar.Add("RLS policies reset", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"RLS reset failed: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task UpdateRetention()
+    {
+        try
+        {
+            await Svc.SetLogRetentionAsync(_retentionDays);
+            Snackbar.Add($"Retention period set to {_retentionDays} days", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to update retention: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private Color GetLogLevelColor(string level) => level switch
+    {
+        "CRITICAL" => Color.Error,
+        "ERROR" => Color.Error,
+        "WARNING" => Color.Warning,
+        _ => Color.Info
+    };
+}

@@ -190,11 +190,31 @@
                     <input type="hidden" name="rememberMe" value="@(RememberMe ? "on" : "off")" />
 
                     <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary"
-                                Size="Size.Large" FullWidth="true" Class="py-3 rounded-xl submit-btn"
-                                id="submit-btn">
+                                 Size="Size.Large" FullWidth="true" Class="py-3 rounded-xl submit-btn"
+                                 id="submit-btn">
                         Sign in to MyDesk
                     </MudButton>
                 </form>
+
+                <div class="azure-sso-divider">
+                    <MudDivider>
+                        <MudText Typo="Typo.caption" Style="color:var(--gray-400);">or</MudText>
+                    </MudDivider>
+                </div>
+
+                <MudButton Href="/AzureAd/Challenge?redirectUri=%2F"
+                           Variant="Variant.Outlined"
+                           Size="Size.Large"
+                           FullWidth="true"
+                           Class="py-3 rounded-xl azure-sso-btn">
+                    <svg style="width:20px;height:20px;margin-right:8px;" viewBox="0 0 23 23" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="1" y="1" width="10" height="10" fill="#f25022"/>
+                        <rect x="12" y="1" width="10" height="10" fill="#7fba00"/>
+                        <rect x="1" y="12" width="10" height="10" fill="#00a4ef"/>
+                        <rect x="12" y="12" width="10" height="10" fill="#ffb900"/>
+                    </svg>
+                    Sign in with Microsoft
+                </MudButton>
 
                 <div class="tl-form-footer">
                     @{
@@ -401,4 +421,25 @@
     body.mud-dark-mode .mud-icon-button { color: #94a3b8 !important; }
     body.mud-dark-mode .mud-icon-button:hover { background: rgba(255,255,255,0.05) !important; color: #f1f5f9 !important; }
     body.mud-dark-mode .portal-links-section .mud-typography { color: #64748b !important; }
+
+    /* Azure AD SSO button */
+    .azure-sso-divider { margin: 20px 0 16px 0; }
+    .azure-sso-btn {
+        border-color: #475467 !important;
+        color: #1f2937 !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease !important;
+    }
+    .azure-sso-btn:hover {
+        background: #f9fafb !important;
+        border-color: #374151 !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+    }
+    body.mud-dark-mode .azure-sso-btn {
+        border-color: #475569 !important;
+        color: #f1f5f9 !important;
+    }
+    body.mud-dark-mode .azure-sso-btn:hover {
+        background: #334155 !important;
+    }
 </style>
