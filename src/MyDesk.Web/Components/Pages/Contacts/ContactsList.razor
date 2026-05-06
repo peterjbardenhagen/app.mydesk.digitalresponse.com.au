@@ -42,7 +42,7 @@
 
 <MudPaper Class="pa-0" Elevation="1" Style="margin-bottom: 40px;">
     <MudDataGrid T="Contact" Items="@_contacts" Loading="@_loading" Dense="true" Hover="true"
-                 SortMode="@SortMode.Multiple" Virtualize="true" FixedHeader="true" Height="calc(100vh - 365px)"
+                 SortMode="@SortMode.Multiple" Virtualize="true" FixedHeader="true" Style="max-height: 70vh;"
                  RowClicked="OnContactRowClicked">
     <Columns>
         <PropertyColumn Property="x => x.ContactId" Title="#" />

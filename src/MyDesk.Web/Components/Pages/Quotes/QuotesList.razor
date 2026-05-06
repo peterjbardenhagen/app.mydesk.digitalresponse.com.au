@@ -84,10 +84,16 @@
 
 <MudPaper Class="pa-0" Elevation="1" Style="margin-bottom: 40px;">
 <MudDataGrid T="Quote" Items="@_quotes" Dense="true" Hover="true" Elevation="0"
-             SortMode="SortMode.Multiple" Filterable="false" Class="tl-compact-grid" Height="calc(100vh - 365px)"
+             SortMode="SortMode.Multiple" Filterable="false" Class="tl-compact-grid" Style="max-height: 70vh;"
              RowClicked="OnQuoteRowClicked">
-        <Columns>
-            <PropertyColumn Property="x => x.Qid" Title="#" CellStyle="width:70px;font-weight:600;" />
+         <Columns>
+             <TemplateColumn Title="#" CellStyle="width:70px;font-weight:600;">
+                 <CellTemplate>
+                     <MudLink Href="@($"/quotes/{context.Item.Qid}")" Color="Color.Primary" Typo="Typo.body2">
+                         @context.Item.Qid
+                     </MudLink>
+                 </CellTemplate>
+             </TemplateColumn>
             <PropertyColumn Property="x => x.CompanyName" Title="Customer" />
             <PropertyColumn Property="x => x.Reference" Title="Project / Reference" />
             <PropertyColumn Property="x => x.QuoteDate" Title="Date" Format="dd/MM/yyyy" CellStyle="width:105px;" />

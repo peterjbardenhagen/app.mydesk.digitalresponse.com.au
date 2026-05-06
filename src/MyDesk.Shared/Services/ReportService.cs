@@ -489,22 +489,30 @@ public class ReportService
 
         var dt = await _db.QueryAsync(sql, new() { ["Start"] = start, ["End"] = end });
         
+        var rows = dt.Map(r => new List<string>
+        {
+            r["Type"]?.ToString() ?? "",
+            r["ID"]?.ToString() ?? "",
+            r["Date"] == DBNull.Value ? "" : Convert.ToDateTime(r["Date"]).ToString("dd/MM/yyyy"),
+            r["Customer"]?.ToString() ?? "",
+            Convert.ToDecimal(r["Cost"]).ToString("C"),
+            Convert.ToDecimal(r["Price"]).ToString("C"),
+            Convert.ToDecimal(r["GPValue"]).ToString("C"),
+            Convert.ToDecimal(r["GPMargin"]).ToString("N2") + "%"
+        }).ToList();
+
+        var totalGP = dt.Rows.Count > 0 ? dt.Map(r => Convert.ToDecimal(r["GPValue"])).Sum() : 0m;
+        var totalPrice = dt.Rows.Count > 0 ? dt.Map(r => Convert.ToDecimal(r["Price"])).Sum() : 0m;
+        var avgMargin = totalPrice == 0 ? 0m : (totalGP / totalPrice) * 100;
+
         return new ReportResult
         {
             Title = "Profitability Analysis",
             Headers = new() { "Type", "ID", "Date", "Customer", "Cost", "Price", "GP Value", "Margin %" },
-            Rows = dt.Map(r => new List<string>
-            {
-                r["Type"]?.ToString() ?? "",
-                r["ID"]?.ToString() ?? "",
-                r["Date"] == DBNull.Value ? "" : Convert.ToDateTime(r["Date"]).ToString("dd/MM/yyyy"),
-                r["Customer"]?.ToString() ?? "",
-                Convert.ToDecimal(r["Cost"]).ToString("C"),
-                Convert.ToDecimal(r["Price"]).ToString("C"),
-                Convert.ToDecimal(r["GPValue"]).ToString("C"),
-                Convert.ToDecimal(r["GPMargin"]).ToString("N2") + "%"
-            }).ToList(),
+            Rows = rows,
             TotalAmount = dt.Rows.Count > 0 ? dt.Map(r => Convert.ToDecimal(r["GPValue"])).Sum() : 0,
+            TotalGrossProfit = totalGP,
+            AvgGrossProfitMargin = avgMargin,
             GeneratedAt = DateTime.Now
         };
     }

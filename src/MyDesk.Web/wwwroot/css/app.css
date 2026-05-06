@@ -416,6 +416,17 @@ body.mud-dark-mode .mud-layout { background: transparent; }
   padding: 4px !important;
 }
 
+/* Grid container — removes bottom padding/margin for grids */
+.tl-grid-container {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tl-grid-container .mud-data-grid {
+  flex: 1;
+}
+
 /* Blazor error UI */
 #blazor-error-ui {
   background: lightyellow;

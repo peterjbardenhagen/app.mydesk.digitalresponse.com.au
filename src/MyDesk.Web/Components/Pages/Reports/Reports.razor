@@ -94,6 +94,17 @@
                                     <span class="value">@_currentResult.TotalAmount.Value.ToString("C0")</span>
                                 </div>
                             }
+                            @if (_reportType == ReportType.Profitability)
+                            {
+                                <div class="tl-summary-card success">
+                                    <span class="label">Total Gross Profit</span>
+                                    <span class="value">@((_currentResult.TotalGrossProfit ?? 0m).ToString("C0"))</span>
+                                </div>
+                                <div class="tl-summary-card info">
+                                    <span class="label">Avg. Gross Profit Margin</span>
+                                    <span class="value">@((_currentResult.AvgGrossProfitMargin ?? 0m).ToString("N1"))%</span>
+                                </div>
+                            }
                             <div class="d-flex align-center ml-auto gap-2">
                                 <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Download" OnClick="ExportToExcel">Export CSV</MudButton>
                                 <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Rounded.Save" OnClick="ShowSaveDialog">Save Preset</MudButton>

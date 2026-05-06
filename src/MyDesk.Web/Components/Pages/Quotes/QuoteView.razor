@@ -215,6 +215,7 @@ else
                                     <th style="text-align:right;">Unit Cost</th>
                                     <th style="text-align:right;">Nett Price</th>
                                     <th style="text-align:right;">Ext Price</th>
+                                    <th style="text-align:right;">GP %</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -227,6 +228,7 @@ else
                                         <td style="text-align:right;">$@i.UnitCost.ToString("N2")</td>
                                         <td style="text-align:right;">$@i.NettPrice.ToString("N2")</td>
                                         <td style="text-align:right;font-weight:500;">$@i.ExtNettPrice.ToString("N2")</td>
+                                        <td style="text-align:right;">@((i.NettPrice > 0 ? ((i.NettPrice - i.UnitCost) / i.NettPrice * 100) : 0).ToString("N1"))%</td>
                                     </tr>
                                 }
                             </tbody>

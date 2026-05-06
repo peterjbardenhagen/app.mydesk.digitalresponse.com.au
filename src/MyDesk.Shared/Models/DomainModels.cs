@@ -432,6 +432,8 @@ public class ReportResult
     public List<string> Headers { get; set; } = new();
     public List<List<string>> Rows { get; set; } = new();
     public decimal? TotalAmount { get; set; }
+    public decimal? TotalGrossProfit { get; set; }
+    public decimal? AvgGrossProfitMargin { get; set; }
     public DateTime GeneratedAt { get; set; }
 }
 

@@ -24,7 +24,7 @@ else
 {
     <MudPaper Class="pa-0" Style="margin-bottom: 40px;">
         <MudDataGrid T="JobOrderRow" Items="_items" Dense="true" Hover="true" Elevation="0"
-                     Filterable="true" SortMode="SortMode.Multiple" QuickFilter="@QuickFilter" Height="calc(100vh - 365px)" FixedHeader="true">
+                     Filterable="true" SortMode="SortMode.Multiple" QuickFilter="@QuickFilter" Style="max-height: 70vh;" FixedHeader="true">
             <ToolBarContent>
                 <MudTextField T="string" Placeholder="Search job orders..." @bind-Value="_search" Immediate="true"
                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Search"

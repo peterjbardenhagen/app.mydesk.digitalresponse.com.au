@@ -74,7 +74,7 @@
 
 <MudPaper Class="pa-0" Elevation="1" Style="margin-bottom: 10px;">
     <MudDataGrid T="Invoice" Items="@_invoices" Loading="@_loading" Dense="true" Hover="true"
-                 SortMode="@SortMode.Multiple" Virtualize="true" FixedHeader="true" Height="calc(100vh - 365px)" Class="tl-compact-grid tl-invoice-grid">
+                 SortMode="@SortMode.Multiple" Virtualize="true" FixedHeader="true" Class="tl-compact-grid tl-invoice-grid" Style="max-height: 70vh;">
         <Columns>
             <TemplateColumn Title="" Sortable="false" CellStyle="width:56px;">
                 <HeaderTemplate>
