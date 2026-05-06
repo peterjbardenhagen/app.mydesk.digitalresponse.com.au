@@ -1,152 +1,251 @@
 @page "/404"
 @layout EmptyLayout
-@inject IJSRuntime JS
+@attribute [AllowAnonymous]
 @inject PlatformSettingsService PlatformSettings
+@inject NavigationManager Nav
 
 <PageTitle>Page Not Found - @PlatformSettings.GetBrandingName()</PageTitle>
 
-<div class="tl-404-root">
-    <div class="tl-404-bg"></div>
-    <div class="tl-404-orb tl-404-orb-1"></div>
-    <div class="tl-404-orb tl-404-orb-2"></div>
+<div class="tl-error-root">
+    <div class="tl-error-container">
+        <div class="tl-error-card">
+            <div class="tl-error-icon tl-404-icon">
+                <MudIcon Icon="@Icons.Material.Rounded.SearchOff" Size="Size.Large" />
+            </div>
+            
+            <h1>Page Not Found</h1>
+            <p class="tl-error-subtitle">The page you're looking for doesn't exist or has been moved.</p>
+            
+            <div class="tl-404-url-display">
+                <MudText Typo="Typo.caption" Class="tl-url-label">You were trying to reach:</MudText>
+                <code class="tl-url-code">@_requestedUrl</code>
+            </div>
 
-    <main class="tl-404-content">
-        <div class="tl-404-code">404</div>
-        <div class="tl-404-glow"></div>
-        <h1>Page not found</h1>
-        <p class="tl-404-subtitle">The page you're looking for doesn't exist or has been moved.</p>
-
-        <div class="tl-404-actions">
-            <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" Class="tl-404-btn"
-                       StartIcon="@Icons.Material.Rounded.Home">
-                Return to Dashboard
-            </MudButton>
-            <MudButton Variant="Variant.Outlined" Size="Size.Large" Class="tl-404-btn"
-                       StartIcon="@Icons.Material.Rounded.ArrowBack"
-                       OnClick="@(async () => await JS.InvokeVoidAsync("history.back"))">
-                Go Back
-            </MudButton>
+            <div class="tl-error-actions">
+                <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" Class="rounded-xl">
+                    <MudIcon Icon="@Icons.Material.Rounded.Home" Size="Size.Small" />
+                    Return to Dashboard
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Large" Class="rounded-xl" OnClick="GoBack">
+                    <MudIcon Icon="@Icons.Material.Rounded.ArrowBack" Size="Size.Small" />
+                    Go Back
+                </MudButton>
+            </div>
         </div>
 
-        <div class="tl-404-help">
-            <MudText Typo="Typo.body2" Style="color:var(--gray-500);">
-                Need help? <a href="mailto:support@digitalresponse.com.au" class="tl-404-link">Contact support</a>
-            </MudText>
+        <div class="tl-error-footer">
+            <div class="tl-help-tips">
+                <MudText Typo="Typo.subtitle2" Class="mb-3">What you can do</MudText>
+                <ul>
+                    <li>Check the URL for typos</li>
+                    <li>Use the navigation menu to find what you need</li>
+                    <li>Visit the <a href="/help-center" class="tl-help-link">Help Centre</a> for guidance</li>
+                    <li>Contact support if you believe this is an error</li>
+                </ul>
+            </div>
         </div>
-    </main>
+    </div>
 </div>
 
 <style>
-    .tl-404-root {
-        position: relative;
+    .tl-error-root {
         min-height: 100vh;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: linear-gradient(165deg, #0b1220 0%, #0f1a2a 40%, #0d1520 100%);
-        overflow: hidden;
-        padding: 40px 24px;
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        padding: 40px 20px;
+        font-family: 'Outfit', 'Inter', sans-serif;
     }
 
-    .tl-404-bg {
-        position: absolute; inset: 0;
-        background:
-            radial-gradient(800px 500px at 30% 0%, rgba(0, 200, 200, 0.08), transparent 60%),
-            radial-gradient(600px 400px at 80% 20%, rgba(14, 165, 233, 0.06), transparent 50%);
-        pointer-events: none;
+    body.mud-dark-mode .tl-error-root {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
     }
 
-    .tl-404-orb {
-        position: absolute;
-        border-radius: 50%;
-        filter: blur(80px);
-        pointer-events: none;
-        animation: tl-404-float 20s ease-in-out infinite;
-    }
-    .tl-404-orb-1 {
-        width: 400px; height: 400px;
-        top: -10%; left: -5%;
-        background: radial-gradient(closest-side, rgba(0, 200, 200, 0.25), transparent);
-    }
-    .tl-404-orb-2 {
-        width: 300px; height: 300px;
-        bottom: 5%; right: -3%;
-        background: radial-gradient(closest-side, rgba(99, 102, 241, 0.2), transparent);
-        animation-delay: -10s;
-    }
-    @@keyframes tl-404-float {
-        0%, 100% { transform: translate(0, 0) scale(1); }
-        33% { transform: translate(20px, -15px) scale(1.05); }
-        66% { transform: translate(-10px, 10px) scale(0.95); }
+    .tl-error-container {
+        max-width: 600px;
+        width: 100%;
     }
 
-    .tl-404-content {
-        position: relative;
-        z-index: 1;
+    .tl-error-card {
+        background: white;
+        border-radius: 24px;
+        padding: 48px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
         text-align: center;
-        max-width: 520px;
-        animation: tl-404-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    @@keyframes tl-404-rise {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
+        animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    .tl-404-code {
-        font-size: 120px;
-        font-weight: 800;
-        letter-spacing: -0.04em;
-        line-height: 1;
-        background: linear-gradient(135deg, #00c8c8 0%, #0ea5e9 50%, #a855f7 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        position: relative;
+    body.mud-dark-mode .tl-error-card {
+        background: #1e293b;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
     }
 
-    .tl-404-glow {
-        position: absolute;
-        top: 50%; left: 50%;
-        width: 300px; height: 300px;
-        transform: translate(-50%, -60%);
-        background: radial-gradient(circle, rgba(0, 200, 200, 0.15), transparent 70%);
-        filter: blur(40px);
-        pointer-events: none;
-        z-index: -1;
+    .tl-error-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 24px;
+        color: #4f46e5;
     }
 
-    .tl-404-content h1 {
+    .tl-404-icon {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        color: #d97706;
+    }
+
+    body.mud-dark-mode .tl-error-icon {
+        background: linear-gradient(135deg, #312e81 0%, #3730a3 100%);
+    }
+
+    body.mud-dark-mode .tl-404-icon {
+        background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
+    }
+
+    .tl-error-card h1 {
         font-size: 32px;
         font-weight: 700;
-        color: #e2e8f0;
-        margin: 24px 0 12px;
-        letter-spacing: -0.02em;
+        color: #0f172a;
+        margin-bottom: 12px;
     }
 
-    .tl-404-subtitle {
+    body.mud-dark-mode .tl-error-card h1 {
+        color: #f1f5f9;
+    }
+
+    .tl-error-subtitle {
         font-size: 16px;
-        color: #94a3b8;
-        margin: 0 0 32px;
+        color: #64748b;
+        margin-bottom: 24px;
     }
 
-    .tl-404-actions {
+    body.mud-dark-mode .tl-error-subtitle {
+        color: #94a3b8;
+    }
+
+    .tl-404-url-display {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 16px;
+        margin: 24px 0;
+    }
+
+    body.mud-dark-mode .tl-404-url-display {
+        background: #334155;
+    }
+
+    .tl-url-label {
+        color: #64748b;
+        margin-bottom: 8px !important;
+    }
+
+    body.mud-dark-mode .tl-url-label {
+        color: #94a3b8;
+    }
+
+    .tl-url-code {
+        background: white;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-family: monospace;
+        color: #4f46e5;
+        display: block;
+        word-break: break-all;
+    }
+
+    body.mud-dark-mode .tl-url-code {
+        background: #475569;
+        color: #a5b4fc;
+    }
+
+    .tl-error-actions {
         display: flex;
         gap: 16px;
         justify-content: center;
+        margin-top: 32px;
         flex-wrap: wrap;
-        margin-bottom: 32px;
     }
 
-    .tl-404-help {
-        opacity: 0.7;
+    .tl-error-footer {
+        margin-top: 32px;
+        text-align: center;
     }
 
-    .tl-404-link {
-        color: #00c8c8;
+    .tl-help-tips {
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        margin-top: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    body.mud-dark-mode .tl-help-tips {
+        background: #1e293b;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+
+    .tl-help-tips ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        text-align: left;
+    }
+
+    .tl-help-tips li {
+        padding: 8px 0;
+        color: #64748b;
+        font-size: 14px;
+        position: relative;
+        padding-left: 24px;
+    }
+
+    body.mud-dark-mode .tl-help-tips li {
+        color: #94a3b8;
+    }
+
+    .tl-help-tips li:before {
+        content: '';
+        position: absolute;
+        left: 0;
+        width: 6px;
+        height: 6px;
+        background: var(--mud-palette-primary);
+        border-radius: 50%;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .tl-help-link {
+        color: var(--mud-palette-primary);
         text-decoration: none;
         font-weight: 500;
     }
-    .tl-404-link:hover {
+
+    .tl-help-link:hover {
         text-decoration: underline;
     }
+
+    @@keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 </style>
+
+@code {
+    private string _requestedUrl = "";
+
+    protected override void OnInitialized()
+    {
+        _requestedUrl = Nav.Uri;
+    }
+
+    private void GoBack()
+    {
+        Nav.NavigateTo("javascript:history.back()");
+    }
+}

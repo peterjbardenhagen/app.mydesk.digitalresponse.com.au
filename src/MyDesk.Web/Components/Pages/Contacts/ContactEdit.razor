@@ -59,18 +59,11 @@
                 <MudTextField @bind-Value="_contact.Fax" Label="Fax" Variant="Variant.Outlined" />
             </MudItem>
 
-            <MudItem xs="12"><MudDivider Class="my-2" /><MudText Typo="Typo.subtitle1">Address</MudText></MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_contact.Address1" Label="Address Line 1" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_contact.Address2" Label="Address Line 2" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_contact.Suburb" Label="Suburb" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="_contact.PostCode" Label="Post Code" Variant="Variant.Outlined" />
+            <MudItem xs="12"><MudDivider Class="my-2" /><MudText Typo="Typo.subtitle1">Company Address</MudText></MudItem>
+            <MudItem xs="12">
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                    Addresses are managed in the Company record. <MudLink Href="@($"/companies/{_contact.CompanyId}/edit")">Edit Company Addresses</MudLink>
+                </MudAlert>
             </MudItem>
 
             <MudItem xs="12"><MudDivider Class="my-2" /><MudText Typo="Typo.subtitle1">Codes</MudText></MudItem>

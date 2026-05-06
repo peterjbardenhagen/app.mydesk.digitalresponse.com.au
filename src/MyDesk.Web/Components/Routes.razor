@@ -15,16 +15,7 @@
             <FocusOnNavigate RouteData="routeData" Selector="h1" />
         </Found>
         <NotFound>
-            <LayoutView Layout="typeof(EmptyLayout)">
-                <MudContainer MaxWidth="MaxWidth.Medium" Class="py-8">
-                    <MudPaper Class="pa-8 text-center" Elevation="0" Style="background:transparent;">
-                        <MudText Typo="Typo.h3" Style="font-weight:800; font-size:120px; line-height:1; background:linear-gradient(135deg, var(--tl-primary-400) 0%, #0ea5e9 50%, #a855f7 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">404</MudText>
-                        <MudText Typo="Typo.h5" Class="mt-4 mb-2">Page not found</MudText>
-                        <MudText Typo="Typo.body1" Style="color:var(--gray-500); margin-bottom:24px;">The page you're looking for doesn't exist or has been moved.</MudText>
-                        <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Home">Return to Dashboard</MudButton>
-                    </MudPaper>
-                </MudContainer>
-            </LayoutView>
+            <NotFound />
         </NotFound>
     </Router>
 </CascadingAuthenticationState>

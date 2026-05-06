@@ -300,11 +300,6 @@ public class Contact
     public string? Phone { get; set; }
     public string? Mobile { get; set; }
     public string? Fax { get; set; }
-    public string? Address1 { get; set; }
-    public string? Address2 { get; set; }
-    public string? Suburb { get; set; }
-    public string? State { get; set; }
-    public string? PostCode { get; set; }
     public string? CustomerCode { get; set; }
     public string? SupplierCode { get; set; }
     public string Originator { get; set; } = string.Empty;

@@ -29,7 +29,7 @@
                     
                     <MudSelect T="ReportType" Label="Report Category" @bind-Value="_reportType" Variant="Variant.Outlined" Class="mb-4" AnchorOrigin="Origin.BottomCenter">
                         <MudSelectItem Value="ReportType.Banking">Banking</MudSelectItem>
-                        <MudSelectItem Value="ReportType.Contacts">Contacts Catalog</MudSelectItem>
+                        <MudSelectItem Value="ReportType.Contacts">Contacts</MudSelectItem>
                         <MudSelectItem Value="ReportType.DeliveryNotes">Delivery Notes</MudSelectItem>
                         <MudSelectItem Value="ReportType.Expenses">Expenses</MudSelectItem>
                         <MudSelectItem Value="ReportType.Invoices">Invoices</MudSelectItem>
@@ -87,7 +87,7 @@
                                 <span class="label">Total Records</span>
                                 <span class="value">@_currentResult.Rows.Count</span>
                             </div>
-                            @if (_currentResult.TotalAmount.HasValue)
+                            @if (_currentResult.TotalAmount.HasValue && _reportType != ReportType.Profitability)
                             {
                                 <div class="tl-summary-card accent">
                                     <span class="label">Aggregate Value</span>
@@ -101,7 +101,7 @@
                                     <span class="value">@((_currentResult.TotalGrossProfit ?? 0m).ToString("C0"))</span>
                                 </div>
                                 <div class="tl-summary-card info">
-                                    <span class="label">Avg. Gross Profit Margin</span>
+                                    <span class="label">Gross Profit Margin %</span>
                                     <span class="value">@((_currentResult.AvgGrossProfitMargin ?? 0m).ToString("N1"))%</span>
                                 </div>
                             }
@@ -405,7 +405,18 @@
 
     private void ShowSaveDialog()
     {
-        _reportName = $"{_reportType} - {DateTime.Now:MMM yyyy}";
+        var periodStr = _dateFilter switch
+        {
+            DateFilter.ThisMonth => "This Month",
+            DateFilter.LastMonth => "Last Month",
+            DateFilter.ThisQuarter => "This Quarter",
+            DateFilter.ThisFY => "Current Financial Year",
+            DateFilter.LastFY => "Last Financial Year",
+            DateFilter.AllTime => "All Time",
+            DateFilter.Custom => "Custom Range",
+            _ => ""
+        };
+        _reportName = $"{_reportType} - {periodStr}";
         _showSaveDialog = true;
     }
 
@@ -414,13 +425,21 @@
         if (string.IsNullOrWhiteSpace(_reportName)) return;
         try
         {
+            var finalName = _reportName;
+            var suffix = 1;
+            while (_savedReports != null && _savedReports.Any(r => r.Name.Equals(finalName, StringComparison.OrdinalIgnoreCase)))
+            {
+                finalName = $"{_reportName} {suffix:D2}";
+                suffix++;
+            }
+            
             var def = new ReportDefinition { 
-                Name = _reportName, Type = _reportType, DateFilter = _dateFilter,
+                Name = finalName, Type = _reportType, DateFilter = _dateFilter,
                 StartDate = _customStartDate, EndDate = _customEndDate, CreatedBy = "Admin"
             };
             await ReportSvc.SaveReportAsync(def);
             _showSaveDialog = false;
-            Snackbar.Add("Preset saved", Severity.Success);
+            Snackbar.Add($"Preset saved as '{finalName}'", Severity.Success);
             await LoadSavedReports();
         }
         catch (Exception ex) { Snackbar.Add($"Save failed: {ex.Message}", Severity.Error); }

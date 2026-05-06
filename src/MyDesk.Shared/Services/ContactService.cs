@@ -95,10 +95,6 @@ public class ContactService
             ["Phone"] = (object?)contact.Phone ?? DBNull.Value,
             ["Mobile"] = (object?)contact.Mobile ?? DBNull.Value,
             ["Fax"] = (object?)contact.Fax ?? DBNull.Value,
-            ["Address1"] = (object?)contact.Address1 ?? DBNull.Value,
-            ["Address2"] = (object?)contact.Address2 ?? DBNull.Value,
-            ["Suburb"] = (object?)contact.Suburb ?? DBNull.Value,
-            ["PostCode"] = (object?)contact.PostCode ?? DBNull.Value,
             ["Code"] = originatorCode,
             ["CompanyId"] = contact.CompanyId,
         });
@@ -242,10 +238,6 @@ public class ContactService
             ["Phone"] = (object?)contact.Phone ?? DBNull.Value,
             ["Mobile"] = (object?)contact.Mobile ?? DBNull.Value,
             ["Fax"] = (object?)contact.Fax ?? DBNull.Value,
-            ["Address1"] = (object?)contact.Address1 ?? DBNull.Value,
-            ["Address2"] = (object?)contact.Address2 ?? DBNull.Value,
-            ["Suburb"] = (object?)contact.Suburb ?? DBNull.Value,
-            ["PostCode"] = (object?)contact.PostCode ?? DBNull.Value,
             ["CompanyId"] = contact.CompanyId,
         });
     }
@@ -306,10 +298,6 @@ public class ContactService
         Phone = r["Phone"] == DBNull.Value ? null : r["Phone"]?.ToString(),
         Mobile = r["Mobile"] == DBNull.Value ? null : r["Mobile"]?.ToString(),
         Fax = r["Fax"] == DBNull.Value ? null : r["Fax"]?.ToString(),
-        Address1 = r["Address1"] == DBNull.Value ? null : r["Address1"]?.ToString(),
-        Address2 = r["Address2"] == DBNull.Value ? null : r["Address2"]?.ToString(),
-        Suburb = r["Suburb"] == DBNull.Value ? null : r["Suburb"]?.ToString(),
-        PostCode = r["PostCode"] == DBNull.Value ? null : r["PostCode"]?.ToString(),
         CustomerCode = r["CustomerCode"] == DBNull.Value ? null : r["CustomerCode"]?.ToString(),
         SupplierCode = r["SupplierCode"] == DBNull.Value ? null : r["SupplierCode"]?.ToString(),
         Originator = r["Originator"]?.ToString() ?? "",

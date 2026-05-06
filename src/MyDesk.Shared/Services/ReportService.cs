@@ -36,6 +36,28 @@ public class ReportDefinition
     public DateTime? EndDate { get; set; }
     public string? CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
+    
+    // Custom Builder fields
+    public bool IsCustomBuilder { get; set; }
+    public string? CustomTableName { get; set; }
+    public string? CustomColumnsJson { get; set; }
+    public string? CustomJoinsJson { get; set; }
+    public string? CustomOrderByJson { get; set; }
+    public string? CustomDateColumn { get; set; }
+}
+
+public class JoinConfig
+{
+    public string JoinType { get; set; } = "INNER"; // INNER, LEFT, RIGHT
+    public string TableName { get; set; } = "";
+    public string LeftColumn { get; set; } = "";
+    public string RightColumn { get; set; } = "";
+}
+
+public class OrderByConfig
+{
+    public string Column { get; set; } = "";
+    public string Direction { get; set; } = "ASC"; // ASC or DESC
 }
 
 public class ReportService
@@ -62,8 +84,29 @@ public class ReportService
                     StartDate DATETIME NULL,
                     EndDate DATETIME NULL,
                     CreatedBy NVARCHAR(100) NULL,
-                    CreatedAt DATETIME NOT NULL DEFAULT GETDATE()
+                    CreatedAt DATETIME NOT NULL DEFAULT GETDATE(),
+                    IsCustomBuilder BIT NOT NULL DEFAULT 0,
+                    CustomTableName NVARCHAR(200) NULL,
+                    CustomColumnsJson NVARCHAR(MAX) NULL,
+                    CustomJoinsJson NVARCHAR(MAX) NULL,
+                    CustomOrderByJson NVARCHAR(MAX) NULL,
+                    CustomDateColumn NVARCHAR(200) NULL
                 );
+            END
+            ELSE
+            BEGIN
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'IsCustomBuilder' AND object_id = OBJECT_ID('SavedReports'))
+                    ALTER TABLE SavedReports ADD IsCustomBuilder BIT NOT NULL DEFAULT 0;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'CustomTableName' AND object_id = OBJECT_ID('SavedReports'))
+                    ALTER TABLE SavedReports ADD CustomTableName NVARCHAR(200) NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'CustomColumnsJson' AND object_id = OBJECT_ID('SavedReports'))
+                    ALTER TABLE SavedReports ADD CustomColumnsJson NVARCHAR(MAX) NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'CustomJoinsJson' AND object_id = OBJECT_ID('SavedReports'))
+                    ALTER TABLE SavedReports ADD CustomJoinsJson NVARCHAR(MAX) NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'CustomOrderByJson' AND object_id = OBJECT_ID('SavedReports'))
+                    ALTER TABLE SavedReports ADD CustomOrderByJson NVARCHAR(MAX) NULL;
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'CustomDateColumn' AND object_id = OBJECT_ID('SavedReports'))
+                    ALTER TABLE SavedReports ADD CustomDateColumn NVARCHAR(200) NULL;
             END";
         await _db.ExecuteNonQueryAsync(sql);
     }
@@ -379,7 +422,11 @@ public class ReportService
 
     public async Task<List<ReportDefinition>> GetSavedReportsAsync()
     {
-        var dt = await _db.QueryAsync("SELECT * FROM SavedReports ORDER BY CreatedAt DESC");
+        var sql = @"SELECT ReportId, Name, ReportType, DateFilter, StartDate, EndDate, CreatedBy, CreatedAt,
+                           ISNULL(IsCustomBuilder, 0) AS IsCustomBuilder, CustomTableName, CustomColumnsJson,
+                           CustomJoinsJson, CustomOrderByJson, CustomDateColumn
+                    FROM SavedReports ORDER BY CreatedAt DESC";
+        var dt = await _db.QueryAsync(sql);
         return dt.Map(r => new ReportDefinition
         {
             ReportId = Convert.ToInt32(r["ReportId"]),
@@ -389,7 +436,13 @@ public class ReportService
             StartDate = r["StartDate"] != DBNull.Value ? Convert.ToDateTime(r["StartDate"]) : null,
             EndDate = r["EndDate"] != DBNull.Value ? Convert.ToDateTime(r["EndDate"]) : null,
             CreatedBy = r["CreatedBy"]?.ToString(),
-            CreatedAt = Convert.ToDateTime(r["CreatedAt"])
+            CreatedAt = Convert.ToDateTime(r["CreatedAt"]),
+            IsCustomBuilder = Convert.ToBoolean(r["IsCustomBuilder"]),
+            CustomTableName = r["CustomTableName"] != DBNull.Value ? r["CustomTableName"]?.ToString() : null,
+            CustomColumnsJson = r["CustomColumnsJson"] != DBNull.Value ? r["CustomColumnsJson"]?.ToString() : null,
+            CustomJoinsJson = r["CustomJoinsJson"] != DBNull.Value ? r["CustomJoinsJson"]?.ToString() : null,
+            CustomOrderByJson = r["CustomOrderByJson"] != DBNull.Value ? r["CustomOrderByJson"]?.ToString() : null,
+            CustomDateColumn = r["CustomDateColumn"] != DBNull.Value ? r["CustomDateColumn"]?.ToString() : null
         }).ToList();
     }
 
