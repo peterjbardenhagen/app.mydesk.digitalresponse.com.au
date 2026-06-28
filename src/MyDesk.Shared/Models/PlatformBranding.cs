@@ -1,27 +1,39 @@
+// PlatformBranding.cs - Multi-tenant branding resolver
+// Determines which platform context to use based on hostname/subdomain
+
 namespace MyDesk.Shared.Models;
 
-/// <summary>
-/// Static accessor for platform branding - can be used without DI injection
-/// Initialized from IConfiguration at app startup
-/// </summary>
 public static class PlatformBranding
 {
-    public static string CompanyName { get; private set; } = "Techlight";
-    public static string PlatformName { get; private set; } = "MyDesk";
-    public static string CompanyWebsite { get; private set; } = "techlight.com.au";
-    public static string SupportEmail { get; private set; } = "support@techlight.com.au";
-    public static string Title => $"{CompanyName} {PlatformName}";
-    public static string LoginQuote { get; private set; } = "";
-    public static string LoginQuoteAuthor { get; private set; } = "";
-
-    public static void Initialize(PlatformSettings settings)
+    public static string Title { get; set; } = "Techlight";
+    
+    public static ClientPlatform GetCurrentPlatform()
     {
-        if (settings == null) return;
-        CompanyName = settings.CompanyName ?? CompanyName;
-        PlatformName = settings.PlatformName ?? PlatformName;
-        CompanyWebsite = settings.CompanyWebsite ?? CompanyWebsite;
-        SupportEmail = settings.SupportEmail ?? SupportEmail;
-        LoginQuote = settings.LoginQuote ?? "";
-        LoginQuoteAuthor = settings.LoginQuoteAuthor ?? "";
+        // This would typically resolve from hostname or user session
+        // http://pb-legion/techlight -> Techlight
+        // http://pb-legion/digital-response -> Digital Response
+        // http://pb-legion/carter-capner-law -> Carter Capner Law
+        
+        return new ClientPlatform
+        {
+            Name = "Techlight",
+            Slug = "techlight",
+            BrandingName = "Techlight",
+            PrimaryColor = "#00c8c8",
+            EnableQuickBooksIntegration = false,
+            EnableFrolloIntegration = false,
+            EnableMYOBIntegration = true
+        };
+    }
+
+    public static void SetPlatform(string slug)
+    {
+        slug = slug.ToLowerInvariant();
+        Title = slug switch
+        {
+            "digital-response" or "digitalresponse" => "Digital Response",
+            "carter-capner-law" or "cartercapnerlaw" => "Carter Capner Law",
+            _ => "Techlight"
+        };
     }
 }
