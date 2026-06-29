@@ -20,6 +20,7 @@
     <PackageReference Include="Cronos" Version="0.13.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.7" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.7" />
     <PackageReference Include="QuestPDF" Version="2026.2.4" />
     <PackageReference Include="SkiaSharp" Version="2.88.8" />
     <!-- Apache 2.0 PDF text-extraction library used by Tier 1 Triage extractor -->

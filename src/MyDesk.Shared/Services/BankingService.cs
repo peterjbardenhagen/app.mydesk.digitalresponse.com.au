@@ -94,14 +94,14 @@ END";
     // Statements
     // ──────────────────────────────────────────────────────────────────────
 
-    public async Task<List<BankStatement>> ListStatementsAsync()
+    public async Task<List<MyDesk.Shared.Models.BankStatement>> ListStatementsAsync()
     {
         var dt = await _db.QueryAsync(
             @"SELECT * FROM BankStatements ORDER BY FromDate DESC, BankStatementId DESC");
         return dt.Map(MapStatement);
     }
 
-    public async Task<BankStatement?> GetStatementAsync(int id)
+    public async Task<MyDesk.Shared.Models.BankStatement?> GetStatementAsync(int id)
     {
         var dt = await _db.QueryAsync(
             "SELECT * FROM BankStatements WHERE BankStatementId = @Id",
@@ -109,7 +109,7 @@ END";
         return dt.Map(MapStatement).FirstOrDefault();
     }
 
-    public async Task<int> CreateStatementAsync(BankStatement s)
+    public async Task<int> CreateStatementAsync(MyDesk.Shared.Models.BankStatement s)
     {
         const string sql = @"
 INSERT INTO BankStatements
@@ -154,7 +154,7 @@ VALUES
     // Transactions
     // ──────────────────────────────────────────────────────────────────────
 
-    public async Task<List<BankTransaction>> ListTransactionsAsync(int statementId)
+    public async Task<List<MyDesk.Shared.Models.BankTransaction>> ListTransactionsAsync(int statementId)
     {
         var dt = await _db.QueryAsync(
             @"SELECT * FROM BankTransactions WHERE BankStatementId = @Id ORDER BY TransactionDate, BankTransactionId",
@@ -167,7 +167,7 @@ VALUES
     /// Used by the dashboard Banking slide to build monthly debit/credit trends.
     /// RLS tenant-scopes this automatically.
     /// </summary>
-    public async Task<List<BankTransaction>> GetAllTransactionsAsync(int? limit = null)
+    public async Task<List<MyDesk.Shared.Models.BankTransaction>> GetAllTransactionsAsync(int? limit = null)
     {
         var top = limit.HasValue ? $"TOP ({limit.Value}) " : string.Empty;
         var dt = await _db.QueryAsync(
@@ -175,7 +175,7 @@ VALUES
         return dt.Map(MapTransaction);
     }
 
-    public async Task<List<BankTransaction>> ListUnreconciledAsync(int? limit = 200)
+    public async Task<List<MyDesk.Shared.Models.BankTransaction>> ListUnreconciledAsync(int? limit = 200)
     {
         var dt = await _db.QueryAsync(
             $@"SELECT TOP ({limit ?? 200}) * FROM BankTransactions
@@ -183,7 +183,7 @@ VALUES
         return dt.Map(MapTransaction);
     }
 
-    public async Task<int> AddTransactionAsync(BankTransaction t)
+    public async Task<int> AddTransactionAsync(MyDesk.Shared.Models.BankTransaction t)
     {
         const string sql = @"
 INSERT INTO BankTransactions
@@ -272,7 +272,7 @@ WHERE BankStatementId = (
         var rows = ParseCsv(csvText);
         if (rows.Count == 0) throw new InvalidOperationException("No transactions found in CSV.");
 
-        var stmt = new BankStatement
+        var stmt = new MyDesk.Shared.Models.BankStatement
         {
             AccountName    = accountName,
             Bsb            = bsb,
@@ -291,7 +291,7 @@ WHERE BankStatementId = (
 
         foreach (var r in rows)
         {
-            await AddTransactionAsync(new BankTransaction
+            await AddTransactionAsync(new MyDesk.Shared.Models.BankTransaction
             {
                 BankStatementId = stmtId,
                 TransactionDate = r.Date,
@@ -425,7 +425,7 @@ SELECT
     // Mappers
     // ──────────────────────────────────────────────────────────────────────
 
-    private static BankStatement MapStatement(DataRow r) => new()
+    private static MyDesk.Shared.Models.BankStatement MapStatement(DataRow r) => new()
     {
         BankStatementId   = Convert.ToInt32(r["BankStatementId"]),
         TenantId          = r.Table.Columns.Contains("TenantId") && r["TenantId"] != DBNull.Value ? Guid.Parse(r["TenantId"].ToString()!) : Guid.Empty,
@@ -446,7 +446,7 @@ SELECT
         UploadedBy        = r["UploadedBy"]?.ToString(),
     };
 
-    private static BankTransaction MapTransaction(DataRow r) => new()
+    private static MyDesk.Shared.Models.BankTransaction MapTransaction(DataRow r) => new()
     {
         BankTransactionId = Convert.ToInt32(r["BankTransactionId"]),
         BankStatementId   = Convert.ToInt32(r["BankStatementId"]),
