@@ -17,15 +17,15 @@ public class BankReconciliationService
         _logger = logger;
     }
 
-    public async Task<List<BankStatement>> GetBankStatementsAsync(int companyId)
+    public async Task<List<ReconciliationBankStatement>> GetReconciliationBankStatementsAsync(int companyId)
     {
         var sql = $@"
             SELECT StatementId, BankName, AccountNumber, StatementDate, OpeningBalance, ClosingBalance, ClosingDate, TransactionCount, Status
-            FROM BankStatements 
+            FROM ReconciliationBankStatements 
             WHERE CompanyId = {companyId}
             ORDER BY StatementDate DESC";
         var dt = await _db.QueryAsync(sql);
-        return dt.Map(MapBankStatement);
+        return dt.Map(MapReconciliationBankStatement);
     }
 
     public async Task<List<ReconciliationTransaction>> GetBankTransactionsAsync(int statementId)
@@ -72,7 +72,7 @@ public class BankReconciliationService
         };
     }
 
-    private static BankStatement MapBankStatement(DataRow r) => new()
+    private static ReconciliationBankStatement MapReconciliationBankStatement(DataRow r) => new()
     {
         StatementId = Convert.ToInt32(r["StatementId"]),
         BankName = r["BankName"]?.ToString() ?? "",
@@ -100,7 +100,7 @@ public class BankReconciliationService
     };
 }
 
-public class BankStatement
+public class ReconciliationBankStatement
 {
     public int StatementId { get; set; }
     public string BankName { get; set; } = "";
