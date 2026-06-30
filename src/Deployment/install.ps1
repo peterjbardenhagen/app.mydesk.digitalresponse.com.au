@@ -1,14 +1,34 @@
 # DR MyDesk - Install & Setup (Self-Elevating)
 # =============================================
-# This script self-elevates to Administrator and deploys MyDesk to IIS on port 80.
-# Usage: .\install.ps1
+# Deploys MyDesk to IIS and binds it to app.mydesk.digitalresponse.com.au.
+#
+# Prerequisites (DNS - done in your DNS provider, not this script):
+#   app.mydesk.digitalresponse.com.au  →  A record pointing to this server's public IP
+#   (same IP as techlight.digitalresponse.com.au)
+#
+# SSL certificate is obtained automatically via win-acme (Let's Encrypt).
+# win-acme must be installed: https://www.win-acme.com/
+# Default expected path: C:\win-acme\wacs.exe  (override with $WinAcmePath param)
+#
+# Usage:
+#   .\install.ps1                                    # default, uses win-acme
+#   .\install.ps1 -SkipSsl                           # HTTP only (dev/test)
+#   .\install.ps1 -WinAcmePath "D:\tools\wacs.exe"  # custom win-acme location
+#   .\install.ps1 -Hostname "app.mydesk.digitalresponse.com.au"  # override hostname
+
+param(
+    [string]$Hostname    = "app.mydesk.digitalresponse.com.au",
+    [string]$WinAcmePath = "C:\win-acme\wacs.exe",
+    [switch]$SkipSsl
+)
 
 # Self-elevate if not running as Administrator
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
 if (-not $isAdmin) {
     Write-Host "Requesting Administrator privileges..." -ForegroundColor Yellow
-    $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -Hostname `"$Hostname`" -WinAcmePath `"$WinAcmePath`""
+    if ($SkipSsl) { $arguments += " -SkipSsl" }
     Start-Process powershell -Verb RunAs -ArgumentList $arguments
     exit
 }
@@ -238,8 +258,10 @@ Write-Host "[6/6] Creating IIS site..." -NoNewline
 # under the machine account context expected by this environment.
 & $appCmd set apppool $appPoolName /processModel.identityType:NetworkService | Out-Null
 
-# Create site on port 80
-& $appCmd add site /name:$siteName /physicalPath:$physicalPath /bindings:"http/*:80:" | Out-Null
+# Create site with hostname-specific HTTP binding.
+# This tells IIS to only route requests for $Hostname to this site, which avoids
+# conflicts when techlight.digitalresponse.com.au resolves to the same IP.
+& $appCmd add site /name:$siteName /physicalPath:$physicalPath /bindings:"http/*:80:$Hostname" | Out-Null
 & $appCmd set site /site.name:$siteName /[path='/'].applicationPool:$appPoolName | Out-Null
 
 # Start services
@@ -248,24 +270,67 @@ Write-Host "[6/6] Creating IIS site..." -NoNewline
 
 Write-Host " OK" -ForegroundColor Green
 
+# 7. SSL certificate via win-acme (Let's Encrypt)
+if ($SkipSsl) {
+    Write-Host "[7/7] SSL skipped (-SkipSsl flag set)." -ForegroundColor Yellow
+    $scheme = "http"
+} else {
+    Write-Host "[7/7] Obtaining SSL certificate via Let's Encrypt (win-acme)..." -NoNewline
+    if (-not (Test-Path $WinAcmePath)) {
+        Write-Host " SKIP" -ForegroundColor Yellow
+        Write-Host "      win-acme not found at: $WinAcmePath" -ForegroundColor Yellow
+        Write-Host "      Download from https://www.win-acme.com/ and re-run, or use -SkipSsl." -ForegroundColor Yellow
+        $scheme = "http"
+    } else {
+        # Run win-acme in unattended mode: create cert + add HTTPS binding to the IIS site
+        $wacsArgs = @(
+            "--source", "iis",
+            "--siteid", "s:$siteName",
+            "--installation", "iis",
+            "--store", "certificatestore",
+            "--certificatestore", "WebHosting",
+            "--acl-fullcontrol", "network service,administrators",
+            "--emailaddress", "peter@bardenhagen.xyz",
+            "--accepttos",
+            "--host", $Hostname,
+            "--notaskscheduler"
+        )
+        & $WinAcmePath @wacsArgs | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host " OK" -ForegroundColor Green
+            $scheme = "https"
+        } else {
+            Write-Host " WARN (check win-acme output above)" -ForegroundColor Yellow
+            Write-Host "      Site is running on HTTP. Re-run without -SkipSsl once DNS propagates." -ForegroundColor Yellow
+            $scheme = "http"
+        }
+    }
+}
+
 # Summary
+$siteUrl = "${scheme}://${Hostname}"
 Write-Host ""
 Write-Host "================================================================================" -ForegroundColor Green
 Write-Host "  DEPLOYMENT SUCCESSFUL!" -ForegroundColor Green
 Write-Host "================================================================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "  URL:       http://localhost" -ForegroundColor White
+Write-Host "  URL:       $siteUrl" -ForegroundColor White
+Write-Host "  Hostname:  $Hostname" -ForegroundColor White
 Write-Host "  Site:      $siteName" -ForegroundColor White
 Write-Host "  App Pool:  $appPoolName" -ForegroundColor White
 Write-Host "  Identity:  NETWORK SERVICE" -ForegroundColor White
 Write-Host "  SQL:       $iisConnectionString" -ForegroundColor White
 Write-Host "  Path:      $physicalPath" -ForegroundColor White
 Write-Host ""
+Write-Host "  DNS reminder: ensure an A record exists in your DNS provider:" -ForegroundColor Yellow
+Write-Host "    $Hostname  ->  <this server's public IP>" -ForegroundColor Yellow
+Write-Host "  (same IP as techlight.digitalresponse.com.au)" -ForegroundColor Yellow
+Write-Host ""
 Write-Host "================================================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Opening browser..." -ForegroundColor Yellow
 Start-Sleep -Seconds 2
-Start-Process "http://localhost"
+Start-Process $siteUrl
 
 Write-Host ""
 Read-Host "Press Enter to close this window"
