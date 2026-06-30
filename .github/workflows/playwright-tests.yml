@@ -20,14 +20,12 @@ jobs:
       with:
         dotnet-version: '8.0.x'
     
-    - name: Install Playwright Browsers
-      run: |
-        dotnet tool install --global Microsoft.Playwright.CLI
-        playwright install chromium
-    
     - name: Build Solution
       run: dotnet build Techlight.MyDesk.slnx --configuration Release
-    
+
+    - name: Install Playwright Browsers
+      run: pwsh tests/MyDesk.PlaywrightTests/bin/Release/net8.0/playwright.ps1 install chromium
+
     - name: Run Playwright Tests
       run: |
         dotnet test tests/MyDesk.PlaywrightTests/MyDesk.PlaywrightTests.csproj `
