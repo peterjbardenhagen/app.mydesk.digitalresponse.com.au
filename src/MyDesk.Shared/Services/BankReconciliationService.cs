@@ -28,7 +28,7 @@ public class BankReconciliationService
         return dt.Map(MapBankStatement);
     }
 
-    public async Task<List<BankTransaction>> GetBankTransactionsAsync(int statementId)
+    public async Task<List<ReconciliationTransaction>> GetBankTransactionsAsync(int statementId)
     {
         var sql = $@"
             SELECT t.TransactionId, t.Date, t.Description, t.Amount, t.Balance, t.Type, t.Reference, t.Status,
@@ -45,8 +45,8 @@ public class BankReconciliationService
     public async Task<ReconciliationResult> ProcessBankReconciliationAsync(int companyId, int statementId)
     {
         var transactions = await GetBankTransactionsAsync(statementId);
-        var unmatched = new List<BankTransaction>();
-        var matched = new List<BankTransaction>();
+        var unmatched = new List<ReconciliationTransaction>();
+        var matched = new List<ReconciliationTransaction>();
 
         foreach (var tx in transactions)
         {
@@ -85,7 +85,7 @@ public class BankReconciliationService
         Status = r["Status"]?.ToString() ?? "Pending"
     };
 
-    private static BankTransaction MapBankTransaction(DataRow r) => new()
+    private static ReconciliationTransaction MapBankTransaction(DataRow r) => new()
     {
         TransactionId = Convert.ToInt32(r["TransactionId"]),
         Date = r["Date"] != DBNull.Value ? Convert.ToDateTime(r["Date"]) : DateTime.MinValue,
@@ -113,7 +113,8 @@ public class BankStatement
     public string Status { get; set; } = "Pending";
 }
 
-public class BankTransaction
+// Renamed from BankTransaction to avoid clash with MyDesk.Shared.Models.BankTransaction
+public class ReconciliationTransaction
 {
     public int TransactionId { get; set; }
     public DateTime Date { get; set; }
@@ -136,6 +137,6 @@ public class ReconciliationResult
     public int MatchedCount { get; set; }
     public int UnmatchedCount { get; set; }
     public DateTime ReconciliationDate { get; set; }
-    public List<BankTransaction> MatchedTransactions { get; set; } = new();
-    public List<BankTransaction> UnmatchedTransactions { get; set; } = new();
+    public List<ReconciliationTransaction> MatchedTransactions { get; set; } = new();
+    public List<ReconciliationTransaction> UnmatchedTransactions { get; set; } = new();
 }
