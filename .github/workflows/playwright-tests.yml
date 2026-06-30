@@ -26,13 +26,37 @@ jobs:
     - name: Install Playwright Browsers
       run: pwsh tests/MyDesk.PlaywrightTests/bin/Release/net10.0/playwright.ps1 install chromium
 
+    - name: Start LocalDB and create CI database
+      run: |
+        sqllocaldb start MSSQLLocalDB
+        sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'Techlight_MyDesk') CREATE DATABASE [Techlight_MyDesk]"
+
+    - name: Start Application
+      run: |
+        $env:ASPNETCORE_ENVIRONMENT = "Development"
+        $env:ASPNETCORE_URLS = "http://localhost:5237"
+        $env:ConnectionStrings__TechlightDb = "Server=(localdb)\MSSQLLocalDB;Database=Techlight_MyDesk;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False;"
+        $proc = Start-Process dotnet -ArgumentList "run","--project","src/MyDesk.Web","--no-build","--configuration","Release","--urls","http://localhost:5237" -NoNewWindow -PassThru
+        Write-Host "App started with PID $($proc.Id)"
+        # Poll until ready (up to 90 seconds)
+        $ready = $false
+        for ($i = 0; $i -lt 45; $i++) {
+          Start-Sleep -Seconds 2
+          try {
+            $r = Invoke-WebRequest -Uri "http://localhost:5237/login" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+            if ($r.StatusCode -lt 500) { $ready = $true; break }
+          } catch { }
+        }
+        if ($ready) { Write-Host "App is ready" } else { Write-Host "##[warning]App did not respond within 90s — tests may fail" }
+
     - name: Run Playwright Tests
       run: |
         dotnet test tests/MyDesk.PlaywrightTests/MyDesk.PlaywrightTests.csproj `
           --logger "console;verbosity=detailed" `
           --logger "trx;LogFileName=TestResults.trx" `
           --collect:"XPlat Code Coverage" `
-          --results-directory ./TestResults
+          --results-directory ./TestResults `
+          --no-build
     
     - name: Upload Test Results
       uses: actions/upload-artifact@v4
