@@ -1,6 +1,7 @@
 using System;
 using System.Data;
 using System.Threading.Tasks;
+using MyDesk.Shared.Models;
 
 namespace MyDesk.Shared.Services;
 
