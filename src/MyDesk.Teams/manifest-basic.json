@@ -50,7 +50,8 @@
       "configurationUrl": "https://svr1.digitalresponse.com.au/teams/tab/configure",
       "canUpdateConfiguration": true,
       "scopes": ["team", "groupChat"],
-      "context": ["channelTab", "meetingChatTab"]
+      "context": ["channelTab", "meetingChatTab"],
+      "supportsChannelFeatures": ["sharedChannels", "privateChannels"]
     }
   ],
   "bots": [
