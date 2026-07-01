@@ -412,10 +412,12 @@ builder.Services.AddHostedService<WorkflowSchedulerService>();
 // Bot webhook endpoint: POST /bot/messages
 // Registered in src/MyDesk.Teams/manifest.json as the bot handler.
 // Reads MicrosoftAppId / MicrosoftAppPassword / MicrosoftAppType from config.
-builder.Services.AddSingleton<Microsoft.Bot.Builder.BotFrameworkAuthentication,
-    Microsoft.Bot.Builder.Integration.AspNet.Core.ConfigurationBotFrameworkAuthentication>();
-builder.Services.AddSingleton<Microsoft.Bot.Builder.Integration.AspNet.Core.IBotFrameworkHttpAdapter,
-    Microsoft.Bot.Builder.Integration.AspNet.Core.CloudAdapter>();
+builder.Services.AddSingleton<Microsoft.Bot.Builder.Integration.AspNet.Core.IBotFrameworkHttpAdapter>(sp =>
+{
+    var cfg  = sp.GetRequiredService<IConfiguration>();
+    var auth = new Microsoft.Bot.Builder.Integration.AspNet.Core.ConfigurationBotFrameworkAuthentication(cfg);
+    return new Microsoft.Bot.Builder.Integration.AspNet.Core.CloudAdapter(auth);
+});
 builder.Services.AddTransient<Microsoft.Bot.Builder.IBot, MyDesk.Web.Bot.MyDeskTeamsBot>();
 
 // ── GraphQL (HotChocolate) ─────────────────────────────────────────────────
