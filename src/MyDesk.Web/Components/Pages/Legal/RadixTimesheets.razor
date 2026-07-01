@@ -149,7 +149,7 @@
 @* Create Dialog *@
 @if (_showCreate)
 {
-    <MudDialog @bind-IsVisible="_showCreate" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+    <MudDialog @bind-Visible="_showCreate" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
         <TitleContent>New Timesheet Entry</TitleContent>
         <DialogContent>
             <MudGrid Spacing="2">
