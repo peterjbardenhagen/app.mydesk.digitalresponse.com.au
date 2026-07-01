@@ -65,7 +65,8 @@ Write-Step "Cleaning development artefacts from publish output..."
 Write-Step "Creating zip package..."
 if (Test-Path $ZipPath) { Remove-Item $ZipPath -Force }
 Compress-Archive -Path "$OutDir\*" -DestinationPath $ZipPath
-Write-OK "Package: $ZipPath  ($([Math]::Round((Get-Item $ZipPath).Length / 1MB, 1)) MB)"
+$sizeMB = [Math]::Round((Get-Item $ZipPath).Length / 1MB, 1)
+Write-OK "Package: $ZipPath  ($sizeMB MB)"
 
 Write-Host ""
 Write-Host "Next steps on svr1.digitalresponse.com.au:" -ForegroundColor Yellow
