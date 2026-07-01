@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using MyDesk.Shared.Models;
-using MyDesk.Web.Services;
+
 
 namespace MyDesk.Shared.Services.Integrations;
 
@@ -11,7 +11,7 @@ namespace MyDesk.Shared.Services.Integrations;
 public class AccountingSyncManager
 {
     private readonly DatabaseService _db;
-    private readonly PlatformSettingsService _settings;
+    private readonly IAccountingSettingsService _settings;
     private readonly XeroSyncService _xero;
     private readonly QuickBooksSyncService _qbo;
     private readonly MyobSyncService _myob;
@@ -19,7 +19,7 @@ public class AccountingSyncManager
 
     public AccountingSyncManager(
         DatabaseService db,
-        PlatformSettingsService settings,
+        IAccountingSettingsService settings,
         XeroSyncService xero,
         QuickBooksSyncService qbo,
         MyobSyncService myob,

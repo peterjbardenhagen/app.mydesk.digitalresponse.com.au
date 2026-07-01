@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using MyDesk.Shared.Models;
-using MyDesk.Web.Services;
+
 
 namespace MyDesk.Shared.Services.Integrations;
 
@@ -19,13 +19,13 @@ public class MyobSyncService
     private const string ApiBase  = "https://api.myob.com/accountright/";
 
     private readonly DatabaseService _db;
-    private readonly PlatformSettingsService _settings;
+    private readonly IAccountingSettingsService _settings;
     private readonly IHttpClientFactory _httpFactory;
     private readonly ILogger<MyobSyncService> _logger;
 
     public MyobSyncService(
         DatabaseService db,
-        PlatformSettingsService settings,
+        IAccountingSettingsService settings,
         IHttpClientFactory httpFactory,
         ILogger<MyobSyncService> logger)
     {

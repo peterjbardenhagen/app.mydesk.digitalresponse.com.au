@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using MyDesk.Shared.Models;
-using MyDesk.Web.Services;
+
 
 namespace MyDesk.Shared.Services.Integrations;
 
@@ -19,13 +19,13 @@ public class QuickBooksSyncService
     private const string ApiBase  = "https://quickbooks.api.intuit.com/v3/company/";
 
     private readonly DatabaseService _db;
-    private readonly PlatformSettingsService _settings;
+    private readonly IAccountingSettingsService _settings;
     private readonly IHttpClientFactory _httpFactory;
     private readonly ILogger<QuickBooksSyncService> _logger;
 
     public QuickBooksSyncService(
         DatabaseService db,
-        PlatformSettingsService settings,
+        IAccountingSettingsService settings,
         IHttpClientFactory httpFactory,
         ILogger<QuickBooksSyncService> logger)
     {

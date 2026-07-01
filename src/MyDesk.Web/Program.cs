@@ -410,6 +410,10 @@ builder.Services.AddScoped<UserIntelligenceService>();
 builder.Services.AddScoped<PredictiveAnalyticsService>();
 builder.Services.AddScoped<ClientNotificationService>();
 
+// IAccountingSettingsService → PlatformSettingsService (allows Shared sync services to save tokens)
+builder.Services.AddScoped<MyDesk.Shared.Services.Integrations.IAccountingSettingsService>(
+    sp => sp.GetRequiredService<PlatformSettingsService>());
+
 // ── Accounting Integrations (Xero / QuickBooks / MYOB) ────────────────────────
 builder.Services.AddScoped<XeroSyncService>();
 builder.Services.AddScoped<QuickBooksSyncService>();
@@ -543,6 +547,7 @@ using (MyDesk.Shared.Services.TenantImpersonation.SystemBypass())
         await SafeInit("ScheduledTaskService",     () => sp.GetRequiredService<ScheduledTaskService>().EnsureTablesAsync());
         await SafeInit("BankingService",           () => sp.GetRequiredService<BankingService>().EnsureTablesAsync());
         await SafeInit("FileLibraryService",       () => sp.GetRequiredService<FileLibraryService>().EnsureTableAsync());
+        await SafeInit("AccountingSyncManager",    () => sp.GetRequiredService<AccountingSyncManager>().EnsureTablesAsync());
 
         // Back-fill legacy columns absent from pre-v3.0 databases (idempotent — COL_LENGTH guards).
         await SafeInit("Legacy schema backfill", async () =>
@@ -1306,6 +1311,64 @@ app.MapGet("/integrations/microsoft/callback", async (HttpContext ctx, PlatformS
     await settingsSvc.SaveAsync();
 
     return Results.Redirect("/integrations?connected=microsoft");
+}).RequireAuthorization();
+
+// ── Accounting OAuth Callback (/oauth/accounting/callback) ────────────────────
+// Handles redirect from Xero, QuickBooks, and MYOB after user authorises access.
+// State param encodes provider name ("xero" | "quickbooks" | "myob").
+app.MapGet("/oauth/accounting/callback", async (HttpContext ctx, XeroSyncService xeroSvc, QuickBooksSyncService qboSvc, MyobSyncService myobSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false))
+        return Results.Redirect("/login");
+
+    var code    = ctx.Request.Query["code"].ToString();
+    var state   = ctx.Request.Query["state"].ToString().ToLowerInvariant();
+    var realmId = ctx.Request.Query["realmId"].ToString();   // QuickBooks only
+
+    if (string.IsNullOrWhiteSpace(code))
+    {
+        Log.Warning("/oauth/accounting/callback: missing code, state={State}", state);
+        return Results.Redirect("/admin/accounting-integrations?error=missing-code");
+    }
+
+    var redirectUri = $"{ctx.Request.Scheme}://{ctx.Request.Host}/oauth/accounting/callback";
+
+    try
+    {
+        if (state == "xero")
+        {
+            var ok = await xeroSvc.ExchangeCodeAsync(code, redirectUri);
+            return ok
+                ? Results.Redirect("/admin/accounting-integrations?connected=Xero")
+                : Results.Redirect("/admin/accounting-integrations?error=xero-token-exchange-failed");
+        }
+
+        if (state == "quickbooks")
+        {
+            if (string.IsNullOrWhiteSpace(realmId))
+                return Results.Redirect("/admin/accounting-integrations?error=missing-realmId");
+            var ok = await qboSvc.ExchangeCodeAsync(code, realmId, redirectUri);
+            return ok
+                ? Results.Redirect("/admin/accounting-integrations?connected=QuickBooks")
+                : Results.Redirect("/admin/accounting-integrations?error=qbo-token-exchange-failed");
+        }
+
+        if (state == "myob")
+        {
+            var ok = await myobSvc.ExchangeCodeAsync(code, redirectUri);
+            return ok
+                ? Results.Redirect("/admin/accounting-integrations?connected=MYOB")
+                : Results.Redirect("/admin/accounting-integrations?error=myob-token-exchange-failed");
+        }
+
+        Log.Warning("/oauth/accounting/callback: unknown state={State}", state);
+        return Results.Redirect("/admin/accounting-integrations?error=unknown-provider");
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "/oauth/accounting/callback failed for state={State}", state);
+        return Results.Redirect($"/admin/accounting-integrations?error={Uri.EscapeDataString(ex.Message)}");
+    }
 }).RequireAuthorization();
 
 Log.Information("Application configured. Environment={Env}, URLs={Urls}",
