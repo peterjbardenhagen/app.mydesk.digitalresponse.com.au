@@ -82,7 +82,7 @@
                             Personalised Coaching
                             @if (!string.IsNullOrWhiteSpace(_profile.RoleContext))
                             {
-                                <MudChip Size="Size.Small" Color="Color.Primary" Class="ml-2">@_profile.RoleContext</MudChip>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="ml-2">@_profile.RoleContext</MudChip>
                             }
                         </MudText>
 
@@ -152,14 +152,14 @@
                                     <MudTd>@context.CompanyName</MudTd>
                                     <MudTd Style="text-align:right">@context.Value.ToString("C0")</MudTd>
                                     <MudTd Style="text-align:center">
-                                        <MudChip Size="Size.Small" Color="@WinColor(context.WinProbability)">
+                                        <MudChip T="string" Size="Size.Small" Color="@WinColor(context.WinProbability)">
                                             @context.WinProbability%
                                         </MudChip>
                                     </MudTd>
                                     <MudTd>
                                         @foreach (var sig in context.Signals)
                                         {
-                                            <MudChip Size="Size.Small" Class="mr-1">@sig</MudChip>
+                                            <MudChip T="string" Size="Size.Small" Class="mr-1">@sig</MudChip>
                                         }
                                     </MudTd>
                                 </RowTemplate>
@@ -207,7 +207,7 @@
 
                         <MudDivider Class="mb-3" />
                         <MudText Typo="Typo.subtitle2" Class="mb-2">
-                            <MudIcon Icon="@Icons.Material.Rounded.Telegram" Size="Size.Small" Class="mr-1" />
+                            <MudIcon Icon="@Icons.Material.Rounded.Chat" Size="Size.Small" Class="mr-1" />
                             Telegram Notifications
                         </MudText>
                         <MudSwitch @bind-Value="_profile.TelegramEnabled" Label="Enable Telegram notifications" Color="Color.Primary" Class="mb-2" />
