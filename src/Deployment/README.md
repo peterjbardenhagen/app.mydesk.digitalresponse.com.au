@@ -33,6 +33,39 @@ This will:
 
 ---
 
+### Local Dev — HTTPS / SSL Certificates
+
+Local IIS dev sites on **pb-legion** use the **IIS Express Development Certificate** (self-signed) for HTTPS — **not** Let's Encrypt. Let's Encrypt is only used on the production server (svr1.digitalresponse.com.au).
+
+| Environment | Hostname pattern | SSL cert |
+|-------------|-----------------|----------|
+| Local dev (pb-legion) | `dev.*.mydesk.digitalresponse.com.au` | IIS Express Development Certificate |
+| Production (svr1) | `*.mydesk.digitalresponse.com.au` | Let's Encrypt (auto-renew) |
+
+**Example local binding (as set in IIS Manager):**
+- Type: `https`, Port: `443`
+- Host name: `dev.ccl.app.mydesk.digitalresponse.com.au`
+- SSL certificate: `IIS Express Development Certificate`
+- SNI: not required (single dev machine)
+
+**Trust the dev cert to silence browser warnings on pb-legion** (run once, as Administrator):
+```powershell
+$cert = Get-ChildItem Cert:\LocalMachine\My |
+    Where-Object { $_.FriendlyName -like "*IIS Express*" } |
+    Select-Object -First 1
+if ($cert) {
+    $store = New-Object System.Security.Cryptography.X509Certificates.X509Store "Root","LocalMachine"
+    $store.Open("ReadWrite")
+    $store.Add($cert)
+    $store.Close()
+    Write-Host "Trusted: $($cert.Subject)"
+}
+```
+
+After running this, Chrome and Edge on pb-legion will accept the dev cert without warnings for all local dev sites.
+
+---
+
 ### Phase 2: Production Server (VM)
 
 **Prerequisites on Production Server:**
