@@ -1,0 +1,92 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.27/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.27",
+  "version": "1.0.0",
+  "id": "29d4f27d-09c5-4aa4-8221-a5ac98b98615",
+  "developer": {
+    "name": "Digital Response",
+    "websiteUrl": "https://mydesk.digitalresponse.com.au",
+    "privacyUrl": "https://mydesk.digitalresponse.com.au/privacy.html",
+    "termsOfUseUrl": "https://mydesk.digitalresponse.com.au/terms.html"
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "name": {
+    "short": "MyDesk",
+    "full": "MyDesk — AI Business Operating System"
+  },
+  "description": {
+    "short": "AI-powered business hub for your organisation.",
+    "full": "MyDesk is an AI-powered Business Operating System. Access your CRM, timesheets, invoices, approvals, and Ask AI — all from within Microsoft Teams."
+  },
+  "accentColor": "#1e40af",
+  "staticTabs": [
+    {
+      "entityId": "dashboard",
+      "name": "Dashboard",
+      "contentUrl": "https://svr1.digitalresponse.com.au/teams/tab?page=dashboard",
+      "websiteUrl": "https://svr1.digitalresponse.com.au/",
+      "scopes": ["personal"]
+    },
+    {
+      "entityId": "timesheets",
+      "name": "Timesheets",
+      "contentUrl": "https://svr1.digitalresponse.com.au/teams/tab?page=timesheets",
+      "websiteUrl": "https://svr1.digitalresponse.com.au/timesheets",
+      "scopes": ["personal"]
+    },
+    {
+      "entityId": "askai",
+      "name": "Ask AI",
+      "contentUrl": "https://svr1.digitalresponse.com.au/teams/tab?page=askai",
+      "websiteUrl": "https://svr1.digitalresponse.com.au/ask-ai",
+      "scopes": ["personal"]
+    }
+  ],
+  "configurableTabs": [
+    {
+      "configurationUrl": "https://svr1.digitalresponse.com.au/teams/tab/configure",
+      "canUpdateConfiguration": true,
+      "scopes": ["team", "groupChat"],
+      "context": ["channelTab", "meetingChatTab"]
+    }
+  ],
+  "bots": [
+    {
+      "botId": "199646d6-a7e6-4a35-9004-bd3311c94599",
+      "scopes": ["personal", "team", "groupChat"],
+      "supportsFiles": false,
+      "isNotificationOnly": false,
+      "commandLists": [
+        {
+          "scopes": ["personal", "team", "groupChat"],
+          "commands": [
+            {
+              "title": "help",
+              "description": "Show available MyDesk commands"
+            },
+            {
+              "title": "timesheets",
+              "description": "Show your timesheet summary for today"
+            },
+            {
+              "title": "approvals",
+              "description": "List your pending approvals"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "permissions": ["identity", "messageTeamMembers"],
+  "validDomains": [
+    "svr1.digitalresponse.com.au",
+    "mydesk.digitalresponse.com.au"
+  ],
+  "webApplicationInfo": {
+    "id": "29d4f27d-09c5-4aa4-8221-a5ac98b98615",
+    "resource": "api://svr1.digitalresponse.com.au/29d4f27d-09c5-4aa4-8221-a5ac98b98615"
+  }
+}
