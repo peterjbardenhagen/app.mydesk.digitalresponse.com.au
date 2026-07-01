@@ -1,5 +1,5 @@
 using System.Text.Json;
-using MyDesk.Shared.Services;
+using MyDesk.Web.Services;
 using MyDesk.Web.Services.Legal;
 
 namespace MyDesk.Web.AI.Tools.Legal;

@@ -1,7 +1,7 @@
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Teams;
 using Microsoft.Bot.Schema;
-using MyDesk.Shared.Services;
+using MyDesk.Web.Services;
 
 namespace MyDesk.Web.Bot;
 
