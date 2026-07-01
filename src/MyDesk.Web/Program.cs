@@ -21,7 +21,6 @@ using System.Text;
 using System.Text.Json;
 using Serilog;
 using Serilog.Events;
-using Microsoft.Bot.Builder.Integration.AspNet.Core;
 
 // ---------------------------------------------------------------------------
 // Logging (Serilog) - writes to /Logs/app-YYYYMMDD.log and /Logs/errors-YYYYMMDD.log
@@ -413,7 +412,8 @@ builder.Services.AddHostedService<WorkflowSchedulerService>();
 // Bot webhook endpoint: POST /bot/messages
 // Registered in src/MyDesk.Teams/manifest.json as the bot handler.
 // Reads MicrosoftAppId / MicrosoftAppPassword / MicrosoftAppType from config.
-builder.Services.AddBotFrameworkAuthentication();
+builder.Services.AddSingleton<Microsoft.Bot.Builder.BotFrameworkAuthentication,
+    Microsoft.Bot.Builder.Integration.AspNet.Core.ConfigurationBotFrameworkAuthentication>();
 builder.Services.AddSingleton<Microsoft.Bot.Builder.Integration.AspNet.Core.IBotFrameworkHttpAdapter,
     Microsoft.Bot.Builder.Integration.AspNet.Core.CloudAdapter>();
 builder.Services.AddTransient<Microsoft.Bot.Builder.IBot, MyDesk.Web.Bot.MyDeskTeamsBot>();
