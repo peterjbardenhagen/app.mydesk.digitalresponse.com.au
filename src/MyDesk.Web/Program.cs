@@ -6,6 +6,7 @@ using Hangfire;
 using Hangfire.SqlServer;
 using MyDesk.Shared.Data;
 using MyDesk.Shared.Services;
+using MyDesk.Shared.Services.Integrations;
 using MyDesk.Shared.Models;
 using MyDesk.Web.Components;
 using MyDesk.Web.Services;
@@ -408,6 +409,12 @@ builder.Services.AddScoped<OneDriveService>();
 builder.Services.AddScoped<UserIntelligenceService>();
 builder.Services.AddScoped<PredictiveAnalyticsService>();
 builder.Services.AddScoped<ClientNotificationService>();
+
+// ── Accounting Integrations (Xero / QuickBooks / MYOB) ────────────────────────
+builder.Services.AddScoped<XeroSyncService>();
+builder.Services.AddScoped<QuickBooksSyncService>();
+builder.Services.AddScoped<MyobSyncService>();
+builder.Services.AddScoped<AccountingSyncManager>();
 
 // Legal modules (CCL — Carter Capner Law)
 builder.Services.AddScoped<MyDesk.Web.Services.Legal.RadixService>();
