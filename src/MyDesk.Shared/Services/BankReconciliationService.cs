@@ -17,18 +17,18 @@ public class BankReconciliationService
         _logger = logger;
     }
 
-    public async Task<List<ReconciliationBankStatement>> GetBankStatementsAsync(int companyId)
+    public async Task<List<ReconciliationBankStatement>> GetReconciliationBankStatementsAsync(int companyId)
     {
         var sql = $@"
             SELECT StatementId, BankName, AccountNumber, StatementDate, OpeningBalance, ClosingBalance, ClosingDate, TransactionCount, Status
-            FROM BankStatements 
+            FROM ReconciliationBankStatements 
             WHERE CompanyId = {companyId}
             ORDER BY StatementDate DESC";
         var dt = await _db.QueryAsync(sql);
-        return dt.Map(MapBankStatement);
+        return dt.Map(MapReconciliationBankStatement);
     }
 
-    public async Task<List<ReconciliationBankTransaction>> GetBankTransactionsAsync(int statementId)
+    public async Task<List<ReconciliationTransaction>> GetBankTransactionsAsync(int statementId)
     {
         var sql = $@"
             SELECT t.TransactionId, t.Date, t.Description, t.Amount, t.Balance, t.Type, t.Reference, t.Status,
@@ -45,8 +45,8 @@ public class BankReconciliationService
     public async Task<ReconciliationResult> ProcessBankReconciliationAsync(int companyId, int statementId)
     {
         var transactions = await GetBankTransactionsAsync(statementId);
-        var unmatched = new List<ReconciliationBankTransaction>();
-        var matched = new List<ReconciliationBankTransaction>();
+        var unmatched = new List<ReconciliationTransaction>();
+        var matched = new List<ReconciliationTransaction>();
 
         foreach (var tx in transactions)
         {
@@ -72,7 +72,7 @@ public class BankReconciliationService
         };
     }
 
-    private static ReconciliationBankStatement MapBankStatement(DataRow r) => new()
+    private static ReconciliationBankStatement MapReconciliationBankStatement(DataRow r) => new()
     {
         StatementId = Convert.ToInt32(r["StatementId"]),
         BankName = r["BankName"]?.ToString() ?? "",
@@ -85,7 +85,7 @@ public class BankReconciliationService
         Status = r["Status"]?.ToString() ?? "Pending"
     };
 
-    private static ReconciliationBankTransaction MapBankTransaction(DataRow r) => new()
+    private static ReconciliationTransaction MapBankTransaction(DataRow r) => new()
     {
         TransactionId = Convert.ToInt32(r["TransactionId"]),
         Date = r["Date"] != DBNull.Value ? Convert.ToDateTime(r["Date"]) : DateTime.MinValue,
@@ -113,7 +113,8 @@ public class ReconciliationBankStatement
     public string Status { get; set; } = "Pending";
 }
 
-public class ReconciliationBankTransaction
+// Renamed from BankTransaction to avoid clash with MyDesk.Shared.Models.BankTransaction
+public class ReconciliationTransaction
 {
     public int TransactionId { get; set; }
     public DateTime Date { get; set; }
@@ -136,6 +137,6 @@ public class ReconciliationResult
     public int MatchedCount { get; set; }
     public int UnmatchedCount { get; set; }
     public DateTime ReconciliationDate { get; set; }
-    public List<ReconciliationBankTransaction> MatchedTransactions { get; set; } = new();
-    public List<ReconciliationBankTransaction> UnmatchedTransactions { get; set; } = new();
+    public List<ReconciliationTransaction> MatchedTransactions { get; set; } = new();
+    public List<ReconciliationTransaction> UnmatchedTransactions { get; set; } = new();
 }
