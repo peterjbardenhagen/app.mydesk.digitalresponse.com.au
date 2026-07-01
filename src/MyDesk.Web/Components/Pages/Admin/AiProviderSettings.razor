@@ -1,0 +1,434 @@
+@page "/admin/ai-provider"
+@attribute [Authorize(Roles = "Administrator,Director")]
+@inject PlatformSettingsService SettingsSvc
+@inject MyDesk.Web.AI.AiProviderFactory Factory
+@inject ISnackbar Snackbar
+@using MyDesk.Shared.Models
+@using MyDesk.Web.Services
+
+<PageTitle>AI Provider Settings – MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/admin/setup">Settings</a><span class="sep">/</span>
+            <span>AI Provider</span>
+        </div>
+        <h1 style="display:flex;align-items:center;gap:10px;">
+            <MudIcon Icon="@Icons.Material.Rounded.Psychology" Style="color:var(--tl-primary);" />
+            AI Provider
+        </h1>
+        <p class="tl-subtitle">
+            Connect your own AI backend. Each provider uses the same OpenAI-compatible
+            protocol — only the endpoint and key differ.
+        </p>
+    </div>
+    <div class="d-flex gap-2 align-center flex-wrap">
+        @if (Factory.IsConfigured)
+        {
+            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">
+                Active: @Factory.ActiveProviderLabel
+            </MudChip>
+        }
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Rounded.Save"
+                   OnClick="SaveAsync" Disabled="@_saving">
+            @(_saving ? "Saving…" : "Save")
+        </MudButton>
+    </div>
+</div>
+
+@if (_cfg is null)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else
+{
+<MudGrid Spacing="3">
+
+    @* ── Provider + Priority ─────────────────────────────────────────────── *@
+    <MudItem xs="12" md="6">
+        <MudPaper Elevation="1" Class="pa-5">
+            <MudText Typo="Typo.h6" Class="mb-4">Provider</MudText>
+
+            <MudSelect T="string" Label="AI Provider" @bind-Value="_cfg.Provider"
+                       Variant="Variant.Outlined" Margin="Margin.Dense"
+                       HelperText="All providers use OpenAI-compatible chat completions."
+                       Class="mb-4" AnchorOrigin="Origin.BottomLeft">
+                @foreach (var p in AiProviderKind.All)
+                {
+                    <MudSelectItem Value="@p">@ProviderLabel(p)</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudSelect T="string" Label="Quality vs Cost Priority" @bind-Value="_cfg.Priority"
+                       Variant="Variant.Outlined" Margin="Margin.Dense"
+                       HelperText="Affects which models are shown first in the dropdowns."
+                       Class="mb-4" AnchorOrigin="Origin.BottomLeft">
+                <MudSelectItem Value="@AiPriorityKind.Quality">
+                    <div class="d-flex align-center gap-2">
+                        <MudIcon Icon="@Icons.Material.Rounded.Star" Size="Size.Small" Color="Color.Warning" />
+                        Quality — best models first
+                    </div>
+                </MudSelectItem>
+                <MudSelectItem Value="@AiPriorityKind.Balanced">
+                    <div class="d-flex align-center gap-2">
+                        <MudIcon Icon="@Icons.Material.Rounded.Balance" Size="Size.Small" Color="Color.Info" />
+                        Balanced (default)
+                    </div>
+                </MudSelectItem>
+                <MudSelectItem Value="@AiPriorityKind.Cost">
+                    <div class="d-flex align-center gap-2">
+                        <MudIcon Icon="@Icons.Material.Rounded.AttachMoney" Size="Size.Small" Color="Color.Success" />
+                        Cost — free models first
+                    </div>
+                </MudSelectItem>
+            </MudSelect>
+        </MudPaper>
+    </MudItem>
+
+    @* ── Credentials / endpoint ──────────────────────────────────────────── *@
+    <MudItem xs="12" md="6">
+        <MudPaper Elevation="1" Class="pa-5">
+            <MudText Typo="Typo.h6" Class="mb-4">Credentials</MudText>
+
+            @if (_cfg.Provider == AiProviderKind.AzureAI)
+            {
+                <MudTextField Label="Azure Endpoint" @bind-Value="_cfg.AzureEndpoint"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                              Placeholder="https://your-resource.cognitiveservices.azure.com"
+                              HelperText="Your Azure Cognitive Services / AI Foundry resource endpoint." />
+                <MudTextField Label="API Key" @bind-Value="_cfg.ApiKey"
+                              InputType="InputType.Password" Adornment="Adornment.End"
+                              AdornmentIcon="@Icons.Material.Rounded.Visibility"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                              HelperText="Azure OpenAI API key." />
+                <MudTextField Label="Deployment Name" @bind-Value="_cfg.AzureDeployment"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                              Placeholder="gpt-4o"
+                              HelperText="Azure model deployment name (e.g. gpt-4o, o3)." />
+                <MudTextField Label="API Version" @bind-Value="_cfg.AzureApiVersion"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                              Placeholder="2025-01-01-preview" />
+            }
+            else if (_cfg.Provider == AiProviderKind.Ollama)
+            {
+                <MudTextField Label="Ollama Base URL" @bind-Value="_cfg.BaseUrl"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                              Placeholder="http://localhost:11434"
+                              HelperText="Your Ollama server URL (local or cloud)." />
+                <MudTextField Label="API Key (optional)" @bind-Value="_cfg.ApiKey"
+                              InputType="InputType.Password" Adornment="Adornment.End"
+                              AdornmentIcon="@Icons.Material.Rounded.Visibility"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                              HelperText="Leave blank for local Ollama (no auth required)." />
+            }
+            else if (_cfg.Provider == AiProviderKind.Opencode)
+            {
+                <MudTextField Label="Opencode Base URL (optional)" @bind-Value="_cfg.BaseUrl"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                              Placeholder="https://api.opencode.ai"
+                              HelperText="Leave blank to use the default Opencode endpoint." />
+                <MudTextField Label="API Key" @bind-Value="_cfg.ApiKey"
+                              InputType="InputType.Password" Adornment="Adornment.End"
+                              AdornmentIcon="@Icons.Material.Rounded.Visibility"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" />
+            }
+            else
+            {
+                <MudTextField Label="API Key" @bind-Value="_cfg.ApiKey"
+                              InputType="InputType.Password" Adornment="Adornment.End"
+                              AdornmentIcon="@Icons.Material.Rounded.Visibility"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                              HelperText="@ApiKeyHint(_cfg.Provider)" />
+            }
+        </MudPaper>
+    </MudItem>
+
+    @* ── Primary chat model ──────────────────────────────────────────────── *@
+    <MudItem xs="12">
+        <MudPaper Elevation="1" Class="pa-5">
+            <MudText Typo="Typo.h6" Class="mb-1">Chat Model</MudText>
+            <MudText Typo="Typo.caption" Class="mb-4" Style="color:var(--gray-500);">
+                Used for all Ask AI conversations and business intelligence queries.
+                @if (_cfg.Provider == AiProviderKind.AzureAI)
+                { <span>For Azure, this is the deployment name (same as above).</span> }
+            </MudText>
+
+            <div class="d-flex gap-3 flex-wrap align-end">
+                <MudSelect T="string" Label="Select model" @bind-Value="_cfg.ChatModel"
+                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                           Style="min-width:320px;" AnchorOrigin="Origin.BottomLeft">
+                    @foreach (var m in AiModelCatalog.ForProvider(_cfg.Provider, _cfg.Priority))
+                    {
+                        <MudSelectItem Value="@m.Id">
+                            <div class="d-flex align-center gap-2">
+                                @if (m.IsFree)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Success"
+                                             Variant="Variant.Outlined" Style="height:18px;font-size:10px;">FREE</MudChip>
+                                }
+                                @m.DisplayName
+                                @if (!string.IsNullOrWhiteSpace(m.Notes))
+                                { <span style="color:var(--gray-400);font-size:12px;">— @m.Notes</span> }
+                            </div>
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+                <span style="color:var(--gray-400);font-size:12px;padding-bottom:4px;">or</span>
+                <MudTextField Label="Custom model ID" @bind-Value="_cfg.ChatModel"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Placeholder="e.g. gpt-4o-mini / llama3.3 / deepseek-v3"
+                              Style="min-width:280px;"
+                              HelperText="Enter any model ID supported by the provider." />
+            </div>
+        </MudPaper>
+    </MudItem>
+
+    @* ── Vision models ───────────────────────────────────────────────────── *@
+    <MudItem xs="12" md="6">
+        <MudPaper Elevation="1" Class="pa-5">
+            <MudText Typo="Typo.h6" Class="mb-1">Vision Models</MudText>
+            <MudText Typo="Typo.caption" Class="mb-4" Style="color:var(--gray-500);">
+                Models capable of analysing images. Used for document extraction and visual analysis.
+                Not all models support vision — only vision-capable models are listed here.
+            </MudText>
+
+            @foreach (var vm in AiModelCatalog.VisionCapable(_cfg.Provider))
+            {
+                var isSelected = _cfg.VisionModels.Contains(vm.Id);
+                <MudCheckBox T="bool" Value="@isSelected"
+                             ValueChanged="@(v => ToggleVisionModel(vm.Id, v))"
+                             Dense="true" Class="mb-1">
+                    <span style="font-size:.875rem;">
+                        @vm.DisplayName
+                        @if (vm.IsFree) { <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined" Style="height:16px;font-size:10px;margin-left:6px;">FREE</MudChip> }
+                    </span>
+                </MudCheckBox>
+            }
+            @if (!AiModelCatalog.VisionCapable(_cfg.Provider).Any())
+            {
+                <MudText Typo="Typo.caption" Style="color:var(--gray-400);">
+                    No vision-capable models listed for this provider. Enter a custom model ID below.
+                </MudText>
+            }
+
+            <MudTextField Label="Custom vision model ID" @bind-Value="_customVisionModel"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mt-3"
+                          Placeholder="e.g. gpt-4o / llama3.2-vision" />
+            <MudButton Size="Size.Small" StartIcon="@Icons.Material.Rounded.Add"
+                       OnClick="AddCustomVision" Disabled="@string.IsNullOrWhiteSpace(_customVisionModel)"
+                       Class="mt-1">Add</MudButton>
+
+            @if (_cfg.VisionModels.Count > 0)
+            {
+                <MudDivider Class="my-3" />
+                <MudText Typo="Typo.caption" Class="mb-2"><strong>Active vision model:</strong></MudText>
+                <MudSelect T="string" @bind-Value="_cfg.ActiveVisionModel"
+                           Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var id in _cfg.VisionModels)
+                    {
+                        <MudSelectItem Value="@id">@id</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+        </MudPaper>
+    </MudItem>
+
+    @* ── Image generation models ─────────────────────────────────────────── *@
+    <MudItem xs="12" md="6">
+        <MudPaper Elevation="1" Class="pa-5">
+            <MudText Typo="Typo.h6" Class="mb-1">Image Generation Models</MudText>
+            <MudText Typo="Typo.caption" Class="mb-4" Style="color:var(--gray-500);">
+                Models for generating images. Used in Marketing AI and brand asset creation.
+            </MudText>
+
+            @foreach (var ig in AiModelCatalog.ImageGen(_cfg.Provider))
+            {
+                var isSelected = _cfg.ImageGenModels.Contains(ig.Id);
+                <MudCheckBox T="bool" Value="@isSelected"
+                             ValueChanged="@(v => ToggleImageGenModel(ig.Id, v))"
+                             Dense="true" Class="mb-1">
+                    <span style="font-size:.875rem;">
+                        @ig.DisplayName
+                        @if (ig.IsFree) { <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined" Style="height:16px;font-size:10px;margin-left:6px;">FREE</MudChip> }
+                        @if (!string.IsNullOrWhiteSpace(ig.Notes)) { <span style="color:var(--gray-400);font-size:12px;"> — @ig.Notes</span> }
+                    </span>
+                </MudCheckBox>
+            }
+            @if (!AiModelCatalog.ImageGen(_cfg.Provider).Any())
+            {
+                <MudText Typo="Typo.caption" Style="color:var(--gray-400);">
+                    No image generation models listed for this provider. Enter a custom model ID below.
+                </MudText>
+            }
+
+            <MudTextField Label="Custom image gen model ID" @bind-Value="_customImageModel"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mt-3"
+                          Placeholder="e.g. dall-e-3 / stable-diffusion / flux-pro" />
+            <MudButton Size="Size.Small" StartIcon="@Icons.Material.Rounded.Add"
+                       OnClick="AddCustomImageGen" Disabled="@string.IsNullOrWhiteSpace(_customImageModel)"
+                       Class="mt-1">Add</MudButton>
+
+            @if (_cfg.ImageGenModels.Count > 0)
+            {
+                <MudDivider Class="my-3" />
+                <MudText Typo="Typo.caption" Class="mb-2"><strong>Active image gen model:</strong></MudText>
+                <MudSelect T="string" @bind-Value="_cfg.ActiveImageGenModel"
+                           Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var id in _cfg.ImageGenModels)
+                    {
+                        <MudSelectItem Value="@id">@id</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+        </MudPaper>
+    </MudItem>
+
+    @* ── Free model quickstart ────────────────────────────────────────────── *@
+    <MudItem xs="12">
+        <MudPaper Elevation="0" Class="pa-4" Style="background:var(--mud-palette-background-grey);border-radius:8px;">
+            <MudText Typo="Typo.subtitle2" Class="mb-2">
+                <MudIcon Icon="@Icons.Material.Rounded.Bolt" Size="Size.Small" Style="color:var(--tl-primary);" />
+                Quick Start — Free Models
+            </MudText>
+            <MudText Typo="Typo.caption" Style="display:block;margin-bottom:8px;">
+                These free models from Openrouter require only a (free) Openrouter account. No credit card needed.
+            </MudText>
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var freeModel in _freeHighlights)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined"
+                               OnClick="@(() => ApplyFreeModel(freeModel))">
+                        @freeModel.DisplayName
+                    </MudButton>
+                }
+            </div>
+        </MudPaper>
+    </MudItem>
+
+</MudGrid>
+}
+
+@code {
+    private AiProviderConfig? _cfg;
+    private bool _saving;
+    private string _customVisionModel = "";
+    private string _customImageModel  = "";
+
+    private static readonly (string Provider, string Id, string DisplayName)[] _freeHighlights =
+    [
+        (AiProviderKind.Openrouter, "deepseek/deepseek-chat:free",            "DeepSeek V3 (free)"),
+        (AiProviderKind.Openrouter, "deepseek/deepseek-r1:free",              "DeepSeek R1 (free)"),
+        (AiProviderKind.Openrouter, "qwen/qwen3-235b-a22b:free",              "Qwen3 235B (free)"),
+        (AiProviderKind.Openrouter, "meta-llama/llama-3.3-70b-instruct:free", "Llama 3.3 70B (free)"),
+        (AiProviderKind.Openrouter, "owl/alpha",                              "Owl Alpha (free)"),
+        (AiProviderKind.Openrouter, "laguna-ai/laguna-v1:free",               "Laguna v1 (free)"),
+    ];
+
+    protected override void OnInitialized()
+    {
+        // Deep-copy so edits don't affect live settings until Save is clicked
+        var src = SettingsSvc.Current.AiProvider;
+        _cfg = new AiProviderConfig
+        {
+            Provider         = src.Provider,
+            ChatModel        = src.ChatModel,
+            ApiKey           = src.ApiKey,
+            BaseUrl          = src.BaseUrl,
+            AzureEndpoint    = src.AzureEndpoint,
+            AzureApiVersion  = src.AzureApiVersion,
+            AzureDeployment  = src.AzureDeployment,
+            VisionModels     = new List<string>(src.VisionModels),
+            ActiveVisionModel  = src.ActiveVisionModel,
+            ImageGenModels   = new List<string>(src.ImageGenModels),
+            ActiveImageGenModel = src.ActiveImageGenModel,
+            Priority         = src.Priority,
+        };
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_cfg is null) return;
+        _saving = true;
+        try
+        {
+            // For Azure, sync deployment name → chat model if only one is set
+            if (_cfg.Provider == AiProviderKind.AzureAI && string.IsNullOrWhiteSpace(_cfg.ChatModel))
+                _cfg.ChatModel = _cfg.AzureDeployment;
+
+            SettingsSvc.Current.AiProvider = _cfg;
+            await SettingsSvc.SaveAsync();
+            Snackbar.Add("AI provider settings saved.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Save failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void ToggleVisionModel(string id, bool add)
+    {
+        if (_cfg is null) return;
+        if (add) { if (!_cfg.VisionModels.Contains(id)) _cfg.VisionModels.Add(id); }
+        else    _cfg.VisionModels.Remove(id);
+        if (!_cfg.VisionModels.Contains(_cfg.ActiveVisionModel))
+            _cfg.ActiveVisionModel = _cfg.VisionModels.FirstOrDefault() ?? "";
+    }
+
+    private void ToggleImageGenModel(string id, bool add)
+    {
+        if (_cfg is null) return;
+        if (add) { if (!_cfg.ImageGenModels.Contains(id)) _cfg.ImageGenModels.Add(id); }
+        else    _cfg.ImageGenModels.Remove(id);
+        if (!_cfg.ImageGenModels.Contains(_cfg.ActiveImageGenModel))
+            _cfg.ActiveImageGenModel = _cfg.ImageGenModels.FirstOrDefault() ?? "";
+    }
+
+    private void AddCustomVision()
+    {
+        if (_cfg is null || string.IsNullOrWhiteSpace(_customVisionModel)) return;
+        if (!_cfg.VisionModels.Contains(_customVisionModel))
+            _cfg.VisionModels.Add(_customVisionModel.Trim());
+        _customVisionModel = "";
+    }
+
+    private void AddCustomImageGen()
+    {
+        if (_cfg is null || string.IsNullOrWhiteSpace(_customImageModel)) return;
+        if (!_cfg.ImageGenModels.Contains(_customImageModel))
+            _cfg.ImageGenModels.Add(_customImageModel.Trim());
+        _customImageModel = "";
+    }
+
+    private void ApplyFreeModel((string Provider, string Id, string DisplayName) m)
+    {
+        if (_cfg is null) return;
+        _cfg.Provider  = m.Provider;
+        _cfg.ChatModel = m.Id;
+    }
+
+    private static string ProviderLabel(string p) => p switch
+    {
+        AiProviderKind.AzureAI    => "Azure AI Foundry",
+        AiProviderKind.OpenAI     => "OpenAI",
+        AiProviderKind.Gemini     => "Google Gemini",
+        AiProviderKind.Ollama     => "Ollama (self-hosted or cloud)",
+        AiProviderKind.Openrouter => "OpenRouter (100+ models, free tier available)",
+        AiProviderKind.Opencode   => "Opencode / Zen",
+        _                          => p
+    };
+
+    private static string ApiKeyHint(string p) => p switch
+    {
+        AiProviderKind.OpenAI     => "Your OpenAI API key (sk-...).",
+        AiProviderKind.Gemini     => "Your Google AI Studio / Gemini API key.",
+        AiProviderKind.Openrouter => "Your OpenRouter API key (sk-or-...). Free tier available at openrouter.ai.",
+        AiProviderKind.Opencode   => "Your Opencode API key.",
+        _                          => "API key for the provider."
+    };
+}

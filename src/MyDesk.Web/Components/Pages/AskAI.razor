@@ -1,6 +1,6 @@
 @page "/ask-ai"
 @attribute [Authorize]
-@inject AzureAIService AI
+@inject MyDesk.Web.AI.AiProviderFactory ProviderFactory
 @inject McpIntegrationService McpSvc
 @inject AiAuditService AuditSvc
 @inject AiConversationService ConvSvc
@@ -34,12 +34,19 @@
                OnClick="Clear" Disabled="@(!_history.Any())">Clear</MudButton>
 </div>
 
-@if (!AI.IsConfigured)
+@if (!ProviderFactory.IsConfigured)
 {
     <MudAlert Severity="Severity.Warning" Class="mb-4">
-        Azure OpenAI is not configured. Set <code>Azure:OpenAIEndpoint</code>, <code>Azure:OpenAIModel</code>,
-        <code>Azure:OpenAIApiVersion</code>, and <code>Azure:OpenAIApiKey</code> in appsettings.json.
+        No AI provider is configured.
+        <MudLink Href="/admin/ai-provider">Go to Settings → AI Provider</MudLink>
+        to connect Azure AI, OpenAI, Gemini, Openrouter, Ollama, or Opencode.
     </MudAlert>
+}
+else
+{
+    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined" Class="mb-2">
+        @ProviderFactory.ActiveProviderLabel
+    </MudChip>
 }
 
 <div class="tl-askai-shell">
@@ -260,9 +267,10 @@ Be concise, practical, and focus on actionable business insights."));
 
         try
         {
-            if (!AI.IsConfigured)
+            if (!ProviderFactory.IsConfigured)
             {
-                throw new InvalidOperationException("Azure OpenAI is not configured. Please set Azure:OpenAIEndpoint, Azure:OpenAIModel, Azure:OpenAIApiVersion, and Azure:OpenAIApiKey in appsettings.json");
+                throw new InvalidOperationException(
+                    "No AI provider is configured. Go to Settings → AI Provider to set one up.");
             }
 
             // Use the AskAiAgentService — it has access to typed tools (quotes / invoices /

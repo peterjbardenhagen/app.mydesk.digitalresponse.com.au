@@ -381,6 +381,7 @@ builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.PipelineSu
 builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.ScheduleReportTool>();
 builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.CashFlowForecastTool>();
 builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.SearchComposioAppsTool>();
+builder.Services.AddScoped<MyDesk.Web.AI.AiProviderFactory>();
 builder.Services.AddScoped<MyDesk.Web.AI.AskAiAgentService>();
 
 builder.Services.Configure<AzureAIOptions>(builder.Configuration.GetSection(AzureAIOptions.Section));

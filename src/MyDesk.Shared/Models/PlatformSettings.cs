@@ -84,6 +84,9 @@ public class PlatformSettings
     public string LoginAccentColor { get; set; } = "#2196F3";
     public string LoginBackgroundColor { get; set; } = "";
 
+    // AI Provider (BYOAI — each tenant chooses their own AI backend)
+    public AiProviderConfig AiProvider { get; set; } = new();
+
     // Legal module flags (CCL — Carter Capner Law and similar firms)
     public bool EnableLegalModules { get; set; } = false;
     public string RadixApiUrl { get; set; } = "";
