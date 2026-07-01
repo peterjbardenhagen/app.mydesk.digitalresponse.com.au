@@ -379,10 +379,14 @@ builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.QuotesSumm
 builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.InvoicesSummaryTool>();
 builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.PipelineSummaryTool>();
 builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.ScheduleReportTool>();
+builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.CashFlowForecastTool>();
+builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.SearchComposioAppsTool>();
 builder.Services.AddScoped<MyDesk.Web.AI.AskAiAgentService>();
 
 builder.Services.Configure<AzureAIOptions>(builder.Configuration.GetSection(AzureAIOptions.Section));
 builder.Services.AddScoped<AzureAIService>();
+builder.Services.Configure<MyDesk.Shared.Services.ComposioOptions>(builder.Configuration.GetSection("Composio"));
+builder.Services.AddScoped<MyDesk.Shared.Services.ComposioIntegrationService>();
 builder.Services.AddScoped<AzureAiVisionClientAdapter>();
 builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.IAiVisionClient>(sp =>
     sp.GetRequiredService<AzureAiVisionClientAdapter>());
