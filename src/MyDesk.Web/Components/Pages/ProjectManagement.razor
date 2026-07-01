@@ -5,6 +5,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject NavigationManager Nav
 @using System.Security.Claims
 
 <PageTitle>Project Management - @PlatformSettings.GetBrandingName()</PageTitle>
@@ -321,10 +322,9 @@
             _tasks = await ProjectSvc.GetTasksAsync();
     }
 
-    private async Task OpenProject(Project project)
+    private void OpenProject(Project project)
     {
-        _selectedProject = project;
-        _tasks = await ProjectSvc.GetTasksAsync(projectId: project.ProjectId);
+        Nav.NavigateTo($"/project-management/{project.ProjectId}");
     }
 
     private async Task CreateTask()

@@ -54,6 +54,7 @@ public class NavMenuService
         
         // Intelligence
         new("my-intelligence", "My Intelligence",  "/my-intelligence", "Intelligence"),
+        new("my-tasks",        "My Tasks",          "/my-tasks",        "Intelligence"),
 
         // Support
         new("ask-ai",          "Ask AI",           "/ask-ai",          "Support"),

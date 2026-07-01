@@ -375,6 +375,7 @@ builder.Services.AddSingleton<DemoDataSeeder>();
 // Tools run inside the caller's request scope so they pick up the current
 // tenant via ICurrentTenantAccessor — every SQL query is automatically filtered
 // by the SQL Row-Level Security policy applied by TenantIsolationService.
+builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.AiQuoteBuilderTool>();
 builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.QuotesSummaryTool>();
 builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.InvoicesSummaryTool>();
 builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.PipelineSummaryTool>();
@@ -406,6 +407,7 @@ builder.Services.AddScoped<TelegramBotService>();
 builder.Services.AddScoped<OneDriveService>();
 builder.Services.AddScoped<UserIntelligenceService>();
 builder.Services.AddScoped<PredictiveAnalyticsService>();
+builder.Services.AddScoped<ClientNotificationService>();
 
 // Legal modules (CCL — Carter Capner Law)
 builder.Services.AddScoped<MyDesk.Web.Services.Legal.RadixService>();

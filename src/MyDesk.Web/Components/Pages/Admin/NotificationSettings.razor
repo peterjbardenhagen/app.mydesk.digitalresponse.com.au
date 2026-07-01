@@ -1,0 +1,233 @@
+@page "/admin/notifications"
+@attribute [Authorize(Roles = "Admin,Director")]
+@inject PlatformSettingsService PlatformSettings
+@inject ClientNotificationService NotifSvc
+@inject ISnackbar Snackbar
+
+<PageTitle>Notification Settings</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <a href="/admin/setup">Admin</a><span class="sep">/</span>
+            <span>Notification Settings</span>
+        </div>
+        <h1>Client Notifications</h1>
+        <p class="tl-subtitle">Configure SMS and email channels for automated client notifications</p>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Save"
+               OnClick="SaveAsync">Save Settings</MudButton>
+</div>
+
+<MudGrid>
+
+    <!-- SMS — Twilio -->
+    <MudItem xs="12" md="6">
+        <MudCard Elevation="2">
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle1" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Rounded.Sms" Size="Size.Small" Class="mr-1" />
+                    SMS Notifications (Twilio)
+                </MudText>
+
+                <MudSwitch @bind-Value="_n.EnableSms" Label="Enable SMS Notifications" Color="Color.Primary" Class="mb-3" />
+
+                @if (_n.EnableSms)
+                {
+                    <MudTextField @bind-Value="_n.TwilioAccountSid" Label="Twilio Account SID"
+                                  Variant="Variant.Outlined" Class="mb-2"
+                                  Placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+                    <MudTextField @bind-Value="_n.TwilioAuthToken" Label="Twilio Auth Token"
+                                  InputType="InputType.Password" Adornment="Adornment.End"
+                                  AdornmentIcon="@Icons.Material.Rounded.Key"
+                                  Variant="Variant.Outlined" Class="mb-2" />
+                    <MudTextField @bind-Value="_n.TwilioFromNumber" Label="From Number"
+                                  Variant="Variant.Outlined" Class="mb-3"
+                                  Placeholder="+61400000000" />
+
+                    <MudSwitch @bind-Value="_n.SmsFallbackToEmail" Label="Fall back to email if SMS fails" Color="Color.Primary" Class="mb-3" />
+
+                    <MudDivider Class="mb-3" />
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Test SMS</MudText>
+                    <MudTextField @bind-Value="_testPhone" Label="Mobile Number" Variant="Variant.Outlined" Class="mb-2" Placeholder="+61400000000" />
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="TestSmsAsync"
+                               Disabled="_testing" StartIcon="@Icons.Material.Rounded.Send">
+                        @(_testing ? "Sending…" : "Send Test SMS")
+                    </MudButton>
+                }
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <!-- Email — SendGrid / SMTP -->
+    <MudItem xs="12" md="6">
+        <MudCard Elevation="2">
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle1" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Rounded.Email" Size="Size.Small" Class="mr-1" />
+                    Email Notifications
+                </MudText>
+
+                <MudSwitch @bind-Value="_n.EnableEmail" Label="Enable Email Notifications" Color="Color.Primary" Class="mb-3" />
+
+                @if (_n.EnableEmail)
+                {
+                    <MudSelect @bind-Value="_n.EmailPrimaryProvider" Label="Primary Provider"
+                               Variant="Variant.Outlined" Class="mb-3">
+                        <MudSelectItem Value="@("SendGrid")">SendGrid (Recommended)</MudSelectItem>
+                        <MudSelectItem Value="@("SMTP")">SMTP Direct</MudSelectItem>
+                    </MudSelect>
+
+                    @if (_n.EmailPrimaryProvider == "SendGrid")
+                    {
+                        <MudTextField @bind-Value="_n.SendGridApiKey" Label="SendGrid API Key"
+                                      InputType="InputType.Password" Adornment="Adornment.End"
+                                      AdornmentIcon="@Icons.Material.Rounded.Key"
+                                      Variant="Variant.Outlined" Class="mb-2" />
+                        <MudTextField @bind-Value="_n.SendGridFromEmail" Label="From Email"
+                                      Variant="Variant.Outlined" Class="mb-2" Placeholder="notifications@yourcompany.com.au" />
+                        <MudTextField @bind-Value="_n.SendGridFromName" Label="From Name"
+                                      Variant="Variant.Outlined" Class="mb-3" Placeholder="Your Company" />
+
+                        <MudSwitch @bind-Value="_n.SmtpFallbackEnabled" Label="Enable SMTP fallback" Color="Color.Primary" Class="mb-2" />
+                    }
+
+                    @if (_n.EmailPrimaryProvider == "SMTP" || _n.SmtpFallbackEnabled)
+                    {
+                        <MudDivider Class="mb-3" />
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">
+                            @(_n.EmailPrimaryProvider == "SMTP" ? "SMTP Settings" : "SMTP Fallback Settings")
+                        </MudText>
+                        <MudTextField @bind-Value="_n.SmtpHost" Label="SMTP Host" Variant="Variant.Outlined" Class="mb-2" Placeholder="smtp.office365.com" />
+                        <MudGrid Spacing="2">
+                            <MudItem xs="6">
+                                <MudNumericField T="int" @bind-Value="_n.SmtpPort" Label="Port" Variant="Variant.Outlined" />
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudSwitch @bind-Value="_n.SmtpUseSsl" Label="Use SSL/TLS" Color="Color.Primary" />
+                            </MudItem>
+                        </MudGrid>
+                        <MudTextField @bind-Value="_n.SmtpUsername" Label="Username" Variant="Variant.Outlined" Class="mt-2 mb-2" />
+                        <MudTextField @bind-Value="_n.SmtpPassword" Label="Password" InputType="InputType.Password"
+                                      Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Rounded.Key"
+                                      Variant="Variant.Outlined" Class="mb-2" />
+                        <MudTextField @bind-Value="_n.SmtpFromEmail" Label="From Email" Variant="Variant.Outlined" Class="mb-2" />
+                        <MudTextField @bind-Value="_n.SmtpFromName" Label="From Name" Variant="Variant.Outlined" Class="mb-3" />
+                    }
+
+                    <MudDivider Class="mb-3" />
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Test Email</MudText>
+                    <MudTextField @bind-Value="_testEmail" Label="Email Address" Variant="Variant.Outlined" Class="mb-2" />
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="TestEmailAsync"
+                               Disabled="_testing" StartIcon="@Icons.Material.Rounded.Send">
+                        @(_testing ? "Sending…" : "Send Test Email")
+                    </MudButton>
+                }
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <!-- Notification Triggers -->
+    <MudItem xs="12">
+        <MudCard Elevation="2">
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle1" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Rounded.NotificationsActive" Size="Size.Small" Class="mr-1" />
+                    Notification Triggers
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                    Choose which events automatically send notifications to clients.
+                </MudText>
+                <MudGrid>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudPaper Outlined="true" Class="pa-3">
+                            <MudSwitch @bind-Value="_n.NotifyOnInvoiceCreated" Color="Color.Primary"
+                                       Label="Invoice Created / Sent" />
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Sends when a new invoice is issued</MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudPaper Outlined="true" Class="pa-3">
+                            <MudSwitch @bind-Value="_n.NotifyOnInvoiceOverdue" Color="Color.Primary"
+                                       Label="Invoice Overdue" />
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Triggered by scheduled debt collection rules</MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudPaper Outlined="true" Class="pa-3">
+                            <MudSwitch @bind-Value="_n.NotifyOnQuoteSent" Color="Color.Primary"
+                                       Label="Quote Sent" />
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Sends when a quote is emailed to client</MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudPaper Outlined="true" Class="pa-3">
+                            <MudSwitch @bind-Value="_n.NotifyOnJobStatusChange" Color="Color.Primary"
+                                       Label="Job Status Changed" />
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Notify client when job order status updates</MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudPaper Outlined="true" Class="pa-3">
+                            <MudSwitch @bind-Value="_n.NotifyOnDespatch" Color="Color.Primary"
+                                       Label="Order Despatched" />
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Sends when a despatch record is created</MudText>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+</MudGrid>
+
+<style>
+    .tl-page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+    .tl-breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--gray-500); margin-bottom: 8px; }
+    .tl-breadcrumb a { color: var(--gray-500); text-decoration: none; }
+    .tl-subtitle { color: var(--gray-500); margin: 0; }
+</style>
+
+@code {
+    private NotificationSettings _n = new();
+    private string _testEmail = "";
+    private string _testPhone = "";
+    private bool _testing;
+
+    protected override void OnInitialized()
+    {
+        _n = PlatformSettings.Current.Notifications;
+    }
+
+    private async Task SaveAsync()
+    {
+        var settings = PlatformSettings.Current;
+        settings.Notifications = _n;
+        await PlatformSettings.SaveAsync(settings);
+        NotifSvc.RefreshConfig(_n);
+        Snackbar.Add("Notification settings saved", Severity.Success);
+    }
+
+    private async Task TestSmsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_testPhone)) { Snackbar.Add("Enter a mobile number", Severity.Warning); return; }
+        _testing = true;
+        NotifSvc.RefreshConfig(_n);
+        var result = await NotifSvc.SendSmsAsync(_testPhone, "MyDesk test SMS — notification system is working.");
+        _testing = false;
+        if (result.Success) Snackbar.Add("Test SMS sent successfully", Severity.Success);
+        else Snackbar.Add($"SMS failed: {result.Error}", Severity.Error);
+    }
+
+    private async Task TestEmailAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_testEmail)) { Snackbar.Add("Enter an email address", Severity.Warning); return; }
+        _testing = true;
+        NotifSvc.RefreshConfig(_n);
+        var result = await NotifSvc.SendEmailAsync(_testEmail, "MyDesk — Notification Test", "This is a test notification from MyDesk. Your notification system is configured correctly.");
+        _testing = false;
+        if (result.Success) Snackbar.Add("Test email sent successfully", Severity.Success);
+        else Snackbar.Add($"Email failed: {result.Error}", Severity.Error);
+    }
+}

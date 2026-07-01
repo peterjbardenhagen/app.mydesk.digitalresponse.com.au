@@ -1,20 +1,27 @@
 @using MyDesk.Shared.Models
+@inject ProjectService ProjectSvc
 
 <MudForm @ref="_form">
     <MudDialog>
         <TitleContent>
-            <MudText Typo="Typo.h6">Project</MudText>
+            <MudText Typo="Typo.h6">@(_isEdit ? "Edit Project" : "New Project")</MudText>
         </TitleContent>
         <DialogContent>
             <MudGrid>
-                <MudItem xs="12">
-                    <MudTextField T="string" Label="Name" @bind-Value="_project.Name" Required="true" />
+                <MudItem xs="12" sm="8">
+                    <MudTextField T="string" Label="Project Name" @bind-Value="_project.Name"
+                                  Required="true" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField T="string" Label="Project Code" @bind-Value="_project.ProjectCode"
+                                  Placeholder="e.g. PRJ-001" Variant="Variant.Outlined" />
                 </MudItem>
                 <MudItem xs="12">
-                    <MudTextField T="string" Label="Description" @bind-Value="_project.Description" Lines="3" />
+                    <MudTextField T="string" Label="Description" @bind-Value="_project.Description"
+                                  Lines="3" Variant="Variant.Outlined" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudSelect T="string" Label="Status" @bind-Value="_project.Status">
+                    <MudSelect T="string" Label="Status" @bind-Value="_project.Status" Variant="Variant.Outlined">
                         <MudSelectItem Value="@("Active")">Active</MudSelectItem>
                         <MudSelectItem Value="@("On Hold")">On Hold</MudSelectItem>
                         <MudSelectItem Value="@("Completed")">Completed</MudSelectItem>
@@ -22,7 +29,7 @@
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudSelect T="string" Label="Priority" @bind-Value="_project.Priority">
+                    <MudSelect T="string" Label="Priority" @bind-Value="_project.Priority" Variant="Variant.Outlined">
                         <MudSelectItem Value="@("Low")">Low</MudSelectItem>
                         <MudSelectItem Value="@("Medium")">Medium</MudSelectItem>
                         <MudSelectItem Value="@("High")">High</MudSelectItem>
@@ -30,36 +37,85 @@
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudDatePicker Label="Start Date" @bind-Date="_project.StartDate" />
+                    <MudSelect T="string" Label="Commercial Model" @bind-Value="_project.CommercialModel" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@("FixedPrice")">Fixed Price</MudSelectItem>
+                        <MudSelectItem Value="@("TimeAndMaterials")">Time &amp; Materials</MudSelectItem>
+                        <MudSelectItem Value="@("Milestone")">Milestone-Based</MudSelectItem>
+                        <MudSelectItem Value="@("Retainer")">Retainer</MudSelectItem>
+                    </MudSelect>
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudDatePicker Label="End Date" @bind-Date="_project.EndDate" />
+                    <MudNumericField T="decimal?" Label="Budget (AUD)" @bind-Value="_project.BudgetAmount"
+                                     Format="N0" Variant="Variant.Outlined"
+                                     Adornment="Adornment.Start" AdornmentText="$" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Client Company" @bind-Value="_project.ClientCompanyName"
+                                  Placeholder="Client name" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Client Project Manager" @bind-Value="_project.ClientProjectManager"
+                                  Placeholder="Client-side PM name" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="Start Date" @bind-Date="_project.StartDate" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="End Date (Planned)" @bind-Date="_project.EndDate" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int?" Label="Linked Quote ID" @bind-Value="_project.LinkedQuoteId"
+                                     Placeholder="Quote Qid (optional)" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int?" Label="Linked Invoice ID" @bind-Value="_project.LinkedInvoiceId"
+                                     Placeholder="Invoice ID (optional)" Variant="Variant.Outlined" />
                 </MudItem>
             </MudGrid>
         </DialogContent>
         <DialogActions>
             <MudButton OnClick="Cancel">Cancel</MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Save</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit"
+                       StartIcon="@Icons.Material.Rounded.Save">
+                @(_isEdit ? "Save Changes" : "Create Project")
+            </MudButton>
         </DialogActions>
     </MudDialog>
 </MudForm>
 
 @code {
     [CascadingParameter] private MudDialogInstance MudDialog { get; set; } = default!;
-    [Parameter] public Project Project { get; set; } = new();
+    [Parameter] public Project? Project { get; set; }
 
     private MudForm _form = default!;
     private Project _project = new();
+    private bool _isEdit;
 
     protected override void OnInitialized()
     {
-        _project = Project ?? new Project();
+        if (Project is not null)
+        {
+            _project = Project;
+            _isEdit = _project.ProjectId > 0;
+        }
+        else
+        {
+            _project = new Project();
+        }
     }
 
     private void Cancel() => MudDialog.Cancel();
 
-    private void Submit()
+    private async Task Submit()
     {
+        await _form.Validate();
+        if (!_form.IsValid) return;
+
+        if (_isEdit)
+            await ProjectSvc.UpdateProjectAsync(_project);
+        else
+            _project.ProjectId = await ProjectSvc.CreateProjectAsync(_project);
+
         MudDialog.Close(_project);
     }
 }

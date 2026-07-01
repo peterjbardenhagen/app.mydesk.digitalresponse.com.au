@@ -1,0 +1,240 @@
+@page "/my-tasks"
+@attribute [Authorize]
+@using System.Security.Claims
+@inject ProjectService ProjectSvc
+@inject AuthenticationStateProvider AuthState
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>My Tasks</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <div>
+            <MudText Typo="Typo.h5">My Tasks</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                @_tasks.Count task@(_tasks.Count == 1 ? "" : "s") assigned to you across all projects
+            </MudText>
+        </div>
+        <div class="d-flex gap-2 align-center">
+            <MudSelect T="string" @bind-Value="_statusFilter" Label="Filter" Variant="Variant.Outlined" Dense="true" Style="min-width:160px">
+                <MudSelectItem Value="@("")">All Statuses</MudSelectItem>
+                <MudSelectItem Value="@("Backlog")">Backlog</MudSelectItem>
+                <MudSelectItem Value="@("ToDo")">To Do</MudSelectItem>
+                <MudSelectItem Value="@("InProgress")">In Progress</MudSelectItem>
+                <MudSelectItem Value="@("InReview")">In Review</MudSelectItem>
+                <MudSelectItem Value="@("Done")">Done</MudSelectItem>
+            </MudSelect>
+            <MudToggleIconButton @bind-Toggled="_kanbanMode"
+                                 Icon="@Icons.Material.Rounded.ViewList"
+                                 ToggledIcon="@Icons.Material.Rounded.ViewKanban"
+                                 Color="Color.Default" ToggledColor="Color.Primary"
+                                 Title="Toggle view" ToggledTitle="Switch to list" />
+        </div>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="d-flex justify-center pa-10"><MudProgressCircular Indeterminate="true" Color="Color.Primary" /></div>
+    }
+    else if (_tasks.Count == 0)
+    {
+        <MudPaper Outlined="true" Class="pa-10 text-center">
+            <MudIcon Icon="@Icons.Material.Rounded.TaskAlt" Size="Size.Large" Class="mb-3 opacity-50" />
+            <MudText Typo="Typo.h6">No tasks assigned to you</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Tasks assigned to you across all projects will appear here.</MudText>
+        </MudPaper>
+    }
+    else if (!_kanbanMode)
+    {
+        <!-- List View -->
+        <MudTable Items="FilteredTasks" Hover="true" Striped="true" Elevation="0" Outlined="true" Dense="true">
+            <HeaderContent>
+                <MudTh>Task</MudTh>
+                <MudTh>Project</MudTh>
+                <MudTh>Milestone</MudTh>
+                <MudTh Style="text-align:center">Priority</MudTh>
+                <MudTh Style="text-align:center">Status</MudTh>
+                <MudTh Style="text-align:center">% Done</MudTh>
+                <MudTh>Due</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Task">
+                    <MudText Typo="Typo.body2" Class="fw-500">@context.Title</MudText>
+                    @if (!string.IsNullOrWhiteSpace(context.Description))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @(context.Description.Length > 60 ? context.Description[..60] + "…" : context.Description)
+                        </MudText>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Project">
+                    @if (context.ProjectId.HasValue)
+                    {
+                        <MudLink Href="@($"/project-management/{context.ProjectId.Value}")" Typo="Typo.body2">
+                            @ProjectName(context.ProjectId.Value)
+                        </MudLink>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Milestone">
+                    @if (!string.IsNullOrWhiteSpace(context.MilestoneName))
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary">@context.MilestoneName</MudChip>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Priority" Style="text-align:center">
+                    <MudChip T="string" Size="Size.Small" Color="@PriorityColor(context.Priority)">@context.Priority</MudChip>
+                </MudTd>
+                <MudTd DataLabel="Status" Style="text-align:center">
+                    <MudChip T="string" Size="Size.Small" Color="@StatusColor(context.Status)">@context.Status</MudChip>
+                </MudTd>
+                <MudTd DataLabel="% Done" Style="text-align:center">
+                    <MudProgressLinear Value="context.PercentComplete" Color="@ProgressColor(context.PercentComplete)" Class="mb-1" Style="height:6px;border-radius:3px" />
+                    <MudText Typo="Typo.caption">@context.PercentComplete%</MudText>
+                </MudTd>
+                <MudTd DataLabel="Due">
+                    @if (context.DueDate.HasValue)
+                    {
+                        <MudText Typo="Typo.body2" Color="@(context.DueDate.Value < DateTime.Today && context.Status != "Done" ? Color.Error : Color.Default)">
+                            @context.DueDate.Value.ToString("dd/MM/yyyy")
+                        </MudText>
+                    }
+                </MudTd>
+                <MudTd>
+                    @if (context.ProjectId.HasValue)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Rounded.OpenInNew" Size="Size.Small"
+                                       Href="@($"/project-management/{context.ProjectId.Value}")"
+                                       Title="Open project" />
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+    else
+    {
+        <!-- Kanban View -->
+        <MudGrid Spacing="2">
+            @foreach (var col in _kanbanColumns)
+            {
+                var colTasks = FilteredTasks.Where(t => t.Status == col.Status).ToList();
+                <MudItem xs="12" sm="6" md="@(12 / _kanbanColumns.Length)">
+                    <MudPaper Outlined="true" Class="pa-3" Style="min-height:350px">
+                        <div class="d-flex align-center gap-2 mb-3">
+                            <MudIcon Icon="@col.Icon" Size="Size.Small" Color="@col.Color" />
+                            <MudText Typo="Typo.subtitle2">@col.Label</MudText>
+                            <MudBadge Content="@colTasks.Count" Color="Color.Default" Class="ml-auto" />
+                        </div>
+                        @foreach (var task in colTasks.OrderBy(t => t.DueDate ?? DateTime.MaxValue))
+                        {
+                            <MudPaper Class="pa-3 mb-2 tl-task-card" Elevation="1"
+                                      Style="cursor:pointer"
+                                      @onclick="() => OpenProject(task)">
+                                <MudText Typo="Typo.body2" Class="fw-500 mb-1">@task.Title</MudText>
+                                @if (task.ProjectId.HasValue)
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
+                                        @ProjectName(task.ProjectId.Value)
+                                    </MudText>
+                                }
+                                <div class="d-flex justify-space-between align-center mt-2">
+                                    <MudChip T="string" Size="Size.Small" Color="@PriorityColor(task.Priority)">@task.Priority</MudChip>
+                                    @if (task.DueDate.HasValue)
+                                    {
+                                        <MudText Typo="Typo.caption"
+                                                 Color="@(task.DueDate.Value < DateTime.Today && task.Status != "Done" ? Color.Error : Color.Secondary)">
+                                            @task.DueDate.Value.ToString("dd MMM")
+                                        </MudText>
+                                    }
+                                </div>
+                                @if (task.PercentComplete > 0)
+                                {
+                                    <MudProgressLinear Value="task.PercentComplete"
+                                                       Color="@ProgressColor(task.PercentComplete)"
+                                                       Class="mt-2" Style="height:4px;border-radius:2px" />
+                                }
+                            </MudPaper>
+                        }
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</MudContainer>
+
+<style>
+    .tl-task-card { border-radius: 8px; transition: box-shadow 0.15s; }
+    .tl-task-card:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.12) !important; }
+</style>
+
+@code {
+    private bool _loading = true;
+    private bool _kanbanMode;
+    private string _statusFilter = "";
+    private int _userId;
+    private List<TaskItem> _tasks = new();
+    private List<Project> _projects = new();
+
+    private readonly (string Status, string Label, string Icon, Color Color)[] _kanbanColumns =
+    {
+        ("Backlog",    "Backlog",     Icons.Material.Rounded.Inbox,             Color.Default),
+        ("ToDo",       "To Do",       Icons.Material.Rounded.CheckBoxOutlineBlank, Color.Info),
+        ("InProgress", "In Progress", Icons.Material.Rounded.Pending,           Color.Warning),
+        ("InReview",   "In Review",   Icons.Material.Rounded.RateReview,        Color.Secondary),
+        ("Done",       "Done",        Icons.Material.Rounded.CheckCircle,       Color.Success),
+    };
+
+    private IEnumerable<TaskItem> FilteredTasks => string.IsNullOrEmpty(_statusFilter)
+        ? _tasks
+        : _tasks.Where(t => t.Status == _statusFilter);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        var idClaim = auth.User.FindFirst("UserId")?.Value;
+        int.TryParse(idClaim, out _userId);
+
+        await Task.WhenAll(LoadTasksAsync(), LoadProjectsAsync());
+        _loading = false;
+    }
+
+    private async Task LoadTasksAsync()
+    {
+        if (_userId > 0)
+            _tasks = await ProjectSvc.GetTasksAsync(assigneeId: _userId);
+    }
+
+    private async Task LoadProjectsAsync()
+    {
+        _projects = await ProjectSvc.GetProjectsAsync();
+    }
+
+    private string ProjectName(int projectId) =>
+        _projects.FirstOrDefault(p => p.ProjectId == projectId)?.Name ?? $"Project #{projectId}";
+
+    private void OpenProject(TaskItem task)
+    {
+        if (task.ProjectId.HasValue)
+            Nav.NavigateTo($"/project-management/{task.ProjectId.Value}");
+    }
+
+    private static Color PriorityColor(string priority) => priority switch
+    {
+        "Critical" => Color.Error,
+        "High"     => Color.Warning,
+        "Low"      => Color.Success,
+        _          => Color.Info,
+    };
+
+    private static Color StatusColor(string status) => status switch
+    {
+        "Done"       => Color.Success,
+        "InProgress" => Color.Warning,
+        "InReview"   => Color.Secondary,
+        "ToDo"       => Color.Info,
+        _            => Color.Default,
+    };
+
+    private static Color ProgressColor(int pct) => pct >= 80 ? Color.Success : pct >= 40 ? Color.Warning : Color.Primary;
+}
