@@ -94,15 +94,9 @@ public class SupplierQuoteParseService
             return result;
         }
 
-        if (!IsDocIntelConfigured)
-        {
-            result.ErrorMessage = "Azure Document Intelligence is not configured. Add an endpoint/key under \"Azure\" in appsettings.json.";
-            return result;
-        }
-
         if (!IsConfigured)
         {
-            result.ErrorMessage = "Azure OpenAI is not configured. Document Intelligence will extract text, but we need OpenAI to convert it into line items.";
+            result.ErrorMessage = "Azure OpenAI is not configured. Add an endpoint/key under \"AzureAI\" in appsettings.json.";
             return result;
         }
 
@@ -121,7 +115,7 @@ public class SupplierQuoteParseService
                     continue;
                 }
 
-                _logger.LogInformation("Extracting text from {FileName} ({Ext}) with Document Intelligence", file.Name, ext);
+                _logger.LogInformation("Extracting text from {FileName} ({Ext})", file.Name, ext);
 
                 byte[] bytes;
                 await using (var stream = file.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024))
@@ -131,16 +125,42 @@ public class SupplierQuoteParseService
                     bytes = ms.ToArray();
                 }
 
-                var (text, error) = await ExtractWithDocIntelAsync(bytes, mime, file.Name);
-                if (!string.IsNullOrEmpty(error))
+                string fileText;
+                if (ext == ".pdf")
                 {
-                    result.ErrorMessage = error;
-                    return result;
+                    // Free path: PdfPig works well for digitally-generated PDFs (supplier quotes
+                    // exported from accounting software). Falls back to DocIntel for scanned docs.
+                    fileText = await ExtractPdfTextWithPdfPigAsync(bytes);
+
+                    if (string.IsNullOrWhiteSpace(fileText) || fileText.Length < 150)
+                    {
+                        if (IsDocIntelConfigured)
+                        {
+                            var (docText, docErr) = await ExtractWithDocIntelAsync(bytes, mime, file.Name);
+                            if (!string.IsNullOrEmpty(docErr)) { result.ErrorMessage = docErr; return result; }
+                            fileText = docText;
+                        }
+                        // Proceed with whatever PdfPig returned; the "no text" check below will handle it.
+                    }
                 }
-                if (!string.IsNullOrWhiteSpace(text))
+                else
+                {
+                    // Images (JPG/PNG/TIFF) need OCR — DocIntel is required.
+                    if (!IsDocIntelConfigured)
+                    {
+                        result.ErrorMessage = $"Image files ({ext}) require Azure Document Intelligence for OCR. " +
+                            "Configure DocIntelEndpoint/DocIntelKey in appsettings.json, or upload a digital PDF instead.";
+                        return result;
+                    }
+                    var (imgText, imgErr) = await ExtractWithDocIntelAsync(bytes, mime, file.Name);
+                    if (!string.IsNullOrEmpty(imgErr)) { result.ErrorMessage = imgErr; return result; }
+                    fileText = imgText;
+                }
+
+                if (!string.IsNullOrWhiteSpace(fileText))
                 {
                     allText.AppendLine($"=== File: {file.Name} ===");
-                    allText.AppendLine(text);
+                    allText.AppendLine(fileText);
                     allText.AppendLine();
                 }
             }
@@ -187,6 +207,25 @@ public class SupplierQuoteParseService
         }
 
         return result;
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Free tier: PdfPig — zero cost, instant, works for digital PDFs
+    // ────────────────────────────────────────────────────────────────────────
+    private static async Task<string> ExtractPdfTextWithPdfPigAsync(byte[] bytes)
+    {
+        try
+        {
+            // Reuse the shared PdfPigExtractionStrategy which already handles text + layout.
+            var strategy = new MyDesk.Shared.Services.Extraction.PdfPigExtractionStrategy();
+            await using var ms = new MemoryStream(bytes);
+            var doc = await strategy.ExtractAsync(ms, "application/pdf", null);
+            return doc.RawText ?? string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
+        }
     }
 
     // ────────────────────────────────────────────────────────────────────────

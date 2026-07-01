@@ -379,10 +379,14 @@ builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.QuotesSumm
 builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.InvoicesSummaryTool>();
 builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.PipelineSummaryTool>();
 builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.ScheduleReportTool>();
+builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.CashFlowForecastTool>();
+builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.SearchComposioAppsTool>();
 builder.Services.AddScoped<MyDesk.Web.AI.AskAiAgentService>();
 
 builder.Services.Configure<AzureAIOptions>(builder.Configuration.GetSection(AzureAIOptions.Section));
 builder.Services.AddScoped<AzureAIService>();
+builder.Services.Configure<MyDesk.Shared.Services.ComposioOptions>(builder.Configuration.GetSection("Composio"));
+builder.Services.AddScoped<MyDesk.Shared.Services.ComposioIntegrationService>();
 builder.Services.AddScoped<AzureAiVisionClientAdapter>();
 builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.IAiVisionClient>(sp =>
     sp.GetRequiredService<AzureAiVisionClientAdapter>());
@@ -397,7 +401,24 @@ builder.Services.AddScoped<McpIntegrationService>();
 builder.Services.AddScoped<ReconciliationService>();
 builder.Services.AddScoped<AiAuditService>();
 builder.Services.AddScoped<TelegramBotService>();
+
+// Legal modules (CCL — Carter Capner Law)
+builder.Services.AddScoped<MyDesk.Web.Services.Legal.RadixService>();
+builder.Services.AddScoped<MyDesk.Web.Services.Legal.PracticeEvolveService>();
+builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.Legal.RadixTimesheetsTool>();
 builder.Services.AddHostedService<WorkflowSchedulerService>();
+
+// ── Teams Bot Framework ────────────────────────────────────────────────────
+// Bot webhook endpoint: POST /bot/messages
+// Registered in src/MyDesk.Teams/manifest.json as the bot handler.
+// Reads MicrosoftAppId / MicrosoftAppPassword / MicrosoftAppType from config.
+builder.Services.AddSingleton<Microsoft.Bot.Builder.Integration.AspNet.Core.IBotFrameworkHttpAdapter>(sp =>
+{
+    var cfg  = sp.GetRequiredService<IConfiguration>();
+    var auth = new Microsoft.Bot.Builder.Integration.AspNet.Core.ConfigurationBotFrameworkAuthentication(cfg);
+    return new Microsoft.Bot.Builder.Integration.AspNet.Core.CloudAdapter(auth);
+});
+builder.Services.AddTransient<Microsoft.Bot.Builder.IBot, MyDesk.Web.Bot.MyDeskTeamsBot>();
 
 // ── GraphQL (HotChocolate) ─────────────────────────────────────────────────
 // Endpoint: /graphql (with Banana Cake Pop UI in Development).

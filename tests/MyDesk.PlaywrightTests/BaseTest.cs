@@ -27,10 +27,10 @@ public abstract class BaseTest
 
         // Pre-flight: verify the server is reachable. If not, skip the test cleanly
         // rather than producing an opaque Playwright "ERR_CONNECTION_REFUSED" failure.
-        // if (!await IsServerReachableAsync(Settings.BaseUrl))
-        // {
-        //     Assert.Ignore($"Web server at {Settings.BaseUrl} is not reachable. Start MyDesk via Run.bat option [4] before running tests.");
-        // }
+        if (!await IsServerReachableAsync(Settings.BaseUrl))
+        {
+            Assert.Ignore($"Web server at {Settings.BaseUrl} is not reachable. Start MyDesk via Run.bat option [4] before running tests.");
+        }
 
         // Initialize Playwright
         Playwright = await Microsoft.Playwright.Playwright.CreateAsync();
