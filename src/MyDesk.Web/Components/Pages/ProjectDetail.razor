@@ -514,16 +514,14 @@ else
             <!-- ── GANTT ── -->
             @if (_taskView == "gantt")
             {
-                @{
-                    var ganttTasks = viewTasks;
-                    var ganttStart = ganttTasks.Where(t => t.TaskStartDate.HasValue).Select(t => t.TaskStartDate!.Value)
-                                     .Concat(new[]{ _project!.StartDate ?? DateTime.Today }).Min();
-                    var ganttEnd   = ganttTasks.Where(t => t.TaskEndDate.HasValue).Select(t => t.TaskEndDate!.Value)
-                                     .Concat(new[]{ _project!.EndDate ?? DateTime.Today.AddDays(30) }).Max();
-                    if (ganttEnd < ganttStart.AddDays(7)) ganttEnd = ganttStart.AddDays(30);
-                    var totalDays  = Math.Max(1, (ganttEnd - ganttStart).Days + 1);
-                    var todayOffset = Math.Clamp((DateTime.Today - ganttStart).Days * 100.0 / totalDays, 0, 100);
-                }
+                var ganttTasks = viewTasks;
+                var ganttStart = ganttTasks.Where(t => t.TaskStartDate.HasValue).Select(t => t.TaskStartDate!.Value)
+                                 .Concat(new[]{ _project!.StartDate ?? DateTime.Today }).Min();
+                var ganttEnd   = ganttTasks.Where(t => t.TaskEndDate.HasValue).Select(t => t.TaskEndDate!.Value)
+                                 .Concat(new[]{ _project!.EndDate ?? DateTime.Today.AddDays(30) }).Max();
+                if (ganttEnd < ganttStart.AddDays(7)) ganttEnd = ganttStart.AddDays(30);
+                var totalDays  = Math.Max(1, (ganttEnd - ganttStart).Days + 1);
+                var todayOffset = Math.Clamp((DateTime.Today - ganttStart).Days * 100.0 / totalDays, 0, 100);
                 <div style="overflow-x:auto;">
                     <div style="min-width:900px;">
                         <div class="d-flex" style="margin-left:220px;border-bottom:2px solid var(--mud-palette-divider);background:var(--mud-palette-background-grey);">
