@@ -1,0 +1,184 @@
+name: Playwright Full Suite
+
+# Manual trigger only — does NOT block CI or PRs.
+# Results are committed to deployment-log/ so AI agents can read and act on failures.
+on:
+  workflow_dispatch:
+
+jobs:
+  full-test:
+    timeout-minutes: 90
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    env:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://localhost:5237
+      ConnectionStrings__TechlightDb: "Server=(localdb)\\MSSQLLocalDB;Database=Techlight_MyDesk;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False;"
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Build Solution
+      run: dotnet build MyDesk.slnx --configuration Release
+
+    - name: Install Playwright Browsers
+      run: pwsh tests/MyDesk.PlaywrightTests/bin/Release/net10.0/playwright.ps1 install chromium
+
+    - name: Start LocalDB and create CI database
+      run: |
+        sqllocaldb start MSSQLLocalDB
+        sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'Techlight_MyDesk') CREATE DATABASE [Techlight_MyDesk]"
+
+    - name: Start App and Run Full Suite
+      id: run_tests
+      continue-on-error: true
+      run: |
+        $stdout = "app-stdout.log"
+        $stderr = "app-stderr.log"
+        $proc = Start-Process dotnet `
+          -ArgumentList "run","--project","src/MyDesk.Web","--no-build","--configuration","Release" `
+          -NoNewWindow -PassThru `
+          -RedirectStandardOutput $stdout `
+          -RedirectStandardError  $stderr
+        Write-Host "App PID $($proc.Id)"
+
+        $ready = $false
+        for ($i = 0; $i -lt 60; $i++) {
+          Start-Sleep -Seconds 2
+          if ($proc.HasExited) {
+            Write-Host "##[error]App exited early"
+            Get-Content $stdout -ErrorAction SilentlyContinue
+            Get-Content $stderr -ErrorAction SilentlyContinue
+            throw "App exited before health check"
+          }
+          try {
+            $r = Invoke-WebRequest -Uri "http://localhost:5237/login" -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
+            if ($r.StatusCode -lt 500) { $ready = $true; break }
+          } catch { }
+        }
+
+        if (!$ready) {
+          Get-Content $stdout -ErrorAction SilentlyContinue | Select-Object -Last 100
+          Get-Content $stderr -ErrorAction SilentlyContinue | Select-Object -Last 100
+          throw "App did not respond within 120 s"
+        }
+
+        Write-Host "Running FULL test suite..."
+        dotnet test tests/MyDesk.PlaywrightTests/MyDesk.PlaywrightTests.csproj `
+          --configuration Release `
+          --logger "console;verbosity=detailed" `
+          --logger "trx;LogFileName=TestResults.trx" `
+          --results-directory ./TestResults `
+          --no-build
+        $global:testExitCode = $LASTEXITCODE
+
+        if (!$proc.HasExited) { $proc.Kill(); $proc.WaitForExit(10000) }
+        exit $global:testExitCode
+
+    - name: Write deployment-log entry
+      if: always()
+      shell: pwsh
+      run: |
+        $timestamp = (Get-Date -Format "yyyy-MM-dd HH:mm") + " UTC"
+        $dateSlug  = Get-Date -Format "yyyy-MM-dd-HHmm"
+        $runUrl    = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        $outcome   = if ('${{ steps.run_tests.outcome }}' -eq 'success') { 'PASSED' } else { 'FAILED' }
+
+        # Parse TRX for failures
+        $trx = Get-ChildItem -Recurse -Filter TestResults.trx -Path TestResults -ErrorAction SilentlyContinue | Select-Object -First 1
+        $failures = @()
+        if ($trx) {
+          [xml]$xml = Get-Content $trx.FullName
+          $ns = @{ t = "http://microsoft.com/schemas/VisualStudio/TeamTest/2010" }
+          $results = $xml.TestRun.Results.UnitTestResult
+          foreach ($r in $results) {
+            if ($r.outcome -eq 'Failed') {
+              $msg = $r.Output.ErrorInfo.Message -replace "`r`n","  " -replace "`n","  "
+              $failures += "- **$($r.testName)**`n  $msg"
+            }
+          }
+          $passed = ($results | Where-Object { $_.outcome -eq 'Passed' }).Count
+          $failed = $failures.Count
+          $total  = $results.Count
+        } else {
+          $passed = 0; $failed = 0; $total = 0
+        }
+
+        # Build markdown
+        $lines = @(
+          "# Full Suite Run — $timestamp",
+          "",
+          "**Result:** $outcome  ",
+          "**Run:** $runUrl  ",
+          "**Tests:** $passed passed, $failed failed, $total total",
+          ""
+        )
+
+        if ($failures.Count -gt 0) {
+          $lines += "## Failed Tests"
+          $lines += ""
+          $lines += $failures
+          $lines += ""
+          $lines += "## Suggested Actions for AI Agent"
+          $lines += ""
+          $lines += "1. Read each failing test name and its error message above."
+          $lines += "2. Find the corresponding test file in \`tests/MyDesk.PlaywrightTests/Tests/\`."
+          $lines += "3. Find the corresponding page/component in \`src/MyDesk.Web/Components/\`."
+          $lines += "4. Fix the underlying issue (missing element, wrong selector, broken route)."
+          $lines += "5. Re-run smoke tests via CI to confirm the fix does not break the build."
+          $lines += "6. Trigger another full suite run to verify all failures are resolved."
+        } else {
+          $lines += "_No failures. All tests passed._"
+        }
+
+        $content = $lines -join "`n"
+
+        # Write dated entry
+        $entryPath = "deployment-log/$dateSlug-full-suite.md"
+        Set-Content -Path $entryPath -Value $content -Encoding UTF8
+
+        # Overwrite latest.md
+        Set-Content -Path "deployment-log/latest.md" -Value $content -Encoding UTF8
+
+        Write-Host "deployment-log written: $entryPath"
+
+    - name: Commit deployment-log
+      if: always()
+      run: |
+        git config user.email "github-actions@github.com"
+        git config user.name "GitHub Actions"
+        git pull --rebase origin main
+        git add deployment-log/
+        $msg = "[skip ci] ci: full suite result $(Get-Date -Format 'yyyy-MM-dd HH:mm') — ${{ steps.run_tests.outcome }}"
+        git commit -m $msg || Write-Host "Nothing to commit"
+        git push origin HEAD:main || Write-Host "Push failed (non-fatal)"
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: full-suite-results
+        path: |
+          TestResults/
+          tests/MyDesk.PlaywrightTests/screenshots/
+          app-stdout.log
+          app-stderr.log
+        retention-days: 30
+
+    - name: Publish Test Report
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: Full Suite Report
+        path: 'TestResults/*.trx'
+        reporter: dotnet-trx
+        fail-on-error: false

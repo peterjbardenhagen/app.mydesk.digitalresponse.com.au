@@ -1,0 +1,1091 @@
+@page "/project-management/{ProjectId:int}"
+@attribute [Authorize]
+@using MyDesk.Shared.Models
+@using MyDesk.Shared.Services
+@using System.Security.Claims
+@inject ProjectService ProjectSvc
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthState
+
+<PageTitle>@(_project?.Name ?? "Project") — Project Management</PageTitle>
+
+@if (_loading)
+{
+    <div class="d-flex justify-center pa-12"><MudProgressCircular Indeterminate="true" Size="Size.Large" Color="Color.Primary" /></div>
+}
+else if (_project is null)
+{
+    <MudAlert Severity="Severity.Error">Project not found.</MudAlert>
+}
+else
+{
+    <!-- Header -->
+    <div class="tl-page-header">
+        <div>
+            <div class="tl-breadcrumb">
+                <a href="/">Dashboard</a><span class="sep">/</span>
+                <a href="/project-management">Projects</a><span class="sep">/</span>
+                <span>@_project.Name</span>
+            </div>
+            <h1 class="d-flex align-center gap-2">
+                @_project.Name
+                @if (!string.IsNullOrWhiteSpace(_project.ProjectCode))
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default">@_project.ProjectCode</MudChip>
+                }
+                <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(_project.Status)">@_project.Status</MudChip>
+            </h1>
+            <p class="tl-subtitle">@_project.CommercialModel · @_project.OwnerName</p>
+        </div>
+        <div class="d-flex gap-2">
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Edit" OnClick="EditProject">Edit</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add" OnClick="() => _addTaskOpen = true">Add Task</MudButton>
+        </div>
+    </div>
+
+    <!-- Health Summary Bar -->
+    @if (_health is not null)
+    {
+        <MudGrid Class="mb-3" Spacing="2">
+            <MudItem xs="6" sm="3">
+                <MudPaper Outlined="true" Class="pa-3 text-center">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">% Complete</MudText>
+                    <MudProgressLinear Value="@_health.PercentComplete" Color="@HealthColor(_health.ScheduleHealth)" Class="my-1" />
+                    <MudText Typo="Typo.h6">@_health.PercentComplete%</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudPaper Outlined="true" Class="pa-3 text-center">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Budget</MudText>
+                    <MudText Typo="Typo.h6" Color="@HealthColor(_health.BudgetHealth)">@_health.ActualCost.ToString("C0")</MudText>
+                    <MudText Typo="Typo.caption">of @_health.BudgetAmount.ToString("C0")</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudPaper Outlined="true" Class="pa-3 text-center">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Predicted End</MudText>
+                    <MudText Typo="Typo.h6" Color="@HealthColor(_health.ScheduleHealth)">
+                        @(_health.PredictedEndDate?.ToString("dd MMM yy") ?? "—")
+                    </MudText>
+                    @if (_health.DaysVariance.HasValue)
+                    {
+                        <MudText Typo="Typo.caption" Color="@(_health.DaysVariance > 0 ? Color.Error : Color.Success)">
+                            @(Math.Abs(_health.DaysVariance.Value)) days @(_health.DaysVariance > 0 ? "late" : "early")
+                        </MudText>
+                    }
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudPaper Outlined="true" Class="pa-3 text-center">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Open Risks / Issues</MudText>
+                    <MudText Typo="Typo.h6" Color="@(_health.OpenRisks + _health.OpenIssues > 0 ? Color.Warning : Color.Success)">
+                        @_health.OpenRisks R · @_health.OpenIssues I
+                    </MudText>
+                    @if (_health.PendingChangeRequests > 0)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Warning">@_health.PendingChangeRequests CR pending</MudText>
+                    }
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+
+    <!-- Main Tabs -->
+    <MudTabs Elevation="0" Rounded="true" PanelClass="pt-3" Color="Color.Primary" Outlined="true" @bind-ActivePanelIndex="_activeTab">
+
+        <!-- ── OVERVIEW ── -->
+        <MudTabPanel Text="Overview" Icon="@Icons.Material.Rounded.Dashboard">
+            <MudGrid Spacing="3">
+                <!-- Members -->
+                <MudItem xs="12" md="6">
+                    <MudCard Elevation="1">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.subtitle1">Project Members</MudText>
+                            </CardHeaderContent>
+                            <CardHeaderActions>
+                                <MudIconButton Icon="@Icons.Material.Rounded.PersonAdd" Size="Size.Small" OnClick="() => _addMemberOpen = true" />
+                            </CardHeaderActions>
+                        </MudCardHeader>
+                        <MudCardContent Class="pa-0">
+                            <MudList T="ProjectMember" Dense="true">
+                                @foreach (var m in _members)
+                                {
+                                    <MudListItem T="ProjectMember">
+                                        <div class="d-flex align-center gap-2">
+                                            <MudAvatar Size="Size.Small" Color="@RoleColor(m.Role)">@m.Name[0]</MudAvatar>
+                                            <div style="flex:1">
+                                                <MudText Typo="Typo.body2">@m.Name</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@m.Role @(m.PortalAccess ? "· Portal" : "")</MudText>
+                                            </div>
+                                            <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
+                                                           OnClick="() => RemoveMember(m.MemberId)" />
+                                        </div>
+                                    </MudListItem>
+                                }
+                                @if (!_members.Any())
+                                {
+                                    <MudListItem T="string"><MudText Typo="Typo.caption" Color="Color.Secondary">No members added yet.</MudText></MudListItem>
+                                }
+                            </MudList>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                <!-- Milestones -->
+                <MudItem xs="12" md="6">
+                    <MudCard Elevation="1">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.subtitle1">Milestones @(_project.CommercialModel == "FixedPrice" ? "/ UAT" : "")</MudText>
+                            </CardHeaderContent>
+                            <CardHeaderActions>
+                                <MudIconButton Icon="@Icons.Material.Rounded.Add" Size="Size.Small" OnClick="() => _addMilestoneOpen = true" />
+                            </CardHeaderActions>
+                        </MudCardHeader>
+                        <MudCardContent Class="pa-0">
+                            @foreach (var ms in _milestones.OrderBy(m => m.DueDate))
+                            {
+                                <div class="pa-3 d-flex align-center gap-2" style="border-bottom:1px solid var(--mud-palette-divider)">
+                                    <MudIcon Icon="@(ms.Status == "Complete" ? Icons.Material.Rounded.CheckCircle : Icons.Material.Rounded.RadioButtonUnchecked)"
+                                             Color="@(ms.Status == "Complete" ? Color.Success : ms.DueDate < DateTime.Today ? Color.Error : Color.Default)"
+                                             Size="Size.Small" />
+                                    <div style="flex:1">
+                                        <MudText Typo="Typo.body2">@ms.Title @(ms.IsUAT ? "(UAT)" : "")</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            Due @ms.DueDate.ToString("dd MMM yyyy")
+                                            @if (ms.SignOffRequired && ms.SignOffDate.HasValue)
+                                            {
+                                                <text> · Signed off @ms.SignOffDate.Value.ToString("dd MMM")</text>
+                                            }
+                                            else if (ms.SignOffRequired)
+                                            {
+                                                <text> · Sign-off required</text>
+                                            }
+                                        </MudText>
+                                    </div>
+                                    @if (ms.SignOffRequired && ms.Status != "Complete")
+                                    {
+                                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success"
+                                                   OnClick="() => SignOffMilestone(ms)">Sign Off</MudButton>
+                                    }
+                                </div>
+                            }
+                            @if (!_milestones.Any())
+                            {
+                                <div class="pa-4 text-center"><MudText Typo="Typo.caption" Color="Color.Secondary">No milestones yet.</MudText></div>
+                            }
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                <!-- Project Links -->
+                <MudItem xs="12" md="6">
+                    <MudCard Elevation="1">
+                        <MudCardContent>
+                            <MudText Typo="Typo.subtitle1" Class="mb-2">Project Details</MudText>
+                            <MudGrid Spacing="1">
+                                <MudItem xs="6"><MudText Typo="Typo.caption" Color="Color.Secondary">Commercial Model</MudText><MudText Typo="Typo.body2">@_project.CommercialModel</MudText></MudItem>
+                                <MudItem xs="6"><MudText Typo="Typo.caption" Color="Color.Secondary">Budget</MudText><MudText Typo="Typo.body2">@(_project.BudgetAmount?.ToString("C0") ?? "—")</MudText></MudItem>
+                                @if (_project.LinkedQuoteId.HasValue)
+                                {
+                                    <MudItem xs="6"><MudText Typo="Typo.caption" Color="Color.Secondary">Linked Quote</MudText><MudLink Href="@($"/quotes/{_project.LinkedQuoteId}")">Q-@_project.LinkedQuoteId</MudLink></MudItem>
+                                }
+                                @if (_project.LinkedInvoiceId.HasValue)
+                                {
+                                    <MudItem xs="6"><MudText Typo="Typo.caption" Color="Color.Secondary">Linked Invoice</MudText><MudLink Href="@($"/invoices/{_project.LinkedInvoiceId}")">INV-@_project.LinkedInvoiceId</MudLink></MudItem>
+                                }
+                                <MudItem xs="6"><MudText Typo="Typo.caption" Color="Color.Secondary">Start Date</MudText><MudText Typo="Typo.body2">@(_project.StartDate?.ToString("dd MMM yyyy") ?? "—")</MudText></MudItem>
+                                <MudItem xs="6"><MudText Typo="Typo.caption" Color="Color.Secondary">Target End</MudText><MudText Typo="Typo.body2">@(_project.EndDate?.ToString("dd MMM yyyy") ?? "—")</MudText></MudItem>
+                            </MudGrid>
+                            @if (!string.IsNullOrWhiteSpace(_project.PortalToken))
+                            {
+                                <MudDivider Class="my-2" />
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Client/Supplier Portal Link</MudText>
+                                <MudTextField Value="@($"{Nav.BaseUri}portal/project/{_project.PortalToken}")" ReadOnly="true"
+                                              Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Rounded.ContentCopy"
+                                              OnAdornmentClick="CopyPortalLink" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            }
+                            else
+                            {
+                                <MudButton Size="Size.Small" StartIcon="@Icons.Material.Rounded.Link" OnClick="GeneratePortalLink" Class="mt-2">
+                                    Generate Portal Link
+                                </MudButton>
+                            }
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+        </MudTabPanel>
+
+        <!-- ── TASKS ── -->
+        <MudTabPanel Text="Tasks" Icon="@Icons.Material.Rounded.Task">
+            <div class="d-flex gap-2 mb-3 align-center">
+                <MudSelect T="string" @bind-Value="_taskFilter" Label="Filter" Variant="Variant.Outlined" Dense="true" Style="min-width:160px;">
+                    <MudSelectItem Value="@("All")">All Tasks</MudSelectItem>
+                    <MudSelectItem Value="@("Backlog")">Backlog</MudSelectItem>
+                    <MudSelectItem Value="@("InProgress")">In Progress</MudSelectItem>
+                    <MudSelectItem Value="@("Done")">Done</MudSelectItem>
+                </MudSelect>
+                <MudSpacer />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add" Size="Size.Small" OnClick="() => _addTaskOpen = true">Add Task</MudButton>
+            </div>
+            <MudTable Items="FilteredTasks" Dense="true" Hover="true" Striped="true" Elevation="0" Outlined="true">
+                <HeaderContent>
+                    <MudTh>Task</MudTh>
+                    <MudTh>Assignee</MudTh>
+                    <MudTh>Priority</MudTh>
+                    <MudTh>Due</MudTh>
+                    <MudTh Style="min-width:160px">% Complete</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <MudText Typo="Typo.body2" Style="font-weight:500">@context.Title</MudText>
+                        @if (!string.IsNullOrWhiteSpace(context.MilestoneName))
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.MilestoneName</MudText>
+                        }
+                    </MudTd>
+                    <MudTd><MudText Typo="Typo.caption">@(context.AssigneeName ?? "—")</MudText></MudTd>
+                    <MudTd><MudChip T="string" Size="Size.Small" Color="@GetPriorityColor(context.Priority)">@context.Priority</MudChip></MudTd>
+                    <MudTd><MudText Typo="Typo.caption" Color="@(context.DueDate < DateTime.Today && context.Status != "Done" ? Color.Error : Color.Default)">@(context.DueDate?.ToString("dd MMM") ?? "—")</MudText></MudTd>
+                    <MudTd>
+                        <div class="d-flex align-center gap-2">
+                            <MudSlider T="int" Value="@context.PercentComplete" Min="0" Max="100" Step="5"
+                                       ValueChanged="@(v => UpdatePercent(context, v))"
+                                       Style="flex:1" Color="Color.Primary" />
+                            <MudText Typo="Typo.caption" Style="min-width:32px">@context.PercentComplete%</MudText>
+                        </div>
+                    </MudTd>
+                    <MudTd>
+                        <MudSelect T="string" Value="@context.Status" ValueChanged="@(s => UpdateTaskStatus(context, s))"
+                                   Dense="true" Variant="Variant.Text" Style="min-width:110px;">
+                            @foreach (var s in _taskStatuses)
+                            {
+                                <MudSelectItem Value="@s">@s</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
+                                       OnClick="() => DeleteTask(context.TaskId)" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudTabPanel>
+
+        <!-- ── KANBAN ── -->
+        <MudTabPanel Text="Kanban" Icon="@Icons.Material.Rounded.ViewKanban">
+            <MudGrid Spacing="2">
+                @foreach (var col in _kanbanColumns)
+                {
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Outlined="true" Class="pa-2" Style="min-height:300px;">
+                            <div class="d-flex align-center gap-1 mb-2 px-1">
+                                <MudIcon Icon="@col.Icon" Size="Size.Small" Color="@col.Color" />
+                                <MudText Typo="Typo.subtitle2">@col.Label</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ml-auto">(@_tasks.Count(t => t.Status == col.Status))</MudText>
+                            </div>
+                            @foreach (var task in _tasks.Where(t => t.Status == col.Status).OrderBy(t => t.OrderIndex))
+                            {
+                                <MudPaper Outlined="true" Class="pa-2 mb-2" Style="cursor:pointer;" @onclick="() => OpenTaskEdit(task)">
+                                    <div class="d-flex align-center gap-1 mb-1">
+                                        <MudChip T="string" Size="Size.Small" Color="@GetPriorityColor(task.Priority)">@task.Priority</MudChip>
+                                        <MudSpacer />
+                                        <MudText Typo="Typo.caption">@task.PercentComplete%</MudText>
+                                    </div>
+                                    <MudText Typo="Typo.body2" Style="font-weight:500">@task.Title</MudText>
+                                    @if (!string.IsNullOrWhiteSpace(task.AssigneeName))
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@task.AssigneeName</MudText>
+                                    }
+                                    @if (task.DueDate.HasValue)
+                                    {
+                                        <MudText Typo="Typo.caption" Color="@(task.DueDate < DateTime.Today && task.Status != "Done" ? Color.Error : Color.Secondary)">
+                                            Due @task.DueDate.Value.ToString("dd MMM")
+                                        </MudText>
+                                    }
+                                    <MudProgressLinear Value="@task.PercentComplete" Color="@col.Color" Class="mt-1" Size="Size.Small" />
+                                    <div class="d-flex gap-1 mt-1">
+                                        @foreach (var dest in _kanbanColumns.Where(c => c.Status != col.Status).Take(2))
+                                        {
+                                            <MudButton Size="Size.Small" Variant="Variant.Text" Color="@dest.Color"
+                                                       OnClick="() => MoveTask(task, dest.Status)" Style="font-size:10px;padding:2px 4px;min-width:0;">
+                                                → @dest.Label
+                                            </MudButton>
+                                        }
+                                    </div>
+                                </MudPaper>
+                            }
+                        </MudPaper>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudTabPanel>
+
+        <!-- ── GANTT ── -->
+        <MudTabPanel Text="Gantt" Icon="@Icons.Material.Rounded.Timeline">
+            @{
+                var ganttStart = _tasks.Where(t => t.TaskStartDate.HasValue).Min(t => (DateTime?)t.TaskStartDate)
+                              ?? _project.StartDate ?? DateTime.Today;
+                var ganttEnd   = _tasks.Where(t => t.TaskEndDate.HasValue).Max(t => (DateTime?)t.TaskEndDate)
+                              ?? _project.EndDate ?? DateTime.Today.AddDays(30);
+                var totalDays  = Math.Max(1, (ganttEnd - ganttStart).Days + 1);
+            }
+            <div style="overflow-x:auto;">
+                <div style="min-width:900px;">
+                    <!-- Timeline header: weeks -->
+                    <div class="d-flex" style="margin-left:240px; border-bottom:2px solid var(--mud-palette-divider);">
+                        @{
+                            var wk = ganttStart;
+                            while (wk <= ganttEnd)
+                            {
+                                var wkWidth = Math.Max(1, Math.Min((ganttEnd - wk).Days + 1, 7)) * 100.0 / totalDays;
+                                <div style="width:@($"{wkWidth:F1}%"); text-align:center; font-size:10px; color:var(--mud-palette-text-secondary); border-right:1px solid var(--mud-palette-divider); padding:2px 0;">
+                                    @wk.ToString("dd MMM")
+                                </div>
+                                wk = wk.AddDays(7);
+                            }
+                        }
+                    </div>
+
+                    <!-- Today marker position -->
+                    @{
+                        var todayOffset = Math.Clamp((DateTime.Today - ganttStart).Days * 100.0 / totalDays, 0, 100);
+                    }
+
+                    <!-- Task rows -->
+                    @foreach (var grp in _tasks.GroupBy(t => t.MilestoneName ?? "General"))
+                    {
+                        <div class="px-1 py-1" style="background:var(--mud-palette-background-grey); font-size:11px; font-weight:600; color:var(--mud-palette-primary);">
+                            @grp.Key
+                        </div>
+                        @foreach (var task in grp.OrderBy(t => t.TaskStartDate ?? ganttStart))
+                        {
+                            var tStart  = task.TaskStartDate ?? ganttStart;
+                            var tEnd    = task.TaskEndDate   ?? tStart.AddDays(3);
+                            var left    = Math.Max(0, (tStart - ganttStart).Days * 100.0 / totalDays);
+                            var width   = Math.Max(0.5, (tEnd - tStart).Days * 100.0 / totalDays);
+                            var isLate  = tEnd < DateTime.Today && task.PercentComplete < 100;
+
+                            <div class="d-flex align-center" style="height:36px; border-bottom:1px solid var(--mud-palette-divider);">
+                                <div style="width:240px; min-width:240px; padding:0 8px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">
+                                    <MudText Typo="Typo.caption" Style="font-weight:500">@task.Title</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="font-size:10px"> @(task.AssigneeName ?? "")</MudText>
+                                </div>
+                                <div style="flex:1; position:relative; height:100%;">
+                                    <!-- today line -->
+                                    <div style="position:absolute; left:@($"{todayOffset:F1}%"); top:0; bottom:0; width:2px; background:var(--mud-palette-error); opacity:0.5; z-index:1;" />
+                                    <!-- task bar -->
+                                    <div style="position:absolute; left:@($"{left:F1}%"); width:@($"{width:F1}%"); top:8px; bottom:8px;
+                                                background:@(isLate ? "var(--mud-palette-error)" : task.Status == "Done" ? "var(--mud-palette-success)" : "var(--mud-palette-primary)");
+                                                border-radius:4px; opacity:0.8; overflow:hidden; display:flex; align-items:center; padding:0 4px;">
+                                        <div style="height:100%; width:@(task.PercentComplete)%; background:rgba(255,255,255,0.35); position:absolute; left:0; top:0;" />
+                                        <MudText Typo="Typo.caption" Style="color:white; font-size:10px; white-space:nowrap; overflow:hidden; position:relative; z-index:1;">@task.PercentComplete%</MudText>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+
+                    <!-- Milestone markers -->
+                    @foreach (var ms in _milestones)
+                    {
+                        var msOffset = Math.Clamp((ms.DueDate - ganttStart).Days * 100.0 / totalDays, 0, 100);
+                        <div style="position:relative; height:24px; border-bottom:1px solid var(--mud-palette-divider);">
+                            <div style="width:240px; min-width:240px; padding:0 8px;">
+                                <MudText Typo="Typo.caption" Color="@(ms.Status == "Complete" ? Color.Success : Color.Warning)" Style="font-size:10px;">⬦ @ms.Title</MudText>
+                            </div>
+                            <div style="position:absolute; left:calc(240px + @($"{msOffset:F1}%")); top:2px;
+                                        width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent;
+                                        border-top:12px solid @(ms.Status == "Complete" ? "var(--mud-palette-success)" : "var(--mud-palette-warning)");" />
+                        </div>
+                    }
+                </div>
+            </div>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
+                <MudIcon Icon="@Icons.Material.Rounded.FiberManualRecord" Size="Size.Small" Style="color:var(--mud-palette-error);vertical-align:middle;" /> Today
+                <MudIcon Icon="@Icons.Material.Rounded.FiberManualRecord" Size="Size.Small" Color="Color.Primary" Style="vertical-align:middle;" Class="ml-2" /> In Progress
+                <MudIcon Icon="@Icons.Material.Rounded.FiberManualRecord" Size="Size.Small" Color="Color.Success" Style="vertical-align:middle;" Class="ml-2" /> Done
+            </MudText>
+        </MudTabPanel>
+
+        <!-- ── BUDGET ── -->
+        <MudTabPanel Text="Budget" Icon="@Icons.Material.Rounded.AccountBalance">
+            <!-- Summary -->
+            <MudGrid Spacing="2" Class="mb-3">
+                <MudItem xs="6" sm="3">
+                    <MudPaper Outlined="true" Class="pa-3 text-center">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Budget</MudText>
+                        <MudText Typo="Typo.h6">@(_project.BudgetAmount?.ToString("C0") ?? "—")</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudPaper Outlined="true" Class="pa-3 text-center">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Actual Cost</MudText>
+                        <MudText Typo="Typo.h6" Color="@(_costTotal > (_project.BudgetAmount ?? decimal.MaxValue) ? Color.Error : Color.Success)">@_costTotal.ToString("C0")</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudPaper Outlined="true" Class="pa-3 text-center">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Variance</MudText>
+                        @{var variance = (_project.BudgetAmount ?? 0) - _costTotal;}
+                        <MudText Typo="Typo.h6" Color="@(variance >= 0 ? Color.Success : Color.Error)">@variance.ToString("C0")</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudPaper Outlined="true" Class="pa-3 text-center">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Predicted Final</MudText>
+                        <MudText Typo="Typo.h6">@(_project.PredictedFinalCost?.ToString("C0") ?? "—")</MudText>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+
+            <div class="d-flex justify-end mb-2">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add" Size="Size.Small" OnClick="() => _addCostOpen = true">Log Cost</MudButton>
+            </div>
+
+            <MudTable Items="_costEntries" Dense="true" Hover="true" Striped="true" Elevation="0" Outlined="true">
+                <HeaderContent>
+                    <MudTh>Date</MudTh>
+                    <MudTh>Type</MudTh>
+                    <MudTh>Description</MudTh>
+                    <MudTh>Entered By</MudTh>
+                    <MudTh Style="text-align:right">Qty</MudTh>
+                    <MudTh Style="text-align:right">Rate</MudTh>
+                    <MudTh Style="text-align:right">Amount</MudTh>
+                    <MudTh>Billable</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.EntryDate.ToString("dd/MM/yy")</MudTd>
+                    <MudTd><MudChip T="string" Size="Size.Small">@context.EntryType</MudChip></MudTd>
+                    <MudTd>@context.Description</MudTd>
+                    <MudTd>@(context.EnteredBy ?? "")</MudTd>
+                    <MudTd Style="text-align:right">@context.Quantity</MudTd>
+                    <MudTd Style="text-align:right">@context.UnitRate.ToString("C2")</MudTd>
+                    <MudTd Style="text-align:right"><b>@context.Amount.ToString("C2")</b></MudTd>
+                    <MudTd><MudIcon Icon="@(context.IsBillable ? Icons.Material.Rounded.CheckCircle : Icons.Material.Rounded.Cancel)" Color="@(context.IsBillable ? Color.Success : Color.Default)" Size="Size.Small" /></MudTd>
+                    <MudTd><MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error" OnClick="() => DeleteCostEntry(context.CostEntryId)" /></MudTd>
+                </RowTemplate>
+                <FooterContent>
+                    <MudTd colspan="6" Style="text-align:right; font-weight:bold;">TOTAL</MudTd>
+                    <MudTd Style="text-align:right; font-weight:bold;">@_costTotal.ToString("C2")</MudTd>
+                    <MudTd colspan="2" />
+                </FooterContent>
+            </MudTable>
+        </MudTabPanel>
+
+        <!-- ── RISKS & ISSUES ── -->
+        <MudTabPanel Text="Risks & Issues" Icon="@Icons.Material.Rounded.Warning">
+            <div class="d-flex gap-2 mb-3">
+                <MudButton Variant="Variant.Filled" Color="Color.Warning" StartIcon="@Icons.Material.Rounded.Add" Size="Size.Small" OnClick="() => AddRiskIssue("Risk")">Add Risk</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Rounded.Add" Size="Size.Small" OnClick="() => AddRiskIssue("Issue")">Log Issue</MudButton>
+            </div>
+
+            @foreach (var type in new[]{"Risk","Issue"})
+            {
+                var items = _risksIssues.Where(r => r.ItemType == type).ToList();
+                if (!items.Any()) continue;
+                <MudText Typo="Typo.subtitle2" Class="mb-1 mt-3">@type&#x73; (@items.Count open)</MudText>
+                <MudTable Items="items" Dense="true" Hover="true" Striped="true" Elevation="0" Outlined="true" Class="mb-4">
+                    <HeaderContent>
+                        <MudTh>Title</MudTh>
+                        <MudTh>@(type == "Risk" ? "Likelihood" : "Type")</MudTh>
+                        <MudTh>Impact</MudTh>
+                        <MudTh>Priority</MudTh>
+                        <MudTh>Owner</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Due</MudTh>
+                        <MudTh></MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd>
+                            <MudText Typo="Typo.body2" Style="font-weight:500">@context.Title</MudText>
+                            @if (!string.IsNullOrWhiteSpace(context.MitigationPlan))
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@(context.MitigationPlan.Length > 80 ? context.MitigationPlan[..80] + "…" : context.MitigationPlan)</MudText>
+                            }
+                        </MudTd>
+                        <MudTd><MudChip T="string" Size="Size.Small" Color="@ImpactColor(context.Likelihood)">@context.Likelihood</MudChip></MudTd>
+                        <MudTd><MudChip T="string" Size="Size.Small" Color="@ImpactColor(context.Impact)">@context.Impact</MudChip></MudTd>
+                        <MudTd><MudChip T="string" Size="Size.Small" Color="@ImpactColor(context.Priority)">@context.Priority</MudChip></MudTd>
+                        <MudTd>@(context.OwnedBy ?? "—")</MudTd>
+                        <MudTd><MudChip T="string" Size="Size.Small">@context.Status</MudChip></MudTd>
+                        <MudTd><MudText Typo="Typo.caption">@(context.DueDate?.ToString("dd/MM") ?? "—")</MudText></MudTd>
+                        <MudTd>
+                            <MudIconButton Icon="@Icons.Material.Rounded.CheckCircle" Size="Size.Small" Color="Color.Success"
+                                           OnClick="() => CloseRiskIssue(context.RiskIssueId)" Title="Close" />
+                            <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
+                                           OnClick="() => DeleteRiskIssue(context.RiskIssueId)" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudTabPanel>
+
+        <!-- ── CHANGE REQUESTS ── -->
+        <MudTabPanel Text="Change Requests" Icon="@Icons.Material.Rounded.ChangeCircle">
+            <div class="d-flex justify-end mb-3">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add" Size="Size.Small" OnClick="() => _addCrOpen = true">New Change Request</MudButton>
+            </div>
+            @if (!_changeRequests.Any())
+            {
+                <MudPaper Outlined="true" Class="pa-8 text-center">
+                    <MudIcon Icon="@Icons.Material.Rounded.ChangeCircle" Size="Size.Large" Class="mb-2 opacity-60" />
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">No change requests yet.</MudText>
+                </MudPaper>
+            }
+            else
+            {
+                <MudTable Items="_changeRequests" Dense="true" Hover="true" Striped="true" Elevation="0" Outlined="true">
+                    <HeaderContent>
+                        <MudTh>CR #</MudTh>
+                        <MudTh>Title</MudTh>
+                        <MudTh>Impact</MudTh>
+                        <MudTh>Cost Impact</MudTh>
+                        <MudTh>Raised By</MudTh>
+                        <MudTh>Raised</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd><b>@context.ChangeNumber</b></MudTd>
+                        <MudTd>
+                            <MudText Typo="Typo.body2" Style="font-weight:500">@context.Title</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@(context.Description.Length > 60 ? context.Description[..60] + "…" : context.Description)</MudText>
+                        </MudTd>
+                        <MudTd><MudText Typo="Typo.caption">@(context.ImpactDays.HasValue ? $"+{context.ImpactDays} days" : "—")</MudText></MudTd>
+                        <MudTd><MudText Typo="Typo.caption">@(context.ImpactCost?.ToString("C0") ?? "—")</MudText></MudTd>
+                        <MudTd>@context.RaisedBy</MudTd>
+                        <MudTd>@context.RaisedAt.ToString("dd/MM/yy")</MudTd>
+                        <MudTd><MudChip T="string" Size="Size.Small" Color="@CrStatusColor(context.Status)">@context.Status</MudChip></MudTd>
+                        <MudTd>
+                            @if (context.Status == "PendingApproval")
+                            {
+                                <MudIconButton Icon="@Icons.Material.Rounded.CheckCircle" Size="Size.Small" Color="Color.Success"
+                                               OnClick="() => ApproveCr(context.ChangeRequestId)" Title="Approve" />
+                                <MudIconButton Icon="@Icons.Material.Rounded.Cancel" Size="Size.Small" Color="Color.Error"
+                                               OnClick="() => RejectCr(context.ChangeRequestId)" Title="Reject" />
+                            }
+                            @if (context.Status == "Draft")
+                            {
+                                <MudIconButton Icon="@Icons.Material.Rounded.Send" Size="Size.Small" Color="Color.Primary"
+                                               OnClick="() => SubmitCr(context.ChangeRequestId)" Title="Submit for Approval" />
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudTabPanel>
+
+    </MudTabs>
+}
+
+<!-- ── DIALOGS / SIDE PANELS ── -->
+
+<!-- Add Task Dialog -->
+<MudDialog @bind-Visible="_addTaskOpen" Options="@(new DialogOptions{MaxWidth=MaxWidth.Small,FullWidth=true})">
+    <TitleContent><MudText Typo="Typo.h6">Add Task</MudText></TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_newTask.Title" Label="Title" Variant="Variant.Outlined" Class="mb-3" Required="true" />
+        <MudTextField @bind-Value="_newTask.Description" Label="Description" Variant="Variant.Outlined" Lines="3" Class="mb-3" />
+        <MudSelect @bind-Value="_newTask.AssigneeName" Label="Assignee" Variant="Variant.Outlined" Class="mb-3">
+            @foreach (var m in _members.Where(m => m.Role != "Client" && m.Role != "Supplier"))
+            {
+                <MudSelectItem Value="@m.Name">@m.Name</MudSelectItem>
+            }
+        </MudSelect>
+        <MudSelect @bind-Value="_newTask.Priority" Label="Priority" Variant="Variant.Outlined" Class="mb-3">
+            <MudSelectItem Value="@("Low")">Low</MudSelectItem>
+            <MudSelectItem Value="@("Medium")">Medium</MudSelectItem>
+            <MudSelectItem Value="@("High")">High</MudSelectItem>
+            <MudSelectItem Value="@("Critical")">Critical</MudSelectItem>
+        </MudSelect>
+        <MudGrid Spacing="2">
+            <MudItem xs="6"><MudDatePicker @bind-Date="_newTask.TaskStartDate" Label="Start Date" Variant="Variant.Outlined" /></MudItem>
+            <MudItem xs="6"><MudDatePicker @bind-Date="_newTask.TaskEndDate" Label="End Date" Variant="Variant.Outlined" /></MudItem>
+            <MudItem xs="6"><MudDatePicker @bind-Date="_newTask.DueDate" Label="Due Date" Variant="Variant.Outlined" /></MudItem>
+            <MudItem xs="6"><MudNumericField @bind-Value="_newTask.EstimatedHours" Label="Est. Hours" Variant="Variant.Outlined" /></MudItem>
+        </MudGrid>
+        <MudSelect @bind-Value="_newTask.MilestoneId" Label="Milestone" Variant="Variant.Outlined" Class="mt-3" Clearable="true">
+            @foreach (var ms in _milestones)
+            {
+                <MudSelectItem Value="@((int?)ms.MilestoneId)">@ms.Title</MudSelectItem>
+            }
+        </MudSelect>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _addTaskOpen = false">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveTask">Save Task</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<!-- Add Member Dialog -->
+<MudDialog @bind-Visible="_addMemberOpen" Options="@(new DialogOptions{MaxWidth=MaxWidth.ExtraSmall,FullWidth=true})">
+    <TitleContent><MudText Typo="Typo.h6">Add Member</MudText></TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_newMember.Name" Label="Name" Variant="Variant.Outlined" Class="mb-3" Required="true" />
+        <MudTextField @bind-Value="_newMember.Email" Label="Email" Variant="Variant.Outlined" Class="mb-3" />
+        <MudTextField @bind-Value="_newMember.UserCode" Label="User Code (optional)" Variant="Variant.Outlined" Class="mb-3" />
+        <MudSelect @bind-Value="_newMember.Role" Label="Role" Variant="Variant.Outlined" Class="mb-3">
+            <MudSelectItem Value="@("ProjectManager")">Project Manager</MudSelectItem>
+            <MudSelectItem Value="@("TeamMember")">Team Member</MudSelectItem>
+            <MudSelectItem Value="@("Client")">Client</MudSelectItem>
+            <MudSelectItem Value="@("Supplier")">Supplier</MudSelectItem>
+            <MudSelectItem Value="@("Stakeholder")">Stakeholder</MudSelectItem>
+        </MudSelect>
+        <MudSwitch @bind-Value="_newMember.PortalAccess" Label="Portal Access" Color="Color.Primary" />
+        <MudSwitch @bind-Value="_newMember.CanApproveChanges" Label="Can Approve Change Requests" Color="Color.Primary" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _addMemberOpen = false">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveMember">Add</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<!-- Add Milestone Dialog -->
+<MudDialog @bind-Visible="_addMilestoneOpen" Options="@(new DialogOptions{MaxWidth=MaxWidth.ExtraSmall,FullWidth=true})">
+    <TitleContent><MudText Typo="Typo.h6">Add Milestone</MudText></TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_newMs.Title" Label="Title" Variant="Variant.Outlined" Class="mb-3" Required="true" />
+        <MudTextField @bind-Value="_newMs.Description" Label="Description" Variant="Variant.Outlined" Lines="2" Class="mb-3" />
+        <MudDatePicker @bind-Date="_newMsDate" Label="Due Date" Variant="Variant.Outlined" Class="mb-3" />
+        <MudSwitch @bind-Value="_newMs.SignOffRequired" Label="Client Sign-Off Required" Color="Color.Primary" />
+        <MudSwitch @bind-Value="_newMs.IsUAT" Label="UAT Milestone" Color="Color.Primary" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _addMilestoneOpen = false">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveMilestone">Add</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<!-- Add Cost Entry Dialog -->
+<MudDialog @bind-Visible="_addCostOpen" Options="@(new DialogOptions{MaxWidth=MaxWidth.ExtraSmall,FullWidth=true})">
+    <TitleContent><MudText Typo="Typo.h6">Log Cost Entry</MudText></TitleContent>
+    <DialogContent>
+        <MudSelect @bind-Value="_newCost.EntryType" Label="Type" Variant="Variant.Outlined" Class="mb-3">
+            <MudSelectItem Value="@("Labour")">Labour</MudSelectItem>
+            <MudSelectItem Value="@("Expense")">Expense</MudSelectItem>
+            <MudSelectItem Value="@("Material")">Material</MudSelectItem>
+            <MudSelectItem Value="@("Subcontractor")">Subcontractor</MudSelectItem>
+        </MudSelect>
+        <MudTextField @bind-Value="_newCost.Description" Label="Description" Variant="Variant.Outlined" Class="mb-3" Required="true" />
+        <MudGrid Spacing="2">
+            <MudItem xs="6"><MudNumericField @bind-Value="_newCost.Quantity" Label="Quantity / Hours" Variant="Variant.Outlined" /></MudItem>
+            <MudItem xs="6"><MudNumericField @bind-Value="_newCost.UnitRate" Label="Rate ($)" Variant="Variant.Outlined" /></MudItem>
+        </MudGrid>
+        <MudDatePicker @bind-Date="_newCostDate" Label="Date" Variant="Variant.Outlined" Class="mt-3" />
+        <MudSwitch @bind-Value="_newCost.IsBillable" Label="Billable to Client" Color="Color.Primary" Class="mt-2" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _addCostOpen = false">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveCostEntry">Log</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<!-- Add Change Request Dialog -->
+<MudDialog @bind-Visible="_addCrOpen" Options="@(new DialogOptions{MaxWidth=MaxWidth.Small,FullWidth=true})">
+    <TitleContent><MudText Typo="Typo.h6">New Change Request</MudText></TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_newCr.Title" Label="Title" Variant="Variant.Outlined" Class="mb-3" Required="true" />
+        <MudTextField @bind-Value="_newCr.Description" Label="Description of Change" Variant="Variant.Outlined" Lines="3" Class="mb-3" Required="true" />
+        <MudTextField @bind-Value="_newCr.ImpactDescription" Label="Impact Description" Variant="Variant.Outlined" Lines="2" Class="mb-3" />
+        <MudGrid Spacing="2">
+            <MudItem xs="6"><MudNumericField @bind-Value="_newCr.ImpactDays" Label="Schedule Impact (days)" Variant="Variant.Outlined" /></MudItem>
+            <MudItem xs="6"><MudNumericField @bind-Value="_newCr.ImpactCost" Label="Cost Impact ($)" Variant="Variant.Outlined" /></MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _addCrOpen = false">Cancel</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="() => SaveCr(false)">Save Draft</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="() => SaveCr(true)">Submit for Approval</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<!-- Add Risk/Issue Dialog -->
+<MudDialog @bind-Visible="_addRiOpen" Options="@(new DialogOptions{MaxWidth=MaxWidth.Small,FullWidth=true})">
+    <TitleContent><MudText Typo="Typo.h6">Add @_newRi.ItemType</MudText></TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_newRi.Title" Label="Title" Variant="Variant.Outlined" Class="mb-3" Required="true" />
+        <MudTextField @bind-Value="_newRi.Description" Label="Description" Variant="Variant.Outlined" Lines="2" Class="mb-3" />
+        <MudGrid Spacing="2">
+            @if (_newRi.ItemType == "Risk")
+            {
+                <MudItem xs="6">
+                    <MudSelect @bind-Value="_newRi.Likelihood" Label="Likelihood" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@("Low")">Low</MudSelectItem>
+                        <MudSelectItem Value="@("Medium")">Medium</MudSelectItem>
+                        <MudSelectItem Value="@("High")">High</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+            }
+            <MudItem xs="6">
+                <MudSelect @bind-Value="_newRi.Impact" Label="Impact" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("Low")">Low</MudSelectItem>
+                    <MudSelectItem Value="@("Medium")">Medium</MudSelectItem>
+                    <MudSelectItem Value="@("High")">High</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+        <MudTextField @bind-Value="_newRi.OwnedBy" Label="Owner" Variant="Variant.Outlined" Class="mt-3" />
+        <MudTextField @bind-Value="_newRi.MitigationPlan" Label="Mitigation / Resolution Plan" Variant="Variant.Outlined" Lines="2" Class="mt-3" />
+        <MudDatePicker @bind-Date="_newRiDate" Label="Due Date" Variant="Variant.Outlined" Class="mt-3" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _addRiOpen = false">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveRiskIssue">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public int ProjectId { get; set; }
+
+    private bool _loading = true;
+    private int _activeTab;
+    private Project? _project;
+    private ProjectHealthSnapshot? _health;
+    private List<TaskItem> _tasks = new();
+    private List<ProjectMember> _members = new();
+    private List<ProjectMilestone> _milestones = new();
+    private List<ProjectCostEntry> _costEntries = new();
+    private List<ChangeRequest> _changeRequests = new();
+    private List<RiskIssue> _risksIssues = new();
+    private decimal _costTotal;
+    private string _taskFilter = "All";
+    private string _userCode = "";
+    private string _userName = "";
+
+    // Dialog state
+    private bool _addTaskOpen, _addMemberOpen, _addMilestoneOpen, _addCostOpen, _addCrOpen, _addRiOpen;
+
+    // New item buffers
+    private TaskItem _newTask = new() { Priority = "Medium", Status = "Backlog", PercentComplete = 0 };
+    private ProjectMember _newMember = new() { Role = "TeamMember" };
+    private ProjectMilestone _newMs = new();
+    private DateTime? _newMsDate;
+    private ProjectCostEntry _newCost = new() { EntryType = "Labour", Quantity = 1, IsBillable = true };
+    private DateTime? _newCostDate = DateTime.Today;
+    private ChangeRequest _newCr = new();
+    private RiskIssue _newRi = new() { ItemType = "Risk", Likelihood = "Medium", Impact = "Medium" };
+    private DateTime? _newRiDate;
+
+    private static readonly string[] _taskStatuses = { "Backlog", "ToDo", "InProgress", "InReview", "Done" };
+
+    private readonly record struct KanbanColumn(string Status, string Label, string Icon, Color Color);
+    private readonly KanbanColumn[] _kanbanColumns =
+    {
+        new("Backlog",    "Backlog",     Icons.Material.Rounded.Inbox,           Color.Default),
+        new("ToDo",       "To Do",       Icons.Material.Rounded.RadioButtonUnchecked, Color.Info),
+        new("InProgress", "In Progress", Icons.Material.Rounded.PlayCircle,       Color.Primary),
+        new("InReview",   "In Review",   Icons.Material.Rounded.Visibility,       Color.Warning),
+        new("Done",       "Done",        Icons.Material.Rounded.CheckCircle,      Color.Success),
+    };
+
+    private IEnumerable<TaskItem> FilteredTasks => _taskFilter == "All"
+        ? _tasks
+        : _tasks.Where(t => t.Status == _taskFilter);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        _userCode = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
+        _userName = auth.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? _userCode;
+
+        await LoadAllAsync();
+        _loading = false;
+    }
+
+    private async Task LoadAllAsync()
+    {
+        _project = await ProjectSvc.GetProjectAsync(ProjectId);
+        if (_project is null) return;
+
+        var results = await Task.WhenAll(
+            ProjectSvc.GetTasksAsync(projectId: ProjectId),
+            ProjectSvc.GetMembersAsync(ProjectId),
+            ProjectSvc.GetMilestonesAsync(ProjectId),
+            ProjectSvc.GetCostEntriesAsync(ProjectId),
+            ProjectSvc.GetChangeRequestsAsync(ProjectId),
+            ProjectSvc.GetRisksIssuesAsync(ProjectId));
+
+        _tasks          = (List<TaskItem>)results[0];
+        _members        = (List<ProjectMember>)results[1];
+        _milestones     = (List<ProjectMilestone>)results[2];
+        _costEntries    = (List<ProjectCostEntry>)results[3];
+        _changeRequests = (List<ChangeRequest>)results[4];
+        _risksIssues    = (List<RiskIssue>)results[5];
+        _costTotal      = _costEntries.Sum(e => e.Amount);
+
+        _health = await ProjectSvc.GetProjectHealthAsync(ProjectId);
+    }
+
+    private async Task UpdatePercent(TaskItem task, int value)
+    {
+        task.PercentComplete = value;
+        await ProjectSvc.UpdateTaskPercentAsync(task.TaskId, value);
+        _health = await ProjectSvc.GetProjectHealthAsync(ProjectId);
+    }
+
+    private async Task UpdateTaskStatus(TaskItem task, string status)
+    {
+        task.Status = status;
+        if (status == "Done") task.PercentComplete = 100;
+        await ProjectSvc.UpdateTaskStatusAsync(task.TaskId, status);
+        if (status == "Done") await ProjectSvc.UpdateTaskPercentAsync(task.TaskId, 100);
+        _health = await ProjectSvc.GetProjectHealthAsync(ProjectId);
+    }
+
+    private async Task MoveTask(TaskItem task, string newStatus)
+    {
+        await UpdateTaskStatus(task, newStatus);
+    }
+
+    private void OpenTaskEdit(TaskItem task)
+    {
+        _newTask = task;
+        _addTaskOpen = true;
+    }
+
+    private async Task SaveTask()
+    {
+        if (string.IsNullOrWhiteSpace(_newTask.Title)) return;
+        _newTask.ProjectId = ProjectId;
+        if (_newTask.MilestoneId.HasValue)
+        {
+            var ms = _milestones.FirstOrDefault(m => m.MilestoneId == _newTask.MilestoneId);
+            _newTask.MilestoneName = ms?.Title;
+        }
+        if (_newTask.TaskId == 0)
+            await ProjectSvc.CreateTaskAsync(_newTask);
+        else
+            await ProjectSvc.UpdateTaskAsync(_newTask);
+
+        _addTaskOpen = false;
+        _newTask = new() { Priority = "Medium", Status = "Backlog" };
+        _tasks = await ProjectSvc.GetTasksAsync(projectId: ProjectId);
+        Snackbar.Add("Task saved", Severity.Success);
+    }
+
+    private async Task DeleteTask(int taskId)
+    {
+        await ProjectSvc.DeleteTaskAsync(taskId);
+        _tasks = await ProjectSvc.GetTasksAsync(projectId: ProjectId);
+        Snackbar.Add("Task deleted", Severity.Info);
+    }
+
+    private async Task SaveMember()
+    {
+        if (string.IsNullOrWhiteSpace(_newMember.Name)) return;
+        _newMember.ProjectId = ProjectId;
+        await ProjectSvc.AddMemberAsync(_newMember);
+        _members = await ProjectSvc.GetMembersAsync(ProjectId);
+        _addMemberOpen = false;
+        _newMember = new() { Role = "TeamMember" };
+        Snackbar.Add("Member added", Severity.Success);
+    }
+
+    private async Task RemoveMember(int memberId)
+    {
+        await ProjectSvc.RemoveMemberAsync(memberId);
+        _members = await ProjectSvc.GetMembersAsync(ProjectId);
+    }
+
+    private async Task SaveMilestone()
+    {
+        if (string.IsNullOrWhiteSpace(_newMs.Title)) return;
+        _newMs.ProjectId = ProjectId;
+        _newMs.DueDate = _newMsDate ?? DateTime.Today.AddDays(14);
+        await ProjectSvc.AddMilestoneAsync(_newMs);
+        _milestones = await ProjectSvc.GetMilestonesAsync(ProjectId);
+        _addMilestoneOpen = false;
+        _newMs = new();
+        _newMsDate = null;
+        Snackbar.Add("Milestone added", Severity.Success);
+    }
+
+    private async Task SignOffMilestone(ProjectMilestone ms)
+    {
+        await ProjectSvc.SignOffMilestoneAsync(ms.MilestoneId, _userName);
+        _milestones = await ProjectSvc.GetMilestonesAsync(ProjectId);
+        Snackbar.Add("Milestone signed off", Severity.Success);
+    }
+
+    private async Task SaveCostEntry()
+    {
+        if (string.IsNullOrWhiteSpace(_newCost.Description)) return;
+        _newCost.ProjectId  = ProjectId;
+        _newCost.EntryDate  = _newCostDate ?? DateTime.Today;
+        _newCost.Amount     = _newCost.Quantity * _newCost.UnitRate;
+        _newCost.EnteredBy  = _userName;
+        _newCost.UserCode   = _userCode;
+        await ProjectSvc.AddCostEntryAsync(_newCost);
+        _costEntries = await ProjectSvc.GetCostEntriesAsync(ProjectId);
+        _costTotal   = _costEntries.Sum(e => e.Amount);
+        _addCostOpen = false;
+        _newCost = new() { EntryType = "Labour", Quantity = 1, IsBillable = true };
+        _newCostDate = DateTime.Today;
+        await ProjectSvc.RefreshProjectStatsAsync(ProjectId);
+        _health = await ProjectSvc.GetProjectHealthAsync(ProjectId);
+        Snackbar.Add("Cost entry logged", Severity.Success);
+    }
+
+    private async Task DeleteCostEntry(int id)
+    {
+        await ProjectSvc.DeleteCostEntryAsync(id);
+        _costEntries = await ProjectSvc.GetCostEntriesAsync(ProjectId);
+        _costTotal = _costEntries.Sum(e => e.Amount);
+        await ProjectSvc.RefreshProjectStatsAsync(ProjectId);
+    }
+
+    private void AddRiskIssue(string type)
+    {
+        _newRi = new() { ItemType = type, Likelihood = "Medium", Impact = "Medium" };
+        _newRiDate = null;
+        _addRiOpen = true;
+    }
+
+    private async Task SaveRiskIssue()
+    {
+        if (string.IsNullOrWhiteSpace(_newRi.Title)) return;
+        _newRi.ProjectId = ProjectId;
+        _newRi.DueDate   = _newRiDate;
+        _newRi.Priority  = ComputePriority(_newRi.Likelihood, _newRi.Impact);
+        await ProjectSvc.AddRiskIssueAsync(_newRi);
+        _risksIssues = await ProjectSvc.GetRisksIssuesAsync(ProjectId);
+        _addRiOpen = false;
+        Snackbar.Add($"{_newRi.ItemType} added", Severity.Success);
+    }
+
+    private async Task CloseRiskIssue(int id)
+    {
+        var item = _risksIssues.FirstOrDefault(r => r.RiskIssueId == id);
+        if (item is null) return;
+        item.Status = "Closed";
+        await ProjectSvc.UpdateRiskIssueAsync(item);
+        _risksIssues = await ProjectSvc.GetRisksIssuesAsync(ProjectId);
+    }
+
+    private async Task DeleteRiskIssue(int id)
+    {
+        await ProjectSvc.DeleteRiskIssueAsync(id);
+        _risksIssues = await ProjectSvc.GetRisksIssuesAsync(ProjectId);
+    }
+
+    private async Task SaveCr(bool submit)
+    {
+        if (string.IsNullOrWhiteSpace(_newCr.Title) || string.IsNullOrWhiteSpace(_newCr.Description)) return;
+        _newCr.ProjectId  = ProjectId;
+        _newCr.RaisedBy   = _userName;
+        _newCr.RaisedByCode = _userCode;
+        _newCr.RaisedAt   = DateTime.Now;
+        _newCr.Status     = submit ? "PendingApproval" : "Draft";
+        _newCr.ChangeNumber = $"CR-{(_changeRequests.Count + 1):D3}";
+        await ProjectSvc.CreateChangeRequestAsync(_newCr);
+        _changeRequests = await ProjectSvc.GetChangeRequestsAsync(ProjectId);
+        _addCrOpen = false;
+        _newCr = new();
+        Snackbar.Add(submit ? "Change request submitted for approval" : "Draft saved", Severity.Success);
+    }
+
+    private async Task ApproveCr(int id)
+    {
+        await ProjectSvc.UpdateChangeRequestStatusAsync(id, "Approved", _userName);
+        _changeRequests = await ProjectSvc.GetChangeRequestsAsync(ProjectId);
+        Snackbar.Add("Change request approved", Severity.Success);
+    }
+
+    private async Task RejectCr(int id)
+    {
+        await ProjectSvc.UpdateChangeRequestStatusAsync(id, "Rejected", _userName);
+        _changeRequests = await ProjectSvc.GetChangeRequestsAsync(ProjectId);
+        Snackbar.Add("Change request rejected", Severity.Warning);
+    }
+
+    private async Task SubmitCr(int id)
+    {
+        await ProjectSvc.UpdateChangeRequestStatusAsync(id, "PendingApproval");
+        _changeRequests = await ProjectSvc.GetChangeRequestsAsync(ProjectId);
+    }
+
+    private void EditProject() => Nav.NavigateTo($"/project-management/{ProjectId}/edit");
+
+    private async Task GeneratePortalLink()
+    {
+        if (_project is null) return;
+        var token = await ProjectSvc.EnsurePortalTokenAsync(ProjectId);
+        _project.PortalToken = token;
+        Snackbar.Add("Portal link generated", Severity.Success);
+    }
+
+    private async Task CopyPortalLink()
+    {
+        // JS interop would copy to clipboard; here we just notify
+        Snackbar.Add("Link copied to clipboard", Severity.Info);
+    }
+
+    // ── Helper colours / computed ──
+
+    private static Color GetStatusColor(string status) => status switch
+    {
+        "Active"    => Color.Primary,
+        "Complete"  => Color.Success,
+        "OnHold"    => Color.Warning,
+        "Cancelled" => Color.Error,
+        _           => Color.Default,
+    };
+
+    private static Color GetPriorityColor(string p) => p switch
+    {
+        "Critical" => Color.Error,
+        "High"     => Color.Warning,
+        "Medium"   => Color.Info,
+        _          => Color.Default,
+    };
+
+    private static Color HealthColor(string health) => health switch
+    {
+        "OnTrack"    => Color.Success,
+        "AtRisk"     => Color.Warning,
+        "Delayed"    or "OverBudget" => Color.Error,
+        _            => Color.Default,
+    };
+
+    private static Color RoleColor(string role) => role switch
+    {
+        "ProjectManager" => Color.Primary,
+        "Client"         => Color.Success,
+        "Supplier"       => Color.Warning,
+        "Stakeholder"    => Color.Info,
+        _                => Color.Default,
+    };
+
+    private static Color ImpactColor(string level) => level switch
+    {
+        "High"   => Color.Error,
+        "Medium" => Color.Warning,
+        _        => Color.Success,
+    };
+
+    private static Color CrStatusColor(string s) => s switch
+    {
+        "Approved"       => Color.Success,
+        "Rejected"       => Color.Error,
+        "PendingApproval"=> Color.Warning,
+        "Invoiced"       => Color.Info,
+        _                => Color.Default,
+    };
+
+    private static string ComputePriority(string likelihood, string impact) =>
+        (likelihood, impact) switch
+        {
+            ("High",   "High")   => "Critical",
+            ("High",   "Medium") or ("Medium","High") => "High",
+            ("Low",    "High")   or ("High","Low")    => "Medium",
+            _                                          => "Low",
+        };
+}

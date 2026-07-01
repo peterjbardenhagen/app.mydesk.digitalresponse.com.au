@@ -12,7 +12,7 @@ public class DashboardTests : BaseTest
         await LoginAsync();
     }
     
-    [Test]
+    [Test, Category("Smoke")]
     public async Task Dashboard_Loads_With_KPI_Cards()
     {
         // Verify dashboard title

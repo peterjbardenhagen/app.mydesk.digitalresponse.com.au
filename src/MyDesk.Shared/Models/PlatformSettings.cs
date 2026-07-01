@@ -84,6 +84,9 @@ public class PlatformSettings
     public string LoginAccentColor { get; set; } = "#2196F3";
     public string LoginBackgroundColor { get; set; } = "";
 
+    // AI Provider (BYOAI — each tenant chooses their own AI backend)
+    public AiProviderConfig AiProvider { get; set; } = new();
+
     // Legal module flags (CCL — Carter Capner Law and similar firms)
     public bool EnableLegalModules { get; set; } = false;
     public string RadixApiUrl { get; set; } = "";
@@ -111,6 +114,44 @@ public class PlatformSettings
     // Brand assets and links (loaded from JSON settings file)
     public List<BrandAssetFile> BrandAssets { get; set; } = new();
     public List<ImportantLink> ImportantLinks { get; set; } = new();
+
+    // Client Notifications (SMS + Email)
+    public NotificationSettings Notifications { get; set; } = new();
+}
+
+public class NotificationSettings
+{
+    // SMS
+    public bool EnableSms { get; set; } = false;
+    public string SmsPrimaryProvider { get; set; } = "Twilio"; // Twilio
+    public string? TwilioAccountSid { get; set; }
+    public string? TwilioAuthToken { get; set; }
+    public string? TwilioFromNumber { get; set; }
+    public bool SmsFallbackToEmail { get; set; } = true; // fall back to email if SMS fails
+
+    // Email
+    public bool EnableEmail { get; set; } = true;
+    public string EmailPrimaryProvider { get; set; } = "SendGrid"; // SendGrid, SMTP
+    public string? SendGridApiKey { get; set; }
+    public string? SendGridFromEmail { get; set; }
+    public string? SendGridFromName { get; set; }
+
+    // SMTP fallback
+    public bool SmtpFallbackEnabled { get; set; } = false;
+    public string? SmtpHost { get; set; }
+    public int SmtpPort { get; set; } = 587;
+    public bool SmtpUseSsl { get; set; } = true;
+    public string? SmtpUsername { get; set; }
+    public string? SmtpPassword { get; set; }
+    public string? SmtpFromEmail { get; set; }
+    public string? SmtpFromName { get; set; }
+
+    // Trigger flags
+    public bool NotifyOnInvoiceCreated { get; set; } = false;
+    public bool NotifyOnInvoiceOverdue { get; set; } = false;
+    public bool NotifyOnQuoteSent { get; set; } = false;
+    public bool NotifyOnJobStatusChange { get; set; } = false;
+    public bool NotifyOnDespatch { get; set; } = false;
 }
 
 public class IntegrationSettings

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using MyDesk.Shared.Services;
+using MyDesk.Shared.Services.Integrations;
 using MyDesk.Shared.Models;
 using System.Text.Json;
 
@@ -20,7 +21,7 @@ namespace MyDesk.Web.Services;
 /// Use <see cref="LoadForHostAsync"/> from anonymous pages (Login) to refresh the
 /// branding once the host is known.
 /// </summary>
-public class PlatformSettingsService
+public class PlatformSettingsService : IAccountingSettingsService
 {
     private readonly DatabaseService _db;
     private readonly TenantService _tenantSvc;

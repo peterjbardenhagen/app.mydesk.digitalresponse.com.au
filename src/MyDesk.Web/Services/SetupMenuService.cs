@@ -105,7 +105,9 @@ public class SetupMenuService
         new("platformAdmin", "Platform Admin", "Branding, platform name and global settings", "/admin/platform", "Settings", "Platform", true),
         new("parameters", "Parameters", "Global settings", "/admin/parameters", "Tune", "System", true),
         new("navMenu", "Navigation Menu", "Side menu visibility", "/admin/nav-menu", "Menu", "System", true),
-        new("logs", "Log Viewer", "View application logs and errors", "/admin/logs", "Description", "System", true),
+        new("logs",       "Log Viewer",    "View application logs and errors",                         "/admin/logs",        "Description", "System", true),
+        new("aiProvider", "AI Provider",   "Connect Azure, OpenAI, Gemini, Openrouter, Ollama or Opencode", "/admin/ai-provider", "Psychology",  "AI",     true),
+        new("aiAuditLog", "AI Audit Log",  "Review all AI interactions for compliance",                 "/admin/ai-audit",    "ManageSearch","AI",     true),
     };
 
     public static string IconToMudIcon(string icon) => icon switch
@@ -128,6 +130,8 @@ public class SetupMenuService
         "Settings" => Icons.Material.Rounded.Settings,
         "Style" => Icons.Material.Rounded.Style,
         "Description" => Icons.Material.Rounded.Description,
+        "Psychology"  => Icons.Material.Rounded.Psychology,
+        "ManageSearch"=> Icons.Material.Rounded.ManageSearch,
         _ => Icons.Material.Rounded.Circle
     };
 
@@ -140,6 +144,7 @@ public class SetupMenuService
         "System" => "success",
         "Marketing" => "secondary",
         "Platform" => "tertiary",
+        "AI"       => "primary",
         _ => "info"
     };
 }

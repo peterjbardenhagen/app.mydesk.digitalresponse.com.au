@@ -69,12 +69,10 @@ $sizeMB = [Math]::Round((Get-Item $ZipPath).Length / 1MB, 1)
 Write-OK "Package: $ZipPath  ($sizeMB MB)"
 
 Write-Host ""
-Write-Host "Next steps on svr1.digitalresponse.com.au:" -ForegroundColor Yellow
-Write-Host "  1. Upload mydesk-publish.zip to the server" -ForegroundColor White
-Write-Host "  2. Stop the MyDesk app pool in IIS Manager" -ForegroundColor White
-Write-Host "  3. Extract the zip over the existing site folder" -ForegroundColor White
-Write-Host "  4. Start the app pool" -ForegroundColor White
+Write-Host "Deploy to svr1.digitalresponse.com.au (run from any directory):" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "  Or run the one-liner on svr1 (adjust paths):" -ForegroundColor White
-Write-Host '  Expand-Archive -Path C:\Drops\mydesk-publish.zip -DestinationPath "C:\inetpub\mydesk" -Force' -ForegroundColor Gray
+Write-Host '  $cred = Get-Credential administrator' -ForegroundColor Gray
+Write-Host "  Invoke-Command -ComputerName svr1.digitalresponse.com.au -Credential `$cred -ScriptBlock { iisreset /stop }" -ForegroundColor Gray
+Write-Host "  robocopy `"$OutDir`" W:\app.mydesk.digitalresponse.com.au\ /MIR /XF appsettings.json appsettings.*.json" -ForegroundColor Gray
+Write-Host '  Invoke-Command -ComputerName svr1.digitalresponse.com.au -Credential $cred -ScriptBlock { iisreset /start }' -ForegroundColor Gray
 Write-Host ""

@@ -50,7 +50,8 @@
       "configurationUrl": "https://svr1.digitalresponse.com.au/teams/tab/configure",
       "canUpdateConfiguration": true,
       "scopes": ["team", "groupChat"],
-      "context": ["channelTab", "meetingChatTab"]
+      "context": ["channelTab", "meetingChatTab"],
+      "supportsChannelFeatures": ["sharedChannels", "privateChannels"]
     }
   ],
   "bots": [
@@ -92,9 +93,5 @@
   "validDomains": [
     "svr1.digitalresponse.com.au",
     "mydesk.digitalresponse.com.au"
-  ],
-  "webApplicationInfo": {
-    "id": "29d4f27d-09c5-4aa4-8221-a5ac98b98615",
-    "resource": "api://svr1.digitalresponse.com.au/29d4f27d-09c5-4aa4-8221-a5ac98b98615"
-  }
+  ]
 }

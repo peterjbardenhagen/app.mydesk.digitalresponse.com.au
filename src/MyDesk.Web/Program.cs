@@ -6,6 +6,7 @@ using Hangfire;
 using Hangfire.SqlServer;
 using MyDesk.Shared.Data;
 using MyDesk.Shared.Services;
+using MyDesk.Shared.Services.Integrations;
 using MyDesk.Shared.Models;
 using MyDesk.Web.Components;
 using MyDesk.Web.Services;
@@ -375,12 +376,14 @@ builder.Services.AddSingleton<DemoDataSeeder>();
 // Tools run inside the caller's request scope so they pick up the current
 // tenant via ICurrentTenantAccessor — every SQL query is automatically filtered
 // by the SQL Row-Level Security policy applied by TenantIsolationService.
+builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.AiQuoteBuilderTool>();
 builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.QuotesSummaryTool>();
 builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.InvoicesSummaryTool>();
 builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.PipelineSummaryTool>();
 builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.ScheduleReportTool>();
 builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.CashFlowForecastTool>();
 builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.SearchComposioAppsTool>();
+builder.Services.AddScoped<MyDesk.Web.AI.AiProviderFactory>();
 builder.Services.AddScoped<MyDesk.Web.AI.AskAiAgentService>();
 
 builder.Services.Configure<AzureAIOptions>(builder.Configuration.GetSection(AzureAIOptions.Section));
@@ -400,7 +403,22 @@ builder.Services.AddScoped<McpIntegrationService>();
 // Proposal #272: AI Enhancement services
 builder.Services.AddScoped<ReconciliationService>();
 builder.Services.AddScoped<AiAuditService>();
+builder.Services.AddScoped<AiConversationService>();
 builder.Services.AddScoped<TelegramBotService>();
+builder.Services.AddScoped<OneDriveService>();
+builder.Services.AddScoped<UserIntelligenceService>();
+builder.Services.AddScoped<PredictiveAnalyticsService>();
+builder.Services.AddScoped<ClientNotificationService>();
+
+// IAccountingSettingsService → PlatformSettingsService (allows Shared sync services to save tokens)
+builder.Services.AddScoped<MyDesk.Shared.Services.Integrations.IAccountingSettingsService>(
+    sp => sp.GetRequiredService<PlatformSettingsService>());
+
+// ── Accounting Integrations (Xero / QuickBooks / MYOB) ────────────────────────
+builder.Services.AddScoped<XeroSyncService>();
+builder.Services.AddScoped<QuickBooksSyncService>();
+builder.Services.AddScoped<MyobSyncService>();
+builder.Services.AddScoped<AccountingSyncManager>();
 
 // Legal modules (CCL — Carter Capner Law)
 builder.Services.AddScoped<MyDesk.Web.Services.Legal.RadixService>();
@@ -513,6 +531,8 @@ using (MyDesk.Shared.Services.TenantImpersonation.SystemBypass())
         await SafeInit("ActivityService",          () => sp.GetRequiredService<ActivityService>().EnsureTableAsync());
         await SafeInit("EmailService",             () => sp.GetRequiredService<EmailService>().EnsureTablesAsync());
         await SafeInit("AiAuditService",           () => sp.GetRequiredService<AiAuditService>().EnsureTableAsync());
+        await SafeInit("AiConversationService",    () => sp.GetRequiredService<AiConversationService>().EnsureTableAsync());
+        await SafeInit("UserIntelligenceService",  () => sp.GetRequiredService<UserIntelligenceService>().EnsureTablesAsync());
         await SafeInit("ReportService",            () => sp.GetRequiredService<ReportService>().EnsureTableAsync());
         await SafeInit("LogService",               () => sp.GetRequiredService<LogService>().EnsureTableAsync());
         await SafeInit("ExpenseService",           () => sp.GetRequiredService<ExpenseService>().EnsureTableAsync());
@@ -527,6 +547,7 @@ using (MyDesk.Shared.Services.TenantImpersonation.SystemBypass())
         await SafeInit("ScheduledTaskService",     () => sp.GetRequiredService<ScheduledTaskService>().EnsureTablesAsync());
         await SafeInit("BankingService",           () => sp.GetRequiredService<BankingService>().EnsureTablesAsync());
         await SafeInit("FileLibraryService",       () => sp.GetRequiredService<FileLibraryService>().EnsureTableAsync());
+        await SafeInit("AccountingSyncManager",    () => sp.GetRequiredService<AccountingSyncManager>().EnsureTablesAsync());
 
         // Back-fill legacy columns absent from pre-v3.0 databases (idempotent — COL_LENGTH guards).
         await SafeInit("Legacy schema backfill", async () =>
@@ -1290,6 +1311,64 @@ app.MapGet("/integrations/microsoft/callback", async (HttpContext ctx, PlatformS
     await settingsSvc.SaveAsync();
 
     return Results.Redirect("/integrations?connected=microsoft");
+}).RequireAuthorization();
+
+// ── Accounting OAuth Callback (/oauth/accounting/callback) ────────────────────
+// Handles redirect from Xero, QuickBooks, and MYOB after user authorises access.
+// State param encodes provider name ("xero" | "quickbooks" | "myob").
+app.MapGet("/oauth/accounting/callback", async (HttpContext ctx, XeroSyncService xeroSvc, QuickBooksSyncService qboSvc, MyobSyncService myobSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false))
+        return Results.Redirect("/login");
+
+    var code    = ctx.Request.Query["code"].ToString();
+    var state   = ctx.Request.Query["state"].ToString().ToLowerInvariant();
+    var realmId = ctx.Request.Query["realmId"].ToString();   // QuickBooks only
+
+    if (string.IsNullOrWhiteSpace(code))
+    {
+        Log.Warning("/oauth/accounting/callback: missing code, state={State}", state);
+        return Results.Redirect("/admin/accounting-integrations?error=missing-code");
+    }
+
+    var redirectUri = $"{ctx.Request.Scheme}://{ctx.Request.Host}/oauth/accounting/callback";
+
+    try
+    {
+        if (state == "xero")
+        {
+            var ok = await xeroSvc.ExchangeCodeAsync(code, redirectUri);
+            return ok
+                ? Results.Redirect("/admin/accounting-integrations?connected=Xero")
+                : Results.Redirect("/admin/accounting-integrations?error=xero-token-exchange-failed");
+        }
+
+        if (state == "quickbooks")
+        {
+            if (string.IsNullOrWhiteSpace(realmId))
+                return Results.Redirect("/admin/accounting-integrations?error=missing-realmId");
+            var ok = await qboSvc.ExchangeCodeAsync(code, realmId, redirectUri);
+            return ok
+                ? Results.Redirect("/admin/accounting-integrations?connected=QuickBooks")
+                : Results.Redirect("/admin/accounting-integrations?error=qbo-token-exchange-failed");
+        }
+
+        if (state == "myob")
+        {
+            var ok = await myobSvc.ExchangeCodeAsync(code, redirectUri);
+            return ok
+                ? Results.Redirect("/admin/accounting-integrations?connected=MYOB")
+                : Results.Redirect("/admin/accounting-integrations?error=myob-token-exchange-failed");
+        }
+
+        Log.Warning("/oauth/accounting/callback: unknown state={State}", state);
+        return Results.Redirect("/admin/accounting-integrations?error=unknown-provider");
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "/oauth/accounting/callback failed for state={State}", state);
+        return Results.Redirect($"/admin/accounting-integrations?error={Uri.EscapeDataString(ex.Message)}");
+    }
 }).RequireAuthorization();
 
 Log.Information("Application configured. Environment={Env}, URLs={Urls}",

@@ -6,7 +6,7 @@ namespace MyDesk.PlaywrightTests.Tests;
 [TestFixture]
 public class LoginTests : BaseTest
 {
-    [Test]
+    [Test, Category("Smoke")]
     public async Task Login_Page_Loads_Successfully()
     {
         await Page.GotoAsync($"{Settings.BaseUrl}/login");
@@ -72,7 +72,7 @@ public class LoginTests : BaseTest
         await TakeScreenshotAsync("Terms_Link");
     }
     
-    [Test]
+    [Test, Category("Smoke")]
     public async Task Login_With_Valid_Credentials_Succeeds()
     {
         await LoginAsync();

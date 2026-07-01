@@ -1,0 +1,546 @@
+@page "/admin/accounting-integrations"
+@attribute [Authorize(Roles = "Admin,Director")]
+@using MyDesk.Shared.Models
+@using MyDesk.Shared.Services.Integrations
+@inject PlatformSettingsService PlatformSettings
+@inject XeroSyncService XeroSvc
+@inject QuickBooksSyncService QboSvc
+@inject MyobSyncService MyobSvc
+@inject AccountingSyncManager SyncManager
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Accounting Integrations - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <a href="/admin/setup">Admin</a><span class="sep">/</span>
+            <span>Accounting Integrations</span>
+        </div>
+        <h1>Accounting Integrations</h1>
+        <p class="tl-subtitle">Real-time two-way sync with Xero, QuickBooks Online, and MYOB</p>
+    </div>
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               StartIcon="@Icons.Material.Rounded.Sync"
+               OnClick="RunAllSyncs"
+               Disabled="_running"
+               Class="rounded-lg px-6">
+        @if (_running)
+        {
+            <MudProgressCircular Size="Size.Small" Color="Color.Inherit" Class="mr-2" />
+            <span>Syncing...</span>
+        }
+        else
+        {
+            <span>Run All Syncs</span>
+        }
+    </MudButton>
+</div>
+
+@* ── Health badges ── *@
+<div class="d-flex gap-3 flex-wrap mb-6">
+    @foreach (var s in _statuses)
+    {
+        <MudChip T="string"
+                 Color="@(s.IsConnected ? Color.Success : s.Enabled ? Color.Warning : Color.Default)"
+                 Icon="@(s.IsConnected ? Icons.Material.Rounded.CheckCircle : Icons.Material.Rounded.Cancel)"
+                 Variant="Variant.Filled"
+                 Size="Size.Medium">
+            @s.Provider: @s.Status
+        </MudChip>
+    }
+</div>
+
+@if (_saving)
+{
+    <MudProgressLinear Indeterminate Color="Color.Primary" Class="mb-4" />
+}
+
+@* ─── Xero Card ─── *@
+<MudExpansionPanels Class="mb-4" Elevation="1">
+    <MudExpansionPanel>
+        <TitleContent>
+            <div class="d-flex align-center gap-3">
+                <MudIcon Icon="@Icons.Material.Rounded.AccountBalance" Color="Color.Primary" />
+                <MudText Typo="Typo.h6">Xero</MudText>
+                <MudSpacer />
+                <MudChip T="string"
+                         Color="@(_settings.Xero.IsConnected ? Color.Success : Color.Default)"
+                         Size="Size.Small"
+                         Variant="Variant.Filled">
+                    @(_settings.Xero.IsConnected ? "Connected" : "Not Connected")
+                </MudChip>
+            </div>
+        </TitleContent>
+        <ChildContent>
+            <MudGrid Spacing="3">
+                <MudItem xs="12" sm="6">
+                    <MudSwitch @bind-Value="_settings.EnableXeroIntegration"
+                               Label="Enable Xero Integration"
+                               Color="Color.Primary" />
+                </MudItem>
+                <MudItem xs="12" sm="6" Class="d-flex align-center">
+                    @if (_settings.Xero.LastSync.HasValue)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Last sync: @_settings.Xero.LastSync.Value.ToLocalTime().ToString("g")
+                        </MudText>
+                    }
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_settings.Xero.ClientId"
+                                  Label="Client ID"
+                                  Variant="Variant.Outlined"
+                                  Disabled="@_settings.Xero.IsConnected" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_settings.Xero.ClientSecret"
+                                  Label="Client Secret"
+                                  InputType="InputType.Password"
+                                  Variant="Variant.Outlined"
+                                  Disabled="@_settings.Xero.IsConnected" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSwitch @bind-Value="_settings.Xero.SyncInvoices"  Label="Sync Invoices"         Color="Color.Primary" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSwitch @bind-Value="_settings.Xero.SyncContacts"  Label="Sync Contacts"         Color="Color.Primary" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSwitch @bind-Value="_settings.Xero.AutoExportInvoices" Label="Auto-export Invoices" Color="Color.Primary" />
+                </MudItem>
+                <MudItem xs="12">
+                    <div class="d-flex gap-3 flex-wrap">
+                        @if (!_settings.Xero.IsConnected)
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Rounded.Link"
+                                       OnClick="ConnectXero"
+                                       Disabled="@(string.IsNullOrWhiteSpace(_settings.Xero.ClientId))">
+                                Connect to Xero
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Outlined" Color="Color.Error"
+                                       StartIcon="@Icons.Material.Rounded.LinkOff"
+                                       OnClick="@(() => DisconnectProvider("Xero"))">
+                                Disconnect
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Rounded.Sync"
+                                       OnClick="@(() => ManualSync("Xero"))"
+                                       Disabled="_running">
+                                Sync Now
+                            </MudButton>
+                        }
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
+                                   StartIcon="@Icons.Material.Rounded.Save"
+                                   OnClick="SaveSettings">
+                            Save
+                        </MudButton>
+                    </div>
+                </MudItem>
+                @if (_xeroLogs.Any())
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Recent Sync Log</MudText>
+                        @RenderLogTable(_xeroLogs)
+                    </MudItem>
+                }
+            </MudGrid>
+        </ChildContent>
+    </MudExpansionPanel>
+</MudExpansionPanels>
+
+@* ─── QuickBooks Card ─── *@
+<MudExpansionPanels Class="mb-4" Elevation="1">
+    <MudExpansionPanel>
+        <TitleContent>
+            <div class="d-flex align-center gap-3">
+                <MudIcon Icon="@Icons.Material.Rounded.AccountBalance" Color="Color.Success" />
+                <MudText Typo="Typo.h6">QuickBooks Online</MudText>
+                <MudSpacer />
+                <MudChip T="string"
+                         Color="@(_settings.QuickBooks.IsConnected ? Color.Success : Color.Default)"
+                         Size="Size.Small"
+                         Variant="Variant.Filled">
+                    @(_settings.QuickBooks.IsConnected ? "Connected" : "Not Connected")
+                </MudChip>
+            </div>
+        </TitleContent>
+        <ChildContent>
+            <MudGrid Spacing="3">
+                <MudItem xs="12" sm="6">
+                    <MudSwitch @bind-Value="_settings.EnableQuickBooksIntegration"
+                               Label="Enable QuickBooks Integration"
+                               Color="Color.Primary" />
+                </MudItem>
+                <MudItem xs="12" sm="6" Class="d-flex align-center">
+                    @if (_settings.QuickBooks.LastSync.HasValue)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Last sync: @_settings.QuickBooks.LastSync.Value.ToLocalTime().ToString("g")
+                        </MudText>
+                    }
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_settings.QuickBooks.ClientId"
+                                  Label="Client ID"
+                                  Variant="Variant.Outlined"
+                                  Disabled="@_settings.QuickBooks.IsConnected" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_settings.QuickBooks.ClientSecret"
+                                  Label="Client Secret"
+                                  InputType="InputType.Password"
+                                  Variant="Variant.Outlined"
+                                  Disabled="@_settings.QuickBooks.IsConnected" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSwitch @bind-Value="_settings.QuickBooks.SyncInvoices"       Label="Sync Invoices"         Color="Color.Primary" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSwitch @bind-Value="_settings.QuickBooks.SyncContacts"       Label="Sync Contacts"         Color="Color.Primary" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSwitch @bind-Value="_settings.QuickBooks.AutoExportInvoices" Label="Auto-export Invoices"  Color="Color.Primary" />
+                </MudItem>
+                <MudItem xs="12">
+                    <div class="d-flex gap-3 flex-wrap">
+                        @if (!_settings.QuickBooks.IsConnected)
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Rounded.Link"
+                                       OnClick="ConnectQuickBooks"
+                                       Disabled="@(string.IsNullOrWhiteSpace(_settings.QuickBooks.ClientId))">
+                                Connect to QuickBooks
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Outlined" Color="Color.Error"
+                                       StartIcon="@Icons.Material.Rounded.LinkOff"
+                                       OnClick="@(() => DisconnectProvider("QuickBooks"))">
+                                Disconnect
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Rounded.Sync"
+                                       OnClick="@(() => ManualSync("QuickBooks"))"
+                                       Disabled="_running">
+                                Sync Now
+                            </MudButton>
+                        }
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
+                                   StartIcon="@Icons.Material.Rounded.Save"
+                                   OnClick="SaveSettings">
+                            Save
+                        </MudButton>
+                    </div>
+                </MudItem>
+                @if (_qboLogs.Any())
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Recent Sync Log</MudText>
+                        @RenderLogTable(_qboLogs)
+                    </MudItem>
+                }
+            </MudGrid>
+        </ChildContent>
+    </MudExpansionPanel>
+</MudExpansionPanels>
+
+@* ─── MYOB Card ─── *@
+<MudExpansionPanels Class="mb-4" Elevation="1">
+    <MudExpansionPanel>
+        <TitleContent>
+            <div class="d-flex align-center gap-3">
+                <MudIcon Icon="@Icons.Material.Rounded.AccountBalance" Color="Color.Warning" />
+                <MudText Typo="Typo.h6">MYOB</MudText>
+                <MudSpacer />
+                <MudChip T="string"
+                         Color="@(_settings.MYOB.IsConnected ? Color.Success : Color.Default)"
+                         Size="Size.Small"
+                         Variant="Variant.Filled">
+                    @(_settings.MYOB.IsConnected ? "Connected" : "Not Connected")
+                </MudChip>
+            </div>
+        </TitleContent>
+        <ChildContent>
+            <MudGrid Spacing="3">
+                <MudItem xs="12" sm="6">
+                    <MudSwitch @bind-Value="_settings.EnableMYOBIntegration"
+                               Label="Enable MYOB Integration"
+                               Color="Color.Primary" />
+                </MudItem>
+                <MudItem xs="12" sm="6" Class="d-flex align-center">
+                    @if (_settings.MYOB.LastSync.HasValue)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Last sync: @_settings.MYOB.LastSync.Value.ToLocalTime().ToString("g")
+                        </MudText>
+                    }
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_settings.MYOB.ClientId"
+                                  Label="Client ID (API Key)"
+                                  Variant="Variant.Outlined"
+                                  Disabled="@_settings.MYOB.IsConnected" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_settings.MYOB.ClientSecret"
+                                  Label="Client Secret"
+                                  InputType="InputType.Password"
+                                  Variant="Variant.Outlined"
+                                  Disabled="@_settings.MYOB.IsConnected" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSwitch @bind-Value="_settings.MYOB.SyncInvoices"       Label="Sync Invoices"         Color="Color.Primary" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSwitch @bind-Value="_settings.MYOB.SyncContacts"       Label="Sync Contacts"         Color="Color.Primary" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSwitch @bind-Value="_settings.MYOB.AutoExportInvoices" Label="Auto-export Invoices"  Color="Color.Primary" />
+                </MudItem>
+                <MudItem xs="12">
+                    <div class="d-flex gap-3 flex-wrap">
+                        @if (!_settings.MYOB.IsConnected)
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Rounded.Link"
+                                       OnClick="ConnectMyob"
+                                       Disabled="@(string.IsNullOrWhiteSpace(_settings.MYOB.ClientId))">
+                                Connect to MYOB
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Outlined" Color="Color.Error"
+                                       StartIcon="@Icons.Material.Rounded.LinkOff"
+                                       OnClick="@(() => DisconnectProvider("MYOB"))">
+                                Disconnect
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Rounded.Sync"
+                                       OnClick="@(() => ManualSync("MYOB"))"
+                                       Disabled="_running">
+                                Sync Now
+                            </MudButton>
+                        }
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
+                                   StartIcon="@Icons.Material.Rounded.Save"
+                                   OnClick="SaveSettings">
+                            Save
+                        </MudButton>
+                    </div>
+                </MudItem>
+                @if (_myobLogs.Any())
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Recent Sync Log</MudText>
+                        @RenderLogTable(_myobLogs)
+                    </MudItem>
+                }
+            </MudGrid>
+        </ChildContent>
+    </MudExpansionPanel>
+</MudExpansionPanels>
+
+<style>
+    .sync-log-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .sync-log-table th, .sync-log-table td { padding: 4px 10px; text-align: left; border-bottom: 1px solid rgba(0,0,0,0.08); }
+    .sync-log-table th { font-weight: 700; color: #64748b; }
+    .status-success { color: #16a34a; font-weight: 600; }
+    .status-failed  { color: #dc2626; font-weight: 600; }
+    .status-running { color: #d97706; font-weight: 600; }
+</style>
+
+@code {
+    private PlatformSettings _settings = new();
+    private List<AccountingSyncStatus> _statuses = new();
+    private List<SyncLogEntry> _xeroLogs = new();
+    private List<SyncLogEntry> _qboLogs  = new();
+    private List<SyncLogEntry> _myobLogs = new();
+    private bool _saving  = false;
+    private bool _running = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _settings = PlatformSettings.Current;
+
+        // Handle OAuth callback query params
+        var uri = new Uri(Nav.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var connected = query["connected"];
+        var err = query["error"];
+
+        if (!string.IsNullOrWhiteSpace(connected))
+            Snackbar.Add($"Successfully connected to {connected}!", Severity.Success);
+        if (!string.IsNullOrWhiteSpace(err))
+            Snackbar.Add($"Connection error: {err}", Severity.Error);
+
+        await LoadStatusAsync();
+    }
+
+    private async Task LoadStatusAsync()
+    {
+        try
+        {
+            _statuses = await SyncManager.GetSyncStatusAsync();
+            _xeroLogs = _statuses.FirstOrDefault(s => s.Provider == "Xero")?.RecentLogs ?? new();
+            _qboLogs  = _statuses.FirstOrDefault(s => s.Provider == "QuickBooks")?.RecentLogs ?? new();
+            _myobLogs = _statuses.FirstOrDefault(s => s.Provider == "MYOB")?.RecentLogs ?? new();
+        }
+        catch
+        {
+            _statuses = new();
+        }
+    }
+
+    private async Task SaveSettings()
+    {
+        _saving = true;
+        try
+        {
+            await PlatformSettings.SaveAsync(_settings);
+            Snackbar.Add("Settings saved", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Save failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task ConnectXero()
+    {
+        await PlatformSettings.SaveAsync(_settings);
+        var redirectUri = $"{Nav.BaseUri.TrimEnd('/')}/oauth/accounting/callback";
+        var url = await XeroSvc.GetAuthUrlAsync(redirectUri);
+        Nav.NavigateTo(url, forceLoad: true);
+    }
+
+    private async Task ConnectQuickBooks()
+    {
+        await PlatformSettings.SaveAsync(_settings);
+        var redirectUri = $"{Nav.BaseUri.TrimEnd('/')}/oauth/accounting/callback";
+        var url = await QboSvc.GetAuthUrlAsync(redirectUri);
+        Nav.NavigateTo(url, forceLoad: true);
+    }
+
+    private async Task ConnectMyob()
+    {
+        await PlatformSettings.SaveAsync(_settings);
+        var redirectUri = $"{Nav.BaseUri.TrimEnd('/')}/oauth/accounting/callback";
+        var url = await MyobSvc.GetAuthUrlAsync(redirectUri);
+        Nav.NavigateTo(url, forceLoad: true);
+    }
+
+    private async Task DisconnectProvider(string provider)
+    {
+        var cfg = provider switch
+        {
+            "Xero"       => _settings.Xero,
+            "QuickBooks" => _settings.QuickBooks,
+            "MYOB"       => _settings.MYOB,
+            _            => null
+        };
+        if (cfg is null) return;
+
+        cfg.IsConnected  = false;
+        cfg.AccessToken  = null;
+        cfg.RefreshToken = null;
+        cfg.TokenExpiry  = null;
+        cfg.Status       = "Disconnected";
+
+        await PlatformSettings.SaveAsync(_settings);
+        Snackbar.Add($"Disconnected from {provider}", Severity.Info);
+        await LoadStatusAsync();
+    }
+
+    private async Task ManualSync(string provider)
+    {
+        _running = true;
+        try
+        {
+            switch (provider)
+            {
+                case "Xero":       await XeroSvc.RunFullSyncAsync(); break;
+                case "QuickBooks": await QboSvc.RunFullSyncAsync();  break;
+                case "MYOB":       await MyobSvc.RunFullSyncAsync(); break;
+            }
+            Snackbar.Add($"{provider} sync complete", Severity.Success);
+            _settings = PlatformSettings.Current;
+            await LoadStatusAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"{provider} sync failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _running = false;
+        }
+    }
+
+    private async Task RunAllSyncs()
+    {
+        _running = true;
+        try
+        {
+            await SyncManager.RunScheduledSyncAsync();
+            Snackbar.Add("All syncs complete", Severity.Success);
+            _settings = PlatformSettings.Current;
+            await LoadStatusAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Sync failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _running = false;
+        }
+    }
+
+    private RenderFragment RenderLogTable(List<SyncLogEntry> logs) => __builder =>
+    {
+        __builder.OpenElement(0, "table");
+        __builder.AddAttribute(1, "class", "sync-log-table");
+        __builder.OpenElement(2, "thead");
+        __builder.OpenElement(3, "tr");
+        foreach (var h in new[] { "Entity", "Direction", "Count", "Status", "Started", "Completed", "Error" })
+        {
+            __builder.OpenElement(4, "th");
+            __builder.AddContent(5, h);
+            __builder.CloseElement();
+        }
+        __builder.CloseElement();
+        __builder.CloseElement();
+        __builder.OpenElement(6, "tbody");
+        foreach (var log in logs)
+        {
+            __builder.OpenElement(7, "tr");
+            __builder.OpenElement(8, "td"); __builder.AddContent(9, log.EntityType);  __builder.CloseElement();
+            __builder.OpenElement(10, "td"); __builder.AddContent(11, log.Direction); __builder.CloseElement();
+            __builder.OpenElement(12, "td"); __builder.AddContent(13, log.Count);     __builder.CloseElement();
+            __builder.OpenElement(14, "td");
+            __builder.AddAttribute(15, "class", log.Status == "Success" ? "status-success" : log.Status == "Failed" ? "status-failed" : "status-running");
+            __builder.AddContent(16, log.Status);
+            __builder.CloseElement();
+            __builder.OpenElement(17, "td"); __builder.AddContent(18, log.StartedAt.ToLocalTime().ToString("g")); __builder.CloseElement();
+            __builder.OpenElement(19, "td"); __builder.AddContent(20, log.CompletedAt?.ToLocalTime().ToString("g") ?? "-"); __builder.CloseElement();
+            __builder.OpenElement(21, "td"); __builder.AddContent(22, log.ErrorMessage ?? ""); __builder.CloseElement();
+            __builder.CloseElement();
+        }
+        __builder.CloseElement();
+        __builder.CloseElement();
+    };
+}

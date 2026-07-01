@@ -1,0 +1,580 @@
+@page "/quotes/ai-generate"
+@attribute [Authorize]
+@inject AskAiAgentService AgentSvc
+@inject AiProviderFactory ProviderFactory
+@inject QuoteService QuoteSvc
+@inject DatabaseService Db
+@inject AuthenticationStateProvider AuthState
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+@inject PlatformSettingsService PlatformSettings
+@using System.Security.Claims
+@using System.Text.Json
+@using MyDesk.Shared.Models
+@using MyDesk.Shared.Services
+@using MyDesk.Web.AI
+
+<PageTitle>AI Quote Builder - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">MyDesk</a><span class="sep">/</span>
+            <a href="/quotes">Quotes</a><span class="sep">/</span>
+            <span style="color:var(--gray-700);font-weight:500;">AI Quote Builder</span>
+        </div>
+        <h1>
+            <MudIcon Icon="@Icons.Material.Rounded.AutoAwesome" Style="vertical-align:middle;margin-right:8px;color:#6366f1;" />
+            AI Quote Builder
+        </h1>
+    </div>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.ArrowBack" Href="/quotes">
+        Back to Quotes
+    </MudButton>
+</div>
+
+@if (!ProviderFactory.IsConfigured)
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-4">
+        AI is not configured. Go to <strong>Settings &rarr; AI Provider</strong> and enter your API key to use the AI Quote Builder.
+    </MudAlert>
+}
+
+@* ─── Step indicator ──────────────────────────────────────────────────────── *@
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <div class="d-flex align-center gap-2">
+        <MudChip T="string" Color="@(_step >= 1 ? Color.Primary : Color.Default)" Variant="@(_step >= 1 ? Variant.Filled : Variant.Outlined)" Size="Size.Small">1</MudChip>
+        <MudText Typo="Typo.body2" Color="@(_step >= 1 ? Color.Primary : Color.Default)"><strong>Describe</strong></MudText>
+        <MudIcon Icon="@Icons.Material.Rounded.ChevronRight" Size="Size.Small" />
+        <MudChip T="string" Color="@(_step >= 2 ? Color.Primary : Color.Default)" Variant="@(_step >= 2 ? Variant.Filled : Variant.Outlined)" Size="Size.Small">2</MudChip>
+        <MudText Typo="Typo.body2" Color="@(_step >= 2 ? Color.Primary : Color.Default)"><strong>Preview &amp; Edit</strong></MudText>
+        <MudIcon Icon="@Icons.Material.Rounded.ChevronRight" Size="Size.Small" />
+        <MudChip T="string" Color="@(_step >= 3 ? Color.Success : Color.Default)" Variant="@(_step >= 3 ? Variant.Filled : Variant.Outlined)" Size="Size.Small">3</MudChip>
+        <MudText Typo="Typo.body2" Color="@(_step >= 3 ? Color.Success : Color.Default)"><strong>Save</strong></MudText>
+    </div>
+</MudPaper>
+
+@* ─── Step 1: Describe ───────────────────────────────────────────────────── *@
+@if (_step == 1)
+{
+    <MudPaper Class="pa-6 mb-4" Elevation="1">
+        <MudText Typo="Typo.h6" Class="mb-4">Describe Your Quote</MudText>
+
+        <MudGrid>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_prompt"
+                              Label="What do you want to quote?"
+                              Placeholder="E.g. Quote for supply and install of 24x LED downlights at 123 Smith St — include labour 4 hours at $120/hr and parts at cost + 30%"
+                              Lines="6"
+                              Variant="Variant.Outlined"
+                              FullWidth="true"
+                              Disabled="@_generating" />
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudAutocomplete T="ContactSearchResult"
+                                 Label="Customer"
+                                 Placeholder="Search by name or company..."
+                                 @bind-Value="_selectedContact"
+                                 SearchFunc="SearchContactsAsync"
+                                 ToStringFunc="@(c => c == null ? "" : $"{c.Name} — {c.Company}")"
+                                 Variant="Variant.Outlined"
+                                 FullWidth="true"
+                                 Clearable="true"
+                                 Disabled="@_generating" />
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_reference"
+                              Label="Reference / Project Name"
+                              Placeholder="E.g. LED Downlight Install – 123 Smith St"
+                              Variant="Variant.Outlined"
+                              FullWidth="true"
+                              Disabled="@_generating" />
+            </MudItem>
+        </MudGrid>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-3">@_error</MudAlert>
+        }
+
+        <div class="d-flex justify-end mt-4">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Rounded.AutoAwesome"
+                       OnClick="GenerateAsync"
+                       Disabled="@(_generating || !ProviderFactory.IsConfigured)">
+                @if (_generating)
+                {
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" />
+                    <span>Generating…</span>
+                }
+                else
+                {
+                    <span>Generate Quote</span>
+                }
+            </MudButton>
+        </div>
+    </MudPaper>
+}
+
+@* ─── Step 2: Preview & Edit ─────────────────────────────────────────────── *@
+@if (_step == 2)
+{
+    <MudPaper Class="pa-6 mb-4" Elevation="1">
+        <div class="d-flex align-center justify-space-between mb-4">
+            <MudText Typo="Typo.h6">Preview &amp; Edit Line Items</MudText>
+            <MudButton Variant="Variant.Outlined"
+                       StartIcon="@Icons.Material.Rounded.Edit"
+                       OnClick="@(() => _step = 1)">
+                Back &amp; Edit Prompt
+            </MudButton>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(_aiNotes))
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4">@_aiNotes</MudAlert>
+        }
+
+        <MudTable Items="@_lineItems" Dense="true" Striped="true" Elevation="0" Class="mb-4">
+            <HeaderContent>
+                <MudTh>Description</MudTh>
+                <MudTh Style="width:80px;text-align:right;">Qty</MudTh>
+                <MudTh Style="width:120px;text-align:right;">Unit Cost</MudTh>
+                <MudTh Style="width:120px;text-align:right;">Sell Price</MudTh>
+                <MudTh Style="width:120px;text-align:right;">Ext. Sell</MudTh>
+                <MudTh Style="width:50px;"></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    <MudTextField @bind-Value="context.Description"
+                                  Variant="Variant.Text"
+                                  FullWidth="true"
+                                  Margin="Margin.Dense" />
+                </MudTd>
+                <MudTd Style="text-align:right;">
+                    <MudNumericField @bind-Value="context.Quantity"
+                                     Variant="Variant.Text"
+                                     Format="N2"
+                                     Margin="Margin.Dense"
+                                     Style="width:70px;" />
+                </MudTd>
+                <MudTd Style="text-align:right;">
+                    <MudNumericField @bind-Value="context.UnitCost"
+                                     Variant="Variant.Text"
+                                     Format="N2"
+                                     Margin="Margin.Dense"
+                                     Style="width:110px;"
+                                     Adornment="Adornment.Start"
+                                     AdornmentText="$" />
+                </MudTd>
+                <MudTd Style="text-align:right;">
+                    <MudNumericField @bind-Value="context.NettPrice"
+                                     Variant="Variant.Text"
+                                     Format="N2"
+                                     Margin="Margin.Dense"
+                                     Style="width:110px;"
+                                     Adornment="Adornment.Start"
+                                     AdornmentText="$" />
+                </MudTd>
+                <MudTd Style="text-align:right;">
+                    <MudText>@((context.Quantity * context.NettPrice).ToString("C"))</MudText>
+                </MudTd>
+                <MudTd>
+                    <MudIconButton Icon="@Icons.Material.Rounded.Delete"
+                                   Color="Color.Error"
+                                   Size="Size.Small"
+                                   OnClick="@(() => _lineItems.Remove(context))" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+
+        <MudButton Variant="Variant.Outlined"
+                   StartIcon="@Icons.Material.Rounded.Add"
+                   Size="Size.Small"
+                   OnClick="AddLineItem"
+                   Class="mb-4">
+            Add Line Item
+        </MudButton>
+
+        @* ── Totals ── *@
+        @{
+            var totalCost = _lineItems.Sum(i => i.Quantity * i.UnitCost);
+            var totalSell = _lineItems.Sum(i => i.Quantity * i.NettPrice);
+            var gst       = totalSell * 0.1m;
+            var totalInc  = totalSell + gst;
+            var margin    = totalSell > 0 ? (totalSell - totalCost) / totalSell * 100m : 0m;
+        }
+
+        <MudDivider Class="mb-3" />
+        <div class="d-flex justify-end">
+            <MudSimpleTable Dense="true" Style="min-width:320px;" Elevation="0">
+                <tbody>
+                    <tr>
+                        <td><MudText Typo="Typo.body2">Total Cost (ex-GST)</MudText></td>
+                        <td style="text-align:right;"><MudText Typo="Typo.body2">@totalCost.ToString("C")</MudText></td>
+                    </tr>
+                    <tr>
+                        <td><MudText Typo="Typo.body2">Total Sell (ex-GST)</MudText></td>
+                        <td style="text-align:right;"><MudText Typo="Typo.body2">@totalSell.ToString("C")</MudText></td>
+                    </tr>
+                    <tr>
+                        <td><MudText Typo="Typo.body2">GST (10%)</MudText></td>
+                        <td style="text-align:right;"><MudText Typo="Typo.body2">@gst.ToString("C")</MudText></td>
+                    </tr>
+                    <tr>
+                        <td><MudText Typo="Typo.body2"><strong>Total Inc. GST</strong></MudText></td>
+                        <td style="text-align:right;"><MudText Typo="Typo.body2"><strong>@totalInc.ToString("C")</strong></MudText></td>
+                    </tr>
+                    <tr>
+                        <td><MudText Typo="Typo.body2" Color="@(margin >= 20 ? Color.Success : Color.Warning)">Margin</MudText></td>
+                        <td style="text-align:right;"><MudText Typo="Typo.body2" Color="@(margin >= 20 ? Color.Success : Color.Warning)">@margin.ToString("F1")%</MudText></td>
+                    </tr>
+                </tbody>
+            </MudSimpleTable>
+        </div>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-3">@_error</MudAlert>
+        }
+
+        <div class="d-flex justify-end gap-2 mt-4">
+            <MudButton Variant="Variant.Outlined"
+                       StartIcon="@Icons.Material.Rounded.ArrowBack"
+                       OnClick="@(() => _step = 1)">
+                Back
+            </MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Rounded.Save"
+                       OnClick="SaveQuoteAsync"
+                       Disabled="@_saving">
+                @if (_saving)
+                {
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" />
+                    <span>Saving…</span>
+                }
+                else
+                {
+                    <span>Save Quote</span>
+                }
+            </MudButton>
+        </div>
+    </MudPaper>
+}
+
+@code {
+    // ── State ──────────────────────────────────────────────────────────────────
+    private int    _step      = 1;
+    private bool   _generating = false;
+    private bool   _saving     = false;
+    private string _error      = string.Empty;
+
+    // Step 1 inputs
+    private string               _prompt    = string.Empty;
+    private string               _reference = string.Empty;
+    private ContactSearchResult? _selectedContact;
+
+    // Step 2 — generated line items (editable)
+    private List<EditableLineItem> _lineItems = new();
+    private string _aiNotes = string.Empty;
+
+    // Auth
+    private string _userCode = string.Empty;
+    private string _userName = string.Empty;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        _userCode = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+        _userName = auth.User.FindFirst(ClaimTypes.Name)?.Value ?? string.Empty;
+    }
+
+    // ── Contact search ─────────────────────────────────────────────────────────
+    private async Task<IEnumerable<ContactSearchResult>> SearchContactsAsync(string value, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length < 2)
+            return Enumerable.Empty<ContactSearchResult>();
+
+        try
+        {
+            var dt = await Db.QueryAsync(
+                @"SELECT TOP 20 c.ContactId,
+                         c.FirstName + ' ' + c.Surname AS Name,
+                         ISNULL(co.Company, '') AS Company,
+                         c.CompanyId
+                  FROM Contacts c
+                  LEFT JOIN Companies co ON c.CompanyId = co.CompanyId
+                  WHERE c.FirstName + ' ' + c.Surname LIKE '%' + @q + '%'
+                     OR co.Company LIKE '%' + @q + '%'
+                  ORDER BY co.Company, c.FirstName",
+                new() { ["q"] = value });
+
+            return dt.Rows.Cast<System.Data.DataRow>().Select(r => new ContactSearchResult
+            {
+                ContactId = Convert.ToInt32(r["ContactId"]),
+                CompanyId = r["CompanyId"] == DBNull.Value ? 0 : Convert.ToInt32(r["CompanyId"]),
+                Name      = r["Name"]?.ToString()    ?? string.Empty,
+                Company   = r["Company"]?.ToString() ?? string.Empty,
+            });
+        }
+        catch
+        {
+            return Enumerable.Empty<ContactSearchResult>();
+        }
+    }
+
+    // ── Generate ───────────────────────────────────────────────────────────────
+    private async Task GenerateAsync()
+    {
+        _error = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(_prompt))
+        {
+            _error = "Please describe what you want to quote.";
+            return;
+        }
+
+        _generating = true;
+        StateHasChanged();
+
+        try
+        {
+            var systemPrompt = """
+                You are a quoting assistant for an Australian business management platform.
+                The user will describe what they want to quote. Your job is to analyse their description
+                and output ONLY a valid JSON object with this exact structure — no markdown, no explanation,
+                just the raw JSON:
+
+                {
+                  "reference": "Short quote title",
+                  "notes": "Optional customer-facing notes (or null)",
+                  "items": [
+                    {
+                      "description": "Item description",
+                      "quantity": 1,
+                      "unit_cost": 0.00,
+                      "sell_price": 0.00,
+                      "product_code": ""
+                    }
+                  ]
+                }
+
+                Rules:
+                - All prices are in AUD, ex-GST.
+                - If the user mentions "cost + X%", calculate sell_price = unit_cost * (1 + X/100).
+                - If the user mentions a total labour cost (e.g. "4 hours at $120/hr"), split quantity=4 and sell_price=120.
+                - If unit_cost is not mentioned, set it to 0.
+                - The reference should be a concise 5-10 word title for the quote.
+                - Output ONLY the JSON object. Do not wrap it in markdown code blocks.
+                """;
+
+            var reply = await AgentSvc.AskAsync(
+                userPrompt: _prompt,
+                systemPrompt: systemPrompt,
+                maxIterations: 1,
+                maxTokens: 1500);
+
+            // Prefer the tool call arguments (what the model passed to parse_quote_items)
+            // over the final text reply, since the system prompt instructs JSON output
+            // but the model may produce a natural language summary after tool use.
+            var toolTrace = reply.Trace.FirstOrDefault(t =>
+                t.ToolName == "parse_quote_items" && t.Success);
+
+            // ArgsJson is what the model sent TO the tool — the structured quote data.
+            // Fall back to reply.Text if the tool was not called (pure JSON text response).
+            string jsonToParse = toolTrace?.ArgsJson ?? reply.Text;
+
+            ParseAiResponse(jsonToParse);
+
+            if (_lineItems.Any())
+            {
+                _step = 2;
+            }
+            else
+            {
+                _error = "The AI did not return any line items. Try rephrasing your description.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Error generating quote: {ex.Message}";
+        }
+        finally
+        {
+            _generating = false;
+        }
+    }
+
+    private void ParseAiResponse(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+
+        // Strip markdown code fences if present
+        var json = text.Trim();
+        if (json.StartsWith("```"))
+        {
+            var start = json.IndexOf('\n');
+            var end   = json.LastIndexOf("```");
+            if (start >= 0 && end > start)
+                json = json.Substring(start, end - start).Trim();
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            // Parse reference
+            if (root.TryGetProperty("reference", out var refEl) && refEl.ValueKind == JsonValueKind.String)
+            {
+                if (string.IsNullOrWhiteSpace(_reference))
+                    _reference = refEl.GetString() ?? string.Empty;
+            }
+
+            // Parse notes
+            if (root.TryGetProperty("notes", out var notesEl) && notesEl.ValueKind == JsonValueKind.String)
+                _aiNotes = notesEl.GetString() ?? string.Empty;
+
+            // Parse items array
+            JsonElement itemsEl;
+            bool hasItemsProp = root.TryGetProperty("items", out itemsEl);
+            var itemsArray = hasItemsProp && itemsEl.ValueKind == JsonValueKind.Array
+                ? itemsEl
+                : (root.ValueKind == JsonValueKind.Array ? root : default);
+
+            if (itemsArray.ValueKind == JsonValueKind.Array)
+            {
+                _lineItems.Clear();
+                foreach (var item in itemsArray.EnumerateArray())
+                {
+                    var desc     = item.TryGetProperty("description",  out var d) ? d.GetString() ?? "" : "";
+                    var qty      = item.TryGetProperty("quantity",     out var q) ? GetDecimal(q) : 1m;
+                    var unitCost = item.TryGetProperty("unit_cost",    out var uc) ? GetDecimal(uc) : 0m;
+                    var sell     = item.TryGetProperty("sell_price",   out var sp) ? GetDecimal(sp) : 0m;
+                    var code     = item.TryGetProperty("product_code", out var pc) ? pc.GetString() ?? "" : "";
+
+                    _lineItems.Add(new EditableLineItem
+                    {
+                        Description = desc,
+                        Quantity    = qty,
+                        UnitCost    = unitCost,
+                        NettPrice   = sell,
+                        ProductCode = code,
+                    });
+                }
+            }
+        }
+        catch
+        {
+            _error = "Could not parse the AI response as JSON. Try again or simplify your prompt.";
+        }
+    }
+
+    private static decimal GetDecimal(JsonElement el)
+    {
+        if (el.ValueKind == JsonValueKind.Number) return el.GetDecimal();
+        if (el.ValueKind == JsonValueKind.String && decimal.TryParse(el.GetString(), out var v)) return v;
+        return 0m;
+    }
+
+    private void AddLineItem()
+    {
+        _lineItems.Add(new EditableLineItem
+        {
+            Description = "New item",
+            Quantity    = 1,
+            UnitCost    = 0,
+            NettPrice   = 0,
+            ProductCode = string.Empty,
+        });
+    }
+
+    // ── Save ───────────────────────────────────────────────────────────────────
+    private async Task SaveQuoteAsync()
+    {
+        _error = string.Empty;
+
+        if (_selectedContact == null)
+        {
+            _error = "Please select a customer contact.";
+            return;
+        }
+
+        if (!_lineItems.Any())
+        {
+            _error = "Please add at least one line item.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_reference))
+        {
+            _error = "Please enter a reference/project name.";
+            return;
+        }
+
+        _saving = true;
+        StateHasChanged();
+
+        try
+        {
+            // Build the Quote header
+            var quote = new Quote
+            {
+                ContactId     = _selectedContact.ContactId,
+                CompanyId     = _selectedContact.CompanyId,
+                Reference     = _reference,
+                CustomerNotes = string.IsNullOrWhiteSpace(_aiNotes) ? null : _aiNotes,
+                DivisionId    = 0,
+                Validity      = 30,
+                Code          = _userCode,
+            };
+
+            // Build line items
+            var items = _lineItems.Select(i => new QuoteLineItem
+            {
+                Description  = i.Description,
+                Quantity     = i.Quantity,
+                UnitCost     = i.UnitCost,
+                NettPrice    = i.NettPrice,
+                ExtNettPrice = i.Quantity * i.NettPrice,
+                ProductCode  = i.ProductCode,
+            }).ToList();
+
+            var newQid = await QuoteSvc.CreateQuoteAsync(
+                quote,
+                items,
+                new List<QuoteThirdPartyItem>(),
+                _userCode);
+
+            Snackbar.Add($"Quote #{newQid} created successfully!", Severity.Success);
+            Nav.NavigateTo($"/quotes/{newQid}");
+        }
+        catch (Exception ex)
+        {
+            _error = $"Error saving quote: {ex.Message}";
+            _saving = false;
+        }
+    }
+
+    // ── Helper models ──────────────────────────────────────────────────────────
+    private class EditableLineItem
+    {
+        public string  Description { get; set; } = string.Empty;
+        public decimal Quantity    { get; set; } = 1;
+        public decimal UnitCost    { get; set; }
+        public decimal NettPrice   { get; set; }
+        public string  ProductCode { get; set; } = string.Empty;
+    }
+
+    private class ContactSearchResult
+    {
+        public int    ContactId { get; set; }
+        public int    CompanyId { get; set; }
+        public string Name      { get; set; } = string.Empty;
+        public string Company   { get; set; } = string.Empty;
+    }
+}
