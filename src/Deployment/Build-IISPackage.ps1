@@ -70,11 +70,10 @@ Write-OK "Package: $ZipPath  ($sizeMB MB)"
 
 Write-Host ""
 Write-Host "Next steps on svr1.digitalresponse.com.au:" -ForegroundColor Yellow
-Write-Host "  1. Upload mydesk-publish.zip to the server" -ForegroundColor White
-Write-Host "  2. Stop the MyDesk app pool in IIS Manager" -ForegroundColor White
-Write-Host "  3. Extract the zip over the existing site folder" -ForegroundColor White
-Write-Host "  4. Start the app pool" -ForegroundColor White
+Write-Host "  1. Copy mydesk-publish.zip to svr1 (RDP file transfer or shared drive)" -ForegroundColor White
+Write-Host "  2. On svr1, run as Administrator:" -ForegroundColor White
 Write-Host ""
-Write-Host "  Or run the one-liner on svr1 (adjust paths):" -ForegroundColor White
-Write-Host '  Expand-Archive -Path C:\Drops\mydesk-publish.zip -DestinationPath "C:\inetpub\mydesk" -Force' -ForegroundColor Gray
+Write-Host '  iisreset /stop' -ForegroundColor Gray
+Write-Host '  Expand-Archive -Path C:\Drops\mydesk-publish.zip -DestinationPath "C:\wwwroot\app.mydesk.digitalresponse.com.au" -Force' -ForegroundColor Gray
+Write-Host '  iisreset /start' -ForegroundColor Gray
 Write-Host ""
