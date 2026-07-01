@@ -400,7 +400,9 @@ builder.Services.AddScoped<McpIntegrationService>();
 // Proposal #272: AI Enhancement services
 builder.Services.AddScoped<ReconciliationService>();
 builder.Services.AddScoped<AiAuditService>();
+builder.Services.AddScoped<AiConversationService>();
 builder.Services.AddScoped<TelegramBotService>();
+builder.Services.AddScoped<OneDriveService>();
 
 // Legal modules (CCL — Carter Capner Law)
 builder.Services.AddScoped<MyDesk.Web.Services.Legal.RadixService>();
@@ -513,6 +515,7 @@ using (MyDesk.Shared.Services.TenantImpersonation.SystemBypass())
         await SafeInit("ActivityService",          () => sp.GetRequiredService<ActivityService>().EnsureTableAsync());
         await SafeInit("EmailService",             () => sp.GetRequiredService<EmailService>().EnsureTablesAsync());
         await SafeInit("AiAuditService",           () => sp.GetRequiredService<AiAuditService>().EnsureTableAsync());
+        await SafeInit("AiConversationService",    () => sp.GetRequiredService<AiConversationService>().EnsureTableAsync());
         await SafeInit("ReportService",            () => sp.GetRequiredService<ReportService>().EnsureTableAsync());
         await SafeInit("LogService",               () => sp.GetRequiredService<LogService>().EnsureTableAsync());
         await SafeInit("ExpenseService",           () => sp.GetRequiredService<ExpenseService>().EnsureTableAsync());

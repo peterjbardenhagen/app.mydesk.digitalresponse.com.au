@@ -3,6 +3,7 @@
 @inject AzureAIService AI
 @inject McpIntegrationService McpSvc
 @inject AiAuditService AuditSvc
+@inject AiConversationService ConvSvc
 @inject AuthenticationStateProvider AuthState
 @inject IJSRuntime JsRuntime
 @inject AIFunctionExecutor FuncExecutor
@@ -167,6 +168,7 @@
 
     private readonly List<AzureChatMessage> _apiMessages = new();
     private string? _userCode;
+    private string _sessionId = Guid.NewGuid().ToString("N")[..12];
     private bool _contextLoaded;
     private bool _listening;
     private DotNetObjectReference<AskAI>? _dotNetRef;
@@ -197,7 +199,17 @@
     {
         var authState = await AuthState.GetAuthenticationStateAsync();
         _userCode = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "unknown";
-        
+
+        // Restore persistent conversation history for this user
+        var saved = await ConvSvc.GetRecentAsync(_userCode, limit: 40);
+        foreach (var msg in saved)
+        {
+            if (msg.Role == "user")
+                _history.Add(UiMessage.User(msg.Content));
+            else
+                _history.Add(UiMessage.Assistant(msg.Content));
+        }
+
         var companyName = SettingsSvc.Current.CompanyName;
         var platformName = SettingsSvc.Current.PlatformName;
         
@@ -260,6 +272,16 @@ Be concise, practical, and focus on actionable business insights."));
             var reply = await Agent.AskAsync(question);
             replyContent = reply.Text;
             _history.Add(UiMessage.Assistant(reply.Text, reply.Renderables, reply.Trace));
+
+            // Persist both turns to durable history
+            var traceJson = reply.Trace.Count > 0
+                ? JsonSerializer.Serialize(reply.Trace.Select(t => new { t.ToolName, t.ArgsJson, t.Success }))
+                : null;
+            _ = Task.Run(async () =>
+            {
+                await ConvSvc.AppendAsync(_userCode!, _sessionId, "user",      question);
+                await ConvSvc.AppendAsync(_userCode!, _sessionId, "assistant", replyContent, traceJson);
+            });
         }
         catch (Exception ex)
         {
@@ -348,6 +370,9 @@ Be concise, practical, and focus on actionable business insights."));
         // Keep the system priming message (index 0) — used only by the legacy chat path.
         if (_apiMessages.Count > 1) _apiMessages.RemoveRange(1, _apiMessages.Count - 1);
         _input = "";
+        _sessionId = Guid.NewGuid().ToString("N")[..12];
+        if (_userCode is not null)
+            _ = Task.Run(() => ConvSvc.ClearHistoryAsync(_userCode));
     }
 
     private async Task ToggleVoiceAsync()

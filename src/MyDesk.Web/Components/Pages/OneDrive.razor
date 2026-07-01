@@ -1,7 +1,9 @@
 @page "/onedrive"
 @attribute [Authorize]
 @inject PlatformSettingsService PlatformSettings
+@inject OneDriveService OneDriveSvc
 @inject AuthenticationStateProvider AuthStateProvider
+@using MyDesk.Web.Services
 
 <PageTitle>OneDrive - MyDesk</PageTitle>
 
@@ -12,132 +14,103 @@
             <span>OneDrive</span>
         </div>
         <h1>OneDrive Files</h1>
-        <p class="tl-subtitle">Access your OneDrive documents and files</p>
+        <p class="tl-subtitle">Browse your OneDrive documents directly from MyDesk.</p>
     </div>
+    @if (_snapshot?.IsConnected == true)
+    {
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Refresh"
+                   OnClick="RefreshAsync" Disabled="@_loading">Refresh</MudButton>
+    }
 </div>
 
-@if (!_oneDriveConnected)
+@if (_loading)
+{
+    <div class="d-flex justify-center pa-12">
+        <MudProgressCircular Size="Size.Large" Indeterminate="true" Color="Color.Primary" />
+    </div>
+}
+else if (_snapshot is null || !_snapshot.IsConnected)
 {
     <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Class="mt-4">
-        OneDrive is not connected. Please configure your OneDrive integration in 
-        <MudLink Href="/integrations">Settings → Integrations</MudLink>
+        OneDrive is not connected. Connect via
+        <MudLink Href="/integrations">Settings → Integrations → My Outlook</MudLink>
+        and enable <strong>Sync OneDrive</strong>.
+    </MudAlert>
+}
+else if (!string.IsNullOrWhiteSpace(_snapshot.ErrorMessage))
+{
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true" Class="mt-4">
+        @_snapshot.ErrorMessage
+    </MudAlert>
+}
+else if (_snapshot.Items.Count == 0)
+{
+    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Class="mt-4">
+        No files found in your OneDrive root folder.
     </MudAlert>
 }
 else
 {
-    <MudPaper Elevation="1" Class="pa-6 mt-4">
-        <MudText Typo="Typo.h6" Class="mb-4">Your OneDrive Files</MudText>
-        
-        @if (_loading)
-        {
-            <div class="d-flex justify-center pa-8">
-                <MudProgressCircular Size="Size.Large" Indeterminate="true" Color="Color.Primary" />
-            </div>
-        }
-        else if (_files?.Count > 0)
-        {
-            <MudTable Items="_files" Hover="true" Dense="true" Striped="true">
-                <HeaderContent>
-                    <MudTh>File Name</MudTh>
-                    <MudTh>Type</MudTh>
-                    <MudTh>Size</MudTh>
-                    <MudTh>Modified</MudTh>
-                    <MudTh>Action</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd>
-                        <div class="d-flex align-center gap-2">
-                            <MudIcon Icon="@GetFileIcon(context.Name)" Size="Size.Small" />
-                            @context.Name
-                        </div>
-                    </MudTd>
-                    <MudTd>@GetFileType(context.Name)</MudTd>
-                    <MudTd>@FormatFileSize(context.Size)</MudTd>
-                    <MudTd>@context.ModifiedTime?.ToString("MMM dd, yyyy HH:mm")</MudTd>
-                    <MudTd>
-                        <MudLink Href="@context.WebUrl" Target="_blank">
-                            <MudIcon Icon="@Icons.Material.Rounded.OpenInNew" Size="Size.Small" />
-                        </MudLink>
-                    </MudTd>
-                </RowTemplate>
-            </MudTable>
-        }
-        else
-        {
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
-                No files found in your OneDrive. Your OneDrive files will appear here once they are synced.
-            </MudAlert>
-        }
+    <MudPaper Elevation="1" Class="mt-4">
+        <MudTable Items="_snapshot.Items" Hover="true" Dense="true" Striped="true"
+                  Filter="FilterFunc" @ref="_table">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">@_snapshot.Items.Count file(s)</MudText>
+                <MudSpacer />
+                <MudTextField @bind-Value="_search" Placeholder="Search files…"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              IconSize="Size.Medium" Class="mt-0" Immediate="true" />
+            </ToolBarContent>
+            <HeaderContent>
+                <MudTh>Name</MudTh>
+                <MudTh>Type</MudTh>
+                <MudTh>Size</MudTh>
+                <MudTh>Modified</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    <div class="d-flex align-center gap-2">
+                        <MudIcon Icon="@GetFileIcon(context)" Size="Size.Small"
+                                 Color="@(context.IsFolder ? Color.Warning : Color.Default)" />
+                        @context.Name
+                    </div>
+                </MudTd>
+                <MudTd>@(context.IsFolder ? "Folder" : GetFileType(context.Name))</MudTd>
+                <MudTd>@(context.IsFolder ? "—" : FormatSize(context.Size))</MudTd>
+                <MudTd>@context.ModifiedTime?.ToString("dd MMM yyyy HH:mm")</MudTd>
+                <MudTd>
+                    @if (!string.IsNullOrWhiteSpace(context.WebUrl))
+                    {
+                        <MudIconButton Icon="@Icons.Material.Rounded.OpenInNew"
+                                       Size="Size.Small" Target="_blank"
+                                       Href="@context.WebUrl" Title="Open in OneDrive" />
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
     </MudPaper>
 
-    <MudPaper Elevation="0" Class="pa-4 mt-4">
-        <MudText Typo="Typo.caption" Class="text-muted">
-            💡 <strong>Tip:</strong> OneDrive files are automatically synced. You can also manage your OneDrive integration in 
-            <MudLink Href="/integrations">Settings</MudLink> to control sync frequency and file types.
-        </MudText>
-    </MudPaper>
+    <MudText Typo="Typo.caption" Class="mt-3 text-muted">
+        Showing OneDrive root folder · <MudLink Href="/integrations">Manage integration</MudLink>
+    </MudText>
 }
 
 @code {
-    private bool _oneDriveConnected = false;
-    private bool _loading = false;
-    private List<OneDriveFile>? _files;
+    private OneDriveSnapshot? _snapshot;
+    private bool _loading = true;
+    private string _search = "";
+    private MudTable<OneDriveItem>? _table;
 
-    private class OneDriveFile
-    {
-        public string Name { get; set; } = "";
-        public string? Type { get; set; }
-        public long Size { get; set; }
-        public DateTime? ModifiedTime { get; set; }
-        public string? WebUrl { get; set; }
-    }
+    protected override async Task OnInitializedAsync() => await RefreshAsync();
 
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
-            var settings = PlatformSettings.Current;
-            
-            if (settings?.MyOutlookUserConnections != null)
-            {
-                var userCodeClaim = auth.User.FindFirst("user_code")?.Value;
-                if (!string.IsNullOrWhiteSpace(userCodeClaim) && 
-                    settings.MyOutlookUserConnections.TryGetValue(userCodeClaim, out var conn))
-                {
-                    _oneDriveConnected = conn.Enabled && conn.SyncDrive;
-                    
-                    if (_oneDriveConnected)
-                    {
-                        await LoadOneDriveFilesAsync();
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error checking OneDrive connection: {ex.Message}");
-        }
-    }
-
-    private async Task LoadOneDriveFilesAsync()
+    private async Task RefreshAsync()
     {
         _loading = true;
+        StateHasChanged();
         try
         {
-            // TODO: Implement actual OneDrive API integration
-            // For now, return empty list with placeholder structure
-            _files = new List<OneDriveFile>();
-            
-            // This would normally call Microsoft Graph API to fetch OneDrive files
-            // Example implementation would use:
-            // - HttpClient with Bearer token from Microsoft Identity
-            // - Microsoft.Graph SDK
-            // - Endpoint: https://graph.microsoft.com/v1.0/me/drive/root/children
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error loading OneDrive files: {ex.Message}");
+            _snapshot = await OneDriveSvc.GetRootFilesAsync(PlatformSettings.Current);
         }
         finally
         {
@@ -145,39 +118,40 @@ else
         }
     }
 
-    private string GetFileIcon(string fileName)
+    private bool FilterFunc(OneDriveItem item) =>
+        string.IsNullOrWhiteSpace(_search) ||
+        item.Name.Contains(_search, StringComparison.OrdinalIgnoreCase);
+
+    private static string GetFileIcon(OneDriveItem item)
     {
-        var ext = System.IO.Path.GetExtension(fileName).ToLower();
+        if (item.IsFolder) return Icons.Material.Rounded.Folder;
+        var ext = Path.GetExtension(item.Name).ToLowerInvariant();
         return ext switch
         {
-            ".pdf" => Icons.Material.Rounded.PictureAsPdf,
-            ".doc" or ".docx" or ".txt" => Icons.Material.Rounded.Description,
-            ".xls" or ".xlsx" or ".csv" => Icons.Material.Rounded.TableChart,
-            ".ppt" or ".pptx" => Icons.Material.Rounded.Slideshow,
-            ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" => Icons.Material.Rounded.Image,
-            ".zip" or ".rar" or ".7z" => Icons.Material.Rounded.FolderZip,
-            ".mp4" or ".avi" or ".mov" or ".mkv" => Icons.Material.Rounded.VideoLibrary,
-            ".mp3" or ".wav" or ".flac" => Icons.Material.Rounded.AudioFile,
-            _ => Icons.Material.Rounded.InsertDriveFile
+            ".pdf"                              => Icons.Material.Rounded.PictureAsPdf,
+            ".doc" or ".docx" or ".txt"         => Icons.Material.Rounded.Description,
+            ".xls" or ".xlsx" or ".csv"         => Icons.Material.Rounded.TableChart,
+            ".ppt" or ".pptx"                   => Icons.Material.Rounded.Slideshow,
+            ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp"
+                                                => Icons.Material.Rounded.Image,
+            ".zip" or ".rar" or ".7z"           => Icons.Material.Rounded.FolderZip,
+            ".mp4" or ".avi" or ".mov" or ".mkv"=> Icons.Material.Rounded.VideoLibrary,
+            ".mp3" or ".wav" or ".flac"         => Icons.Material.Rounded.AudioFile,
+            _                                   => Icons.Material.Rounded.InsertDriveFile,
         };
     }
 
-    private string GetFileType(string fileName)
+    private static string GetFileType(string name)
     {
-        var ext = System.IO.Path.GetExtension(fileName).ToLower();
-        return ext.TrimStart('.').ToUpper();
+        var ext = Path.GetExtension(name).TrimStart('.').ToUpperInvariant();
+        return string.IsNullOrEmpty(ext) ? "File" : ext;
     }
 
-    private string FormatFileSize(long bytes)
+    private static string FormatSize(long bytes)
     {
-        string[] sizes = { "B", "KB", "MB", "GB" };
-        double len = bytes;
-        int order = 0;
-        while (len >= 1024 && order < sizes.Length - 1)
-        {
-            order++;
-            len = len / 1024;
-        }
-        return $"{len:0.##} {sizes[order]}";
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1_048_576) return $"{bytes / 1024.0:0.#} KB";
+        if (bytes < 1_073_741_824) return $"{bytes / 1_048_576.0:0.#} MB";
+        return $"{bytes / 1_073_741_824.0:0.##} GB";
     }
 }

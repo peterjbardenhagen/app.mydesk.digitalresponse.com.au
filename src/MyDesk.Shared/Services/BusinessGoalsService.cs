@@ -20,9 +20,10 @@ public class BusinessGoalsService
         var goals = (await _db.QueryAsync<BusinessGoal>(sql, new { Status = status })).ToList();
         if (goals.Count == 0) return goals;
 
-        var ids = string.Join(",", goals.Select(g => g.GoalId));
+        var goalIds = goals.Select(g => g.GoalId).ToArray();
         var kpis = (await _db.QueryAsync<BusinessGoalKpi>(
-            $"SELECT * FROM BusinessGoalKpis WHERE GoalId IN ({ids}) ORDER BY GoalId, KpiId")).ToList();
+            "SELECT * FROM BusinessGoalKpis WHERE GoalId IN @Ids ORDER BY GoalId, KpiId",
+            new { Ids = goalIds })).ToList();
         foreach (var g in goals) g.Kpis = kpis.Where(k => k.GoalId == g.GoalId).ToList();
         return goals;
     }
