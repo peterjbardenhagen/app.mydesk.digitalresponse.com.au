@@ -56,7 +56,7 @@
   ],
   "bots": [
     {
-      "botId": "00000000-0000-0000-0000-000000000002",
+      "botId": "199646d6-a7e6-4a35-9004-bd3311c94599",
       "scopes": ["personal", "team", "groupchat"],
       "supportsFiles": false,
       "isNotificationOnly": false,
