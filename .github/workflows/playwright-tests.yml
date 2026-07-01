@@ -6,16 +6,17 @@ on:
   pull_request:
     branches: [ main, master, develop ]
   workflow_dispatch:
+    inputs:
+      full_suite:
+        description: 'Run full test suite (slow — 20+ min)'
+        type: boolean
+        default: false
 
 jobs:
   test:
     timeout-minutes: 60
     runs-on: windows-latest
 
-    # Job-level env vars: set by the Actions runner before any step runs.
-    # All child processes (including dotnet started via Start-Process) inherit
-    # these, which avoids the appsettings.json SQL-credential connection string
-    # (User ID=mydesk) that doesn't exist on a fresh LocalDB instance.
     env:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://localhost:5237
@@ -42,13 +43,6 @@ jobs:
 
     - name: Start App and Run Tests
       run: |
-        # Job-level env vars (ASPNETCORE_* and ConnectionStrings__*) are already
-        # in the current process environment and are inherited by Start-Process.
-        #
-        # IMPORTANT: The app process and test runner must run in THE SAME PowerShell
-        # step. On Windows GitHub Actions runners, processes started in a step may be
-        # terminated by the runner's Job Object when the step ends. By combining app
-        # startup and test execution into one step the app stays alive throughout.
         $stdout = "app-stdout.log"
         $stderr = "app-stderr.log"
         $proc = Start-Process dotnet `
@@ -58,16 +52,13 @@ jobs:
           -RedirectStandardError  $stderr
         Write-Host "App started with PID $($proc.Id)"
 
-        # Poll for up to 120 s — app runs DB init (migrations + seeding) before
-        # accepting requests, which can take 30-60 s on a cold LocalDB.
+        # Poll up to 120 s for the app to respond
         $ready = $false
         for ($i = 0; $i -lt 60; $i++) {
           Start-Sleep -Seconds 2
           if ($proc.HasExited) {
             Write-Host "##[error]App process exited early (exit code $($proc.ExitCode))"
-            Write-Host "=== App STDOUT ==="
             if (Test-Path $stdout) { Get-Content $stdout | ForEach-Object { Write-Host $_ } }
-            Write-Host "=== App STDERR ==="
             if (Test-Path $stderr) { Get-Content $stderr | ForEach-Object { Write-Host $_ } }
             throw "App process exited before health check passed"
           }
@@ -78,59 +69,41 @@ jobs:
         }
 
         if (!$ready) {
-          Write-Host "=== App STDOUT (last 100 lines) ==="
           if (Test-Path $stdout) { Get-Content $stdout | Select-Object -Last 100 | ForEach-Object { Write-Host $_ } }
-          Write-Host "=== App STDERR (last 100 lines) ==="
           if (Test-Path $stderr) { Get-Content $stderr | Select-Object -Last 100 | ForEach-Object { Write-Host $_ } }
           throw "App did not respond on http://localhost:5237/login within 120 s"
         }
 
-        Write-Host "=== App is ready (startup log) ==="
-        if (Test-Path $stdout) { Get-Content $stdout | ForEach-Object { Write-Host $_ } }
-        Write-Host "=== End startup log ==="
+        Write-Host "App is ready."
 
-        # Verify the app is still alive before running tests
-        if ($proc.HasExited) {
-          Write-Host "##[error]App process exited immediately after health check!"
-          throw "App process died after health check — see startup log above"
-        }
+        # Smoke only on push/PR; full suite only on manual workflow_dispatch with full_suite=true
+        $fullSuite = '${{ inputs.full_suite }}' -eq 'true'
+        $filterArg = if ($fullSuite) { @() } else { @("--filter", "TestCategory=Smoke") }
+        $suiteLabel = if ($fullSuite) { "FULL suite" } else { "SMOKE tests only" }
+        Write-Host "Running $suiteLabel..."
 
-        # Run Playwright tests while the app is still alive in this step
-        Write-Host "Starting Playwright tests..."
         dotnet test tests/MyDesk.PlaywrightTests/MyDesk.PlaywrightTests.csproj `
           --configuration Release `
           --logger "console;verbosity=detailed" `
           --logger "trx;LogFileName=TestResults.trx" `
           --collect:"XPlat Code Coverage" `
           --results-directory ./TestResults `
-          --no-build
+          --no-build `
+          @filterArg
         $testExitCode = $LASTEXITCODE
 
-        # Print full app log after tests complete
-        Write-Host "=== App STDOUT (post-test) ==="
-        if (Test-Path $stdout) { Get-Content $stdout | ForEach-Object { Write-Host $_ } }
-        Write-Host "=== App STDERR (post-test) ==="
-        if (Test-Path $stderr) { Get-Content $stderr | ForEach-Object { Write-Host $_ } }
-
-        # Stop the app gracefully
         if (!$proc.HasExited) {
-          Write-Host "Stopping app (PID $($proc.Id))..."
           $proc.Kill()
           $proc.WaitForExit(10000)
         }
 
-        # Propagate dotnet test exit code
         exit $testExitCode
 
     - name: Print App Logs
       if: always()
       run: |
-        Write-Host "=== App STDOUT (full) ==="
         if (Test-Path "app-stdout.log") { Get-Content "app-stdout.log" | ForEach-Object { Write-Host $_ } }
-        else { Write-Host "(app-stdout.log not found)" }
-        Write-Host "=== App STDERR (full) ==="
         if (Test-Path "app-stderr.log") { Get-Content "app-stderr.log" | ForEach-Object { Write-Host $_ } }
-        else { Write-Host "(app-stderr.log not found)" }
 
     - name: Upload Test Results
       uses: actions/upload-artifact@v4
@@ -140,10 +113,8 @@ jobs:
         path: |
           TestResults/
           tests/MyDesk.PlaywrightTests/screenshots/
-          tests/MyDesk.PlaywrightTests/videos/
           app-stdout.log
           app-stderr.log
-          app-pid.txt
         retention-days: 30
 
     - name: Publish Test Report
@@ -154,13 +125,3 @@ jobs:
         path: 'TestResults/*.trx'
         reporter: dotnet-trx
         fail-on-error: false
-
-    - name: Generate Coverage Report
-      if: always()
-      run: |
-        $coverage = Get-ChildItem -Recurse -Filter coverage.cobertura.xml -Path TestResults | Select-Object -First 1
-        if ($coverage) {
-          Write-Host "Coverage report: $($coverage.FullName)"
-        } else {
-          Write-Host "No coverage report found (tests may not have run)"
-        }
