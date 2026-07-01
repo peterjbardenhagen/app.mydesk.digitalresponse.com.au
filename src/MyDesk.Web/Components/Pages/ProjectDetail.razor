@@ -659,8 +659,8 @@ else
         <!-- ── RISKS & ISSUES ── -->
         <MudTabPanel Text="Risks & Issues" Icon="@Icons.Material.Rounded.Warning">
             <div class="d-flex gap-2 mb-3">
-                <MudButton Variant="Variant.Filled" Color="Color.Warning" StartIcon="@Icons.Material.Rounded.Add" Size="Size.Small" OnClick="() => AddRiskIssue("Risk")">Add Risk</MudButton>
-                <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Rounded.Add" Size="Size.Small" OnClick="() => AddRiskIssue("Issue")">Log Issue</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Warning" StartIcon="@Icons.Material.Rounded.Add" Size="Size.Small" OnClick='() => AddRiskIssue("Risk")'>Add Risk</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Rounded.Add" Size="Size.Small" OnClick='() => AddRiskIssue("Issue")'>Log Issue</MudButton>
             </div>
 
             @foreach (var type in new[]{"Risk","Issue"})
