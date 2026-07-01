@@ -1,0 +1,357 @@
+@page "/my-intelligence"
+@attribute [Authorize]
+@using MyDesk.Shared.Services
+@using MyDesk.Web.AI
+@using System.Security.Claims
+@using System.Text.Json
+@inject UserIntelligenceService IntelSvc
+@inject PredictiveAnalyticsService Analytics
+@inject AskAiAgentService AgentSvc
+@inject AiProviderFactory ProviderFactory
+@inject AuthenticationStateProvider AuthState
+@inject ISnackbar Snackbar
+
+<PageTitle>My Intelligence</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4">
+    <MudText Typo="Typo.h5" Class="mb-4">My Intelligence</MudText>
+
+    @if (_loading)
+    {
+        <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+    }
+    else
+    {
+        <MudGrid>
+            <!-- Pipeline Health Card -->
+            <MudItem xs="12" md="4">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+                        <MudText Typo="Typo.subtitle1" Class="mb-2">
+                            <MudIcon Icon="@Icons.Material.Rounded.Analytics" Size="Size.Small" Class="mr-1" />
+                            Pipeline Health
+                        </MudText>
+                        @if (_pipelineHealth is not null)
+                        {
+                            <MudProgressLinear Color="@HealthColor(_pipelineHealth.HealthScore)"
+                                              Value="_pipelineHealth.HealthScore" Class="mb-2" />
+                            <MudText Typo="Typo.h4" Color="@HealthColor(_pipelineHealth.HealthScore)">
+                                @_pipelineHealth.HealthScore<MudText Typo="Typo.caption">/100</MudText>
+                            </MudText>
+                            <MudDivider Class="my-2" />
+                            <MudGrid Spacing="0">
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Open Quotes</MudText>
+                                    <MudText Typo="Typo.body2"><b>@_pipelineHealth.OpenQuotes</b></MudText>
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Weighted Value</MudText>
+                                    <MudText Typo="Typo.body2"><b>@_pipelineHealth.WeightedValue.ToString("C0")</b></MudText>
+                                </MudItem>
+                                <MudItem xs="6" Class="mt-2">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">High Confidence</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Success"><b>@_pipelineHealth.HighConfidenceCount</b></MudText>
+                                </MudItem>
+                                <MudItem xs="6" Class="mt-2">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">At Risk</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Error"><b>@_pipelineHealth.AtRiskCount</b></MudText>
+                                </MudItem>
+                                <MudItem xs="12" Class="mt-2">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">90-Day Forecast</MudText>
+                                    <MudText Typo="Typo.body2"><b>@_pipelineHealth.ForecastRevenue90d.ToString("C0")</b></MudText>
+                                </MudItem>
+                            </MudGrid>
+                            @if (_pipelineHealth.HighRiskInvoiceCount > 0)
+                            {
+                                <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+                                    @_pipelineHealth.HighRiskInvoiceCount invoice(s) at payment risk —
+                                    @_pipelineHealth.HighRiskInvoiceExposure.ToString("C0") exposure
+                                </MudAlert>
+                            }
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- AI Coaching Card -->
+            <MudItem xs="12" md="8">
+                <MudCard Elevation="2" Style="height:100%">
+                    <MudCardContent>
+                        <MudText Typo="Typo.subtitle1" Class="mb-2">
+                            <MudIcon Icon="@Icons.Material.Rounded.Psychology" Size="Size.Small" Class="mr-1" />
+                            Personalised Coaching
+                            @if (!string.IsNullOrWhiteSpace(_profile.RoleContext))
+                            {
+                                <MudChip Size="Size.Small" Color="Color.Primary" Class="ml-2">@_profile.RoleContext</MudChip>
+                            }
+                        </MudText>
+
+                        @if (!ProviderFactory.IsConfigured)
+                        {
+                            <MudAlert Severity="Severity.Info" Dense="true">
+                                Configure an AI provider in <MudLink Href="/admin/ai-provider">Settings → AI Provider</MudLink> to enable personalised coaching.
+                            </MudAlert>
+                        }
+                        else if (_coachingLoading)
+                        {
+                            <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" Class="mr-2" />
+                            <MudText Typo="Typo.body2" Inline="true">Generating your coaching insight…</MudText>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(_latestCoaching))
+                        {
+                            <MudPaper Outlined="true" Class="pa-3 mb-3" Style="background:var(--mud-palette-background-grey)">
+                                <MudText Typo="Typo.body2">@_latestCoaching</MudText>
+                            </MudPaper>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary"
+                                       OnClick="GenerateCoachingAsync" StartIcon="@Icons.Material.Rounded.Refresh">
+                                Refresh Insight
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                       OnClick="GenerateCoachingAsync" StartIcon="@Icons.Material.Rounded.AutoAwesome">
+                                Generate My Coaching Insight
+                            </MudButton>
+                        }
+
+                        @if (_recentSessions.Count > 0)
+                        {
+                            <MudDivider Class="my-3" />
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">Recent Insights</MudText>
+                            @foreach (var s in _recentSessions.Take(3))
+                            {
+                                <MudPaper Outlined="true" Class="pa-2 mb-1">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@s.CreatedAt.ToString("dd MMM yyyy HH:mm")</MudText>
+                                    <MudText Typo="Typo.body2">@(s.Insight.Length > 200 ? s.Insight[..200] + "…" : s.Insight)</MudText>
+                                </MudPaper>
+                            }
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- Top Opportunities -->
+            @if (_pipelineHealth?.TopOpportunities.Count > 0)
+            {
+                <MudItem xs="12" md="6">
+                    <MudCard Elevation="2">
+                        <MudCardContent>
+                            <MudText Typo="Typo.subtitle1" Class="mb-2">
+                                <MudIcon Icon="@Icons.Material.Rounded.TrendingUp" Size="Size.Small" Class="mr-1" />
+                                Top Opportunities
+                            </MudText>
+                            <MudTable Items="_pipelineHealth.TopOpportunities" Dense="true" Hover="true" Striped="true" Elevation="0">
+                                <HeaderContent>
+                                    <MudTh>Customer</MudTh>
+                                    <MudTh Style="text-align:right">Value</MudTh>
+                                    <MudTh Style="text-align:center">Win %</MudTh>
+                                    <MudTh>Signals</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd>@context.CompanyName</MudTd>
+                                    <MudTd Style="text-align:right">@context.Value.ToString("C0")</MudTd>
+                                    <MudTd Style="text-align:center">
+                                        <MudChip Size="Size.Small" Color="@WinColor(context.WinProbability)">
+                                            @context.WinProbability%
+                                        </MudChip>
+                                    </MudTd>
+                                    <MudTd>
+                                        @foreach (var sig in context.Signals)
+                                        {
+                                            <MudChip Size="Size.Small" Class="mr-1">@sig</MudChip>
+                                        }
+                                    </MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+
+            <!-- My Profile Settings -->
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="2">
+                    <MudCardContent>
+                        <MudText Typo="Typo.subtitle1" Class="mb-3">
+                            <MudIcon Icon="@Icons.Material.Rounded.ManageAccounts" Size="Size.Small" Class="mr-1" />
+                            Intelligence Profile
+                        </MudText>
+
+                        <MudTextField @bind-Value="_profile.RoleContext" Label="My Role / Title"
+                                      Placeholder="e.g. Sales Manager, Account Executive"
+                                      Variant="Variant.Outlined" Class="mb-3" />
+
+                        <MudTextField @bind-Value="_profile.FocusAreas" Label="Focus Areas"
+                                      Placeholder="e.g. enterprise deals, renewals, new logos"
+                                      Variant="Variant.Outlined" Class="mb-3" />
+
+                        <MudSelect @bind-Value="_profile.CoachingStyle" Label="Coaching Style"
+                                   Variant="Variant.Outlined" Class="mb-3">
+                            <MudSelectItem Value="@("balanced")">Balanced</MudSelectItem>
+                            <MudSelectItem Value="@("motivational")">Motivational</MudSelectItem>
+                            <MudSelectItem Value="@("analytical")">Analytical</MudSelectItem>
+                            <MudSelectItem Value="@("direct")">Direct</MudSelectItem>
+                        </MudSelect>
+
+                        <MudDivider Class="mb-3" />
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Connected Apps (Composio)</MudText>
+                        <MudTextField @bind-Value="_profile.ComposioApiKey" Label="Your Composio API Key"
+                                      Placeholder="Leave blank to use platform key"
+                                      InputType="InputType.Password" Adornment="Adornment.End"
+                                      AdornmentIcon="@Icons.Material.Rounded.Key"
+                                      Variant="Variant.Outlined" Class="mb-1" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3">
+                            Get your key at composio.dev — connects Outlook, Gmail, OneDrive and 200+ apps to your AI.
+                        </MudText>
+
+                        <MudDivider Class="mb-3" />
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">
+                            <MudIcon Icon="@Icons.Material.Rounded.Telegram" Size="Size.Small" Class="mr-1" />
+                            Telegram Notifications
+                        </MudText>
+                        <MudSwitch @bind-Value="_profile.TelegramEnabled" Label="Enable Telegram notifications" Color="Color.Primary" Class="mb-2" />
+                        @if (_profile.TelegramEnabled)
+                        {
+                            <MudTextField @bind-Value="_profile.TelegramChatId" Label="Telegram Chat ID"
+                                          Placeholder="e.g. 123456789"
+                                          Variant="Variant.Outlined" Class="mb-2" />
+                            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+                                <b>Set up in 3 steps:</b><br />
+                                1. Download <b>Telegram X</b> —
+                                <MudLink Href="https://apps.apple.com/app/telegram-x/id898228810" Target="_blank">iOS</MudLink> ·
+                                <MudLink Href="https://play.google.com/store/apps/details?id=org.thunderdog.challegram" Target="_blank">Android</MudLink> ·
+                                <MudLink Href="https://desktop.telegram.org/" Target="_blank">Desktop</MudLink><br />
+                                2. Message <b>@@DeskBot</b> from your work account<br />
+                                3. Send <code>/start</code> and copy the Chat ID shown
+                            </MudAlert>
+                        }
+
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                   OnClick="SaveProfileAsync" StartIcon="@Icons.Material.Rounded.Save"
+                                   Class="mt-2">
+                            Save Profile
+                        </MudButton>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    private bool _loading = true;
+    private bool _coachingLoading;
+    private string? _userCode;
+    private UserIntelligenceProfile _profile = new();
+    private PipelineHealthSummary? _pipelineHealth;
+    private List<UserCoachingSession> _recentSessions = new();
+    private string? _latestCoaching;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthState.GetAuthenticationStateAsync();
+        _userCode = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "unknown";
+
+        await Task.WhenAll(
+            LoadProfileAsync(),
+            LoadAnalyticsAsync());
+
+        if (_recentSessions.Count > 0)
+            _latestCoaching = _recentSessions[0].Insight;
+
+        _loading = false;
+    }
+
+    private async Task LoadProfileAsync()
+    {
+        _profile = await IntelSvc.GetProfileAsync(_userCode!);
+        _recentSessions = await IntelSvc.GetRecentSessionsAsync(_userCode!, 5);
+    }
+
+    private async Task LoadAnalyticsAsync()
+    {
+        _pipelineHealth = await Analytics.GetPipelineHealthAsync();
+    }
+
+    private async Task SaveProfileAsync()
+    {
+        await IntelSvc.SaveProfileAsync(_profile);
+        Snackbar.Add("Intelligence profile saved", Severity.Success);
+    }
+
+    private async Task GenerateCoachingAsync()
+    {
+        if (!ProviderFactory.IsConfigured) return;
+        _coachingLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var health = _pipelineHealth;
+            var focusSnippet = string.IsNullOrWhiteSpace(_profile.FocusAreas)
+                ? "" : $"My focus areas: {_profile.FocusAreas}.";
+            var roleSnippet = string.IsNullOrWhiteSpace(_profile.RoleContext)
+                ? "a sales/business professional"
+                : _profile.RoleContext;
+
+            var prompt = $"""
+                I am {roleSnippet} at an Australian company. {focusSnippet}
+                Coaching style preference: {_profile.CoachingStyle}.
+
+                Here is my current pipeline summary:
+                - Open quotes: {health?.OpenQuotes ?? 0}
+                - Weighted pipeline value: {health?.WeightedValue.ToString("C0") ?? "unknown"}
+                - High-confidence opportunities: {health?.HighConfidenceCount ?? 0}
+                - Opportunities at risk (stale): {health?.AtRiskCount ?? 0}
+                - 90-day revenue forecast: {health?.ForecastRevenue90d.ToString("C0") ?? "unknown"}
+                - Pipeline health score: {health?.HealthScore ?? 0}/100
+                - Outstanding invoice exposure: {health?.HighRiskInvoiceExposure.ToString("C0") ?? "0"}
+
+                Top opportunities by expected value:
+                {string.Join("\n", health?.TopOpportunities.Take(3).Select(o => $"  - {o.CompanyName}: {o.Value:C0} ({o.WinProbability}% win probability)") ?? Array.Empty<string>())}
+
+                Provide a concise, actionable coaching insight (3–5 sentences, Australian English).
+                Focus on what I should prioritise today to maximise revenue. Be direct and specific.
+                """;
+
+            var reply = await AgentSvc.AskAsync(
+                userPrompt: prompt,
+                systemPrompt: "You are a high-performance sales coach for an Australian business. Be concise, specific, and action-oriented.",
+                maxIterations: 1,
+                maxTokens: 300);
+
+            _latestCoaching = reply.Text;
+
+            await IntelSvc.SaveCoachingSessionAsync(
+                _userCode!,
+                "ondemand",
+                reply.Text,
+                new { pipelineScore = health?.HealthScore, openQuotes = health?.OpenQuotes });
+
+            _recentSessions = await IntelSvc.GetRecentSessionsAsync(_userCode!, 5);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Coaching generation failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _coachingLoading = false;
+        }
+    }
+
+    private static Color HealthColor(int score) => score switch
+    {
+        >= 70 => Color.Success,
+        >= 40 => Color.Warning,
+        _     => Color.Error,
+    };
+
+    private static Color WinColor(int pct) => pct switch
+    {
+        >= 70 => Color.Success,
+        >= 40 => Color.Warning,
+        _     => Color.Error,
+    };
+}

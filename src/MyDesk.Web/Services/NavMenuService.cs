@@ -52,6 +52,9 @@ public class NavMenuService
         // Planning
         new("calendar",        "Calendar",         "/calendar",        "Planning"),
         
+        // Intelligence
+        new("my-intelligence", "My Intelligence",  "/my-intelligence", "Intelligence"),
+
         // Support
         new("ask-ai",          "Ask AI",           "/ask-ai",          "Support"),
         new("help",            "Help Centre",      "/help",            "Support"),

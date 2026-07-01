@@ -123,6 +123,15 @@
             </div>
         }
 
+        @* ── Intelligence ── *@
+        @if (_activeSection == "intelligence")
+        {
+            <div class="tl-nav-section">
+                <MudNavLink Href="/my-intelligence" Icon="@Icons.Material.Rounded.Psychology" Class="tl-nav-link--highlight">My Intelligence</MudNavLink>
+                <MudNavLink Href="/ask-ai"          Icon="@Icons.Material.Rounded.AutoAwesome">Ask AI</MudNavLink>
+            </div>
+        }
+
         @* ── Portals ── *@
         @if (_activeSection == "portals")
         {
@@ -228,6 +237,7 @@
         "desk" => "My Desk",
         "insights" => "Insights",
         "marketing" => "Marketing",
+        "intelligence" => "Intelligence",
         "portals" => "Portals",
         "legal" => "Legal",
         "admin" => "Admin",

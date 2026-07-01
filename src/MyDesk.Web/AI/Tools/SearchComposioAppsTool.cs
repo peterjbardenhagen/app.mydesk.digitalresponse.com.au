@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 using MyDesk.Shared.Services;
 
 namespace MyDesk.Web.AI.Tools;
@@ -6,21 +7,40 @@ namespace MyDesk.Web.AI.Tools;
 /// <summary>
 /// Searches data across Composio-connected third-party apps:
 /// QuickBooks Online, OneDrive, and any other authenticated integrations.
+/// Resolves API key: user's own Composio key first, then platform-level key.
 /// </summary>
 public class SearchComposioAppsTool : IAiTool
 {
     private readonly ComposioIntegrationService _composio;
+    private readonly UserIntelligenceService _intelligence;
+    private readonly IHttpContextAccessor _httpCtx;
     private readonly IHttpClientFactory _httpFactory;
     private readonly ILogger<SearchComposioAppsTool> _logger;
 
     public SearchComposioAppsTool(
         ComposioIntegrationService composio,
+        UserIntelligenceService intelligence,
+        IHttpContextAccessor httpCtx,
         IHttpClientFactory httpFactory,
         ILogger<SearchComposioAppsTool> logger)
     {
-        _composio = composio;
-        _httpFactory = httpFactory;
-        _logger = logger;
+        _composio     = composio;
+        _intelligence = intelligence;
+        _httpCtx      = httpCtx;
+        _httpFactory  = httpFactory;
+        _logger       = logger;
+    }
+
+    private async Task<string?> ResolveApiKeyAsync()
+    {
+        var userCode = _httpCtx.HttpContext?.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!string.IsNullOrWhiteSpace(userCode))
+        {
+            var profile = await _intelligence.GetProfileAsync(userCode);
+            if (!string.IsNullOrWhiteSpace(profile.ComposioApiKey))
+                return profile.ComposioApiKey;
+        }
+        return _composio.IsConfigured ? _composio.ApiKey : null;
     }
 
     public string Name => "search_connected_apps";
@@ -50,13 +70,14 @@ public class SearchComposioAppsTool : IAiTool
 
     public async Task<AiToolResult> ExecuteAsync(JsonElement args, CancellationToken ct = default)
     {
-        if (!_composio.IsConfigured)
+        var apiKey = await ResolveApiKeyAsync();
+        if (string.IsNullOrWhiteSpace(apiKey))
         {
             return new AiToolResult(
-                """{"error":"Composio is not configured","hint":"Add Composio:ApiKey to appsettings.json"}""",
+                """{"error":"Composio is not configured","hint":"Add your Composio API key in My Intelligence settings, or ask an admin to add a platform key to appsettings.json"}""",
                 new AiNoticeSpec(
                     "Composio Not Configured",
-                    "Add a Composio API key to appsettings.json to enable search across QuickBooks, OneDrive, and other integrations.",
+                    "Add your personal Composio API key in My Intelligence → Connected Apps, or ask your admin to configure a platform key.",
                     "warning"));
         }
 
@@ -74,7 +95,7 @@ public class SearchComposioAppsTool : IAiTool
         {
             var client = _httpFactory.CreateClient();
             client.DefaultRequestHeaders.Clear();
-            client.DefaultRequestHeaders.Add("X-API-Key", _composio.ApiKey);
+            client.DefaultRequestHeaders.Add("X-API-Key", apiKey);
             client.Timeout = TimeSpan.FromSeconds(15);
 
             // Fetch all connected accounts from Composio
