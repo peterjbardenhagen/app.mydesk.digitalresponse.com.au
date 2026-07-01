@@ -67,14 +67,12 @@
                 <MudIcon Icon="@Icons.Material.Rounded.AccountBalance" Color="Color.Primary" />
                 <MudText Typo="Typo.h6">Xero</MudText>
                 <MudSpacer />
-                @if (_settings.Xero.IsConnected)
-                {
-                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Connected</MudChip>
-                }
-                else
-                {
-                    <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Filled">Not Connected</MudChip>
-                }
+                <MudChip T="string"
+                         Color="@(_settings.Xero.IsConnected ? Color.Success : Color.Default)"
+                         Size="Size.Small"
+                         Variant="Variant.Filled">
+                    @(_settings.Xero.IsConnected ? "Connected" : "Not Connected")
+                </MudChip>
             </div>
         </TitleContent>
         <ChildContent>
@@ -92,7 +90,6 @@
                         </MudText>
                     }
                 </MudItem>
-
                 <MudItem xs="12" sm="6">
                     <MudTextField @bind-Value="_settings.Xero.ClientId"
                                   Label="Client ID"
@@ -106,59 +103,52 @@
                                   Variant="Variant.Outlined"
                                   Disabled="@_settings.Xero.IsConnected" />
                 </MudItem>
-
                 <MudItem xs="12" sm="4">
-                    <MudSwitch @bind-Value="_settings.Xero.SyncInvoices" Label="Sync Invoices" Color="Color.Primary" />
+                    <MudSwitch @bind-Value="_settings.Xero.SyncInvoices"  Label="Sync Invoices"         Color="Color.Primary" />
                 </MudItem>
                 <MudItem xs="12" sm="4">
-                    <MudSwitch @bind-Value="_settings.Xero.SyncContacts" Label="Sync Contacts" Color="Color.Primary" />
+                    <MudSwitch @bind-Value="_settings.Xero.SyncContacts"  Label="Sync Contacts"         Color="Color.Primary" />
                 </MudItem>
                 <MudItem xs="12" sm="4">
                     <MudSwitch @bind-Value="_settings.Xero.AutoExportInvoices" Label="Auto-export Invoices" Color="Color.Primary" />
                 </MudItem>
-
                 <MudItem xs="12">
                     <div class="d-flex gap-3 flex-wrap">
                         @if (!_settings.Xero.IsConnected)
                         {
-                            <MudButton Variant="Variant.Filled"
-                                       Color="Color.Primary"
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary"
                                        StartIcon="@Icons.Material.Rounded.Link"
-                                       OnClick="@(() => ConnectXero())"
+                                       OnClick="ConnectXero"
                                        Disabled="@(string.IsNullOrWhiteSpace(_settings.Xero.ClientId))">
                                 Connect to Xero
                             </MudButton>
                         }
                         else
                         {
-                            <MudButton Variant="Variant.Outlined"
-                                       Color="Color.Error"
+                            <MudButton Variant="Variant.Outlined" Color="Color.Error"
                                        StartIcon="@Icons.Material.Rounded.LinkOff"
                                        OnClick="@(() => DisconnectProvider("Xero"))">
                                 Disconnect
                             </MudButton>
-                            <MudButton Variant="Variant.Outlined"
-                                       Color="Color.Primary"
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
                                        StartIcon="@Icons.Material.Rounded.Sync"
                                        OnClick="@(() => ManualSync("Xero"))"
                                        Disabled="_running">
                                 Sync Now
                             </MudButton>
                         }
-                        <MudButton Variant="Variant.Outlined"
-                                   Color="Color.Secondary"
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
                                    StartIcon="@Icons.Material.Rounded.Save"
                                    OnClick="SaveSettings">
                             Save
                         </MudButton>
                     </div>
                 </MudItem>
-
                 @if (_xeroLogs.Any())
                 {
                     <MudItem xs="12">
                         <MudText Typo="Typo.subtitle2" Class="mb-2">Recent Sync Log</MudText>
-                        <SyncLogTable Logs="_xeroLogs" />
+                        @RenderLogTable(_xeroLogs)
                     </MudItem>
                 }
             </MudGrid>
@@ -174,14 +164,12 @@
                 <MudIcon Icon="@Icons.Material.Rounded.AccountBalance" Color="Color.Success" />
                 <MudText Typo="Typo.h6">QuickBooks Online</MudText>
                 <MudSpacer />
-                @if (_settings.QuickBooks.IsConnected)
-                {
-                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Connected</MudChip>
-                }
-                else
-                {
-                    <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Filled">Not Connected</MudChip>
-                }
+                <MudChip T="string"
+                         Color="@(_settings.QuickBooks.IsConnected ? Color.Success : Color.Default)"
+                         Size="Size.Small"
+                         Variant="Variant.Filled">
+                    @(_settings.QuickBooks.IsConnected ? "Connected" : "Not Connected")
+                </MudChip>
             </div>
         </TitleContent>
         <ChildContent>
@@ -199,7 +187,6 @@
                         </MudText>
                     }
                 </MudItem>
-
                 <MudItem xs="12" sm="6">
                     <MudTextField @bind-Value="_settings.QuickBooks.ClientId"
                                   Label="Client ID"
@@ -213,59 +200,52 @@
                                   Variant="Variant.Outlined"
                                   Disabled="@_settings.QuickBooks.IsConnected" />
                 </MudItem>
-
                 <MudItem xs="12" sm="4">
-                    <MudSwitch @bind-Value="_settings.QuickBooks.SyncInvoices" Label="Sync Invoices" Color="Color.Primary" />
+                    <MudSwitch @bind-Value="_settings.QuickBooks.SyncInvoices"       Label="Sync Invoices"         Color="Color.Primary" />
                 </MudItem>
                 <MudItem xs="12" sm="4">
-                    <MudSwitch @bind-Value="_settings.QuickBooks.SyncContacts" Label="Sync Contacts" Color="Color.Primary" />
+                    <MudSwitch @bind-Value="_settings.QuickBooks.SyncContacts"       Label="Sync Contacts"         Color="Color.Primary" />
                 </MudItem>
                 <MudItem xs="12" sm="4">
-                    <MudSwitch @bind-Value="_settings.QuickBooks.AutoExportInvoices" Label="Auto-export Invoices" Color="Color.Primary" />
+                    <MudSwitch @bind-Value="_settings.QuickBooks.AutoExportInvoices" Label="Auto-export Invoices"  Color="Color.Primary" />
                 </MudItem>
-
                 <MudItem xs="12">
                     <div class="d-flex gap-3 flex-wrap">
                         @if (!_settings.QuickBooks.IsConnected)
                         {
-                            <MudButton Variant="Variant.Filled"
-                                       Color="Color.Primary"
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary"
                                        StartIcon="@Icons.Material.Rounded.Link"
-                                       OnClick="@(() => ConnectQuickBooks())"
+                                       OnClick="ConnectQuickBooks"
                                        Disabled="@(string.IsNullOrWhiteSpace(_settings.QuickBooks.ClientId))">
                                 Connect to QuickBooks
                             </MudButton>
                         }
                         else
                         {
-                            <MudButton Variant="Variant.Outlined"
-                                       Color="Color.Error"
+                            <MudButton Variant="Variant.Outlined" Color="Color.Error"
                                        StartIcon="@Icons.Material.Rounded.LinkOff"
                                        OnClick="@(() => DisconnectProvider("QuickBooks"))">
                                 Disconnect
                             </MudButton>
-                            <MudButton Variant="Variant.Outlined"
-                                       Color="Color.Primary"
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
                                        StartIcon="@Icons.Material.Rounded.Sync"
                                        OnClick="@(() => ManualSync("QuickBooks"))"
                                        Disabled="_running">
                                 Sync Now
                             </MudButton>
                         }
-                        <MudButton Variant="Variant.Outlined"
-                                   Color="Color.Secondary"
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
                                    StartIcon="@Icons.Material.Rounded.Save"
                                    OnClick="SaveSettings">
                             Save
                         </MudButton>
                     </div>
                 </MudItem>
-
                 @if (_qboLogs.Any())
                 {
                     <MudItem xs="12">
                         <MudText Typo="Typo.subtitle2" Class="mb-2">Recent Sync Log</MudText>
-                        <SyncLogTable Logs="_qboLogs" />
+                        @RenderLogTable(_qboLogs)
                     </MudItem>
                 }
             </MudGrid>
@@ -281,14 +261,12 @@
                 <MudIcon Icon="@Icons.Material.Rounded.AccountBalance" Color="Color.Warning" />
                 <MudText Typo="Typo.h6">MYOB</MudText>
                 <MudSpacer />
-                @if (_settings.MYOB.IsConnected)
-                {
-                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Connected</MudChip>
-                }
-                else
-                {
-                    <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Filled">Not Connected</MudChip>
-                }
+                <MudChip T="string"
+                         Color="@(_settings.MYOB.IsConnected ? Color.Success : Color.Default)"
+                         Size="Size.Small"
+                         Variant="Variant.Filled">
+                    @(_settings.MYOB.IsConnected ? "Connected" : "Not Connected")
+                </MudChip>
             </div>
         </TitleContent>
         <ChildContent>
@@ -306,7 +284,6 @@
                         </MudText>
                     }
                 </MudItem>
-
                 <MudItem xs="12" sm="6">
                     <MudTextField @bind-Value="_settings.MYOB.ClientId"
                                   Label="Client ID (API Key)"
@@ -320,59 +297,52 @@
                                   Variant="Variant.Outlined"
                                   Disabled="@_settings.MYOB.IsConnected" />
                 </MudItem>
-
                 <MudItem xs="12" sm="4">
-                    <MudSwitch @bind-Value="_settings.MYOB.SyncInvoices" Label="Sync Invoices" Color="Color.Primary" />
+                    <MudSwitch @bind-Value="_settings.MYOB.SyncInvoices"       Label="Sync Invoices"         Color="Color.Primary" />
                 </MudItem>
                 <MudItem xs="12" sm="4">
-                    <MudSwitch @bind-Value="_settings.MYOB.SyncContacts" Label="Sync Contacts" Color="Color.Primary" />
+                    <MudSwitch @bind-Value="_settings.MYOB.SyncContacts"       Label="Sync Contacts"         Color="Color.Primary" />
                 </MudItem>
                 <MudItem xs="12" sm="4">
-                    <MudSwitch @bind-Value="_settings.MYOB.AutoExportInvoices" Label="Auto-export Invoices" Color="Color.Primary" />
+                    <MudSwitch @bind-Value="_settings.MYOB.AutoExportInvoices" Label="Auto-export Invoices"  Color="Color.Primary" />
                 </MudItem>
-
                 <MudItem xs="12">
                     <div class="d-flex gap-3 flex-wrap">
                         @if (!_settings.MYOB.IsConnected)
                         {
-                            <MudButton Variant="Variant.Filled"
-                                       Color="Color.Primary"
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary"
                                        StartIcon="@Icons.Material.Rounded.Link"
-                                       OnClick="@(() => ConnectMyob())"
+                                       OnClick="ConnectMyob"
                                        Disabled="@(string.IsNullOrWhiteSpace(_settings.MYOB.ClientId))">
                                 Connect to MYOB
                             </MudButton>
                         }
                         else
                         {
-                            <MudButton Variant="Variant.Outlined"
-                                       Color="Color.Error"
+                            <MudButton Variant="Variant.Outlined" Color="Color.Error"
                                        StartIcon="@Icons.Material.Rounded.LinkOff"
                                        OnClick="@(() => DisconnectProvider("MYOB"))">
                                 Disconnect
                             </MudButton>
-                            <MudButton Variant="Variant.Outlined"
-                                       Color="Color.Primary"
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
                                        StartIcon="@Icons.Material.Rounded.Sync"
                                        OnClick="@(() => ManualSync("MYOB"))"
                                        Disabled="_running">
                                 Sync Now
                             </MudButton>
                         }
-                        <MudButton Variant="Variant.Outlined"
-                                   Color="Color.Secondary"
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
                                    StartIcon="@Icons.Material.Rounded.Save"
                                    OnClick="SaveSettings">
                             Save
                         </MudButton>
                     </div>
                 </MudItem>
-
                 @if (_myobLogs.Any())
                 {
                     <MudItem xs="12">
                         <MudText Typo="Typo.subtitle2" Class="mb-2">Recent Sync Log</MudText>
-                        <SyncLogTable Logs="_myobLogs" />
+                        @RenderLogTable(_myobLogs)
                     </MudItem>
                 }
             </MudGrid>
@@ -380,20 +350,14 @@
     </MudExpansionPanel>
 </MudExpansionPanels>
 
-@* ── Inline sync log table component ── *@
-@code {
-    [Parameter] public List<SyncLogEntry> Logs { get; set; } = new();
-}
-
-@* We inline the log table as a local component equivalent using plain MudTable *@
-
-@code {
-    // Null-safe access helpers for inline log table usage above
-}
-
-@* The inline SyncLogTable is defined as a nested razor fragment below using MudTable *@
-
-<div></div>
+<style>
+    .sync-log-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .sync-log-table th, .sync-log-table td { padding: 4px 10px; text-align: left; border-bottom: 1px solid rgba(0,0,0,0.08); }
+    .sync-log-table th { font-weight: 700; color: #64748b; }
+    .status-success { color: #16a34a; font-weight: 600; }
+    .status-failed  { color: #dc2626; font-weight: 600; }
+    .status-running { color: #d97706; font-weight: 600; }
+</style>
 
 @code {
     private PlatformSettings _settings = new();
@@ -408,13 +372,14 @@
     {
         _settings = PlatformSettings.Current;
 
-        // Handle OAuth callback result
+        // Handle OAuth callback query params
         var uri = new Uri(Nav.Uri);
-        var qs  = System.Web.HttpUtility.ParseQueryString(uri.Query);
-        var connected = qs["connected"];
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var connected = query["connected"];
+        var err = query["error"];
+
         if (!string.IsNullOrWhiteSpace(connected))
             Snackbar.Add($"Successfully connected to {connected}!", Severity.Success);
-        var err = qs["error"];
         if (!string.IsNullOrWhiteSpace(err))
             Snackbar.Add($"Connection error: {err}", Severity.Error);
 
@@ -482,10 +447,10 @@
     {
         var cfg = provider switch
         {
-            "Xero"        => _settings.Xero,
-            "QuickBooks"  => _settings.QuickBooks,
-            "MYOB"        => _settings.MYOB,
-            _             => null
+            "Xero"       => _settings.Xero,
+            "QuickBooks" => _settings.QuickBooks,
+            "MYOB"       => _settings.MYOB,
+            _            => null
         };
         if (cfg is null) return;
 
@@ -507,9 +472,9 @@
         {
             switch (provider)
             {
-                case "Xero":       await XeroSvc.RunFullSyncAsync();  break;
-                case "QuickBooks": await QboSvc.RunFullSyncAsync();   break;
-                case "MYOB":       await MyobSvc.RunFullSyncAsync();  break;
+                case "Xero":       await XeroSvc.RunFullSyncAsync(); break;
+                case "QuickBooks": await QboSvc.RunFullSyncAsync();  break;
+                case "MYOB":       await MyobSvc.RunFullSyncAsync(); break;
             }
             Snackbar.Add($"{provider} sync complete", Severity.Success);
             _settings = PlatformSettings.Current;
@@ -544,29 +509,38 @@
             _running = false;
         }
     }
-}
 
-@* ── Sync Log Table fragment ── *@
-@if (_xeroLogs.Any() || _qboLogs.Any() || _myobLogs.Any())
-{
-    @* Individual log tables are rendered inside each expansion panel above *@
-}
-
-@* Local reusable log table (defined in-file as a code-behind fragment via Blazor inline component pattern) *@
-@* Note: Blazor Server doesn't support nested component classes in .razor files;
-   we render the table inline in each panel using the pattern below. *@
-
-<style>
-    .sync-log-table td, .sync-log-table th { font-size: 12px; padding: 4px 8px; }
-    .status-success { color: #22c55e; }
-    .status-failed  { color: #ef4444; }
-    .status-running { color: #f59e0b; }
-</style>
-
-@* Helper: Inline log table render — called from code above for each provider *@
-@{
-    void RenderLogTable(List<SyncLogEntry> logs)
+    private RenderFragment RenderLogTable(List<SyncLogEntry> logs) => __builder =>
     {
-        // Rendered per-provider inside expansion panels above via component variable
-    }
+        __builder.OpenElement(0, "table");
+        __builder.AddAttribute(1, "class", "sync-log-table");
+        __builder.OpenElement(2, "thead");
+        __builder.OpenElement(3, "tr");
+        foreach (var h in new[] { "Entity", "Direction", "Count", "Status", "Started", "Completed", "Error" })
+        {
+            __builder.OpenElement(4, "th");
+            __builder.AddContent(5, h);
+            __builder.CloseElement();
+        }
+        __builder.CloseElement();
+        __builder.CloseElement();
+        __builder.OpenElement(6, "tbody");
+        foreach (var log in logs)
+        {
+            __builder.OpenElement(7, "tr");
+            __builder.OpenElement(8, "td"); __builder.AddContent(9, log.EntityType);  __builder.CloseElement();
+            __builder.OpenElement(10, "td"); __builder.AddContent(11, log.Direction); __builder.CloseElement();
+            __builder.OpenElement(12, "td"); __builder.AddContent(13, log.Count);     __builder.CloseElement();
+            __builder.OpenElement(14, "td");
+            __builder.AddAttribute(15, "class", log.Status == "Success" ? "status-success" : log.Status == "Failed" ? "status-failed" : "status-running");
+            __builder.AddContent(16, log.Status);
+            __builder.CloseElement();
+            __builder.OpenElement(17, "td"); __builder.AddContent(18, log.StartedAt.ToLocalTime().ToString("g")); __builder.CloseElement();
+            __builder.OpenElement(19, "td"); __builder.AddContent(20, log.CompletedAt?.ToLocalTime().ToString("g") ?? "-"); __builder.CloseElement();
+            __builder.OpenElement(21, "td"); __builder.AddContent(22, log.ErrorMessage ?? ""); __builder.CloseElement();
+            __builder.CloseElement();
+        }
+        __builder.CloseElement();
+        __builder.CloseElement();
+    };
 }
