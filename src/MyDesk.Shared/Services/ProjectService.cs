@@ -173,7 +173,7 @@ public class ProjectService
                 ActualCost      = ISNULL((SELECT SUM(Amount) FROM ProjectCostEntries WHERE ProjectId = @ProjectId), 0),
                 UpdatedAt       = GETDATE()
             WHERE ProjectId = @ProjectId";
-        await _db.ExecuteNonQueryAsync(sql, new { ProjectId = projectId });
+        await _db.ExecuteNonQueryAsync(sql, new() { ["ProjectId"] = projectId });
     }
 
     /// <summary>Returns the project's PortalToken, generating and persisting one if it does not yet exist.</summary>
@@ -188,7 +188,7 @@ public class ProjectService
         var token = Guid.NewGuid().ToString("N");
         await _db.ExecuteNonQueryAsync(
             "UPDATE Projects SET PortalToken = @Token, UpdatedAt = GETDATE() WHERE ProjectId = @ProjectId",
-            new { Token = token, ProjectId = projectId });
+            new() { ["Token"] = token, ["ProjectId"] = projectId });
         return token;
     }
 
@@ -253,7 +253,7 @@ public class ProjectService
     {
         await _db.ExecuteNonQueryAsync(
             "UPDATE Tasks SET PercentComplete = @Percent, UpdatedAt = GETDATE() WHERE TaskId = @TaskId",
-            new { TaskId = taskId, Percent = percent });
+            new() { ["TaskId"] = taskId, ["Percent"] = percent });
 
         // Refresh project-level aggregates
         var task = await GetTaskAsync(taskId);
@@ -346,7 +346,7 @@ public class ProjectService
     {
         await _db.ExecuteNonQueryAsync(
             "DELETE FROM ProjectMembers WHERE MemberId = @MemberId",
-            new { MemberId = memberId });
+            new() { ["MemberId"] = memberId });
     }
 
     // -------------------------------------------------------------------------
@@ -391,7 +391,7 @@ public class ProjectService
     {
         await _db.ExecuteNonQueryAsync(
             "DELETE FROM ProjectMilestones WHERE MilestoneId = @MilestoneId",
-            new { MilestoneId = milestoneId });
+            new() { ["MilestoneId"] = milestoneId });
     }
 
     public async Task SignOffMilestoneAsync(int milestoneId, string signedOffBy)
@@ -403,7 +403,7 @@ public class ProjectService
                 SignOffBy = @SignedOffBy,
                 ActualDate = CAST(GETDATE() AS DATE)
             WHERE MilestoneId = @MilestoneId";
-        await _db.ExecuteNonQueryAsync(sql, new { MilestoneId = milestoneId, SignedOffBy = signedOffBy });
+        await _db.ExecuteNonQueryAsync(sql, new() { ["MilestoneId"] = milestoneId, ["SignedOffBy"] = signedOffBy });
     }
 
     // -------------------------------------------------------------------------
@@ -430,7 +430,7 @@ public class ProjectService
     {
         await _db.ExecuteNonQueryAsync(
             "DELETE FROM ProjectCostEntries WHERE CostEntryId = @CostEntryId",
-            new { CostEntryId = entryId });
+            new() { ["CostEntryId"] = entryId });
     }
 
     public async Task<decimal> GetTotalCostAsync(int projectId)
@@ -492,7 +492,7 @@ public class ProjectService
                 RejectionReason = CASE WHEN @Status = 'Rejected'            THEN @Reason ELSE RejectionReason END,
                 UpdatedAt = GETDATE()
             WHERE ChangeRequestId = @Id";
-        await _db.ExecuteNonQueryAsync(sql, new { Id = id, Status = status, By = by, Reason = reason });
+        await _db.ExecuteNonQueryAsync(sql, new() { ["Id"] = id, ["Status"] = status, ["By"] = by, ["Reason"] = reason });
     }
 
     // -------------------------------------------------------------------------
@@ -541,7 +541,7 @@ public class ProjectService
     {
         await _db.ExecuteNonQueryAsync(
             "DELETE FROM RisksIssues WHERE RiskIssueId = @RiskIssueId",
-            new { RiskIssueId = id });
+            new() { ["RiskIssueId"] = id });
     }
 
     // -------------------------------------------------------------------------
@@ -640,7 +640,7 @@ public class ProjectService
         // Persist predicted end date
         await _db.ExecuteNonQueryAsync(
             "UPDATE Projects SET PredictedEndDate = @PredictedEndDate, UpdatedAt = GETDATE() WHERE ProjectId = @ProjectId",
-            new { PredictedEndDate = predictedEndDate, ProjectId = projectId });
+            new() { ["PredictedEndDate"] = predictedEndDate, ["ProjectId"] = projectId });
 
         return new ProjectHealthSnapshot
         {
