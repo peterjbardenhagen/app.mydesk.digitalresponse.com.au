@@ -49,19 +49,19 @@
     {
       "configurationUrl": "https://svr1.digitalresponse.com.au/teams/tab/configure",
       "canUpdateConfiguration": true,
-      "scopes": ["team", "groupchat"],
+      "scopes": ["team", "groupChat"],
       "context": ["channelTab", "meetingChatTab"]
     }
   ],
   "bots": [
     {
       "botId": "199646d6-a7e6-4a35-9004-bd3311c94599",
-      "scopes": ["personal", "team", "groupchat"],
+      "scopes": ["personal", "team", "groupChat"],
       "supportsFiles": false,
       "isNotificationOnly": false,
       "commandLists": [
         {
-          "scopes": ["personal", "team", "groupchat"],
+          "scopes": ["personal", "team", "groupChat"],
           "commands": [
             {
               "title": "help",
