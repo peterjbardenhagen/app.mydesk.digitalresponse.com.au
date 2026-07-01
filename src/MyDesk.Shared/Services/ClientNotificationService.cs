@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using MyDesk.Shared.Models;
+using MyDesk.Shared.Services.Integrations;
 
 namespace MyDesk.Shared.Services;
 
@@ -20,7 +21,7 @@ public class ClientNotificationService
 
     public ClientNotificationService(
         IHttpClientFactory httpFactory,
-        PlatformSettingsService platformSettings,
+        IAccountingSettingsService platformSettings,
         ILogger<ClientNotificationService> logger)
     {
         _httpFactory = httpFactory;
