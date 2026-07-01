@@ -220,198 +220,374 @@ else
             </MudGrid>
         </MudTabPanel>
 
-        <!-- ── TASKS ── -->
+        <!-- ── TASKS WORKSPACE (Gallery / Grid / Kanban / Gantt) ── -->
         <MudTabPanel Text="Tasks" Icon="@Icons.Material.Rounded.Task">
-            <div class="d-flex gap-2 mb-3 align-center">
-                <MudSelect T="string" @bind-Value="_taskFilter" Label="Filter" Variant="Variant.Outlined" Dense="true" Style="min-width:160px;">
-                    <MudSelectItem Value="@("All")">All Tasks</MudSelectItem>
-                    <MudSelectItem Value="@("Backlog")">Backlog</MudSelectItem>
-                    <MudSelectItem Value="@("InProgress")">In Progress</MudSelectItem>
-                    <MudSelectItem Value="@("Done")">Done</MudSelectItem>
+            <!-- Toolbar: view switcher + filters + team presets -->
+            <div class="d-flex flex-wrap gap-2 align-center mb-3">
+                <MudPaper Outlined="true" Class="d-flex" Style="border-radius:8px;overflow:hidden;">
+                    @foreach (var (icon, view, tip) in new[]{
+                        (Icons.Material.Rounded.GridView,    "gallery", "Gallery"),
+                        (Icons.Material.Rounded.TableChart,  "grid",    "Grid"),
+                        (Icons.Material.Rounded.ViewKanban,  "kanban",  "Kanban"),
+                        (Icons.Material.Rounded.Timeline,    "gantt",   "Gantt")})
+                    {
+                        <MudTooltip Text="@tip">
+                            <MudIconButton Icon="@icon" Size="Size.Small"
+                                           Color="@(_taskView == view ? Color.Primary : Color.Default)"
+                                           Style="@(_taskView == view ? "background:var(--mud-palette-primary);color:white;border-radius:0;" : "border-radius:0;")"
+                                           OnClick="() => _taskView = view" />
+                        </MudTooltip>
+                    }
+                </MudPaper>
+                <MudSelect T="string" @bind-Value="_taskFilter" Label="Status" Variant="Variant.Outlined"
+                           Dense="true" Margin="Margin.Dense" Style="min-width:120px;max-width:150px;">
+                    <MudSelectItem Value="@("All")">All</MudSelectItem>
+                    @foreach (var s in _taskStatuses) { <MudSelectItem Value="@s">@s</MudSelectItem> }
                 </MudSelect>
-                <MudSpacer />
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add" Size="Size.Small" OnClick="() => _addTaskOpen = true">Add Task</MudButton>
-            </div>
-            <MudTable Items="FilteredTasks" Dense="true" Hover="true" Striped="true" Elevation="0" Outlined="true">
-                <HeaderContent>
-                    <MudTh>Task</MudTh>
-                    <MudTh>Assignee</MudTh>
-                    <MudTh>Priority</MudTh>
-                    <MudTh>Due</MudTh>
-                    <MudTh Style="min-width:160px">% Complete</MudTh>
-                    <MudTh>Status</MudTh>
-                    <MudTh></MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd>
-                        <MudText Typo="Typo.body2" Style="font-weight:500">@context.Title</MudText>
-                        @if (!string.IsNullOrWhiteSpace(context.MilestoneName))
-                        {
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.MilestoneName</MudText>
-                        }
-                    </MudTd>
-                    <MudTd><MudText Typo="Typo.caption">@(context.AssigneeName ?? "—")</MudText></MudTd>
-                    <MudTd><MudChip T="string" Size="Size.Small" Color="@GetPriorityColor(context.Priority)">@context.Priority</MudChip></MudTd>
-                    <MudTd><MudText Typo="Typo.caption" Color="@(context.DueDate < DateTime.Today && context.Status != "Done" ? Color.Error : Color.Default)">@(context.DueDate?.ToString("dd MMM") ?? "—")</MudText></MudTd>
-                    <MudTd>
-                        <div class="d-flex align-center gap-2">
-                            <MudSlider T="int" Value="@context.PercentComplete" Min="0" Max="100" Step="5"
-                                       ValueChanged="@(v => UpdatePercent(context, v))"
-                                       Style="flex:1" Color="Color.Primary" />
-                            <MudText Typo="Typo.caption" Style="min-width:32px">@context.PercentComplete%</MudText>
-                        </div>
-                    </MudTd>
-                    <MudTd>
-                        <MudSelect T="string" Value="@context.Status" ValueChanged="@(s => UpdateTaskStatus(context, s))"
-                                   Dense="true" Variant="Variant.Text" Style="min-width:110px;">
-                            @foreach (var s in _taskStatuses)
-                            {
-                                <MudSelectItem Value="@s">@s</MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudTd>
-                    <MudTd>
-                        <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
-                                       OnClick="() => DeleteTask(context.TaskId)" />
-                    </MudTd>
-                </RowTemplate>
-            </MudTable>
-        </MudTabPanel>
-
-        <!-- ── KANBAN ── -->
-        <MudTabPanel Text="Kanban" Icon="@Icons.Material.Rounded.ViewKanban">
-            <MudGrid Spacing="2">
-                @foreach (var col in _kanbanColumns)
+                <MudSelect T="string" @bind-Value="_filterPriority" Label="Priority" Variant="Variant.Outlined"
+                           Dense="true" Margin="Margin.Dense" Style="min-width:115px;max-width:145px;">
+                    <MudSelectItem Value="@("all")">All</MudSelectItem>
+                    @foreach (var p in new[]{"Critical","High","Medium","Low"}) { <MudSelectItem Value="@p">@p</MudSelectItem> }
+                </MudSelect>
+                @if (_taskView is "gallery" or "grid")
                 {
-                    <MudItem xs="12" sm="6" md="3">
-                        <MudPaper Outlined="true" Class="pa-2" Style="min-height:300px;">
-                            <div class="d-flex align-center gap-1 mb-2 px-1">
-                                <MudIcon Icon="@col.Icon" Size="Size.Small" Color="@col.Color" />
-                                <MudText Typo="Typo.subtitle2">@col.Label</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ml-auto">(@_tasks.Count(t => t.Status == col.Status))</MudText>
-                            </div>
-                            @foreach (var task in _tasks.Where(t => t.Status == col.Status).OrderBy(t => t.OrderIndex))
-                            {
-                                <MudPaper Outlined="true" Class="pa-2 mb-2" Style="cursor:pointer;" @onclick="() => OpenTaskEdit(task)">
-                                    <div class="d-flex align-center gap-1 mb-1">
-                                        <MudChip T="string" Size="Size.Small" Color="@GetPriorityColor(task.Priority)">@task.Priority</MudChip>
-                                        <MudSpacer />
-                                        <MudText Typo="Typo.caption">@task.PercentComplete%</MudText>
-                                    </div>
-                                    <MudText Typo="Typo.body2" Style="font-weight:500">@task.Title</MudText>
-                                    @if (!string.IsNullOrWhiteSpace(task.AssigneeName))
-                                    {
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@task.AssigneeName</MudText>
-                                    }
-                                    @if (task.DueDate.HasValue)
-                                    {
-                                        <MudText Typo="Typo.caption" Color="@(task.DueDate < DateTime.Today && task.Status != "Done" ? Color.Error : Color.Secondary)">
-                                            Due @task.DueDate.Value.ToString("dd MMM")
-                                        </MudText>
-                                    }
-                                    <MudProgressLinear Value="@task.PercentComplete" Color="@col.Color" Class="mt-1" Size="Size.Small" />
-                                    <div class="d-flex gap-1 mt-1">
-                                        @foreach (var dest in _kanbanColumns.Where(c => c.Status != col.Status).Take(2))
-                                        {
-                                            <MudButton Size="Size.Small" Variant="Variant.Text" Color="@dest.Color"
-                                                       OnClick="() => MoveTask(task, dest.Status)" Style="font-size:10px;padding:2px 4px;min-width:0;">
-                                                → @dest.Label
-                                            </MudButton>
-                                        }
-                                    </div>
-                                </MudPaper>
-                            }
-                        </MudPaper>
-                    </MudItem>
+                    <MudSelect T="string" @bind-Value="_groupBy" Label="Group by" Variant="Variant.Outlined"
+                               Dense="true" Margin="Margin.Dense" Style="min-width:130px;max-width:160px;">
+                        <MudSelectItem Value="@("none")">No grouping</MudSelectItem>
+                        <MudSelectItem Value="@("status")">Status</MudSelectItem>
+                        <MudSelectItem Value="@("milestone")">Milestone</MudSelectItem>
+                        <MudSelectItem Value="@("priority")">Priority</MudSelectItem>
+                        <MudSelectItem Value="@("assignee")">Assignee</MudSelectItem>
+                    </MudSelect>
                 }
-            </MudGrid>
-        </MudTabPanel>
-
-        <!-- ── GANTT ── -->
-        <MudTabPanel Text="Gantt" Icon="@Icons.Material.Rounded.Timeline">
-            @{
-                var ganttStart = _tasks.Where(t => t.TaskStartDate.HasValue).Min(t => (DateTime?)t.TaskStartDate)
-                              ?? _project.StartDate ?? DateTime.Today;
-                var ganttEnd   = _tasks.Where(t => t.TaskEndDate.HasValue).Max(t => (DateTime?)t.TaskEndDate)
-                              ?? _project.EndDate ?? DateTime.Today.AddDays(30);
-                var totalDays  = Math.Max(1, (ganttEnd - ganttStart).Days + 1);
-            }
-            <div style="overflow-x:auto;">
-                <div style="min-width:900px;">
-                    <!-- Timeline header: weeks -->
-                    <div class="d-flex" style="margin-left:240px; border-bottom:2px solid var(--mud-palette-divider);">
-                        @{
-                            var wk = ganttStart;
-                            while (wk <= ganttEnd)
-                            {
-                                var wkWidth = Math.Max(1, Math.Min((ganttEnd - wk).Days + 1, 7)) * 100.0 / totalDays;
-                                <div style="width:@($"{wkWidth:F1}%"); text-align:center; font-size:10px; color:var(--mud-palette-text-secondary); border-right:1px solid var(--mud-palette-divider); padding:2px 0;">
-                                    @wk.ToString("dd MMM")
+                <MudSpacer />
+                <MudMenu Label="Team Views" StartIcon="@Icons.Material.Rounded.Groups" Variant="Variant.Outlined" Size="Size.Small">
+                    @foreach (var preset in _teamPresets)
+                    {
+                        <MudMenuItem OnClick="() => ApplyPreset(preset)">
+                            <div class="d-flex align-center gap-2">
+                                <MudIcon Icon="@preset.Icon" Size="Size.Small" />
+                                <div>
+                                    <MudText Typo="Typo.body2">@preset.Name</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@preset.Description</MudText>
                                 </div>
+                            </div>
+                        </MudMenuItem>
+                    }
+                </MudMenu>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
+                           Size="Size.Small" OnClick="() => _addTaskOpen = true">Add Task</MudButton>
+            </div>
+            @{
+                var viewTasks = FilteredTasks.ToList();
+                IEnumerable<IGrouping<string, TaskItem>> grouped = _groupBy switch
+                {
+                    "status"    => viewTasks.GroupBy(t => t.Status),
+                    "milestone" => viewTasks.GroupBy(t => t.MilestoneName ?? "General"),
+                    "priority"  => viewTasks.GroupBy(t => t.Priority),
+                    "assignee"  => viewTasks.GroupBy(t => t.AssigneeName ?? "Unassigned"),
+                    _           => viewTasks.GroupBy(_ => ""),
+                };
+            }
+
+            <!-- ── GALLERY ── -->
+            @if (_taskView == "gallery")
+            {
+                @if (!viewTasks.Any())
+                {
+                    <MudPaper Outlined="true" Class="pa-12 text-center">
+                        <MudIcon Icon="@Icons.Material.Rounded.GridView" Size="Size.Large" Class="mb-2" Style="opacity:.3" />
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">No tasks match the current filters.</MudText>
+                    </MudPaper>
+                }
+                @foreach (var grp in grouped)
+                {
+                    @if (_groupBy != "none" && !string.IsNullOrEmpty(grp.Key))
+                    {
+                        <div class="d-flex align-center gap-2 mb-2 mt-3">
+                            <div style="width:4px;height:20px;border-radius:2px;background:var(--mud-palette-primary);"></div>
+                            <MudText Typo="Typo.subtitle2">@grp.Key</MudText>
+                            <MudChip T="string" Size="Size.Small">@grp.Count()</MudChip>
+                        </div>
+                    }
+                    <MudGrid Spacing="3">
+                        @foreach (var task in grp.OrderBy(t => t.OrderIndex).ThenBy(t => t.DueDate))
+                        {
+                            var isOverdue = task.DueDate < DateTime.Today && task.Status != "Done";
+                            var taskCardStyle = $"cursor:pointer;border-radius:10px;border-left:4px solid {PriorityHex(task.Priority)};";
+                            <MudItem xs="12" sm="6" md="4" lg="3">
+                                <MudCard Elevation="1" @onclick="() => OpenTaskEdit(task)"
+                                         Style="@taskCardStyle">
+                                    <MudCardContent Class="pa-3">
+                                        <div class="d-flex gap-1 mb-1 flex-wrap">
+                                            <MudChip T="string" Size="Size.Small" Color="@GetPriorityColor(task.Priority)" Style="height:20px;font-size:10px;">@task.Priority</MudChip>
+                                            <MudChip T="string" Size="Size.Small" Color="@GetTaskStatusColor(task.Status)" Style="height:20px;font-size:10px;">@task.Status</MudChip>
+                                            @if (task.StoryPoints.HasValue)
+                                            {
+                                                <MudChip T="string" Size="Size.Small" Style="height:20px;font-size:10px;margin-left:auto;">@task.StoryPoints pts</MudChip>
+                                            }
+                                        </div>
+                                        <MudText Typo="Typo.subtitle2" Style="font-weight:600;line-height:1.3;">@task.Title</MudText>
+                                        @if (!string.IsNullOrWhiteSpace(task.Description))
+                                        {
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary"
+                                                     Style="font-size:11px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                                                @task.Description
+                                            </MudText>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(task.MilestoneName))
+                                        {
+                                            <div class="d-flex align-center gap-1 mt-1">
+                                                <MudIcon Icon="@Icons.Material.Rounded.Flag" Size="Size.Small" Color="Color.Warning" Style="font-size:12px;" />
+                                                <MudText Typo="Typo.caption" Color="Color.Warning" Style="font-size:11px;">@task.MilestoneName</MudText>
+                                            </div>
+                                        }
+                                        <MudDivider Class="my-1" />
+                                        <div class="d-flex align-center gap-1">
+                                            @if (!string.IsNullOrWhiteSpace(task.AssigneeName))
+                                            {
+                                                <MudAvatar Size="Size.Small" Color="Color.Primary" Style="width:20px;height:20px;font-size:10px;">@task.AssigneeName[0]</MudAvatar>
+                                                <MudText Typo="Typo.caption" Style="font-size:11px;flex:1;">@task.AssigneeName</MudText>
+                                            }
+                                            else { <MudText Typo="Typo.caption" Color="Color.Secondary" Style="font-size:11px;flex:1;">Unassigned</MudText> }
+                                            @if (task.DueDate.HasValue)
+                                            {
+                                                <MudText Typo="Typo.caption" Color="@(isOverdue ? Color.Error : Color.Secondary)" Style="font-size:10px;">
+                                                    @task.DueDate.Value.ToString("dd MMM")
+                                                </MudText>
+                                            }
+                                        </div>
+                                        <MudProgressLinear Value="@task.PercentComplete"
+                                                           Color="@(task.Status == "Done" ? Color.Success : isOverdue ? Color.Error : Color.Primary)"
+                                                           Size="Size.Small" Class="mt-1" Style="border-radius:4px;" />
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary" Style="font-size:10px;text-align:right;">@task.PercentComplete%</MudText>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                }
+            }
+
+            <!-- ── GRID ── -->
+            @if (_taskView == "grid")
+            {
+                @if (!viewTasks.Any())
+                {
+                    <MudPaper Outlined="true" Class="pa-8 text-center">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">No tasks match the current filters.</MudText>
+                    </MudPaper>
+                }
+                @foreach (var grp in grouped)
+                {
+                    @if (_groupBy != "none" && !string.IsNullOrEmpty(grp.Key))
+                    {
+                        <div class="d-flex align-center gap-2 mb-1 mt-3">
+                            <div style="width:4px;height:20px;border-radius:2px;background:var(--mud-palette-primary);"></div>
+                            <MudText Typo="Typo.subtitle2">@grp.Key</MudText>
+                            <MudChip T="string" Size="Size.Small">@grp.Count()</MudChip>
+                        </div>
+                    }
+                    <MudTable Items="@grp" Dense="true" Hover="true" Striped="true" Elevation="0" Outlined="true" Class="mb-3">
+                        <HeaderContent>
+                            <MudTh Style="width:38%">Task</MudTh>
+                            <MudTh>Assignee</MudTh>
+                            <MudTh>Priority</MudTh>
+                            <MudTh>Due</MudTh>
+                            <MudTh Style="min-width:140px">Progress</MudTh>
+                            <MudTh>Status</MudTh>
+                            <MudTh></MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>
+                                <div style="cursor:pointer;" @onclick="() => OpenTaskEdit(context)">
+                                    <MudText Typo="Typo.body2" Style="font-weight:500">@context.Title</MudText>
+                                    @if (!string.IsNullOrWhiteSpace(context.MilestoneName))
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Warning" Style="font-size:11px;">⬦ @context.MilestoneName</MudText>
+                                    }
+                                </div>
+                            </MudTd>
+                            <MudTd>
+                                @if (!string.IsNullOrWhiteSpace(context.AssigneeName))
+                                {
+                                    <div class="d-flex align-center gap-1">
+                                        <MudAvatar Size="Size.Small" Color="Color.Primary" Style="width:22px;height:22px;font-size:10px;">@context.AssigneeName[0]</MudAvatar>
+                                        <MudText Typo="Typo.caption">@context.AssigneeName</MudText>
+                                    </div>
+                                }
+                                else { <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText> }
+                            </MudTd>
+                            <MudTd><MudChip T="string" Size="Size.Small" Color="@GetPriorityColor(context.Priority)">@context.Priority</MudChip></MudTd>
+                            <MudTd>
+                                <MudText Typo="Typo.caption" Color="@(context.DueDate < DateTime.Today && context.Status != "Done" ? Color.Error : Color.Default)">
+                                    @(context.DueDate?.ToString("dd MMM") ?? "—")
+                                </MudText>
+                            </MudTd>
+                            <MudTd>
+                                <div class="d-flex align-center gap-1">
+                                    <MudSlider T="int" Value="@context.PercentComplete" Min="0" Max="100" Step="5"
+                                               ValueChanged="@(v => UpdatePercent(context, v))"
+                                               Style="flex:1" Color="Color.Primary" />
+                                    <MudText Typo="Typo.caption" Style="min-width:32px;font-size:10px;">@context.PercentComplete%</MudText>
+                                </div>
+                            </MudTd>
+                            <MudTd>
+                                <MudSelect T="string" Value="@context.Status" ValueChanged="@(s => UpdateTaskStatus(context, s))"
+                                           Dense="true" Variant="Variant.Text" Style="min-width:110px;">
+                                    @foreach (var s in _taskStatuses) { <MudSelectItem Value="@s">@s</MudSelectItem> }
+                                </MudSelect>
+                            </MudTd>
+                            <MudTd>
+                                <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
+                                               OnClick="() => DeleteTask(context.TaskId)" />
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+            }
+
+            <!-- ── KANBAN (drag-drop) ── -->
+            @if (_taskView == "kanban")
+            {
+                <MudGrid Spacing="2">
+                    @foreach (var col in _kanbanColumns)
+                    {
+                        var colTasks = viewTasks.Where(t => t.Status == col.Status).OrderBy(t => t.OrderIndex).ToList();
+                        var colIsTarget = _dropTarget == col.Status;
+                        var colBorderColor = colIsTarget ? "var(--mud-palette-primary)" : "var(--mud-palette-divider)";
+                        var colBgColor = colIsTarget ? "rgba(25,118,210,0.05)" : "var(--mud-palette-surface)";
+                        var colStyle = $"min-height:320px;padding:8px;border-radius:8px;border:2px dashed {colBorderColor};background:{colBgColor};transition:all .15s;";
+                        <MudItem xs="12" sm="6" md="@(12 / _kanbanColumns.Length)">
+                            <div @ondragover:preventDefault @ondragenter:preventDefault
+                                 @ondragenter="() => _dropTarget = col.Status"
+                                 @ondragleave="() => { if (_dropTarget == col.Status) _dropTarget = string.Empty; }"
+                                 @ondrop="() => OnDropAsync(col.Status)"
+                                 style="@colStyle">
+                                <div class="d-flex align-center gap-1 mb-2 px-1">
+                                    <MudIcon Icon="@col.Icon" Size="Size.Small" Color="@col.Color" />
+                                    <MudText Typo="Typo.subtitle2">@col.Label</MudText>
+                                    <MudChip T="string" Size="Size.Small" Style="margin-left:auto;height:18px;font-size:10px;">@colTasks.Count</MudChip>
+                                </div>
+                                @foreach (var task in colTasks)
+                                {
+                                    var isOverdue = task.DueDate < DateTime.Today && task.Status != "Done";
+                                    var cardOpacity = _draggingTask?.TaskId == task.TaskId ? ".4" : "1";
+                                    var cardStyle = $"margin-bottom:8px;border-radius:8px;padding:10px;cursor:grab;background:var(--mud-palette-background);border:1px solid var(--mud-palette-divider);border-left:4px solid {PriorityHex(task.Priority)};opacity:{cardOpacity};transition:opacity .1s;";
+                                    <div draggable="true"
+                                         @ondragstart="() => _draggingTask = task"
+                                         @ondragend="() => { _draggingTask = null; _dropTarget = string.Empty; }"
+                                         @onclick="() => OpenTaskEdit(task)"
+                                         style="@cardStyle">
+                                        <div class="d-flex gap-1 mb-1">
+                                            <MudChip T="string" Size="Size.Small" Color="@GetPriorityColor(task.Priority)" Style="height:18px;font-size:10px;">@task.Priority</MudChip>
+                                            @if (task.StoryPoints.HasValue) { <MudText Typo="Typo.caption" Style="margin-left:auto;font-size:10px;">@task.StoryPoints sp</MudText> }
+                                        </div>
+                                        <MudText Typo="Typo.body2" Style="font-weight:600;font-size:13px;line-height:1.3;">@task.Title</MudText>
+                                        @if (!string.IsNullOrWhiteSpace(task.MilestoneName))
+                                        {
+                                            <MudText Typo="Typo.caption" Color="Color.Warning" Style="font-size:10px;">⬦ @task.MilestoneName</MudText>
+                                        }
+                                        <div class="d-flex align-center gap-1 mt-1">
+                                            @if (!string.IsNullOrWhiteSpace(task.AssigneeName))
+                                            {
+                                                <MudAvatar Size="Size.Small" Color="Color.Primary" Style="width:18px;height:18px;font-size:9px;">@task.AssigneeName[0]</MudAvatar>
+                                                <MudText Typo="Typo.caption" Style="font-size:10px;flex:1;">@task.AssigneeName</MudText>
+                                            }
+                                            @if (task.DueDate.HasValue)
+                                            {
+                                                <MudText Typo="Typo.caption" Color="@(isOverdue ? Color.Error : Color.Secondary)" Style="font-size:10px;">@task.DueDate.Value.ToString("dd MMM")</MudText>
+                                            }
+                                        </div>
+                                        <MudProgressLinear Value="@task.PercentComplete" Color="@col.Color" Size="Size.Small" Class="mt-1" Style="border-radius:4px;" />
+                                    </div>
+                                }
+                                @if (!colTasks.Any())
+                                {
+                                    <div style="text-align:center;padding:24px 0;font-size:12px;color:var(--mud-palette-text-secondary);">Drop tasks here</div>
+                                }
+                            </div>
+                        </MudItem>
+                    }
+                </MudGrid>
+            }
+
+            <!-- ── GANTT ── -->
+            @if (_taskView == "gantt")
+            {
+                var ganttTasks = viewTasks;
+                var ganttStart = ganttTasks.Where(t => t.TaskStartDate.HasValue).Select(t => t.TaskStartDate!.Value)
+                                 .Concat(new[]{ _project!.StartDate ?? DateTime.Today }).Min();
+                var ganttEnd   = ganttTasks.Where(t => t.TaskEndDate.HasValue).Select(t => t.TaskEndDate!.Value)
+                                 .Concat(new[]{ _project!.EndDate ?? DateTime.Today.AddDays(30) }).Max();
+                if (ganttEnd < ganttStart.AddDays(7)) ganttEnd = ganttStart.AddDays(30);
+                var totalDays  = Math.Max(1, (ganttEnd - ganttStart).Days + 1);
+                var todayOffset = Math.Clamp((DateTime.Today - ganttStart).Days * 100.0 / totalDays, 0, 100);
+                <div style="overflow-x:auto;">
+                    <div style="min-width:900px;">
+                        <div class="d-flex" style="margin-left:220px;border-bottom:2px solid var(--mud-palette-divider);background:var(--mud-palette-background-grey);">
+                            @{ var wk = ganttStart.AddDays(-(int)ganttStart.DayOfWeek); }
+                            @while (wk <= ganttEnd)
+                            {
+                                var wdays = Math.Max(0, Math.Min((ganttEnd - wk).Days + 1, 7));
+                                var wpct  = wdays * 100.0 / totalDays;
+                                if (wpct > 0)
+                                {
+                                    var wpctStr = wpct.ToString("F2");
+                                    <div style="width:@(wpctStr)%;text-align:center;font-size:10px;color:var(--mud-palette-text-secondary);border-right:1px solid var(--mud-palette-divider);padding:3px 0;white-space:nowrap;overflow:hidden;">@wk.ToString("dd MMM")</div>
+                                }
                                 wk = wk.AddDays(7);
                             }
-                        }
-                    </div>
-
-                    <!-- Today marker position -->
-                    @{
-                        var todayOffset = Math.Clamp((DateTime.Today - ganttStart).Days * 100.0 / totalDays, 0, 100);
-                    }
-
-                    <!-- Task rows -->
-                    @foreach (var grp in _tasks.GroupBy(t => t.MilestoneName ?? "General"))
-                    {
-                        <div class="px-1 py-1" style="background:var(--mud-palette-background-grey); font-size:11px; font-weight:600; color:var(--mud-palette-primary);">
-                            @grp.Key
                         </div>
-                        @foreach (var task in grp.OrderBy(t => t.TaskStartDate ?? ganttStart))
+                        @foreach (var grp in ganttTasks.GroupBy(t => t.MilestoneName ?? "General"))
                         {
-                            var tStart  = task.TaskStartDate ?? ganttStart;
-                            var tEnd    = task.TaskEndDate   ?? tStart.AddDays(3);
-                            var left    = Math.Max(0, (tStart - ganttStart).Days * 100.0 / totalDays);
-                            var width   = Math.Max(0.5, (tEnd - tStart).Days * 100.0 / totalDays);
-                            var isLate  = tEnd < DateTime.Today && task.PercentComplete < 100;
-
-                            <div class="d-flex align-center" style="height:36px; border-bottom:1px solid var(--mud-palette-divider);">
-                                <div style="width:240px; min-width:240px; padding:0 8px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">
-                                    <MudText Typo="Typo.caption" Style="font-weight:500">@task.Title</MudText>
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="font-size:10px"> @(task.AssigneeName ?? "")</MudText>
-                                </div>
-                                <div style="flex:1; position:relative; height:100%;">
-                                    <!-- today line -->
-                                    <div style="position:absolute; left:@($"{todayOffset:F1}%"); top:0; bottom:0; width:2px; background:var(--mud-palette-error); opacity:0.5; z-index:1;" />
-                                    <!-- task bar -->
-                                    <div style="position:absolute; left:@($"{left:F1}%"); width:@($"{width:F1}%"); top:8px; bottom:8px;
-                                                background:@(isLate ? "var(--mud-palette-error)" : task.Status == "Done" ? "var(--mud-palette-success)" : "var(--mud-palette-primary)");
-                                                border-radius:4px; opacity:0.8; overflow:hidden; display:flex; align-items:center; padding:0 4px;">
-                                        <div style="height:100%; width:@(task.PercentComplete)%; background:rgba(255,255,255,0.35); position:absolute; left:0; top:0;" />
-                                        <MudText Typo="Typo.caption" Style="color:white; font-size:10px; white-space:nowrap; overflow:hidden; position:relative; z-index:1;">@task.PercentComplete%</MudText>
+                            <div style="padding:2px 8px;background:var(--mud-palette-background-grey);font-size:11px;font-weight:600;color:var(--mud-palette-primary-text);border-bottom:1px solid var(--mud-palette-divider);">@grp.Key</div>
+                            @foreach (var task in grp.OrderBy(t => t.TaskStartDate ?? ganttStart))
+                            {
+                                var ts    = task.TaskStartDate ?? ganttStart;
+                                var te    = task.TaskEndDate   ?? ts.AddDays(Math.Max(1, (int)((task.EstimatedHours ?? 8) / 8)));
+                                var left  = Math.Max(0, (ts - ganttStart).Days * 100.0 / totalDays);
+                                var width = Math.Max(0.3, (te - ts).Days * 100.0 / totalDays);
+                                var late     = te < DateTime.Today && task.PercentComplete < 100;
+                                var bar      = late ? "var(--mud-palette-error)" : task.Status == "Done" ? "var(--mud-palette-success)" : "var(--mud-palette-primary)";
+                                var todayStr = todayOffset.ToString("F2");
+                                var leftStr  = left.ToString("F2");
+                                var widthStr = width.ToString("F2");
+                                <div class="d-flex align-center" style="height:34px;border-bottom:1px solid var(--mud-palette-divider);cursor:pointer;" @onclick="() => OpenTaskEdit(task)">
+                                    <div style="width:220px;min-width:220px;padding:0 8px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">
+                                        <div style="font-size:12px;font-weight:500;">@task.Title</div>
+                                        <div style="font-size:10px;color:var(--mud-palette-text-secondary);">@(task.AssigneeName ?? "")</div>
+                                    </div>
+                                    <div style="flex:1;position:relative;height:100%;">
+                                        <div style="position:absolute;left:@(todayStr)%;top:0;bottom:0;width:2px;background:var(--mud-palette-error);opacity:.4;z-index:2;" />
+                                        <div style="position:absolute;left:@(leftStr)%;width:@(widthStr)%;top:6px;bottom:6px;background:@bar;border-radius:4px;overflow:hidden;display:flex;align-items:center;padding:0 4px;" title="@task.Title — @task.PercentComplete%">
+                                            <div style="position:absolute;left:0;top:0;bottom:0;width:@(task.PercentComplete)%;background:rgba(255,255,255,.3);" />
+                                            <span style="color:white;font-size:9px;white-space:nowrap;position:relative;z-index:1;">@task.PercentComplete%</span>
+                                        </div>
                                     </div>
                                 </div>
+                            }
+                        }
+                        @foreach (var ms in _milestones.OrderBy(m => m.DueDate))
+                        {
+                            var msOff    = Math.Clamp((ms.DueDate - ganttStart).Days * 100.0 / totalDays, 0, 100);
+                            var msCss    = ms.Status == "Complete" ? "var(--mud-palette-success)" : "var(--mud-palette-warning)";
+                            var msOffStr = msOff.ToString("F2");
+                            <div style="display:flex;align-items:center;height:22px;border-bottom:1px solid var(--mud-palette-divider);">
+                                <div style="width:220px;min-width:220px;padding:0 8px;overflow:hidden;white-space:nowrap;font-size:10px;color:@msCss;">⬦ @ms.Title</div>
+                                <div style="flex:1;position:relative;height:100%;">
+                                    <div style="position:absolute;left:@(msOffStr)%;top:50%;transform:translate(-50%,-50%) rotate(45deg);width:10px;height:10px;background:@msCss;" title="@ms.Title" />
+                                </div>
                             </div>
                         }
-                    }
-
-                    <!-- Milestone markers -->
-                    @foreach (var ms in _milestones)
-                    {
-                        var msOffset = Math.Clamp((ms.DueDate - ganttStart).Days * 100.0 / totalDays, 0, 100);
-                        <div style="position:relative; height:24px; border-bottom:1px solid var(--mud-palette-divider);">
-                            <div style="width:240px; min-width:240px; padding:0 8px;">
-                                <MudText Typo="Typo.caption" Color="@(ms.Status == "Complete" ? Color.Success : Color.Warning)" Style="font-size:10px;">⬦ @ms.Title</MudText>
-                            </div>
-                            <div style="position:absolute; left:calc(240px + @($"{msOffset:F1}%")); top:2px;
-                                        width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent;
-                                        border-top:12px solid @(ms.Status == "Complete" ? "var(--mud-palette-success)" : "var(--mud-palette-warning)");" />
-                        </div>
-                    }
+                    </div>
                 </div>
-            </div>
-            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
-                <MudIcon Icon="@Icons.Material.Rounded.FiberManualRecord" Size="Size.Small" Style="color:var(--mud-palette-error);vertical-align:middle;" /> Today
-                <MudIcon Icon="@Icons.Material.Rounded.FiberManualRecord" Size="Size.Small" Color="Color.Primary" Style="vertical-align:middle;" Class="ml-2" /> In Progress
-                <MudIcon Icon="@Icons.Material.Rounded.FiberManualRecord" Size="Size.Small" Color="Color.Success" Style="vertical-align:middle;" Class="ml-2" /> Done
-            </MudText>
+                <div class="d-flex gap-3 mt-2" style="font-size:11px;color:var(--mud-palette-text-secondary);">
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--mud-palette-primary);margin-right:3px;vertical-align:middle;"></span>In Progress
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--mud-palette-success);margin-right:3px;vertical-align:middle;"></span>Done
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--mud-palette-error);margin-right:3px;vertical-align:middle;"></span>Overdue
+                </div>
+            }
         </MudTabPanel>
 
         <!-- ── BUDGET ── -->
@@ -483,8 +659,8 @@ else
         <!-- ── RISKS & ISSUES ── -->
         <MudTabPanel Text="Risks & Issues" Icon="@Icons.Material.Rounded.Warning">
             <div class="d-flex gap-2 mb-3">
-                <MudButton Variant="Variant.Filled" Color="Color.Warning" StartIcon="@Icons.Material.Rounded.Add" Size="Size.Small" OnClick="() => AddRiskIssue("Risk")">Add Risk</MudButton>
-                <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Rounded.Add" Size="Size.Small" OnClick="() => AddRiskIssue("Issue")">Log Issue</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Warning" StartIcon="@Icons.Material.Rounded.Add" Size="Size.Small" OnClick='() => AddRiskIssue("Risk")'>Add Risk</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Rounded.Add" Size="Size.Small" OnClick='() => AddRiskIssue("Issue")'>Log Issue</MudButton>
             </div>
 
             @foreach (var type in new[]{"Risk","Issue"})
@@ -757,8 +933,25 @@ else
     private List<RiskIssue> _risksIssues = new();
     private decimal _costTotal;
     private string _taskFilter = "All";
+    private string _filterPriority = "all";
+    private string _taskView = "grid";
+    private string _groupBy = "none";
     private string _userCode = "";
     private string _userName = "";
+
+    // Kanban drag-drop
+    private TaskItem? _draggingTask;
+    private string _dropTarget = "";
+
+    // Team view presets
+    private record TeamPreset(string Name, string Icon, string Description, string View, string GroupBy, string Priority);
+    private static readonly TeamPreset[] _teamPresets =
+    [
+        new("Marketing",   Icons.Material.Rounded.Campaign,  "Gallery · grouped by milestone",    "gallery", "milestone", "all"),
+        new("Operations",  Icons.Material.Rounded.Build,      "Kanban · all tasks",                "kanban",  "none",      "all"),
+        new("Executive",   Icons.Material.Rounded.BarChart,   "Grid · high priority items",        "grid",    "priority",  "High"),
+        new("Engineering", Icons.Material.Rounded.Code,       "Gantt · timeline view",             "gantt",   "milestone", "all"),
+    ];
 
     // Dialog state
     private bool _addTaskOpen, _addMemberOpen, _addMilestoneOpen, _addCostOpen, _addCrOpen, _addRiOpen;
@@ -786,9 +979,10 @@ else
         new("Done",       "Done",        Icons.Material.Rounded.CheckCircle,      Color.Success),
     };
 
-    private IEnumerable<TaskItem> FilteredTasks => _taskFilter == "All"
-        ? _tasks
-        : _tasks.Where(t => t.Status == _taskFilter);
+    private IEnumerable<TaskItem> FilteredTasks =>
+        _tasks
+            .Where(t => _taskFilter == "All" || t.Status == _taskFilter)
+            .Where(t => _filterPriority == "all" || t.Priority.Equals(_filterPriority, StringComparison.OrdinalIgnoreCase));
 
     protected override async Task OnInitializedAsync()
     {
@@ -805,20 +999,20 @@ else
         _project = await ProjectSvc.GetProjectAsync(ProjectId);
         if (_project is null) return;
 
-        var results = await Task.WhenAll(
-            ProjectSvc.GetTasksAsync(projectId: ProjectId),
-            ProjectSvc.GetMembersAsync(ProjectId),
-            ProjectSvc.GetMilestonesAsync(ProjectId),
-            ProjectSvc.GetCostEntriesAsync(ProjectId),
-            ProjectSvc.GetChangeRequestsAsync(ProjectId),
-            ProjectSvc.GetRisksIssuesAsync(ProjectId));
+        var t1 = ProjectSvc.GetTasksAsync(projectId: ProjectId);
+        var t2 = ProjectSvc.GetMembersAsync(ProjectId);
+        var t3 = ProjectSvc.GetMilestonesAsync(ProjectId);
+        var t4 = ProjectSvc.GetCostEntriesAsync(ProjectId);
+        var t5 = ProjectSvc.GetChangeRequestsAsync(ProjectId);
+        var t6 = ProjectSvc.GetRisksIssuesAsync(ProjectId);
+        await Task.WhenAll(t1, t2, t3, t4, t5, t6);
 
-        _tasks          = (List<TaskItem>)results[0];
-        _members        = (List<ProjectMember>)results[1];
-        _milestones     = (List<ProjectMilestone>)results[2];
-        _costEntries    = (List<ProjectCostEntry>)results[3];
-        _changeRequests = (List<ChangeRequest>)results[4];
-        _risksIssues    = (List<RiskIssue>)results[5];
+        _tasks          = await t1;
+        _members        = await t2;
+        _milestones     = await t3;
+        _costEntries    = await t4;
+        _changeRequests = await t5;
+        _risksIssues    = await t6;
         _costTotal      = _costEntries.Sum(e => e.Amount);
 
         _health = await ProjectSvc.GetProjectHealthAsync(ProjectId);
@@ -1078,6 +1272,39 @@ else
         "PendingApproval"=> Color.Warning,
         "Invoiced"       => Color.Info,
         _                => Color.Default,
+    };
+
+    private async Task OnDropAsync(string newStatus)
+    {
+        _dropTarget = string.Empty;
+        if (_draggingTask is null || _draggingTask.Status == newStatus) { _draggingTask = null; return; }
+        await UpdateTaskStatus(_draggingTask, newStatus);
+        _draggingTask = null;
+    }
+
+    private void ApplyPreset(TeamPreset preset)
+    {
+        _taskView = preset.View;
+        _groupBy = preset.GroupBy;
+        _filterPriority = preset.Priority;
+        _taskFilter = "All";
+    }
+
+    private static string PriorityHex(string p) => p switch
+    {
+        "Critical" => "#d32f2f",
+        "High"     => "#f57c00",
+        "Medium"   => "#1976d2",
+        _          => "#9e9e9e",
+    };
+
+    private static Color GetTaskStatusColor(string s) => s switch
+    {
+        "Done"       => Color.Success,
+        "InProgress" => Color.Primary,
+        "InReview"   => Color.Warning,
+        "ToDo"       => Color.Info,
+        _            => Color.Default,
     };
 
     private static string ComputePriority(string likelihood, string impact) =>
