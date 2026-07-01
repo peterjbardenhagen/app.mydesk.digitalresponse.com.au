@@ -11,10 +11,19 @@ jobs:
   test:
     timeout-minutes: 60
     runs-on: windows-latest
-    
+
+    # Job-level env vars: set by the Actions runner before any step runs.
+    # All child processes (including dotnet started via Start-Process) inherit
+    # these, which avoids the appsettings.json SQL-credential connection string
+    # (User ID=mydesk) that doesn't exist on a fresh LocalDB instance.
+    env:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://localhost:5237
+      ConnectionStrings__TechlightDb: "Server=(localdb)\\MSSQLLocalDB;Database=Techlight_MyDesk;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False;"
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
@@ -33,21 +42,40 @@ jobs:
 
     - name: Start Application
       run: |
-        $env:ASPNETCORE_ENVIRONMENT = "Development"
-        $env:ASPNETCORE_URLS = "http://localhost:5237"
-        $env:ConnectionStrings__TechlightDb = "Server=(localdb)\MSSQLLocalDB;Database=Techlight_MyDesk;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False;"
-        $proc = Start-Process dotnet -ArgumentList "run","--project","src/MyDesk.Web","--no-build","--configuration","Release","--urls","http://localhost:5237" -NoNewWindow -PassThru
+        # Job-level env vars (ASPNETCORE_* and ConnectionStrings__*) are already
+        # in the current process environment and are inherited by Start-Process.
+        $stdout = "app-stdout.log"
+        $stderr = "app-stderr.log"
+        $proc = Start-Process dotnet `
+          -ArgumentList "run","--project","src/MyDesk.Web","--no-build","--configuration","Release" `
+          -NoNewWindow -PassThru `
+          -RedirectStandardOutput $stdout `
+          -RedirectStandardError  $stderr
         Write-Host "App started with PID $($proc.Id)"
-        # Poll until ready (up to 90 seconds)
+
+        # Poll for up to 120 s — app runs DB init (migrations + seeding) before
+        # accepting requests, which can take 30-60 s on a cold LocalDB.
         $ready = $false
-        for ($i = 0; $i -lt 45; $i++) {
+        for ($i = 0; $i -lt 60; $i++) {
           Start-Sleep -Seconds 2
+          if ($proc.HasExited) {
+            Write-Host "##[error]App process exited early (exit code $($proc.ExitCode))"
+            break
+          }
           try {
-            $r = Invoke-WebRequest -Uri "http://localhost:5237/login" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+            $r = Invoke-WebRequest -Uri "http://localhost:5237/login" -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
             if ($r.StatusCode -lt 500) { $ready = $true; break }
           } catch { }
         }
-        if ($ready) { Write-Host "App is ready" } else { Write-Host "##[warning]App did not respond within 90s — tests may fail" }
+
+        if (!$ready) {
+          Write-Host "=== App STDOUT (last 80 lines) ==="
+          if (Test-Path $stdout) { Get-Content $stdout | Select-Object -Last 80 | ForEach-Object { Write-Host $_ } }
+          Write-Host "=== App STDERR (last 80 lines) ==="
+          if (Test-Path $stderr) { Get-Content $stderr | Select-Object -Last 80 | ForEach-Object { Write-Host $_ } }
+          throw "App did not respond on http://localhost:5237/login within 120 s"
+        }
+        Write-Host "App is ready"
 
     - name: Run Playwright Tests
       run: |
@@ -58,7 +86,7 @@ jobs:
           --collect:"XPlat Code Coverage" `
           --results-directory ./TestResults `
           --no-build
-    
+
     - name: Upload Test Results
       uses: actions/upload-artifact@v4
       if: always()
@@ -68,8 +96,10 @@ jobs:
           TestResults/
           tests/MyDesk.PlaywrightTests/screenshots/
           tests/MyDesk.PlaywrightTests/videos/
+          app-stdout.log
+          app-stderr.log
         retention-days: 30
-    
+
     - name: Publish Test Report
       uses: dorny/test-reporter@v1
       if: always()
@@ -78,7 +108,7 @@ jobs:
         path: 'TestResults/*.trx'
         reporter: dotnet-trx
         fail-on-error: false
-    
+
     - name: Generate Coverage Report
       if: always()
       run: |
