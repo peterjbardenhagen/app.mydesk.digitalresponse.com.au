@@ -314,9 +314,10 @@ else
                         @foreach (var task in grp.OrderBy(t => t.OrderIndex).ThenBy(t => t.DueDate))
                         {
                             var isOverdue = task.DueDate < DateTime.Today && task.Status != "Done";
+                            var taskCardStyle = $"cursor:pointer;border-radius:10px;border-left:4px solid {PriorityHex(task.Priority)};";
                             <MudItem xs="12" sm="6" md="4" lg="3">
                                 <MudCard Elevation="1" @onclick="() => OpenTaskEdit(task)"
-                                         Style="@($"cursor:pointer;border-radius:10px;border-left:4px solid {PriorityHex(task.Priority)};")">
+                                         Style="@taskCardStyle">
                                     <MudCardContent Class="pa-3">
                                         <div class="d-flex gap-1 mb-1 flex-wrap">
                                             <MudChip T="string" Size="Size.Small" Color="@GetPriorityColor(task.Priority)" Style="height:20px;font-size:10px;">@task.Priority</MudChip>
@@ -532,7 +533,8 @@ else
                                 var wpct  = wdays * 100.0 / totalDays;
                                 if (wpct > 0)
                                 {
-                                    <div style="width:@($"{wpct:F2}%");text-align:center;font-size:10px;color:var(--mud-palette-text-secondary);border-right:1px solid var(--mud-palette-divider);padding:3px 0;white-space:nowrap;overflow:hidden;">@wk.ToString("dd MMM")</div>
+                                    var wpctStr = wpct.ToString("F2");
+                                    <div style="width:@(wpctStr)%;text-align:center;font-size:10px;color:var(--mud-palette-text-secondary);border-right:1px solid var(--mud-palette-divider);padding:3px 0;white-space:nowrap;overflow:hidden;">@wk.ToString("dd MMM")</div>
                                 }
                                 wk = wk.AddDays(7);
                             }
@@ -546,16 +548,19 @@ else
                                 var te    = task.TaskEndDate   ?? ts.AddDays(Math.Max(1, (int)((task.EstimatedHours ?? 8) / 8)));
                                 var left  = Math.Max(0, (ts - ganttStart).Days * 100.0 / totalDays);
                                 var width = Math.Max(0.3, (te - ts).Days * 100.0 / totalDays);
-                                var late  = te < DateTime.Today && task.PercentComplete < 100;
-                                var bar   = late ? "var(--mud-palette-error)" : task.Status == "Done" ? "var(--mud-palette-success)" : "var(--mud-palette-primary)";
+                                var late     = te < DateTime.Today && task.PercentComplete < 100;
+                                var bar      = late ? "var(--mud-palette-error)" : task.Status == "Done" ? "var(--mud-palette-success)" : "var(--mud-palette-primary)";
+                                var todayStr = todayOffset.ToString("F2");
+                                var leftStr  = left.ToString("F2");
+                                var widthStr = width.ToString("F2");
                                 <div class="d-flex align-center" style="height:34px;border-bottom:1px solid var(--mud-palette-divider);cursor:pointer;" @onclick="() => OpenTaskEdit(task)">
                                     <div style="width:220px;min-width:220px;padding:0 8px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">
                                         <div style="font-size:12px;font-weight:500;">@task.Title</div>
                                         <div style="font-size:10px;color:var(--mud-palette-text-secondary);">@(task.AssigneeName ?? "")</div>
                                     </div>
                                     <div style="flex:1;position:relative;height:100%;">
-                                        <div style="position:absolute;left:@($"{todayOffset:F2}%");top:0;bottom:0;width:2px;background:var(--mud-palette-error);opacity:.4;z-index:2;" />
-                                        <div style="position:absolute;left:@($"{left:F2}%");width:@($"{width:F2}%");top:6px;bottom:6px;background:@bar;border-radius:4px;overflow:hidden;display:flex;align-items:center;padding:0 4px;" title="@task.Title — @task.PercentComplete%">
+                                        <div style="position:absolute;left:@(todayStr)%;top:0;bottom:0;width:2px;background:var(--mud-palette-error);opacity:.4;z-index:2;" />
+                                        <div style="position:absolute;left:@(leftStr)%;width:@(widthStr)%;top:6px;bottom:6px;background:@bar;border-radius:4px;overflow:hidden;display:flex;align-items:center;padding:0 4px;" title="@task.Title — @task.PercentComplete%">
                                             <div style="position:absolute;left:0;top:0;bottom:0;width:@(task.PercentComplete)%;background:rgba(255,255,255,.3);" />
                                             <span style="color:white;font-size:9px;white-space:nowrap;position:relative;z-index:1;">@task.PercentComplete%</span>
                                         </div>
@@ -565,12 +570,13 @@ else
                         }
                         @foreach (var ms in _milestones.OrderBy(m => m.DueDate))
                         {
-                            var msOff = Math.Clamp((ms.DueDate - ganttStart).Days * 100.0 / totalDays, 0, 100);
-                            var msCss = ms.Status == "Complete" ? "var(--mud-palette-success)" : "var(--mud-palette-warning)";
+                            var msOff    = Math.Clamp((ms.DueDate - ganttStart).Days * 100.0 / totalDays, 0, 100);
+                            var msCss    = ms.Status == "Complete" ? "var(--mud-palette-success)" : "var(--mud-palette-warning)";
+                            var msOffStr = msOff.ToString("F2");
                             <div style="display:flex;align-items:center;height:22px;border-bottom:1px solid var(--mud-palette-divider);">
                                 <div style="width:220px;min-width:220px;padding:0 8px;overflow:hidden;white-space:nowrap;font-size:10px;color:@msCss;">⬦ @ms.Title</div>
                                 <div style="flex:1;position:relative;height:100%;">
-                                    <div style="position:absolute;left:@($"{msOff:F2}%");top:50%;transform:translate(-50%,-50%) rotate(45deg);width:10px;height:10px;background:@msCss;" title="@ms.Title" />
+                                    <div style="position:absolute;left:@(msOffStr)%;top:50%;transform:translate(-50%,-50%) rotate(45deg);width:10px;height:10px;background:@msCss;" title="@ms.Title" />
                                 </div>
                             </div>
                         }
