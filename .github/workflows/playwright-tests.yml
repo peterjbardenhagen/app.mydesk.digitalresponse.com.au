@@ -52,6 +52,7 @@ jobs:
     - name: Run Playwright Tests
       run: |
         dotnet test tests/MyDesk.PlaywrightTests/MyDesk.PlaywrightTests.csproj `
+          --configuration Release `
           --logger "console;verbosity=detailed" `
           --logger "trx;LogFileName=TestResults.trx" `
           --collect:"XPlat Code Coverage" `
