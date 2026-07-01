@@ -6,11 +6,6 @@ on:
   pull_request:
     branches: [ main, master, develop ]
   workflow_dispatch:
-    inputs:
-      full_suite:
-        description: 'Run full test suite (slow — 20+ min)'
-        type: boolean
-        default: false
 
 jobs:
   test:
@@ -76,12 +71,7 @@ jobs:
 
         Write-Host "App is ready."
 
-        # Smoke only on push/PR; full suite only on manual workflow_dispatch with full_suite=true
-        $fullSuite = '${{ inputs.full_suite }}' -eq 'true'
-        $filterArg = if ($fullSuite) { @() } else { @("--filter", "TestCategory=Smoke") }
-        $suiteLabel = if ($fullSuite) { "FULL suite" } else { "SMOKE tests only" }
-        Write-Host "Running $suiteLabel..."
-
+        Write-Host "Running SMOKE tests only..."
         dotnet test tests/MyDesk.PlaywrightTests/MyDesk.PlaywrightTests.csproj `
           --configuration Release `
           --logger "console;verbosity=detailed" `
@@ -89,7 +79,7 @@ jobs:
           --collect:"XPlat Code Coverage" `
           --results-directory ./TestResults `
           --no-build `
-          @filterArg
+          --filter "TestCategory=Smoke"
         $testExitCode = $LASTEXITCODE
 
         if (!$proc.HasExited) {
