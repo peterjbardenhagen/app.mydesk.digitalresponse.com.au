@@ -1,0 +1,74 @@
+@page "/legal"
+@attribute [Authorize]
+@inject PlatformSettingsService PlatformSettings
+@inject NavigationManager Nav
+
+@if (!PlatformSettings.Current.EnableLegalModules)
+{
+    Nav.NavigateTo("/", replace: true);
+    return;
+}
+
+<PageTitle>Legal Hub - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <span>Legal Hub</span>
+        </div>
+        <h1>Legal Hub</h1>
+        <p class="tl-subtitle">Legal practice management integrations — Radix and Practice Evolve.</p>
+    </div>
+</div>
+
+<MudGrid Spacing="4" Class="mt-2">
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard Elevation="2" Style="cursor:pointer;transition:transform .15s,box-shadow .15s;"
+                 @onclick='() => Nav.NavigateTo("/legal/radix-timesheets")'
+                 Class="hover-lift">
+            <MudCardContent Class="d-flex flex-column align-center pa-6">
+                <MudIcon Icon="@Icons.Material.Rounded.Schedule"
+                         Style="font-size:3.5rem;color:var(--mud-palette-primary);" Class="mb-3" />
+                <MudText Typo="Typo.h6" Style="font-weight:700;" Align="Align.Center">Radix Timesheets</MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary mt-2" Align="Align.Center">
+                    View and create billable time entries via the Radix REST API.<br />
+                    6-minute billing units · Fee earner · Matter · WIP
+                </MudText>
+            </MudCardContent>
+            <MudCardActions Class="justify-center pb-4">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           Href="/legal/radix-timesheets"
+                           StartIcon="@Icons.Material.Rounded.ArrowForward">Open Timesheets</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard Elevation="2" Style="cursor:pointer;transition:transform .15s,box-shadow .15s;"
+                 @onclick='() => Nav.NavigateTo("/legal/practice-evolve")'
+                 Class="hover-lift">
+            <MudCardContent Class="d-flex flex-column align-center pa-6">
+                <MudIcon Icon="@Icons.Material.Rounded.AccountTree"
+                         Style="font-size:3.5rem;color:var(--mud-palette-secondary);" Class="mb-3" />
+                <MudText Typo="Typo.h6" Style="font-weight:700;" Align="Align.Center">Practice Evolve</MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary mt-2" Align="Align.Center">
+                    Live read-only dashboard of the Practice Evolve SQL Server database.<br />
+                    Matters · Timesheets · WIP · Stats
+                </MudText>
+            </MudCardContent>
+            <MudCardActions Class="justify-center pb-4">
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary"
+                           Href="/legal/practice-evolve"
+                           StartIcon="@Icons.Material.Rounded.ArrowForward">Open Practice Evolve</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+<style>
+    .hover-lift:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
+    }
+</style>

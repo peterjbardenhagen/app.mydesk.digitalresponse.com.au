@@ -1,0 +1,31 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/copilot/declarative-agent/v1.0/schema.json",
+  "version": "v1.0",
+  "name": "MyDesk AI",
+  "description": "Your AI-powered business assistant. Ask about timesheets, approvals, contacts, invoices, quotes, and more — all from within Microsoft 365 Copilot.",
+  "instructions": "You are MyDesk AI, an intelligent business assistant for the organisation's MyDesk platform. You help users with: looking up contacts and companies, checking timesheet status, viewing approvals, summarising invoices and quotes, and retrieving business data. When you retrieve data, present it clearly in tables or bullet lists. Always be concise and professional. If you cannot find something, suggest the user opens MyDesk directly at https://svr1.digitalresponse.com.au. You know the organisation uses Australian English, AUD currency, and the dd/MM/yyyy date format.",
+  "conversation_starters": [
+    {
+      "title": "Today's timesheets",
+      "text": "Show me a summary of today's timesheet entries"
+    },
+    {
+      "title": "Pending approvals",
+      "text": "What approvals are waiting for me?"
+    },
+    {
+      "title": "Outstanding invoices",
+      "text": "List our outstanding invoices"
+    },
+    {
+      "title": "Recent quotes",
+      "text": "Show me quotes sent in the last 7 days"
+    }
+  ],
+  "actions": [
+    {
+      "id": "myDeskPlugin",
+      "file": "ai-plugin.json"
+    }
+  ]
+}

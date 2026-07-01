@@ -401,7 +401,19 @@ builder.Services.AddScoped<McpIntegrationService>();
 builder.Services.AddScoped<ReconciliationService>();
 builder.Services.AddScoped<AiAuditService>();
 builder.Services.AddScoped<TelegramBotService>();
+
+// Legal modules (CCL — Carter Capner Law)
+builder.Services.AddScoped<MyDesk.Web.Services.Legal.RadixService>();
+builder.Services.AddScoped<MyDesk.Web.Services.Legal.PracticeEvolveService>();
+builder.Services.AddScoped<MyDesk.Web.AI.IAiTool, MyDesk.Web.AI.Tools.Legal.RadixTimesheetsTool>();
 builder.Services.AddHostedService<WorkflowSchedulerService>();
+
+// ── Teams Bot Framework ────────────────────────────────────────────────────
+// Bot webhook endpoint: POST /bot/messages
+// Registered in src/MyDesk.Teams/manifest.json as the bot handler.
+builder.Services.AddSingleton<Microsoft.Bot.Builder.Integration.AspNet.Core.IBotFrameworkHttpAdapter,
+    Microsoft.Bot.Builder.Integration.AspNet.Core.CloudAdapter>();
+builder.Services.AddTransient<Microsoft.Bot.Builder.IBot, MyDesk.Web.Bot.MyDeskTeamsBot>();
 
 // ── GraphQL (HotChocolate) ─────────────────────────────────────────────────
 // Endpoint: /graphql (with Banana Cake Pop UI in Development).

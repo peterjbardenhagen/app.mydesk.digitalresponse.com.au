@@ -1,6 +1,7 @@
 @inject NavMenuService NavMenuSvc
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Nav
+@inject PlatformSettingsService PlatformSettings
 @using System.Security.Claims
 
 <div class="tl-col1-nav">
@@ -62,6 +63,12 @@
         <MudTooltip Text="Site Map" Placement="Placement.Right" Arrow="true">
             <MudIconButton Icon="@Icons.Material.Rounded.Schema" Href="/sitemap" Color="Color.Default" />
         </MudTooltip>
+        @if (PlatformSettings.Current.EnableLegalModules)
+        {
+            <MudTooltip Text="Legal Hub" Placement="Placement.Right" Arrow="true">
+                <MudIconButton Icon="@Icons.Material.Rounded.Gavel" Href="/legal" Color="Color.Default" />
+            </MudTooltip>
+        }
     </div>
 
     <div class="tl-col1-footer">

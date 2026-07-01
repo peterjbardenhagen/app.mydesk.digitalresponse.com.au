@@ -177,6 +177,20 @@
             </div>
         }
 
+        @* ── Legal (CCL) ── *@
+        @if (_activeSection == "legal" && PlatformSettings.Current.EnableLegalModules)
+        {
+            <div class="tl-nav-section">
+                <MudNavLink Href="/legal" Icon="@Icons.Material.Rounded.Gavel">Legal Hub</MudNavLink>
+                <MudNavGroup Icon="@Icons.Material.Rounded.Schedule" Title="Radix" Expanded="true" HideExpandIcon="true">
+                    <MudNavLink Href="/legal/radix-timesheets" Icon="@Icons.Material.Rounded.AccessTime">Timesheets</MudNavLink>
+                </MudNavGroup>
+                <MudNavGroup Icon="@Icons.Material.Rounded.AccountTree" Title="Practice Evolve" Expanded="true" HideExpandIcon="true">
+                    <MudNavLink Href="/legal/practice-evolve" Icon="@Icons.Material.Rounded.Dashboard">PE Dashboard</MudNavLink>
+                </MudNavGroup>
+            </div>
+        }
+
         @* ── Support / Help ── *@
         @if (_activeSection == "support")
         {
@@ -215,6 +229,7 @@
         "insights" => "Insights",
         "marketing" => "Marketing",
         "portals" => "Portals",
+        "legal" => "Legal",
         "admin" => "Admin",
         "support" => "Support",
         _ => "Navigation"

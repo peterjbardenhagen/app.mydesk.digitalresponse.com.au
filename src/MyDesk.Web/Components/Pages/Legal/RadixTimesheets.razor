@@ -1,0 +1,281 @@
+@page "/legal/radix-timesheets"
+@attribute [Authorize]
+@inject RadixService RadixSvc
+@inject PlatformSettingsService PlatformSettings
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+@if (!PlatformSettings.Current.EnableLegalModules)
+{
+    Nav.NavigateTo("/", replace: true);
+    return;
+}
+
+<PageTitle>Radix Timesheets - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <a href="/legal">Legal Hub</a><span class="sep">/</span>
+            <span>Radix Timesheets</span>
+        </div>
+        <h1>Radix Timesheets</h1>
+        <p class="tl-subtitle">View and manage billable time entries from Radix (6-min units).</p>
+    </div>
+    <div class="d-flex gap-2 align-center">
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Rounded.Refresh"
+                   OnClick="LoadTimesheets">Refresh</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Rounded.Add"
+                   OnClick="OpenCreateDialog">New Entry</MudButton>
+    </div>
+</div>
+
+@if (!RadixSvc.IsConfigured)
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-4">
+        Radix API is not configured. Add <strong>RadixApiUrl</strong> and <strong>RadixApiKey</strong> in Platform Settings.
+    </MudAlert>
+}
+
+@* Filters *@
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudGrid Spacing="2" AlignItems="Center">
+        <MudItem xs="12" sm="4" md="3">
+            <MudDatePicker @bind-Date="_fromDate" Label="From" DateFormat="dd/MM/yyyy" Clearable="true" />
+        </MudItem>
+        <MudItem xs="12" sm="4" md="3">
+            <MudDatePicker @bind-Date="_toDate" Label="To" DateFormat="dd/MM/yyyy" Clearable="true" />
+        </MudItem>
+        <MudItem xs="12" sm="4" md="3">
+            <MudTextField @bind-Value="_feeEarnerFilter" Label="Fee Earner Code" Clearable="true"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Person" />
+        </MudItem>
+        <MudItem xs="12" sm="12" md="3">
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" FullWidth="true"
+                       StartIcon="@Icons.Material.Rounded.FilterAlt"
+                       OnClick="LoadTimesheets">Apply Filters</MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@* Summary chips *@
+@if (_timesheets.Count > 0)
+{
+    <div class="d-flex gap-3 flex-wrap mb-4">
+        <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined">
+            <MudIcon Icon="@Icons.Material.Rounded.Receipt" Size="Size.Small" Class="mr-1" />
+            @_timesheets.Count entries
+        </MudChip>
+        <MudChip T="string" Color="Color.Secondary" Variant="Variant.Outlined">
+            <MudIcon Icon="@Icons.Material.Rounded.AccessTime" Size="Size.Small" Class="mr-1" />
+            @TotalHours.ToString("F1") hrs (@TotalUnits units)
+        </MudChip>
+        <MudChip T="string" Color="Color.Success" Variant="Variant.Outlined">
+            <MudIcon Icon="@Icons.Material.Rounded.AttachMoney" Size="Size.Small" Class="mr-1" />
+            WIP: $@TotalWip.ToString("N2")
+        </MudChip>
+    </div>
+}
+
+@* Table *@
+<MudPaper Elevation="1">
+    @if (_loading)
+    {
+        <div class="d-flex justify-center pa-8">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+        </div>
+    }
+    else if (_timesheets.Count == 0)
+    {
+        <div class="d-flex flex-column align-center pa-12 mud-text-secondary">
+            <MudIcon Icon="@Icons.Material.Rounded.Schedule" Style="font-size:4rem;" Class="mb-3" />
+            <MudText Typo="Typo.h6">No timesheets found</MudText>
+            <MudText Typo="Typo.body2">Adjust the filters or create a new entry.</MudText>
+        </div>
+    }
+    else
+    {
+        <MudTable Items="_timesheets" Dense="true" Hover="true" FixedHeader="true"
+                  Height="calc(100vh - 380px)" Class="tl-table">
+            <HeaderContent>
+                <MudTh>Date</MudTh>
+                <MudTh>Fee Earner</MudTh>
+                <MudTh>Matter</MudTh>
+                <MudTh Style="text-align:center">Units</MudTh>
+                <MudTh Style="text-align:center">Hours</MudTh>
+                <MudTh>Activity</MudTh>
+                <MudTh>Narrative</MudTh>
+                <MudTh Style="text-align:right">Rate</MudTh>
+                <MudTh Style="text-align:right">WIP</MudTh>
+                <MudTh Style="text-align:center">Status</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.Date.ToString("dd/MM/yyyy")</MudTd>
+                <MudTd>
+                    <MudText Typo="Typo.body2" Style="font-weight:600;">@context.FeeEarnerCode</MudText>
+                    @if (!string.IsNullOrWhiteSpace(context.FeeEarnerName))
+                    {
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.FeeEarnerName</MudText>
+                    }
+                </MudTd>
+                <MudTd>
+                    <MudText Typo="Typo.body2" Style="font-weight:600;">@context.MatterNumber</MudText>
+                    @if (!string.IsNullOrWhiteSpace(context.MatterName))
+                    {
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.MatterName</MudText>
+                    }
+                </MudTd>
+                <MudTd Style="text-align:center;font-weight:600;">@context.Units</MudTd>
+                <MudTd Style="text-align:center;">@((context.Units / 10m).ToString("F1"))</MudTd>
+                <MudTd><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.ActivityCode</MudChip></MudTd>
+                <MudTd Style="max-width:280px;">
+                    <MudText Typo="Typo.body2" Style="white-space:normal;word-break:break-word;">@context.Narrative</MudText>
+                </MudTd>
+                <MudTd Style="text-align:right;">$@context.Rate.ToString("N2")</MudTd>
+                <MudTd Style="text-align:right;font-weight:600;">$@context.WipAmount.ToString("N2")</MudTd>
+                <MudTd Style="text-align:center;">
+                    <MudChip T="string" Size="Size.Small"
+                             Color="@(context.Status == "Billed" ? Color.Success : context.Status == "Draft" ? Color.Warning : Color.Default)"
+                             Variant="Variant.Filled">@context.Status</MudChip>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudPaper>
+
+@* Create Dialog *@
+@if (_showCreate)
+{
+    <MudDialog @bind-IsVisible="_showCreate" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+        <TitleContent>New Timesheet Entry</TitleContent>
+        <DialogContent>
+            <MudGrid Spacing="2">
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_createFeeEarner" Label="Fee Earner Code" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_createMatter" Label="Matter Number" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker @bind-Date="_createDate" Label="Date" DateFormat="dd/MM/yyyy" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField @bind-Value="_createUnits" Label="Units (1 unit = 6 min)" Min="1" Max="100" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_createActivity" Label="Activity Code" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_createNarrative" Label="Narrative" Lines="3" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        Duration: @(_createUnits * 6) minutes = @((_createUnits / 10m).ToString("F1")) hours
+                    </MudText>
+                </MudItem>
+            </MudGrid>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="() => _showCreate = false">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       OnClick="SubmitNewEntry" Disabled="_saving">
+                @if (_saving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                Save Entry
+            </MudButton>
+        </DialogActions>
+    </MudDialog>
+}
+
+@code {
+    private List<RadixTimesheet> _timesheets = new();
+    private bool _loading = false;
+    private bool _showCreate = false;
+    private bool _saving = false;
+
+    private DateTime? _fromDate = DateTime.Today.AddDays(-30);
+    private DateTime? _toDate = DateTime.Today;
+    private string _feeEarnerFilter = "";
+
+    // Create dialog fields (separate mutable fields since RadixTimesheetCreate uses init setters)
+    private string _createFeeEarner = "";
+    private string _createMatter = "";
+    private DateTime? _createDate = DateTime.Today;
+    private int _createUnits = 1;
+    private string _createActivity = "";
+    private string _createNarrative = "";
+
+    private int TotalUnits => _timesheets.Sum(t => t.Units);
+    private decimal TotalHours => Math.Round(TotalUnits / 10m, 1);
+    private decimal TotalWip => _timesheets.Sum(t => t.WipAmount);
+
+    protected override async Task OnInitializedAsync() => await LoadTimesheets();
+
+    private async Task LoadTimesheets()
+    {
+        _loading = true;
+        StateHasChanged();
+        try
+        {
+            _timesheets = await RadixSvc.GetTimesheetsAsync(
+                from: _fromDate,
+                to: _toDate,
+                feeEarnerCode: string.IsNullOrWhiteSpace(_feeEarnerFilter) ? null : _feeEarnerFilter);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OpenCreateDialog()
+    {
+        _createFeeEarner = "";
+        _createMatter = "";
+        _createDate = DateTime.Today;
+        _createUnits = 1;
+        _createActivity = "";
+        _createNarrative = "";
+        _showCreate = true;
+    }
+
+    private async Task SubmitNewEntry()
+    {
+        if (string.IsNullOrWhiteSpace(_createFeeEarner) || string.IsNullOrWhiteSpace(_createMatter))
+        {
+            Snackbar.Add("Fee Earner Code and Matter Number are required.", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            var entry = new RadixTimesheetCreate
+            {
+                FeeEarnerCode = _createFeeEarner,
+                MatterNumber  = _createMatter,
+                Date          = _createDate ?? DateTime.Today,
+                Units         = _createUnits,
+                ActivityCode  = _createActivity,
+                Narrative     = _createNarrative,
+            };
+            var result = await RadixSvc.CreateTimesheetAsync(entry);
+            if (result != null)
+            {
+                Snackbar.Add("Timesheet entry created.", Severity.Success);
+                _showCreate = false;
+                await LoadTimesheets();
+            }
+            else
+            {
+                Snackbar.Add("Failed to create entry. Check Radix API configuration.", Severity.Error);
+            }
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

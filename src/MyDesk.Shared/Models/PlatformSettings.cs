@@ -84,6 +84,12 @@ public class PlatformSettings
     public string LoginAccentColor { get; set; } = "#2196F3";
     public string LoginBackgroundColor { get; set; } = "";
 
+    // Legal module flags (CCL — Carter Capner Law and similar firms)
+    public bool EnableLegalModules { get; set; } = false;
+    public string RadixApiUrl { get; set; } = "";
+    public string RadixApiKey { get; set; } = "";
+    public string PracticeEvolveConnectionString { get; set; } = "";
+
     // Integration Settings
     public IntegrationSettings MYOB { get; set; } = new();
     public IntegrationSettings Xero { get; set; } = new();

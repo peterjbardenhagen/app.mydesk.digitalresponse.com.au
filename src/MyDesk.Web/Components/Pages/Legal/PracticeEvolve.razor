@@ -1,0 +1,242 @@
+@page "/legal/practice-evolve"
+@attribute [Authorize]
+@inject PracticeEvolveService PeSvc
+@inject PlatformSettingsService PlatformSettings
+@inject NavigationManager Nav
+
+@if (!PlatformSettings.Current.EnableLegalModules)
+{
+    Nav.NavigateTo("/", replace: true);
+    return;
+}
+
+<PageTitle>Practice Evolve - @PlatformSettings.GetBrandingName()</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">Dashboard</a><span class="sep">/</span>
+            <a href="/legal">Legal Hub</a><span class="sep">/</span>
+            <span>Practice Evolve</span>
+        </div>
+        <h1>Practice Evolve</h1>
+        <p class="tl-subtitle">Live read-only view of the Practice Evolve on-premise legal PM system.</p>
+    </div>
+    <div class="d-flex gap-2 align-center">
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Rounded.Refresh"
+                   OnClick="LoadAll">Refresh</MudButton>
+    </div>
+</div>
+
+@if (!PeSvc.IsConfigured)
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-4">
+        Practice Evolve is not configured. Add <strong>PracticeEvolveConnectionString</strong> in Platform Settings.
+    </MudAlert>
+}
+
+@* Stats cards *@
+<MudGrid Spacing="3" Class="mb-4">
+    <MudItem xs="6" sm="3">
+        <MudPaper Class="pa-4 d-flex flex-column align-center" Elevation="1">
+            @if (_statsLoading)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+            }
+            else
+            {
+                <MudText Typo="Typo.h4" Style="font-weight:700;color:var(--mud-palette-primary)">@_stats.OpenMatters</MudText>
+            }
+            <MudText Typo="Typo.caption" Class="mud-text-secondary mt-1">Open Matters</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="6" sm="3">
+        <MudPaper Class="pa-4 d-flex flex-column align-center" Elevation="1">
+            @if (_statsLoading)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+            }
+            else
+            {
+                <MudText Typo="Typo.h4" Style="font-weight:700;color:var(--mud-palette-secondary)">@_stats.TodayEntries</MudText>
+            }
+            <MudText Typo="Typo.caption" Class="mud-text-secondary mt-1">Today's Entries</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="6" sm="3">
+        <MudPaper Class="pa-4 d-flex flex-column align-center" Elevation="1">
+            @if (_statsLoading)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+            }
+            else
+            {
+                <MudText Typo="Typo.h4" Style="font-weight:700;color:var(--mud-palette-success)">@_stats.WeekHours.ToString("F1")</MudText>
+            }
+            <MudText Typo="Typo.caption" Class="mud-text-secondary mt-1">hrs (7 days)</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="6" sm="3">
+        <MudPaper Class="pa-4 d-flex flex-column align-center" Elevation="1">
+            @if (_statsLoading)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+            }
+            else
+            {
+                <MudText Typo="Typo.h4" Style="font-weight:700;color:var(--mud-palette-warning)">$@_stats.WeekWip.ToString("N0")</MudText>
+            }
+            <MudText Typo="Typo.caption" Class="mud-text-secondary mt-1">WIP (7 days)</MudText>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudGrid Spacing="3">
+    @* Timesheets panel *@
+    <MudItem xs="12" lg="7">
+        <MudPaper Elevation="1">
+            <div class="pa-4 d-flex align-center justify-space-between" style="border-bottom:1px solid var(--mud-palette-divider);">
+                <MudText Typo="Typo.h6" Style="font-weight:600;">Recent Timesheets</MudText>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                           Href="/legal/radix-timesheets">Radix Timesheets</MudButton>
+            </div>
+
+            @if (_tsLoading)
+            {
+                <div class="d-flex justify-center pa-8">
+                    <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+                </div>
+            }
+            else if (_timesheets.Count == 0)
+            {
+                <div class="d-flex flex-column align-center pa-8 mud-text-secondary">
+                    <MudIcon Icon="@Icons.Material.Rounded.Schedule" Style="font-size:3rem;" Class="mb-2" />
+                    <MudText Typo="Typo.body2">No recent timesheet entries.</MudText>
+                </div>
+            }
+            else
+            {
+                <MudTable Items="_timesheets" Dense="true" Hover="true">
+                    <HeaderContent>
+                        <MudTh>Date</MudTh>
+                        <MudTh>Fee Earner</MudTh>
+                        <MudTh>Matter</MudTh>
+                        <MudTh Style="text-align:right">Hrs</MudTh>
+                        <MudTh Style="text-align:right">WIP</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd>@context.Date.ToString("dd/MM/yy")</MudTd>
+                        <MudTd>@context.FeeEarnerCode</MudTd>
+                        <MudTd>
+                            <MudText Typo="Typo.body2">@context.MatterNumber</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.MatterName</MudText>
+                        </MudTd>
+                        <MudTd Style="text-align:right">@context.Hours.ToString("F1")</MudTd>
+                        <MudTd Style="text-align:right;font-weight:600;">$@context.WipAmount.ToString("N2")</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudPaper>
+    </MudItem>
+
+    @* Matters panel *@
+    <MudItem xs="12" lg="5">
+        <MudPaper Elevation="1">
+            <div class="pa-4 d-flex align-center justify-space-between" style="border-bottom:1px solid var(--mud-palette-divider);">
+                <MudText Typo="Typo.h6" Style="font-weight:600;">Active Matters</MudText>
+                <MudTextField @bind-Value="_matterSearch" Placeholder="Search…" Clearable="true"
+                              Margin="Margin.Dense" Variant="Variant.Outlined"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Search"
+                              @onkeydown="OnMatterSearchKey" Style="width:200px;" />
+            </div>
+
+            @if (_mattersLoading)
+            {
+                <div class="d-flex justify-center pa-8">
+                    <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+                </div>
+            }
+            else if (_matters.Count == 0)
+            {
+                <div class="d-flex flex-column align-center pa-8 mud-text-secondary">
+                    <MudIcon Icon="@Icons.Material.Rounded.FolderOpen" Style="font-size:3rem;" Class="mb-2" />
+                    <MudText Typo="Typo.body2">No matters found.</MudText>
+                </div>
+            }
+            else
+            {
+                <MudList T="PeMatter" Dense="true">
+                    @foreach (var m in _matters.Take(25))
+                    {
+                        <MudListItem T="PeMatter" Value="m">
+                            <div class="d-flex justify-space-between align-center">
+                                <div>
+                                    <MudText Typo="Typo.body2" Style="font-weight:600;">@m.MatterNumber — @m.MatterName</MudText>
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@m.ClientName • @m.ResponsibleLawyer</MudText>
+                                </div>
+                                <MudChip T="string" Size="Size.Small"
+                                         Color="@(m.Status == "Open" ? Color.Success : Color.Default)"
+                                         Variant="Variant.Outlined">@m.Status</MudChip>
+                            </div>
+                        </MudListItem>
+                    }
+                </MudList>
+                @if (_matters.Count > 25)
+                {
+                    <div class="pa-3 text-center mud-text-secondary">
+                        <MudText Typo="Typo.caption">Showing first 25 of @_matters.Count results. Refine your search.</MudText>
+                    </div>
+                }
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private List<PeTimesheet> _timesheets = new();
+    private List<PeMatter> _matters = new();
+    private PeDashboardStats _stats = new();
+
+    private bool _tsLoading, _mattersLoading, _statsLoading;
+    private string _matterSearch = "";
+
+    protected override async Task OnInitializedAsync() => await LoadAll();
+
+    private async Task LoadAll()
+    {
+        await Task.WhenAll(LoadTimesheets(), LoadMatters(), LoadStats());
+    }
+
+    private async Task LoadTimesheets()
+    {
+        _tsLoading = true;
+        StateHasChanged();
+        _timesheets = await PeSvc.GetTimesheetsAsync(
+            from: DateTime.Today.AddDays(-7),
+            to: DateTime.Today);
+        _tsLoading = false;
+    }
+
+    private async Task LoadMatters()
+    {
+        _mattersLoading = true;
+        StateHasChanged();
+        _matters = await PeSvc.GetMattersAsync(
+            search: string.IsNullOrWhiteSpace(_matterSearch) ? null : _matterSearch);
+        _mattersLoading = false;
+    }
+
+    private async Task LoadStats()
+    {
+        _statsLoading = true;
+        StateHasChanged();
+        _stats = await PeSvc.GetDashboardStatsAsync();
+        _statsLoading = false;
+    }
+
+    private async Task OnMatterSearchKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await LoadMatters();
+    }
+}
