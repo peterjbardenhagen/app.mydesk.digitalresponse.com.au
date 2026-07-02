@@ -1,8 +1,12 @@
-# Agent Guidelines for Techlight.MyDesk
+# Agent Guidelines for MyDesk
 
 This file is the **single source of truth** for any agent (AI or human) working on this codebase.
 Read it completely before starting any task. Follow every section autonomously — do not ask the user
 for permission to run a build, fix a compile error, or restart Kestrel. These are expected steps.
+
+**Language standard: UK English** — use "analyse" not "analyze", "colour" not "color", "behaviour" not "behavior",
+"authorise" not "authorize", "organise" not "organize", "recognise" not "recognize", "centre" not "center",
+"programme" not "program" (except for software/code contexts), "licence" (noun) / "license" (verb).
 
 ---
 
@@ -558,19 +562,19 @@ On option `[4] → [1]` (Kestrel), it:
 
 ### Popup Dialog Pattern
 
-Use `QuickNavDialog.razor` as the reference design pattern for popup dialogs across MyDesk.
+Use `QuickNavDialog.razor` as the reference design pattern for popup dialogues across MyDesk.
 
-- Open dialogs through `IDialogService.ShowAsync(...)` with explicit `DialogOptions`.
+- Open dialogues through `IDialogService.ShowAsync(...)` with explicit `DialogOptions`.
 - Default options should be:
-  - `CloseButton = false` for command-palette / focused task dialogs unless the dialog is form-heavy
+  - `CloseButton = false` for command-palette / focused task dialogues unless the dialogue is form-heavy
   - `CloseOnEscapeKey = true`
   - `BackdropClick = true`
-  - `NoHeader = true` when the dialog supplies its own visual header/search chrome
+  - `NoHeader = true` when the dialogue supplies its own visual header/search chrome
   - `MaxWidth = MaxWidth.Small` and `FullWidth = true` unless the content genuinely needs more space
-- The dialog body should own the interaction model:
+- The dialogue body should own the interaction model:
   - autofocus the primary input on first render
   - support keyboard navigation (`ArrowUp`, `ArrowDown`, `Enter`, `Escape`)
-  - provide a compact footer with keyboard hints when the dialog is command-oriented
+  - provide a compact footer with keyboard hints when the dialogue is command-oriented
 - Styling pattern:
   - rounded outer shell (`border-radius: 12px` or larger)
   - a distinct top interaction row (search, title, or filter area)
@@ -578,9 +582,9 @@ Use `QuickNavDialog.razor` as the reference design pattern for popup dialogs acr
   - restrained footer/status bar at the bottom
 - Visual behaviour:
   - selected/hovered rows should use a soft background treatment plus a strong left accent or inset highlight
-  - avoid browser-default button/input styling inside dialogs; dialog content should look like part of the MyDesk design system
-- If a dialog diverges from this pattern, there should be a specific product reason rather than convenience.
+  - avoid browser-default button/input styling inside dialogues; dialogue content should look like part of the MyDesk design system
+- If a dialogue diverges from this pattern, there should be a specific product reason rather than convenience.
 
 ---
 
-*Last updated: May 2026 — Powered by Digital Response*
+*Last updated: July 2026 — Maintained by Digital Response*

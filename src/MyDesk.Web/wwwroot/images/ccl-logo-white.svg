@@ -1,4 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" width="320" height="80">
-  <rect width="320" height="80" fill="none"/>
-  <text x="16" y="52" font-family="Georgia, serif" font-size="32" font-weight="bold" fill="white" letter-spacing="1">Carter Capner Law</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 90" width="340" height="90">
+  <text x="0" y="42" font-family="'Arial Black','Franklin Gothic Heavy',Impact,sans-serif"
+        font-size="38" font-weight="900" fill="white" letter-spacing="3">CARTER</text>
+  <text x="0" y="82" font-family="'Arial Black','Franklin Gothic Heavy',Impact,sans-serif"
+        font-size="38" font-weight="900" fill="#b0b8c4" letter-spacing="3">CAPNER</text>
+  <text x="222" y="82" font-family="'Arial Black','Franklin Gothic Heavy',Impact,sans-serif"
+        font-size="38" font-weight="900" fill="#FFED00" letter-spacing="3">LAW</text>
 </svg>

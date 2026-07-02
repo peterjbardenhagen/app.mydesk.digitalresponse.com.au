@@ -426,14 +426,14 @@ IF NOT EXISTS (SELECT 1 FROM TenantHostnames WHERE Hostname = @H8)
             "\"PrivacyPolicyUrl\":\"https://www.digitalresponse.com.au/privacy-policy\"," +
             "\"TermsAndConditionsUrl\":\"https://www.digitalresponse.com.au/terms-and-conditions\"," +
             "\"CopyrightText\":\"\\u00A9 2026 Digital Response. iFusion Pty Ltd ABN 91 071 383 401.\"," +
-            "\"LogoUrl\":\"/images/DR-White-Logo.png\"," +
-            "\"LoginLogoUrl\":\"/images/DR-White-Logo.png\"," +
-            "\"LoginMarkUrl\":\"/images/DR-White-Logo.png\"," +
+            "\"LogoUrl\":\"/images/dr-logo-white.png\"," +
+            "\"LoginLogoUrl\":\"/images/dr-logo-white.png\"," +
+            "\"LoginMarkUrl\":\"/images/dr-mark.png\"," +
             "\"LoginHeading\":\"Sign in to MyDesk\"," +
             "\"LoginSubheading\":\"Digital Response client portal\"," +
-            "\"LoginPrimaryColor\":\"#0ea5e9\"," +
-            "\"LoginAccentColor\":\"#14b8a6\"," +
-            "\"LoginBackgroundColor\":\"#08121a\"," +
+            "\"LoginPrimaryColor\":\"#12261d\"," +
+            "\"LoginAccentColor\":\"#3d7a32\"," +
+            "\"LoginBackgroundColor\":\"#0a1510\"," +
             "\"IsMultiTenant\":true" +
             "}";
 
@@ -460,9 +460,8 @@ IF NOT EXISTS (SELECT 1 FROM TenantHostnames WHERE Hostname = @H8)
             "\"DisableAllEmails\":false" +
             "}";
 
-        // Carter Capner Law — Brisbane law firm.
-        // Logo: upload ccl-logo-white.png to wwwroot/images/ and update LoginLogoUrl/LoginMarkUrl via Admin UI.
-        // Colors: navy #1e3a6e / gold #c4a84c — update via Admin → Platform Settings if needed.
+        // Carter Capner Law — Brisbane law firm. Brand: yellow #FFED00, blue #1C7BC4, black #1A1A1A.
+        // Hero uses dark→blue gradient so white text remains readable; yellow shows in mark and logo accent.
         var carterCapnerJson = "{" +
             "\"PlatformName\":\"MyDesk\"," +
             "\"BrandName\":\"Carter Capner Law\"," +
@@ -480,9 +479,9 @@ IF NOT EXISTS (SELECT 1 FROM TenantHostnames WHERE Hostname = @H8)
             "\"LoginMarkUrl\":\"/images/ccl-mark.svg\"," +
             "\"LoginHeading\":\"Carter Capner Law\"," +
             "\"LoginSubheading\":\"Staff & client portal\"," +
-            "\"LoginPrimaryColor\":\"#1e3a6e\"," +
-            "\"LoginAccentColor\":\"#c4a84c\"," +
-            "\"LoginBackgroundColor\":\"#0c1929\"," +
+            "\"LoginPrimaryColor\":\"#1a1a1a\"," +
+            "\"LoginAccentColor\":\"#1C7BC4\"," +
+            "\"LoginBackgroundColor\":\"#0c1620\"," +
             "\"CopyrightText\":\"\\u00A9 2026 Carter Capner Law.\"," +
             "\"IsMultiTenant\":true" +
             "}";
