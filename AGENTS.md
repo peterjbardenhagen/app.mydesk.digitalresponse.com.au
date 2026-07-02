@@ -29,8 +29,9 @@ MyDesk is multi-tenant. Built-in tenants (per `TenantConstants`):
 | Tenant | GUID | Default hostnames |
 |--------|------|-------------------|
 | Techlight | `11111111-1111-1111-1111-111111111111` | `techlight.digitalresponse.com.au`, `localhost` |
-| Digital Response | `22222222-2222-2222-2222-222222222222` | `portal.digitalresponse.com.au` |
+| Digital Response | `22222222-2222-2222-2222-222222222222` | `portal.digitalresponse.com.au`, `app.dr.mydesk.digitalresponse.com.au` |
 | Demo MyDesk | `33333333-3333-3333-3333-333333333333` | `demo.localhost`, `demo.mydesk.local`, `demo.digitalresponse.com.au` |
+| Carter Capner Law | `44444444-4444-4444-4444-444444444444` | `app.ccl.mydesk.digitalresponse.com.au` |
 
 Hostnames live in `TenantHostnames`; the login page resolves the tenant from `Request.Host` so branding is correct before sign-in.
 
@@ -341,10 +342,17 @@ IF NOT EXISTS (SELECT 1 FROM UserTenants WHERE UserId=2 AND TenantId='11111111-1
 
 ## Known Tenant IDs
 
-| Tenant | GUID |
-|--------|------|
-| Techlight | `11111111-1111-1111-1111-111111111111` |
-| Digital Response | `22222222-2222-2222-2222-222222222222` |
+| Tenant | GUID | Brand primary / accent |
+|--------|------|------------------------|
+| Techlight | `11111111-1111-1111-1111-111111111111` | `#00c8c8` teal / `#cca05a` gold (midnight bg `#08121a`) |
+| Digital Response | `22222222-2222-2222-2222-222222222222` | `#12261d` dark green / `#3d7a32` forest green |
+| Demo MyDesk | `33333333-3333-3333-3333-333333333333` | `#a855f7` purple / `#facc15` yellow |
+| Carter Capner Law | `44444444-4444-4444-4444-444444444444` | `#1a1a1a` dark / `#1C7BC4` CCL blue (brand yellow `#FFED00` on mark) |
+
+Techlight brand verified against v1.4 Brand Guidelines (June 2026):
+- Teal Primary `#00c8c8`, Teal Light `#00e0e0`, Teal Dark `#008b8b`, Midnight `#08121a`
+- Gold `#cca05a`, Gold Dark `#b98745`, Charcoal `#1a2a3a`
+- Primary typeface: Inter (fallback: Segoe UI)
 
 These are hardcoded in `TenantConstants.cs`. The database **must** have matching rows in `Tenants`.
 
