@@ -211,10 +211,11 @@
                                     <MudTextField @bind-Value="_editDescription" Variant="Variant.Outlined" Dense="true" Style="min-width:180px;" />
                                 </MudTd>
                                 <MudTd>
-                                    <MudNumericField @bind-Value="_editAmountExGst" Variant="Variant.Outlined" Dense="true"
+                                    <MudNumericField Value="@_editAmountExGst"
+                                                     ValueChanged="@((decimal v) => OnAmountChanged(v))"
+                                                     Variant="Variant.Outlined" Dense="true"
                                                      Style="min-width:100px;" Format="F2"
-                                                     Adornment="Adornment.Start" AdornmentText="$"
-                                                     ValueChanged="OnAmountChanged" />
+                                                     Adornment="Adornment.Start" AdornmentText="$" />
                                 </MudTd>
                                 <MudTd>
                                     <MudNumericField @bind-Value="_editGstAmount" Variant="Variant.Outlined" Dense="true"
