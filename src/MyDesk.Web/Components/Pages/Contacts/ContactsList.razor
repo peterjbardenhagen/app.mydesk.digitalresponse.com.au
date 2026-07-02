@@ -62,6 +62,9 @@
                                    Href="@($"/contacts/{context.Item.ContactId}")" />
                     <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
                                    Href="@($"/contacts/{context.Item.ContactId}/edit")" />
+                    <MudIconButton Icon="@Icons.Material.Rounded.ManageAccounts" Size="Size.Small" Color="Color.Secondary"
+                                   Href="@($"/customer-portal?impersonate={context.Item.ContactId}")"
+                                   Title="View Customer Portal as this contact" />
                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
                                    OnClick="@(() => DeleteAsync(context.Item))" />
                 </div>

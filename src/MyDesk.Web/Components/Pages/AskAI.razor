@@ -18,7 +18,8 @@
 
 <PageTitle>Ask AI - MyDesk</PageTitle>
 
-<div class="tl-page-header">
+@* Page header — hidden on mobile to maximise chat real-estate *@
+<div class="tl-page-header d-none d-sm-flex">
     <div>
         <div class="tl-breadcrumb">
             <a href="/">MyDesk</a><span class="sep">/</span>
@@ -26,12 +27,21 @@
         </div>
         <h1 style="display:flex;align-items:center;gap:10px;">
             <MudIcon Icon="@Icons.Material.Rounded.AutoAwesome" Style="color:var(--tl-primary);" />
-            Ask Techlight AI
+            MyDesk AI
         </h1>
         <p class="tl-subtitle">Ask questions about your business data.</p>
     </div>
     <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Clear"
                OnClick="Clear" Disabled="@(!_history.Any())">Clear</MudButton>
+</div>
+
+@* Mobile header bar — visible only on small screens *@
+<div class="tl-askai-mobile-bar d-flex d-sm-none">
+    <MudIconButton Icon="@Icons.Material.Rounded.AutoAwesome" Color="Color.Primary" Size="Size.Medium" />
+    <span class="tl-askai-mobile-title">MyDesk AI</span>
+    <MudSpacer />
+    <MudIconButton Icon="@Icons.Material.Rounded.Clear" OnClick="Clear"
+                   Disabled="@(!_history.Any())" Size="Size.Medium" title="Clear conversation" />
 </div>
 
 @if (!ProviderFactory.IsConfigured)
@@ -127,30 +137,48 @@ else
 }
 
 <MudPaper Elevation="1" Class="tl-chat-input-wrap pa-3">
-    <div class="d-flex align-center gap-2 mb-2">
+    @* Context toggles: shown inline on desktop, collapsed on mobile *@
+    <div class="tl-ctx-toggles d-none d-sm-flex align-center gap-2 mb-2">
         <MudText Typo="Typo.caption" Style="color:var(--gray-500);">Add to context:</MudText>
         <MudCheckBox @bind-Value="_includeMyDeskData" Size="Size.Small" Label="MyDesk Data" Color="Color.Primary" Dense="true" />
         <MudCheckBox @bind-Value="_includeFilesLibrary" Size="Size.Small" Label="Files Library" Color="Color.Primary" Dense="true" />
         <MudCheckBox @bind-Value="_includeIntegrations" Size="Size.Small" Label="Integrations" Color="Color.Primary" Dense="true" />
     </div>
     <div class="d-flex gap-2 align-end">
-        <MudTextField @bind-Value="_input" Placeholder="Ask a question." Variant="Variant.Outlined"
+        @* Mobile context chip — tap to show/hide toggles *@
+        <div class="d-flex d-sm-none align-self-end">
+            <MudIconButton Icon="@Icons.Material.Rounded.Tune"
+                           Size="Size.Medium"
+                           Color="@(_showMobileCtx ? Color.Primary : Color.Default)"
+                           OnClick="@(() => _showMobileCtx = !_showMobileCtx)"
+                           title="Context options" />
+        </div>
+        <MudTextField @bind-Value="_input" Placeholder="Message MyDesk AI…" Variant="Variant.Outlined"
                       Lines="2" Immediate="true" OnKeyDown="OnKeyDown" Style="flex:1;"
                       Margin="Margin.Dense" Disabled="@_thinking" />
         <MudIconButton Icon="@(_listening ? Icons.Material.Rounded.MicOff : Icons.Material.Rounded.Mic)"
                        Color="@(_listening ? Color.Error : Color.Default)"
                        OnClick="ToggleVoiceAsync" Disabled="@_thinking" Size="Size.Large"
-                       title="Voice input (browser speech recognition)" />
-        <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                   StartIcon="@Icons.Material.Rounded.Send"
-                   OnClick="SendAsync"
-                   Disabled="@(_thinking || string.IsNullOrWhiteSpace(_input))">
-            Send
-        </MudButton>
+                       title="Voice input" />
+        <MudIconButton Icon="@Icons.Material.Rounded.Send"
+                       Color="Color.Primary" Variant="Variant.Filled"
+                       OnClick="SendAsync"
+                       Disabled="@(_thinking || string.IsNullOrWhiteSpace(_input))"
+                       Size="Size.Large"
+                       title="Send" />
     </div>
-        <MudText Typo="Typo.caption" Class="mt-1" Style="color:var(--gray-500);">
-            Enter to send · Shift+Enter for new line · 🎤 to speak · All interactions are logged for compliance
-        </MudText>
+    @* Mobile context toggles — conditionally shown *@
+    @if (_showMobileCtx)
+    {
+        <div class="d-flex d-sm-none flex-wrap gap-2 mt-2">
+            <MudCheckBox @bind-Value="_includeMyDeskData" Size="Size.Small" Label="MyDesk Data" Color="Color.Primary" Dense="true" />
+            <MudCheckBox @bind-Value="_includeFilesLibrary" Size="Size.Small" Label="Files Library" Color="Color.Primary" Dense="true" />
+            <MudCheckBox @bind-Value="_includeIntegrations" Size="Size.Small" Label="Integrations" Color="Color.Primary" Dense="true" />
+        </div>
+    }
+    <MudText Typo="Typo.caption" Class="mt-1 d-none d-sm-block" Style="color:var(--gray-500);">
+        Enter to send · Shift+Enter for new line · All interactions are logged for compliance
+    </MudText>
 </MudPaper>
 </div>
 
@@ -178,6 +206,7 @@ else
     private string _sessionId = Guid.NewGuid().ToString("N")[..12];
     private bool _contextLoaded;
     private bool _listening;
+    private bool _showMobileCtx;
     private DotNetObjectReference<AskAI>? _dotNetRef;
 
     private readonly string[] _suggestedPrompts = new[]
@@ -426,33 +455,61 @@ Be concise, practical, and focus on actionable business insights."));
 }
 
 <style>
-    /* Shell that fits the visible viewport — chat scrolls internally,
-        suggestions + input bar stay pinned at the bottom regardless of how
-        many suggestion chips wrap onto extra rows.
-        The header above us in MainLayout is ~64px and the page-header inside
-        AskAI is ~120px, so we subtract those plus some breathing room. */
+    /* ── Mobile header bar ─────────────────────────────────────────────── */
+    .tl-askai-mobile-bar {
+        align-items: center;
+        padding: 8px 4px 8px 8px;
+        border-bottom: 1px solid var(--gray-200);
+        background: var(--mud-palette-surface);
+        gap: 6px;
+    }
+    .tl-askai-mobile-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--gray-900);
+    }
+    body.mud-dark-mode .tl-askai-mobile-bar { background: var(--gray-100); border-color: var(--gray-300); }
+    body.mud-dark-mode .tl-askai-mobile-title { color: var(--gray-900); }
+
+    /* ── Shell ─────────────────────────────────────────────────────────── */
+    /* Desktop: subtract AppBar (~48px), page-header (~130px), some margin */
     .tl-askai-shell {
         display: flex;
         flex-direction: column;
         height: calc(100vh - 220px);
         min-height: 480px;
     }
-    
-    /* Ensure input bar is always visible and sticky at bottom */
+
+    /* Mobile: take full dynamic viewport height minus AppBar (~48px) and
+       the compact mobile header bar (~48px). Use dvh so it adjusts when
+       the browser's bottom bar hides/shows. */
+    @@media (max-width: 599px) {
+        .tl-askai-shell {
+            height: calc(100dvh - 96px);
+            min-height: unset;
+        }
+    }
+
+    /* ── Input bar ─────────────────────────────────────────────────────── */
     .tl-askai-shell > .tl-chat-input-wrap {
         position: sticky;
         bottom: 0;
         background: var(--surface);
         z-index: 10;
         margin-top: auto;
+        flex: 0 0 auto;
+        /* iOS safe area for home-bar notch */
+        padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     }
     body.mud-dark-mode .tl-askai-shell > .tl-chat-input-wrap {
         background: var(--gray-100) !important;
         border-top: 1px solid var(--gray-300);
     }
+
+    /* ── Chat container ────────────────────────────────────────────────── */
     .tl-chat-container {
         flex: 1 1 auto;
-        min-height: 0;          /* allow children to shrink so flex scrolling works */
+        min-height: 0;
         display: flex;
         flex-direction: column;
         overflow: hidden;
@@ -463,7 +520,22 @@ Be concise, practical, and focus on actionable business insights."));
         overflow-y: auto;
         overflow-x: hidden;
         padding-right: 4px;
+        /* smooth momentum scroll on iOS */
+        -webkit-overflow-scrolling: touch;
     }
+
+    /* ── Bubbles ──────────────────────────────────────────────────────── */
+    .tl-chat-bubble-user,
+    .tl-chat-bubble-ai {
+        /* On mobile allow bubbles wider — 95% vs 80% on desktop */
+        max-width: 95%;
+    }
+    @@media (min-width: 600px) {
+        .tl-chat-bubble-user,
+        .tl-chat-bubble-ai { max-width: 80%; }
+    }
+
+    /* ── Empty state ───────────────────────────────────────────────────── */
     .tl-chat-empty-state {
         display: flex;
         flex-direction: column;
@@ -473,11 +545,27 @@ Be concise, practical, and focus on actionable business insights."));
         min-height: 200px;
         opacity: 0.45;
     }
-    /* Suggestions + input pinned at bottom of the shell */
-    .tl-askai-shell > .tl-chat-input-wrap {
-        flex: 0 0 auto;
+
+    /* ── Suggested prompts — horizontal scroll on mobile ───────────────── */
+    @@media (max-width: 599px) {
+        .tl-askai-shell > .mud-paper:has(.mud-chip) {
+            padding: 8px 4px !important;
+        }
+        .tl-askai-shell .d-flex.flex-wrap.gap-2 {
+            flex-wrap: nowrap !important;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            -webkit-overflow-scrolling: touch;
+        }
     }
 
+    /* ── Input area touch targets ──────────────────────────────────────── */
+    @@media (max-width: 599px) {
+        .tl-chat-input-wrap .mud-icon-button { min-width: 44px; min-height: 44px; }
+        .tl-chat-input-wrap .mud-input-control { font-size: 16px; } /* prevents iOS zoom */
+    }
+
+    /* ── Dark mode overrides ───────────────────────────────────────────── */
     body.mud-dark-mode .tl-chat-bubble-ai { background: var(--gray-200) !important; border-color: var(--gray-400) !important; color: var(--gray-900) !important; }
     body.mud-dark-mode .tl-chat-bubble-user { background: var(--tl-primary-400) !important; color: #000 !important; }
     body.mud-dark-mode .tl-chat-thinking { border-color: var(--gray-400) !important; background: var(--gray-100); }

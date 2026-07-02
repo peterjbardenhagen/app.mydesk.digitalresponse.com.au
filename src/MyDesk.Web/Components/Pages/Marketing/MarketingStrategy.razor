@@ -2,6 +2,7 @@
 @attribute [Authorize(Roles = "Director,Administrator,Marketing")]
 @inject MarketingDataService Data
 @inject ISnackbar Snackbar
+@using System.Text.Json
 
 <PageTitle>Marketing Strategy - DR MyDesk</PageTitle>
 
@@ -16,11 +17,20 @@
             <MudIcon Icon="@Icons.Material.Rounded.Lightbulb" Class="mr-2" Style="color: var(--tl-accent)" />
             Marketing Strategy
         </h1>
-        <div class="tl-page-sub">Document your ideal customer profile, positioning, quarterly initiatives and KPIs.</div>
+        <div class="tl-page-sub">Define your brand positioning, market initiatives, KPIs and ideal customer profile.</div>
     </div>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Save" OnClick="SaveStrategy" Disabled="_saving">
-        @(_saving ? "Saving..." : "Save Changes")
-    </MudButton>
+    <div class="d-flex align-center gap-3">
+        @if (_lastSaved.HasValue)
+        {
+            <MudText Typo="Typo.caption" Color="Color.Default" Class="d-none d-sm-flex">
+                Last saved @FormatLastSaved()
+            </MudText>
+        }
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Save"
+                   OnClick="@(() => SaveStrategy())" Disabled="_saving">
+            @(_saving ? "Saving..." : "Save Changes")
+        </MudButton>
+    </div>
 </div>
 
 @if (_loading)
@@ -34,7 +44,75 @@ else if (_strategy == null)
 else
 {
     <MudGrid Spacing="3">
-        @* Ideal Customer Profile *@
+
+        @* ── Brand Positioning Canvas ───────────────────────────────────────── *@
+        <MudItem xs="12">
+            <MudCard Elevation="0" Outlined="true">
+                <MudCardHeader>
+                    <CardHeaderAvatar>
+                        <MudAvatar Style="background: linear-gradient(135deg, var(--mud-palette-primary), var(--mud-palette-secondary));">
+                            <MudIcon Icon="@Icons.Material.Rounded.BrandingWatermark" Style="color:#fff;" />
+                        </MudAvatar>
+                    </CardHeaderAvatar>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Brand Positioning Canvas</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Default">Define how your brand is perceived and differentiated in the market</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12" md="6">
+                            <MudTextField T="string"
+                                         Value="_strategy.ValueProposition"
+                                         ValueChanged="@(v => { _strategy.ValueProposition = v; _ = TriggerAutoSave(); })"
+                                         Label="Value Proposition"
+                                         Placeholder="What unique value do you deliver to customers?"
+                                         Lines="3" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField T="string"
+                                         Value="_strategy.Differentiators"
+                                         ValueChanged="@(v => { _strategy.Differentiators = v; _ = TriggerAutoSave(); })"
+                                         Label="Unique Differentiators"
+                                         Placeholder="Why choose you over competitors? What do you do that no one else does?"
+                                         Lines="3" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4" md="3">
+                            <MudSelect T="string"
+                                       Value="_strategy.BrandVoiceTone"
+                                       ValueChanged="@(v => { _strategy.BrandVoiceTone = v; _ = TriggerAutoSave(); })"
+                                       Label="Brand Voice / Tone" Variant="Variant.Outlined">
+                                <MudSelectItem Value="@("Professional")">Professional</MudSelectItem>
+                                <MudSelectItem Value="@("Conversational")">Conversational</MudSelectItem>
+                                <MudSelectItem Value="@("Bold")">Bold</MudSelectItem>
+                                <MudSelectItem Value="@("Technical")">Technical</MudSelectItem>
+                                <MudSelectItem Value="@("Friendly")">Friendly &amp; Approachable</MudSelectItem>
+                                <MudSelectItem Value="@("Authoritative")">Authoritative</MudSelectItem>
+                                <MudSelectItem Value="@("Empathetic")">Empathetic</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="8" md="9">
+                            <MudTextField T="string"
+                                         Value="_strategy.TargetPersona"
+                                         ValueChanged="@(v => { _strategy.TargetPersona = v; _ = TriggerAutoSave(); })"
+                                         Label="Target Persona"
+                                         Placeholder="Describe your ideal buyer — their role, challenges, goals, and decision-making process"
+                                         Lines="2" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField T="string"
+                                         Value="_strategy.PositioningStatement"
+                                         ValueChanged="@(v => { _strategy.PositioningStatement = v; _ = TriggerAutoSave(); })"
+                                         Label="Positioning Statement"
+                                         Placeholder="For [target customer], [brand] is the [category] that [key benefit] because [reason to believe]."
+                                         Lines="2" Variant="Variant.Outlined" />
+                        </MudItem>
+                    </MudGrid>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        @* ── Ideal Customer Profile ─────────────────────────────────────────── *@
         <MudItem xs="12" md="6">
             <MudCard Elevation="0" Outlined="true" Class="h-100">
                 <MudCardHeader>
@@ -48,64 +126,40 @@ else
                     </CardHeaderContent>
                 </MudCardHeader>
                 <MudCardContent>
-                    <MudTextField T="string" @bind-Value="_strategy.IcpIndustries" 
-                                 Label="Target Industries" 
+                    <MudTextField T="string"
+                                 Value="_strategy.IcpIndustries"
+                                 ValueChanged="@(v => { _strategy.IcpIndustries = v; _ = TriggerAutoSave(); })"
+                                 Label="Target Industries"
                                  Placeholder="e.g. Healthcare, Manufacturing, Education..."
                                  Lines="2" Variant="Variant.Outlined" Class="mb-4" />
-                    
-                    <MudTextField T="string" @bind-Value="_strategy.IcpCompanySize" 
-                                 Label="Company Size" 
-                                 Placeholder="e.g. 50-500 employees, $5M-$50M revenue..."
+
+                    <MudTextField T="string"
+                                 Value="_strategy.IcpCompanySize"
+                                 ValueChanged="@(v => { _strategy.IcpCompanySize = v; _ = TriggerAutoSave(); })"
+                                 Label="Company Size"
+                                 Placeholder="e.g. 50–500 employees, $5M–$50M revenue..."
                                  Variant="Variant.Outlined" Class="mb-4" />
-                    
-                    <MudTextField T="string" @bind-Value="_strategy.IcpPainPoints" 
-                                 Label="Key Pain Points" 
+
+                    <MudTextField T="string"
+                                 Value="_strategy.IcpPainPoints"
+                                 ValueChanged="@(v => { _strategy.IcpPainPoints = v; _ = TriggerAutoSave(); })"
+                                 Label="Key Pain Points"
                                  Placeholder="What problems do they need solved?"
                                  Lines="3" Variant="Variant.Outlined" Class="mb-4" />
-                    
-                    <MudTextField T="string" @bind-Value="_strategy.IcpBuyingTriggers" 
-                                 Label="Buying Triggers" 
+
+                    <MudTextField T="string"
+                                 Value="_strategy.IcpBuyingTriggers"
+                                 ValueChanged="@(v => { _strategy.IcpBuyingTriggers = v; _ = TriggerAutoSave(); })"
+                                 Label="Buying Triggers"
                                  Placeholder="What events drive purchase decisions?"
                                  Lines="2" Variant="Variant.Outlined" />
                 </MudCardContent>
             </MudCard>
         </MudItem>
 
-        @* Positioning *@
+        @* ── Quarterly Initiatives ──────────────────────────────────────────── *@
         <MudItem xs="12" md="6">
             <MudCard Elevation="0" Outlined="true" Class="h-100">
-                <MudCardHeader>
-                    <CardHeaderAvatar>
-                        <MudAvatar Color="Color.Secondary">
-                            <MudIcon Icon="@Icons.Material.Rounded.BrandingWatermark" />
-                        </MudAvatar>
-                    </CardHeaderAvatar>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">Positioning</MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudTextField T="string" @bind-Value="_strategy.ValueProposition" 
-                                 Label="Value Proposition" 
-                                 Placeholder="What unique value do you deliver?"
-                                 Lines="2" Variant="Variant.Outlined" Class="mb-4" />
-                    
-                    <MudTextField T="string" @bind-Value="_strategy.Differentiators" 
-                                 Label="Key Differentiators" 
-                                 Placeholder="Why choose you over competitors?"
-                                 Lines="3" Variant="Variant.Outlined" Class="mb-4" />
-                    
-                    <MudTextField T="string" @bind-Value="_strategy.PositioningStatement" 
-                                 Label="Positioning Statement" 
-                                 Placeholder="For [target], [brand] is the [category] that [benefit]..."
-                                 Lines="2" Variant="Variant.Outlined" />
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-
-        @* Quarterly Initiatives *@
-        <MudItem xs="12" md="8">
-            <MudCard Elevation="0" Outlined="true">
                 <MudCardHeader>
                     <CardHeaderAvatar>
                         <MudAvatar Color="Color.Tertiary">
@@ -118,20 +172,28 @@ else
                 </MudCardHeader>
                 <MudCardContent>
                     <MudGrid Spacing="2">
-                        <MudItem xs="12" md="6">
-                            <MudTextField T="string" @bind-Value="_strategy.Q1Initiatives" 
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string"
+                                         Value="_strategy.Q1Initiatives"
+                                         ValueChanged="@(v => { _strategy.Q1Initiatives = v; _ = TriggerAutoSave(); })"
                                          Label="Q1 Initiatives" Lines="3" Variant="Variant.Outlined" />
                         </MudItem>
-                        <MudItem xs="12" md="6">
-                            <MudTextField T="string" @bind-Value="_strategy.Q2Initiatives" 
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string"
+                                         Value="_strategy.Q2Initiatives"
+                                         ValueChanged="@(v => { _strategy.Q2Initiatives = v; _ = TriggerAutoSave(); })"
                                          Label="Q2 Initiatives" Lines="3" Variant="Variant.Outlined" />
                         </MudItem>
-                        <MudItem xs="12" md="6">
-                            <MudTextField T="string" @bind-Value="_strategy.Q3Initiatives" 
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string"
+                                         Value="_strategy.Q3Initiatives"
+                                         ValueChanged="@(v => { _strategy.Q3Initiatives = v; _ = TriggerAutoSave(); })"
                                          Label="Q3 Initiatives" Lines="3" Variant="Variant.Outlined" />
                         </MudItem>
-                        <MudItem xs="12" md="6">
-                            <MudTextField T="string" @bind-Value="_strategy.Q4Initiatives" 
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string"
+                                         Value="_strategy.Q4Initiatives"
+                                         ValueChanged="@(v => { _strategy.Q4Initiatives = v; _ = TriggerAutoSave(); })"
                                          Label="Q4 Initiatives" Lines="3" Variant="Variant.Outlined" />
                         </MudItem>
                     </MudGrid>
@@ -139,44 +201,203 @@ else
             </MudCard>
         </MudItem>
 
-        @* KPIs *@
-        <MudItem xs="12" md="4">
-            <MudCard Elevation="0" Outlined="true" Class="h-100">
+        @* ── Market Initiatives Tracker ─────────────────────────────────────── *@
+        <MudItem xs="12">
+            <MudCard Elevation="0" Outlined="true">
                 <MudCardHeader>
                     <CardHeaderAvatar>
                         <MudAvatar Color="Color.Warning">
-                            <MudIcon Icon="@Icons.Material.Rounded.TrendingUp" />
+                            <MudIcon Icon="@Icons.Material.Rounded.Checklist" />
                         </MudAvatar>
                     </CardHeaderAvatar>
                     <CardHeaderContent>
-                        <MudText Typo="Typo.h6">KPI Targets</MudText>
+                        <MudText Typo="Typo.h6">Market Initiatives</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Default">Track marketing initiatives with owner, deadline, and progress</MudText>
                     </CardHeaderContent>
+                    <CardHeaderActions>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined"
+                                   StartIcon="@Icons.Material.Rounded.Add" OnClick="AddInitiative">
+                            Add Initiative
+                        </MudButton>
+                    </CardHeaderActions>
                 </MudCardHeader>
-                <MudCardContent>
-                    <div class="d-flex align-center gap-4 mb-4">
-                        <MudNumericField T="int" @bind-Value="_strategy.KpiLeadTarget" 
-                                        Label="Lead Target" Variant="Variant.Outlined" Min="0" />
-                        <MudText Typo="Typo.caption" Class="mt-4">/quarter</MudText>
-                    </div>
-                    <div class="d-flex align-center gap-4 mb-4">
-                        <MudNumericField T="decimal" @bind-Value="_strategy.KpiConversionRate" 
-                                        Label="Conversion %" Variant="Variant.Outlined" Min="0" Max="100" 
-                                        Adornment="Adornment.End" AdornmentText="%" />
-                    </div>
-                    <div class="d-flex align-center gap-4 mb-4">
-                        <MudNumericField T="decimal" @bind-Value="_strategy.KpiCacTarget" 
-                                        Label="Target CAC" Variant="Variant.Outlined" Min="0"
-                                        Adornment="Adornment.Start" AdornmentText="$" />
-                    </div>
-                    <div class="d-flex align-center gap-4">
-                        <MudNumericField T="decimal" @bind-Value="_strategy.KpiNpsTarget" 
-                                        Label="NPS Target" Variant="Variant.Outlined" Min="0" Max="100" />
-                    </div>
+                <MudCardContent Class="pa-0">
+                    @if (_initiatives.Count == 0)
+                    {
+                        <div class="pa-6 text-center">
+                            <MudText Typo="Typo.body2" Color="Color.Default">No initiatives added yet. Click "Add Initiative" to get started.</MudText>
+                        </div>
+                    }
+                    else
+                    {
+                        <div style="overflow-x:auto;">
+                            <MudSimpleTable Dense="true" Hover="true" Style="min-width:720px;">
+                                <thead>
+                                    <tr>
+                                        <th style="width:32%;">Initiative</th>
+                                        <th style="width:13%;">Owner</th>
+                                        <th style="width:13%;">Due Date</th>
+                                        <th style="width:14%;">Status</th>
+                                        <th style="width:22%;">Progress</th>
+                                        <th style="width:44px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var ini in _initiatives)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <MudTextField T="string" @bind-Value="ini.Name"
+                                                             Variant="Variant.Text" Margin="Margin.Dense"
+                                                             Placeholder="Initiative name" />
+                                            </td>
+                                            <td>
+                                                <MudTextField T="string" @bind-Value="ini.Owner"
+                                                             Variant="Variant.Text" Margin="Margin.Dense"
+                                                             Placeholder="Owner" />
+                                            </td>
+                                            <td>
+                                                <MudDatePicker @bind-Date="ini.DueDate"
+                                                              Variant="Variant.Text" Margin="Margin.Dense"
+                                                              DateFormat="dd MMM yyyy" />
+                                            </td>
+                                            <td>
+                                                <MudSelect T="string" @bind-Value="ini.Status"
+                                                           Variant="Variant.Text" Margin="Margin.Dense">
+                                                    <MudSelectItem Value="@("Not Started")">Not Started</MudSelectItem>
+                                                    <MudSelectItem Value="@("In Progress")">In Progress</MudSelectItem>
+                                                    <MudSelectItem Value="@("Completed")">Completed</MudSelectItem>
+                                                    <MudSelectItem Value="@("On Hold")">On Hold</MudSelectItem>
+                                                    <MudSelectItem Value="@("Cancelled")">Cancelled</MudSelectItem>
+                                                </MudSelect>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-center gap-2">
+                                                    <MudProgressLinear Value="@ini.ProgressPercent"
+                                                                       Color="@GetInitiativeProgressColor(ini)"
+                                                                       Style="flex:1;height:8px;border-radius:4px;" />
+                                                    <MudNumericField T="int" @bind-Value="ini.ProgressPercent"
+                                                                     Min="0" Max="100" Variant="Variant.Text" Margin="Margin.Dense"
+                                                                     Style="width:54px;"
+                                                                     Adornment="Adornment.End" AdornmentText="%" />
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <MudIconButton Icon="@Icons.Material.Rounded.DeleteOutline"
+                                                               Size="Size.Small" Color="Color.Error"
+                                                               OnClick="@(() => RemoveInitiative(ini))" />
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </MudSimpleTable>
+                        </div>
+                    }
                 </MudCardContent>
             </MudCard>
         </MudItem>
 
-        @* Notes *@
+        @* ── KPI Dashboard ──────────────────────────────────────────────────── *@
+        <MudItem xs="12">
+            <MudCard Elevation="0" Outlined="true">
+                <MudCardHeader>
+                    <CardHeaderAvatar>
+                        <MudAvatar Color="Color.Success">
+                            <MudIcon Icon="@Icons.Material.Rounded.TrendingUp" />
+                        </MudAvatar>
+                    </CardHeaderAvatar>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">KPI Dashboard</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Default">Track performance against targets. Edits save when you click Save Changes.</MudText>
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined"
+                                   StartIcon="@Icons.Material.Rounded.Add" OnClick="AddKpiRow">
+                            Add KPI
+                        </MudButton>
+                    </CardHeaderActions>
+                </MudCardHeader>
+                <MudCardContent Class="pa-0">
+                    @if (_kpiRows.Count == 0)
+                    {
+                        <div class="pa-6 text-center">
+                            <MudText Typo="Typo.body2" Color="Color.Default">No KPIs defined yet. Click "Add KPI" to get started.</MudText>
+                        </div>
+                    }
+                    else
+                    {
+                        <div style="overflow-x:auto;">
+                            <MudSimpleTable Dense="true" Hover="true" Style="min-width:580px;">
+                                <thead>
+                                    <tr>
+                                        <th style="width:30%;">KPI</th>
+                                        <th style="width:14%;">Target</th>
+                                        <th style="width:14%;">Current</th>
+                                        <th style="width:10%;">Unit</th>
+                                        <th style="width:16%;">Trend</th>
+                                        <th style="width:10%;">Status</th>
+                                        <th style="width:44px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var kpi in _kpiRows)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <MudTextField T="string" @bind-Value="kpi.KpiName"
+                                                             Variant="Variant.Text" Margin="Margin.Dense"
+                                                             Placeholder="KPI name" />
+                                            </td>
+                                            <td>
+                                                <MudTextField T="string" @bind-Value="kpi.Target"
+                                                             Variant="Variant.Text" Margin="Margin.Dense"
+                                                             Placeholder="Target" />
+                                            </td>
+                                            <td>
+                                                <MudTextField T="string" @bind-Value="kpi.Current"
+                                                             Variant="Variant.Text" Margin="Margin.Dense"
+                                                             Placeholder="Current" />
+                                            </td>
+                                            <td>
+                                                <MudTextField T="string" @bind-Value="kpi.Unit"
+                                                             Variant="Variant.Text" Margin="Margin.Dense"
+                                                             Placeholder="%" />
+                                            </td>
+                                            <td>
+                                                <MudSelect T="string" @bind-Value="kpi.Trend"
+                                                           Variant="Variant.Text" Margin="Margin.Dense">
+                                                    <MudSelectItem Value="@("Improving")">Improving</MudSelectItem>
+                                                    <MudSelectItem Value="@("Stable")">Stable</MudSelectItem>
+                                                    <MudSelectItem Value="@("Declining")">Declining</MudSelectItem>
+                                                </MudSelect>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-center gap-1">
+                                                    <MudIcon Icon="@GetTrendIconPath(kpi.Trend)"
+                                                             Color="@GetTrendColor(kpi.Trend)"
+                                                             Size="Size.Small" />
+                                                    <MudText Typo="Typo.caption"
+                                                             Style="@($"color:{GetTrendCssColor(kpi.Trend)};font-weight:600;")">
+                                                        @kpi.Trend
+                                                    </MudText>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <MudIconButton Icon="@Icons.Material.Rounded.DeleteOutline"
+                                                               Size="Size.Small" Color="Color.Error"
+                                                               OnClick="@(() => RemoveKpiRow(kpi))" />
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </MudSimpleTable>
+                        </div>
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        @* ── Strategic Notes ────────────────────────────────────────────────── *@
         <MudItem xs="12">
             <MudCard Elevation="0" Outlined="true">
                 <MudCardHeader>
@@ -185,7 +406,9 @@ else
                     </CardHeaderContent>
                 </MudCardHeader>
                 <MudCardContent>
-                    <MudTextField T="string" @bind-Value="_strategy.Notes" 
+                    <MudTextField T="string"
+                                 Value="_strategy.Notes"
+                                 ValueChanged="@(v => { _strategy.Notes = v; _ = TriggerAutoSave(); })"
                                  Placeholder="Additional strategy notes, market insights, competitive observations..."
                                  Lines="5" Variant="Variant.Outlined" />
                 </MudCardContent>
@@ -193,21 +416,39 @@ else
         </MudItem>
     </MudGrid>
 
-    <div class="d-flex justify-end gap-2 mt-6">
-        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="LoadStrategy" Disabled="_saving">
-            Reset
-        </MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Save" 
-                  OnClick="SaveStrategy" Disabled="_saving">
-            @(_saving ? "Saving..." : "Save Changes")
-        </MudButton>
+    <div class="d-flex justify-space-between align-center mt-6 flex-wrap gap-2">
+        <MudText Typo="Typo.caption" Color="Color.Default">
+            @if (_lastSaved.HasValue)
+            {
+                <span>Last saved @FormatLastSaved() &mdash; changes auto-save 2 seconds after you finish editing.</span>
+            }
+            else
+            {
+                <span>Changes auto-save 2 seconds after you finish editing a field. Multiple users can edit simultaneously.</span>
+            }
+        </MudText>
+        <div class="d-flex gap-2">
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="LoadStrategy" Disabled="_saving">
+                Reset
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Save"
+                      OnClick="@(() => SaveStrategy())" Disabled="_saving">
+                @(_saving ? "Saving..." : "Save Changes")
+            </MudButton>
+        </div>
     </div>
 }
 
 @code {
     private MarketingStrategyDoc? _strategy;
+    private List<MarketInitiative> _initiatives = new();
+    private List<KpiRow> _kpiRows = new();
     private bool _loading = true;
     private bool _saving = false;
+    private DateTime? _lastSaved;
+    private CancellationTokenSource? _autoSaveCts;
+
+    private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     protected override async Task OnInitializedAsync()
     {
@@ -217,9 +458,21 @@ else
     private async Task LoadStrategy()
     {
         _loading = true;
+        _lastSaved = null;
         try
         {
             _strategy = await Data.GetStrategyAsync() ?? new MarketingStrategyDoc();
+
+            // Deserialise initiatives and KPI rows from JSON strings
+            var initList = TryDeserialize<List<MarketInitiative>>(_strategy.MarketInitiativesJson);
+            _initiatives = initList?.Count > 0
+                ? initList
+                : (_strategy.Id == 0 ? DefaultInitiatives() : new());
+
+            var kpiList = TryDeserialize<List<KpiRow>>(_strategy.KpiRowsJson);
+            _kpiRows = kpiList?.Count > 0
+                ? kpiList
+                : (_strategy.Id == 0 ? DefaultKpiRows() : new());
         }
         catch (Exception ex)
         {
@@ -231,25 +484,127 @@ else
         }
     }
 
-    private async Task SaveStrategy()
+    private static T? TryDeserialize<T>(string json)
+    {
+        try { return JsonSerializer.Deserialize<T>(json, _jsonOptions); }
+        catch { return default; }
+    }
+
+    // ── Auto-save: debounced 2 s after last change ───────────────────────────
+    private async Task TriggerAutoSave()
+    {
+        _autoSaveCts?.Cancel();
+        _autoSaveCts = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(2000, _autoSaveCts.Token);
+            await SaveStrategy(silent: true);
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private async Task SaveStrategy(bool silent = false)
     {
         if (_strategy == null) return;
 
         _saving = true;
         try
         {
+            _strategy.MarketInitiativesJson = JsonSerializer.Serialize(_initiatives);
+            _strategy.KpiRowsJson = JsonSerializer.Serialize(_kpiRows);
             await Data.SaveStrategyAsync(_strategy);
-            Snackbar.Add("Strategy saved", Severity.Success);
+            _lastSaved = DateTime.Now;
+            if (!silent) Snackbar.Add("Strategy saved", Severity.Success);
+            StateHasChanged();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error saving: {ex.Message}", Severity.Error);
+            if (!silent) Snackbar.Add($"Error saving: {ex.Message}", Severity.Error);
+            else _logger.LogWarning(ex, "Auto-save failed");
         }
         finally
         {
             _saving = false;
         }
     }
+
+    // ── Initiative helpers ───────────────────────────────────────────────────
+    private void AddInitiative() =>
+        _initiatives.Add(new MarketInitiative());
+
+    private void RemoveInitiative(MarketInitiative ini) =>
+        _initiatives.Remove(ini);
+
+    // ── KPI helpers ──────────────────────────────────────────────────────────
+    private void AddKpiRow() =>
+        _kpiRows.Add(new KpiRow());
+
+    private void RemoveKpiRow(KpiRow kpi) =>
+        _kpiRows.Remove(kpi);
+
+    // ── Formatting ───────────────────────────────────────────────────────────
+    private string FormatLastSaved()
+    {
+        if (!_lastSaved.HasValue) return "";
+        var elapsed = DateTime.Now - _lastSaved.Value;
+        if (elapsed.TotalSeconds < 60) return "just now";
+        if (elapsed.TotalMinutes < 60) return $"{(int)elapsed.TotalMinutes} min ago";
+        return _lastSaved.Value.ToString("HH:mm");
+    }
+
+    private static Color GetInitiativeProgressColor(MarketInitiative ini) => ini.Status switch
+    {
+        "Completed" => Color.Success,
+        "On Hold" or "Cancelled" => Color.Default,
+        _ => ini.ProgressPercent >= 75 ? Color.Success
+           : ini.ProgressPercent >= 40 ? Color.Primary
+           : Color.Warning
+    };
+
+    private static string GetTrendIconPath(string trend) => trend switch
+    {
+        "Improving" => Icons.Material.Rounded.TrendingUp,
+        "Declining" => Icons.Material.Rounded.TrendingDown,
+        _ => Icons.Material.Rounded.TrendingFlat
+    };
+
+    private static Color GetTrendColor(string trend) => trend switch
+    {
+        "Improving" => Color.Success,
+        "Declining" => Color.Error,
+        _ => Color.Default
+    };
+
+    private static string GetTrendCssColor(string trend) => trend switch
+    {
+        "Improving" => "var(--mud-palette-success-default)",
+        "Declining" => "var(--mud-palette-error-default)",
+        _ => "var(--mud-palette-text-secondary)"
+    };
+
+    // ── Sample / default data shown on first load ────────────────────────────
+    private static List<MarketInitiative> DefaultInitiatives() => new()
+    {
+        new() { Id = "a1", Name = "Champion Customer Loyalty Programme", Owner = "Sarah M.",
+                DueDate = new DateTime(DateTime.Now.Year, 3, 31), Status = "In Progress", ProgressPercent = 65 },
+        new() { Id = "a2", Name = "Q1 Email Nurture Sequence", Owner = "James T.",
+                DueDate = new DateTime(DateTime.Now.Year, 2, 28), Status = "Completed", ProgressPercent = 100 },
+        new() { Id = "a3", Name = "Trade Electrician Portal Launch", Owner = "Mike R.",
+                DueDate = new DateTime(DateTime.Now.Year, 6, 30), Status = "Not Started", ProgressPercent = 0 },
+        new() { Id = "a4", Name = "DesignBUILD Expo Attendance", Owner = "Sarah M.",
+                DueDate = new DateTime(DateTime.Now.Year, 5, 15), Status = "In Progress", ProgressPercent = 40 },
+        new() { Id = "a5", Name = "Sustainability Report Publication", Owner = "Emma K.",
+                DueDate = new DateTime(DateTime.Now.Year, 4, 30), Status = "In Progress", ProgressPercent = 25 },
+    };
+
+    private static List<KpiRow> DefaultKpiRows() => new()
+    {
+        new() { Id = "k1", KpiName = "New Leads per Quarter",     Target = "120",    Current = "89",    Unit = "leads", Trend = "Improving" },
+        new() { Id = "k2", KpiName = "Quote Conversion Rate",     Target = "15%",    Current = "12.3%", Unit = "%",     Trend = "Improving" },
+        new() { Id = "k3", KpiName = "Customer Acquisition Cost", Target = "$2,500", Current = "$2,847",Unit = "$",     Trend = "Declining" },
+        new() { Id = "k4", KpiName = "Net Promoter Score",        Target = "50",     Current = "42",    Unit = "pts",   Trend = "Stable"    },
+        new() { Id = "k5", KpiName = "Email Open Rate",           Target = "35%",    Current = "38%",   Unit = "%",     Trend = "Improving" },
+    };
+
+    [Inject] private ILogger<MarketingStrategy> _logger { get; set; } = null!;
 }
-
-

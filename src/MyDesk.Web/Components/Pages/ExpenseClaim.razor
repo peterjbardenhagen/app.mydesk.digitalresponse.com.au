@@ -1,0 +1,615 @@
+@page "/expenses/claim/{ClaimId:int}"
+@attribute [Authorize]
+@using MyDesk.Shared.Models
+@using MyDesk.Shared.Services
+@using MudBlazor
+@inject ExpenseService ExpenseService
+@inject UserService UserService
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthState
+
+<PageTitle>Expense Claim - MyDesk</PageTitle>
+
+@if (_claim != null)
+{
+<style>
+    @@media print {
+        .tl-page-header, .tl-nav-col2, .mud-appbar, .mud-drawer, .no-print,
+        .tl-breadcrumb, .mud-snackbar-container { display: none !important; }
+        .print-only { display: block !important; }
+        body, .mud-main-content { padding: 0 !important; margin: 0 !important; }
+        .print-table { width: 100%; border-collapse: collapse; }
+        .print-table th, .print-table td { border: 1px solid #ccc; padding: 6px 10px; font-size: 12px; }
+        .print-table th { background: #f0f0f0; font-weight: 700; }
+        .print-header { margin-bottom: 20px; }
+        .print-header h1 { font-size: 22px; margin: 0 0 8px; }
+    }
+    .print-only { display: none; }
+</style>
+
+@* Print header (hidden on screen) *@
+<div class="print-only print-header">
+    <h1>Expense Claim</h1>
+    <table style="width:100%; font-size:13px; margin-bottom:16px;">
+        <tr><td><strong>Claim Ref:</strong> @_claim.ClaimRef</td><td><strong>Period:</strong> @_claim.ClaimPeriod</td></tr>
+        <tr><td><strong>Submitted By:</strong> @_claim.SubmittedBy</td><td><strong>Approver:</strong> @(_claim.ApproverName ?? "—")</td></tr>
+        <tr><td><strong>Status:</strong> @_claim.Status</td><td><strong>Date:</strong> @_claim.CreatedAt.ToString("dd MMM yyyy")</td></tr>
+    </table>
+</div>
+
+<div class="tl-page-header no-print">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/expenses">Expense Claims</a><span class="sep">/</span>
+            <span>@_claim.ClaimRef</span>
+        </div>
+        <h1>@_claim.ClaimRef</h1>
+        <p class="tl-subtitle">@_claim.ClaimPeriod — @_claim.SubmittedBy</p>
+    </div>
+    <div class="d-flex gap-2 ml-auto">
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Print"
+                   OnClick="@(() => JS.InvokeVoidAsync("window.print"))">Print</MudButton>
+        @if (_claim.Status == "Draft")
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Rounded.Save"
+                       OnClick="SaveDraft" Disabled="_saving">Save Draft</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Rounded.Send"
+                       OnClick="OpenSubmitModal" Disabled="_saving">Submit for Approval</MudButton>
+        }
+        @if (_claim.Status == "Rejected")
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Rounded.Edit"
+                       OnClick="EditAndResubmit">Edit &amp; Resubmit</MudButton>
+        }
+        @if (_claim.Status == "Submitted" && _isApprover)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Success"
+                       StartIcon="@Icons.Material.Rounded.CheckCircle"
+                       OnClick="ApproveClaim">Approve</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Error"
+                       StartIcon="@Icons.Material.Rounded.Cancel"
+                       OnClick="OpenRejectModal">Reject</MudButton>
+        }
+        @if (_claim.Status == "Approved" && _isAccounts)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Info"
+                       StartIcon="@Icons.Material.Rounded.DoneAll"
+                       OnClick="FinaliseClaim">Finalise</MudButton>
+        }
+    </div>
+</div>
+
+@* Status banner *@
+@if (_claim.Status == "Rejected" && !string.IsNullOrWhiteSpace(_claim.RejectionReason))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="false">
+        <strong>Rejected:</strong> @_claim.RejectionReason
+    </MudAlert>
+}
+@if (_claim.Status == "Approved")
+{
+    <MudAlert Severity="Severity.Success" Class="mb-4" Dense="true">
+        Approved by @_claim.ApproverName on @_claim.ApprovedAt?.ToString("dd MMM yyyy")
+    </MudAlert>
+}
+@if (_claim.Status == "Finalised")
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+        Finalised by @_claim.FinalisedBy on @_claim.FinalisedAt?.ToString("dd MMM yyyy")
+    </MudAlert>
+}
+
+<MudGrid Spacing="3">
+    @* Claim header *@
+    <MudItem xs="12">
+        <MudCard Elevation="0" Outlined="true">
+            <MudCardContent>
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="4">
+                        <MudTextField Label="Claim Reference" Value="@_claim.ClaimRef" ReadOnly="true" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        @if (_claim.Status == "Draft")
+                        {
+                            <MudTextField @bind-Value="_claim.ClaimPeriod" Label="Claim Period"
+                                         Variant="Variant.Outlined"
+                                         Placeholder="e.g. June 2026 or 1 Jun – 30 Jun 2026" />
+                        }
+                        else
+                        {
+                            <MudTextField Label="Claim Period" Value="@_claim.ClaimPeriod" ReadOnly="true" Variant="Variant.Outlined" />
+                        }
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudTextField Label="Status" Value="@_claim.Status" ReadOnly="true" Variant="Variant.Outlined" />
+                    </MudItem>
+                    @if (_claim.Status == "Draft")
+                    {
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="_claim.Notes" Label="Notes (optional)"
+                                         Lines="2" Variant="Variant.Outlined" />
+                        </MudItem>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(_claim.Notes))
+                    {
+                        <MudItem xs="12">
+                            <MudTextField Label="Notes" Value="@_claim.Notes" ReadOnly="true" Lines="2" Variant="Variant.Outlined" />
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    @* Line items *@
+    <MudItem xs="12">
+        <MudCard Elevation="0" Outlined="true">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Expense Items</MudText>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    @if (_claim.Status == "Draft")
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                                   StartIcon="@Icons.Material.Rounded.Add"
+                                   OnClick="AddItem" Class="no-print">Add Item</MudButton>
+                    }
+                </CardHeaderActions>
+            </MudCardHeader>
+            <MudCardContent Class="pa-0">
+                @if (_claim.Items.Count == 0)
+                {
+                    <div class="pa-6 text-center">
+                        <MudText Color="Color.Default">No items yet. Click <strong>Add Item</strong> to add your first expense.</MudText>
+                    </div>
+                }
+                else
+                {
+                    <MudTable Items="_claim.Items" Dense="true" Hover="true" Striped="true" Class="print-table">
+                        <HeaderContent>
+                            <MudTh>Date</MudTh>
+                            <MudTh>Category</MudTh>
+                            <MudTh>Supplier</MudTh>
+                            <MudTh>Description</MudTh>
+                            <MudTh Style="text-align:right;">Ex GST</MudTh>
+                            <MudTh Style="text-align:right;">GST</MudTh>
+                            <MudTh Style="text-align:right;">Total</MudTh>
+                            @if (_claim.Status == "Draft")
+                            {
+                                <MudTh Style="width:120px;" Class="no-print">Receipt</MudTh>
+                                <MudTh Style="width:80px;" Class="no-print"></MudTh>
+                            }
+                            else
+                            {
+                                <MudTh>Receipt</MudTh>
+                            }
+                        </HeaderContent>
+                        <RowTemplate>
+                            @if (_editingItemId == context.ItemId && _claim.Status == "Draft")
+                            {
+                                @* Inline editing row *@
+                                <MudTd>
+                                    <MudDatePicker @bind-Date="_editDate" Variant="Variant.Outlined" Dense="true" Style="min-width:130px;" />
+                                </MudTd>
+                                <MudTd>
+                                    <MudSelect @bind-Value="_editCategory" Variant="Variant.Outlined" Dense="true" Style="min-width:160px;">
+                                        @foreach (var cat in _categories)
+                                        {
+                                            <MudSelectItem Value="@cat">@cat</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                </MudTd>
+                                <MudTd>
+                                    <MudTextField @bind-Value="_editSupplier" Variant="Variant.Outlined" Dense="true" Style="min-width:130px;" />
+                                </MudTd>
+                                <MudTd>
+                                    <MudTextField @bind-Value="_editDescription" Variant="Variant.Outlined" Dense="true" Style="min-width:180px;" />
+                                </MudTd>
+                                <MudTd>
+                                    <MudNumericField @bind-Value="_editAmountExGst" Variant="Variant.Outlined" Dense="true"
+                                                     Style="min-width:100px;" Format="F2"
+                                                     Adornment="Adornment.Start" AdornmentText="$"
+                                                     ValueChanged="OnAmountChanged" />
+                                </MudTd>
+                                <MudTd>
+                                    <MudNumericField @bind-Value="_editGstAmount" Variant="Variant.Outlined" Dense="true"
+                                                     Style="min-width:90px;" Format="F2"
+                                                     Adornment="Adornment.Start" AdornmentText="$" />
+                                </MudTd>
+                                <MudTd Style="text-align:right; font-weight:600;">
+                                    @((_editAmountExGst + _editGstAmount).ToString("C"))
+                                </MudTd>
+                                <MudTd Class="no-print">
+                                    <MudCheckBox @bind-Value="_editHasGst" Label="GST" Dense="true" />
+                                </MudTd>
+                                <MudTd Class="no-print">
+                                    <div class="d-flex gap-1">
+                                        <MudIconButton Icon="@Icons.Material.Rounded.Check" Color="Color.Success" Size="Size.Small" OnClick="SaveItem" />
+                                        <MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small" OnClick="CancelEdit" />
+                                    </div>
+                                </MudTd>
+                            }
+                            else
+                            {
+                                <MudTd>@context.Date.ToString("dd MMM yyyy")</MudTd>
+                                <MudTd>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Default">@context.Category</MudChip>
+                                </MudTd>
+                                <MudTd>@context.Supplier</MudTd>
+                                <MudTd>@context.Description</MudTd>
+                                <MudTd Style="text-align:right;">@context.AmountExGst.ToString("C")</MudTd>
+                                <MudTd Style="text-align:right;">@context.GstAmount.ToString("C")</MudTd>
+                                <MudTd Style="text-align:right; font-weight:600;">@context.TotalAmount.ToString("C")</MudTd>
+                                @if (_claim.Status == "Draft")
+                                {
+                                    <MudTd Class="no-print">
+                                        @if (!string.IsNullOrWhiteSpace(context.ReceiptFilePath))
+                                        {
+                                            <MudIconButton Icon="@Icons.Material.Rounded.PictureAsPdf" Color="Color.Error"
+                                                           Size="Size.Small" Href="@context.ReceiptFilePath" Target="_blank" />
+                                        }
+                                        else
+                                        {
+                                            <span class="mud-text-secondary" style="font-size:12px;">No receipt</span>
+                                        }
+                                    </MudTd>
+                                    <MudTd Class="no-print">
+                                        <div class="d-flex gap-1">
+                                            <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small"
+                                                           OnClick="@(() => EditItem(context))" />
+                                            <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small"
+                                                           Color="Color.Error" OnClick="@(() => DeleteItem(context))" />
+                                        </div>
+                                    </MudTd>
+                                }
+                                else
+                                {
+                                    <MudTd>
+                                        @if (!string.IsNullOrWhiteSpace(context.ReceiptFilePath))
+                                        {
+                                            <MudIconButton Icon="@Icons.Material.Rounded.PictureAsPdf" Color="Color.Error"
+                                                           Size="Size.Small" Href="@context.ReceiptFilePath" Target="_blank" />
+                                        }
+                                    </MudTd>
+                                }
+                            }
+                        </RowTemplate>
+                    </MudTable>
+
+                    @* Totals row *@
+                    <div class="d-flex justify-end pa-4 gap-6">
+                        <div class="text-right">
+                            <MudText Typo="Typo.caption" Color="Color.Default">Total ex GST</MudText>
+                            <MudText Typo="Typo.h6">@_claim.Items.Sum(i => i.AmountExGst).ToString("C")</MudText>
+                        </div>
+                        <div class="text-right">
+                            <MudText Typo="Typo.caption" Color="Color.Default">Total GST</MudText>
+                            <MudText Typo="Typo.h6">@_claim.Items.Sum(i => i.GstAmount).ToString("C")</MudText>
+                        </div>
+                        <div class="text-right">
+                            <MudText Typo="Typo.caption" Color="Color.Default">Total</MudText>
+                            <MudText Typo="Typo.h5" Style="font-weight:700; color:var(--mud-palette-primary);">
+                                @_claim.TotalAmount.ToString("C")
+                            </MudText>
+                        </div>
+                    </div>
+                }
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@* ── Submit Modal ─────────────────────────────────────────────────────── *@
+<MudDialog @bind-IsVisible="_showSubmitModal" Options="_modalOptions">
+    <TitleContent>Submit Claim for Approval</TitleContent>
+    <DialogContent>
+        <MudText Class="mb-4">
+            You are about to submit <strong>@_claim.ClaimRef</strong>
+            totalling <strong>@_claim.TotalAmount.ToString("C")</strong>.
+            Please select the manager to approve this claim.
+        </MudText>
+        <MudSelect T="int" @bind-Value="_selectedApproverId" Label="Approver (Manager)"
+                   Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+            @foreach (var u in _users)
+            {
+                <MudSelectItem Value="@u.UserId">@u.Name</MudSelectItem>
+            }
+        </MudSelect>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showSubmitModal = false)">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   OnClick="SubmitClaim" Disabled="@(_selectedApproverId == 0)">Submit</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@* ── Reject Modal ──────────────────────────────────────────────────────── *@
+<MudDialog @bind-IsVisible="_showRejectModal" Options="_modalOptions">
+    <TitleContent>Reject Claim</TitleContent>
+    <DialogContent>
+        <MudText Class="mb-4">Please provide a reason for rejecting <strong>@_claim.ClaimRef</strong>.</MudText>
+        <MudTextField @bind-Value="_rejectionReason" Label="Rejection Reason"
+                      Lines="3" Variant="Variant.Outlined" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showRejectModal = false)">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error"
+                   OnClick="RejectClaim" Disabled="@string.IsNullOrWhiteSpace(_rejectionReason)">Reject</MudButton>
+    </DialogActions>
+</MudDialog>
+}
+else if (_notFound)
+{
+    <MudAlert Severity="Severity.Error">Claim not found.</MudAlert>
+}
+else
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+
+@code {
+    [Parameter] public int ClaimId { get; set; }
+
+    private ExpenseClaim? _claim;
+    private bool _notFound = false;
+    private bool _saving = false;
+    private bool _isApprover = false;
+    private bool _isAccounts = false;
+    private List<User> _users = new();
+    private string? _currentUserName;
+
+    // Submit modal
+    private bool _showSubmitModal = false;
+    private int _selectedApproverId = 0;
+
+    // Reject modal
+    private bool _showRejectModal = false;
+    private string _rejectionReason = "";
+
+    // Item editing
+    private int _editingItemId = 0;   // 0 = new item being added
+    private bool _isAddingNew = false;
+    private DateTime? _editDate = DateTime.Today;
+    private string _editCategory = "General";
+    private string? _editSupplier;
+    private string _editDescription = "";
+    private decimal _editAmountExGst = 0;
+    private decimal _editGstAmount = 0;
+    private bool _editHasGst = true;
+
+    private readonly DialogOptions _modalOptions = new()
+    {
+        CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true,
+        MaxWidth = MaxWidth.Small, FullWidth = true
+    };
+
+    private static readonly string[] _categories =
+    {
+        "Accommodation", "Airfare", "Car Hire", "Fuel/Mileage",
+        "Meals & Entertainment", "Client Entertainment", "Office Supplies",
+        "Professional Development", "Technology/Software", "Taxi/Uber/Parking",
+        "Telephone & Internet", "Other", "General"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        _currentUserName = auth.User.Identity?.Name ?? auth.User.FindFirst("name")?.Value;
+        _isApprover = auth.User.IsInRole("Director") ||
+                      auth.User.IsInRole("Administrator") ||
+                      auth.User.FindFirst("IsAdmin")?.Value == "True";
+        _isAccounts = auth.User.IsInRole("Accounts") ||
+                      auth.User.IsInRole("Administrator") ||
+                      auth.User.IsInRole("Director") ||
+                      _isApprover;
+
+        await LoadClaimAsync();
+
+        try { _users = await UserService.GetAllAsync(); }
+        catch { /* non-fatal */ }
+    }
+
+    private async Task LoadClaimAsync()
+    {
+        try
+        {
+            _claim = await ExpenseService.GetClaimAsync(ClaimId);
+            if (_claim == null) _notFound = true;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading claim: {ex.Message}", Severity.Error);
+            _notFound = true;
+        }
+    }
+
+    // ── Line item editing ─────────────────────────────────────────────────
+
+    private void AddItem()
+    {
+        _editingItemId = -1;   // -1 = sentinel for "new item"
+        _isAddingNew = true;
+        _editDate = DateTime.Today;
+        _editCategory = "General";
+        _editSupplier = null;
+        _editDescription = "";
+        _editAmountExGst = 0;
+        _editGstAmount = 0;
+        _editHasGst = true;
+
+        // Add a placeholder item to the list so the edit row renders
+        var placeholder = new ExpenseClaimItem { ItemId = -1, ClaimId = ClaimId };
+        _claim!.Items.Add(placeholder);
+    }
+
+    private void EditItem(ExpenseClaimItem item)
+    {
+        _editingItemId = item.ItemId;
+        _isAddingNew = false;
+        _editDate = item.Date;
+        _editCategory = item.Category;
+        _editSupplier = item.Supplier;
+        _editDescription = item.Description;
+        _editAmountExGst = item.AmountExGst;
+        _editGstAmount = item.GstAmount;
+        _editHasGst = item.HasGst;
+    }
+
+    private void CancelEdit()
+    {
+        if (_isAddingNew)
+            _claim!.Items.RemoveAll(i => i.ItemId == -1);
+        _editingItemId = 0;
+        _isAddingNew = false;
+    }
+
+    private void OnAmountChanged(decimal value)
+    {
+        _editAmountExGst = value;
+        if (_editHasGst)
+            _editGstAmount = Math.Round(value * 0.1m, 2);
+    }
+
+    private async Task SaveItem()
+    {
+        if (_claim == null) return;
+
+        var item = _isAddingNew
+            ? new ExpenseClaimItem { ClaimId = ClaimId }
+            : _claim.Items.First(i => i.ItemId == _editingItemId);
+
+        item.Date = _editDate ?? DateTime.Today;
+        item.Category = _editCategory;
+        item.Supplier = _editSupplier;
+        item.Description = _editDescription;
+        item.AmountExGst = _editAmountExGst;
+        item.GstAmount = _editGstAmount;
+        item.HasGst = _editHasGst;
+        item.TotalAmount = _editAmountExGst + _editGstAmount;
+
+        try
+        {
+            await ExpenseService.SaveClaimItemAsync(item);
+            Snackbar.Add("Item saved", Severity.Success);
+            _editingItemId = 0;
+            _isAddingNew = false;
+            await LoadClaimAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task DeleteItem(ExpenseClaimItem item)
+    {
+        try
+        {
+            await ExpenseService.DeleteClaimItemAsync(item.ItemId);
+            Snackbar.Add("Item removed", Severity.Success);
+            await LoadClaimAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+    }
+
+    // ── Claim actions ─────────────────────────────────────────────────────
+
+    private async Task SaveDraft()
+    {
+        if (_claim == null) return;
+        _saving = true;
+        try
+        {
+            await ExpenseService.SaveClaimAsync(_claim);
+            Snackbar.Add("Draft saved", Severity.Success);
+        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+        finally { _saving = false; }
+    }
+
+    private void OpenSubmitModal() => _showSubmitModal = true;
+
+    private async Task SubmitClaim()
+    {
+        if (_claim == null || _selectedApproverId == 0) return;
+        _showSubmitModal = false;
+        _saving = true;
+        try
+        {
+            // Save any pending draft changes first
+            await ExpenseService.SaveClaimAsync(_claim);
+
+            var approver = _users.FirstOrDefault(u => u.UserId == _selectedApproverId);
+            await ExpenseService.SubmitClaimAsync(ClaimId, _selectedApproverId,
+                approver?.Name ?? "", approver?.Email ?? null);
+
+            Snackbar.Add("Claim submitted for approval", Severity.Success);
+            await LoadClaimAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+        finally { _saving = false; }
+    }
+
+    private async Task ApproveClaim()
+    {
+        if (_claim == null) return;
+        _saving = true;
+        try
+        {
+            await ExpenseService.ApproveClaimAsync(ClaimId, _currentUserName ?? "");
+            Snackbar.Add("Claim approved", Severity.Success);
+            await LoadClaimAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+        finally { _saving = false; }
+    }
+
+    private void OpenRejectModal() => _showRejectModal = true;
+
+    private async Task RejectClaim()
+    {
+        if (_claim == null || string.IsNullOrWhiteSpace(_rejectionReason)) return;
+        _showRejectModal = false;
+        _saving = true;
+        try
+        {
+            await ExpenseService.RejectClaimAsync(ClaimId, _rejectionReason, _currentUserName ?? "");
+            Snackbar.Add("Claim rejected", Severity.Warning);
+            await LoadClaimAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+        finally { _saving = false; }
+    }
+
+    private async Task EditAndResubmit()
+    {
+        if (_claim == null) return;
+        _saving = true;
+        try
+        {
+            _claim.Status = "Draft";
+            _claim.RejectionReason = null;
+            await ExpenseService.SaveClaimAsync(_claim);
+            Snackbar.Add("Claim moved back to Draft — please edit and resubmit", Severity.Info);
+            await LoadClaimAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+        finally { _saving = false; }
+    }
+
+    private async Task FinaliseClaim()
+    {
+        if (_claim == null) return;
+        _saving = true;
+        try
+        {
+            await ExpenseService.FinaliseClaimAsync(ClaimId, _currentUserName ?? "");
+            Snackbar.Add("Claim finalised", Severity.Success);
+            await LoadClaimAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+        finally { _saving = false; }
+    }
+}

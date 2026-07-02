@@ -383,9 +383,13 @@ public class MarketingDataService
                 Subject = "Your exclusive early access to new arrivals",
                 Audience = "Champions",
                 Status = "Sent",
+                CampaignType = "Single Send",
                 SentCount = 45,
                 OpenRate = 68,
                 ClickRate = 24,
+                BounceRate = 1.2m,
+                UnsubscribeRate = 0.4m,
+                ConversionRate = 8.5m,
                 SentAt = new DateTime(2026, 1, 15),
                 RecipientCount = 45
             },
@@ -394,10 +398,17 @@ public class MarketingDataService
                 Id = "2",
                 Name = "At-Risk Reactivation",
                 Subject = "We miss you — here's 10% off your next order",
-                Audience = "At-Risk",
+                Audience = "At Risk",
                 Status = "Draft",
+                CampaignType = "Drip Sequence",
                 SentCount = 0,
-                RecipientCount = 12
+                RecipientCount = 12,
+                DripSteps = new()
+                {
+                    new DripStep { Order = 1, DelayDays = 0, Subject = "We miss you!", BodyHtml = "<p>It's been a while...</p>" },
+                    new DripStep { Order = 2, DelayDays = 3, Subject = "Special offer inside", BodyHtml = "<p>Here's 10% off your next order.</p>" },
+                    new DripStep { Order = 3, DelayDays = 7, Subject = "Last chance", BodyHtml = "<p>This offer expires soon.</p>" }
+                }
             },
             new EmailCampaign
             {
@@ -406,9 +417,31 @@ public class MarketingDataService
                 Subject = "Introducing the 2026 Collection",
                 Audience = "All Customers",
                 Status = "Scheduled",
+                CampaignType = "Single Send",
+                AbTestEnabled = true,
+                SubjectVariantA = "Introducing the 2026 Collection",
+                SubjectVariantB = "2026 Collection — Now Available",
+                AbSplitPercent = 50,
                 SentCount = 0,
                 RecipientCount = 156,
                 ScheduledAt = new DateTime(2026, 5, 1)
+            },
+            new EmailCampaign
+            {
+                Id = "4",
+                Name = "Win-Back Campaign",
+                Subject = "Still thinking about us?",
+                Audience = "Win-Back",
+                Status = "Sent",
+                CampaignType = "Trigger-Based",
+                SentCount = 28,
+                OpenRate = 42,
+                ClickRate = 11,
+                BounceRate = 2.1m,
+                UnsubscribeRate = 0.8m,
+                ConversionRate = 4.2m,
+                SentAt = new DateTime(2026, 2, 28),
+                RecipientCount = 28
             }
         };
     }
@@ -416,12 +449,15 @@ public class MarketingDataService
     public async Task<CampaignStats> GetCampaignStatsAsync()
     {
         var campaigns = await GetCampaignsAsync();
-        var sent = campaigns.Where(c => c.Status == "Sent");
+        var sent = campaigns.Where(c => c.Status == "Sent").ToList();
         return new CampaignStats
         {
             TotalSent = sent.Sum(c => c.SentCount),
             AvgOpenRate = sent.Any() ? (int)sent.Average(c => c.OpenRate) : 0,
-            AvgClickRate = sent.Any() ? (int)sent.Average(c => c.ClickRate) : 0
+            AvgClickRate = sent.Any() ? (int)sent.Average(c => c.ClickRate) : 0,
+            AvgBounceRate = sent.Any() ? sent.Average(c => c.BounceRate) : 0,
+            AvgUnsubscribeRate = sent.Any() ? sent.Average(c => c.UnsubscribeRate) : 0,
+            AvgConversionRate = sent.Any() ? sent.Average(c => c.ConversionRate) : 0,
         };
     }
 
@@ -541,71 +577,92 @@ public class MarketingDataService
             KpiLeadTarget = r.Table.Columns.Contains("KpiLeadTarget") && r["KpiLeadTarget"] != DBNull.Value ? Convert.ToInt32(r["KpiLeadTarget"]) : 120,
             KpiConversionRate = r.Table.Columns.Contains("KpiConversionRate") && r["KpiConversionRate"] != DBNull.Value ? Convert.ToDecimal(r["KpiConversionRate"]) : 15,
             KpiCacTarget = r.Table.Columns.Contains("KpiCacTarget") && r["KpiCacTarget"] != DBNull.Value ? Convert.ToDecimal(r["KpiCacTarget"]) : 2500,
-            KpiNpsTarget = r.Table.Columns.Contains("KpiNpsTarget") && r["KpiNpsTarget"] != DBNull.Value ? Convert.ToInt32(r["KpiNpsTarget"]) : 50
+            KpiNpsTarget = r.Table.Columns.Contains("KpiNpsTarget") && r["KpiNpsTarget"] != DBNull.Value ? Convert.ToInt32(r["KpiNpsTarget"]) : 50,
+            BrandVoiceTone = r.Table.Columns.Contains("BrandVoiceTone") && r["BrandVoiceTone"] != DBNull.Value ? r["BrandVoiceTone"].ToString()! : "Professional",
+            TargetPersona = r.Table.Columns.Contains("TargetPersona") && r["TargetPersona"] != DBNull.Value ? r["TargetPersona"].ToString()! : "",
+            MarketInitiativesJson = r.Table.Columns.Contains("MarketInitiativesJson") && r["MarketInitiativesJson"] != DBNull.Value ? r["MarketInitiativesJson"].ToString()! : "[]",
+            KpiRowsJson = r.Table.Columns.Contains("KpiRowsJson") && r["KpiRowsJson"] != DBNull.Value ? r["KpiRowsJson"].ToString()! : "[]",
         };
     }
 
     public async Task SaveStrategyAsync(MarketingStrategyDoc strategy)
     {
+        var coreParams = new Dictionary<string, object?>
+        {
+            ["Industries"] = strategy.IcpIndustries,
+            ["Size"] = strategy.IcpCompanySize,
+            ["PainPoints"] = strategy.IcpPainPoints,
+            ["Triggers"] = strategy.IcpBuyingTriggers,
+            ["ValueProp"] = strategy.ValueProposition,
+            ["Diff"] = strategy.Differentiators,
+            ["Position"] = strategy.PositioningStatement,
+            ["Q1"] = strategy.Q1Initiatives,
+            ["Q2"] = strategy.Q2Initiatives,
+            ["Q3"] = strategy.Q3Initiatives,
+            ["Q4"] = strategy.Q4Initiatives,
+            ["Lead"] = strategy.KpiLeadTarget,
+            ["Conv"] = strategy.KpiConversionRate,
+            ["Cac"] = strategy.KpiCacTarget,
+            ["Nps"] = strategy.KpiNpsTarget,
+            ["Notes"] = strategy.Notes ?? "",
+        };
+
         if (strategy.Id == 0)
         {
             await _db.ExecuteNonQueryAsync(@"
-                INSERT INTO MarketingStrategy 
-                (IcpIndustries, IcpCompanySize, IcpPainPoints, IcpBuyingTriggers, ValueProposition, 
-                 Differentiators, PositioningStatement, Q1Initiatives, Q2Initiatives, Q3Initiatives, 
-                 Q4Initiatives, KpiLeadTarget, KpiConversionRate, KpiCacTarget, KpiNpsTarget, 
+                INSERT INTO MarketingStrategy
+                (IcpIndustries, IcpCompanySize, IcpPainPoints, IcpBuyingTriggers, ValueProposition,
+                 Differentiators, PositioningStatement, Q1Initiatives, Q2Initiatives, Q3Initiatives,
+                 Q4Initiatives, KpiLeadTarget, KpiConversionRate, KpiCacTarget, KpiNpsTarget, Notes,
                  UpdatedBy)
-                VALUES (@Industries, @Size, @PainPoints, @Triggers, @ValueProp, 
-                        @Diff, @Position, @Q1, @Q2, @Q3, @Q4, @Lead, @Conv, @Cac, @Nps, @UpdatedBy)",
-                new() { 
-                    ["Industries"] = strategy.IcpIndustries,
-                    ["Size"] = strategy.IcpCompanySize,
-                    ["PainPoints"] = strategy.IcpPainPoints,
-                    ["Triggers"] = strategy.IcpBuyingTriggers,
-                    ["ValueProp"] = strategy.ValueProposition,
-                    ["Diff"] = strategy.Differentiators,
-                    ["Position"] = strategy.PositioningStatement,
-                    ["Q1"] = strategy.Q1Initiatives,
-                    ["Q2"] = strategy.Q2Initiatives,
-                    ["Q3"] = strategy.Q3Initiatives,
-                    ["Q4"] = strategy.Q4Initiatives,
-                    ["Lead"] = strategy.KpiLeadTarget,
-                    ["Conv"] = strategy.KpiConversionRate,
-                    ["Cac"] = strategy.KpiCacTarget,
-                    ["Nps"] = strategy.KpiNpsTarget,
-                    ["UpdatedBy"] = ""
-                });
+                VALUES (@Industries, @Size, @PainPoints, @Triggers, @ValueProp,
+                        @Diff, @Position, @Q1, @Q2, @Q3, @Q4, @Lead, @Conv, @Cac, @Nps, @Notes, '')",
+                coreParams);
+
+            // Attempt to retrieve the new row Id
+            var idDt = await _db.QueryAsync("SELECT TOP 1 StrategyId FROM MarketingStrategy ORDER BY StrategyId DESC");
+            if (idDt.Rows.Count > 0)
+                strategy.Id = Convert.ToInt32(idDt.Rows[0]["StrategyId"]);
         }
         else
         {
             await _db.ExecuteNonQueryAsync(@"
-                UPDATE MarketingStrategy 
-                SET IcpIndustries = @Industries, IcpCompanySize = @Size, IcpPainPoints = @PainPoints, 
-                    IcpBuyingTriggers = @Triggers, ValueProposition = @ValueProp, Differentiators = @Diff, 
-                    PositioningStatement = @Position, Q1Initiatives = @Q1, Q2Initiatives = @Q2, 
-                    Q3Initiatives = @Q3, Q4Initiatives = @Q4, KpiLeadTarget = @Lead, 
-                    KpiConversionRate = @Conv, KpiCacTarget = @Cac, KpiNpsTarget = @Nps, 
-                    UpdatedAt = GETDATE()
+                UPDATE MarketingStrategy
+                SET IcpIndustries = @Industries, IcpCompanySize = @Size, IcpPainPoints = @PainPoints,
+                    IcpBuyingTriggers = @Triggers, ValueProposition = @ValueProp, Differentiators = @Diff,
+                    PositioningStatement = @Position, Q1Initiatives = @Q1, Q2Initiatives = @Q2,
+                    Q3Initiatives = @Q3, Q4Initiatives = @Q4, KpiLeadTarget = @Lead,
+                    KpiConversionRate = @Conv, KpiCacTarget = @Cac, KpiNpsTarget = @Nps,
+                    Notes = @Notes, UpdatedAt = GETDATE()
                 WHERE StrategyId = @Id",
-                new() { 
-                    ["Id"] = strategy.Id,
-                    ["Industries"] = strategy.IcpIndustries,
-                    ["Size"] = strategy.IcpCompanySize,
-                    ["PainPoints"] = strategy.IcpPainPoints,
-                    ["Triggers"] = strategy.IcpBuyingTriggers,
-                    ["ValueProp"] = strategy.ValueProposition,
-                    ["Diff"] = strategy.Differentiators,
-                    ["Position"] = strategy.PositioningStatement,
-                    ["Q1"] = strategy.Q1Initiatives,
-                    ["Q2"] = strategy.Q2Initiatives,
-                    ["Q3"] = strategy.Q3Initiatives,
-                    ["Q4"] = strategy.Q4Initiatives,
-                    ["Lead"] = strategy.KpiLeadTarget,
-                    ["Conv"] = strategy.KpiConversionRate,
-                    ["Cac"] = strategy.KpiCacTarget,
-                    ["Nps"] = strategy.KpiNpsTarget
-                });
+                new Dictionary<string, object?>(coreParams) { ["Id"] = strategy.Id });
         }
-        _logger.LogInformation("Marketing strategy saved");
+
+        // Save extended fields (Brand Positioning Canvas, Initiatives, KPIs) — silently skip if columns don't exist yet
+        if (strategy.Id > 0)
+        {
+            try
+            {
+                await _db.ExecuteNonQueryAsync(@"
+                    UPDATE MarketingStrategy
+                    SET BrandVoiceTone = @BrandVoice, TargetPersona = @Persona,
+                        MarketInitiativesJson = @Initiatives, KpiRowsJson = @KpiRows
+                    WHERE StrategyId = @Id",
+                    new Dictionary<string, object?>
+                    {
+                        ["BrandVoice"] = strategy.BrandVoiceTone,
+                        ["Persona"] = strategy.TargetPersona,
+                        ["Initiatives"] = strategy.MarketInitiativesJson,
+                        ["KpiRows"] = strategy.KpiRowsJson,
+                        ["Id"] = strategy.Id
+                    });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Extended strategy columns not yet in schema — skipping");
+            }
+        }
+
+        _logger.LogInformation("Marketing strategy saved (Id={Id})", strategy.Id);
     }
 }

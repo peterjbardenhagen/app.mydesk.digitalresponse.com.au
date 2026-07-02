@@ -8,6 +8,44 @@
 
 <PageTitle>Dashboard - @PlatformSettings.GetBrandingName()</PageTitle>
 
+@* ── Mobile Quick-Launch (phones only, shown above the full dashboard) ──────── *@
+<div class="tl-mobile-quicklaunch d-block d-sm-none">
+    <div class="tl-mql-greeting">Good @TimeOfDayGreeting(), @FirstName(_userName)</div>
+    <div class="tl-mql-question">What do you want to do today?</div>
+    <div class="tl-mql-grid">
+        <a href="/ask-ai" class="tl-mql-tile tl-mql-ai">
+            <div class="tl-mql-icon"><MudIcon Icon="@Icons.Material.Rounded.AutoAwesome" Size="Size.Large" /></div>
+            <div class="tl-mql-label">MyDesk AI</div>
+            <div class="tl-mql-hint">Ask anything</div>
+        </a>
+        <a href="/quotes/create" class="tl-mql-tile">
+            <div class="tl-mql-icon"><MudIcon Icon="@Icons.Material.Rounded.RequestQuote" Size="Size.Large" /></div>
+            <div class="tl-mql-label">New Quote</div>
+            <div class="tl-mql-hint">Create quotation</div>
+        </a>
+        <a href="/invoices/create" class="tl-mql-tile">
+            <div class="tl-mql-icon"><MudIcon Icon="@Icons.Material.Rounded.ReceiptLong" Size="Size.Large" /></div>
+            <div class="tl-mql-label">New Invoice</div>
+            <div class="tl-mql-hint">Bill for services</div>
+        </a>
+        <a href="/contacts" class="tl-mql-tile">
+            <div class="tl-mql-icon"><MudIcon Icon="@Icons.Material.Rounded.People" Size="Size.Large" /></div>
+            <div class="tl-mql-label">Contacts</div>
+            <div class="tl-mql-hint">Customers &amp; suppliers</div>
+        </a>
+        <a href="/expenses" class="tl-mql-tile">
+            <div class="tl-mql-icon"><MudIcon Icon="@Icons.Material.Rounded.Receipt" Size="Size.Large" /></div>
+            <div class="tl-mql-label">Expenses</div>
+            <div class="tl-mql-hint">Claims &amp; receipts</div>
+        </a>
+        <a href="/purchase-orders" class="tl-mql-tile">
+            <div class="tl-mql-icon"><MudIcon Icon="@Icons.Material.Rounded.ShoppingCart" Size="Size.Large" /></div>
+            <div class="tl-mql-label">Purchase Orders</div>
+            <div class="tl-mql-hint">Manage POs</div>
+        </a>
+    </div>
+</div>
+
 @* ── Enterprise Dashboard Header ──────────────────────────────────────────── *@
 <div class="tl-dashboard-header">
     <div class="tl-dashboard-header-bg">
@@ -638,6 +676,13 @@ else
         string.IsNullOrWhiteSpace(n) ? "there"
         : n.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "there";
 
+    private static string TimeOfDayGreeting() => DateTime.Now.Hour switch
+    {
+        < 12 => "morning",
+        < 17 => "afternoon",
+        _    => "evening"
+    };
+
     // Helper methods for KPI cards
     private string GetTrendClass(decimal value) => value >= 0 ? "positive" : "negative";
     private string GetTrendIcon(decimal value) => value >= 0 ? Icons.Material.Rounded.TrendingUp : Icons.Material.Rounded.TrendingDown;
@@ -754,6 +799,68 @@ else
 }
 
 <style>
+    /* ── Mobile Quick-Launch ─────────────────────────────────────────────── */
+    .tl-mobile-quicklaunch {
+        padding: 20px 16px 8px;
+    }
+    .tl-mql-greeting {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 4px;
+    }
+    .tl-mql-question {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin-bottom: 20px;
+    }
+    .tl-mql-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+    .tl-mql-tile {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 16px 8px 14px;
+        border-radius: 16px;
+        border: 1px solid var(--gray-200);
+        background: white;
+        text-decoration: none;
+        color: var(--gray-900);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        gap: 6px;
+        -webkit-tap-highlight-color: transparent;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .tl-mql-tile:active { transform: scale(0.96); }
+    .tl-mql-tile.tl-mql-ai {
+        background: linear-gradient(135deg, var(--tl-primary-50, #eff6ff) 0%, white 100%);
+        border-color: var(--tl-primary-200, #bfdbfe);
+        grid-column: span 3;
+        flex-direction: row;
+        justify-content: flex-start;
+        padding: 18px 20px;
+        gap: 16px;
+    }
+    .tl-mql-ai .tl-mql-icon { color: var(--tl-primary); }
+    .tl-mql-ai .tl-mql-label { font-size: 17px; font-weight: 700; }
+    .tl-mql-ai .tl-mql-hint { font-size: 13px; color: var(--gray-500); }
+    .tl-mql-ai > div:not(.tl-mql-icon) { display: flex; flex-direction: column; }
+    .tl-mql-icon { color: var(--tl-primary); display: flex; }
+    .tl-mql-label { font-size: 12px; font-weight: 600; text-align: center; color: var(--gray-800); }
+    .tl-mql-hint { font-size: 10px; color: var(--gray-400); text-align: center; }
+    body.mud-dark-mode .tl-mql-tile { background: var(--gray-100); border-color: var(--gray-300); }
+    body.mud-dark-mode .tl-mql-tile.tl-mql-ai { background: linear-gradient(135deg, var(--gray-200) 0%, var(--gray-100) 100%); }
+    body.mud-dark-mode .tl-mql-question { color: var(--gray-900); }
+    body.mud-dark-mode .tl-mql-label { color: var(--gray-800); }
+
     .tl-dashboard-period-selector {
         display: flex;
         align-items: center;

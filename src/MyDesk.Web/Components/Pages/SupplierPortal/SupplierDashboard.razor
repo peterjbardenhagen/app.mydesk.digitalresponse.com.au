@@ -8,6 +8,17 @@
 
 <PageTitle>Dashboard - Techlight Supplier Portal</PageTitle>
 
+@* ── Impersonation Banner ─────────────────────────────────────────── *@
+@if (Impersonate.HasValue && _supplier != null)
+{
+    <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-4" NoIcon="false">
+        You are viewing the portal as <strong>@_supplier.SupplierName</strong>.
+        <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="StopImpersonating" Class="ml-2">
+            Stop Impersonating
+        </MudButton>
+    </MudAlert>
+}
+
 <MudText Typo="Typo.h4" Class="mb-1">Welcome, @_supplier?.SupplierName!</MudText>
 <MudText Typo="Typo.body1" Color="Color.Default" Class="mb-6">Here's your supplier overview</MudText>
 
@@ -23,7 +34,7 @@
             </div>
         </MudPaper>
     </MudItem>
-    
+
     <MudItem xs="12" sm="6" md="3">
         <MudPaper Class="pa-4 cursor-pointer" Elevation="2" OnClick="GoToOrders">
             <div class="d-flex align-center gap-3">
@@ -35,7 +46,7 @@
             </div>
         </MudPaper>
     </MudItem>
-    
+
     <MudItem xs="12" sm="6" md="3">
         <MudPaper Class="pa-4 cursor-pointer" Elevation="2" OnClick="GoToInvoices">
             <div class="d-flex align-center gap-3">
@@ -47,7 +58,7 @@
             </div>
         </MudPaper>
     </MudItem>
-    
+
     <MudItem xs="12" sm="6" md="3">
         <MudPaper Class="pa-4" Elevation="2">
             <div class="d-flex align-center gap-3">
@@ -77,7 +88,7 @@
             }
         </MudPaper>
     </MudItem>
-    
+
     <MudItem xs="12" md="6">
         <MudPaper Class="pa-4" Elevation="2">
             <MudText Typo="Typo.h6" Class="mb-4">Purchase Order Stats</MudText>
@@ -114,6 +125,10 @@
 </MudGrid>
 
 @code {
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public int? Impersonate { get; set; }
+
     private Supplier? _supplier;
     private int _quoteCount;
     private int _poCount;
@@ -125,11 +140,25 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _supplier = await SupplierService.GetCurrentPortalSupplierAsync();
-        if (_supplier == null)
+        if (Impersonate.HasValue)
         {
-            Nav.NavigateTo("/supplier-login");
-            return;
+            // Staff impersonating a supplier — load by ID directly
+            _supplier = await SupplierService.GetSupplierAsync(Impersonate.Value);
+            if (_supplier == null)
+            {
+                Snackbar.Add("Supplier not found for impersonation.", Severity.Error);
+                Nav.NavigateTo("/supplier-portal");
+                return;
+            }
+        }
+        else
+        {
+            _supplier = await SupplierService.GetCurrentPortalSupplierAsync();
+            if (_supplier == null)
+            {
+                Nav.NavigateTo("/supplier-login");
+                return;
+            }
         }
 
         await LoadDataAsync();
@@ -142,6 +171,8 @@
         _poCount = _supplier.OrderCount;
         _invoiceCount = 0;
     }
+
+    private void StopImpersonating() => Nav.NavigateTo("/supplier-portal");
 
     private async Task ContactUs()
     {
@@ -157,5 +188,3 @@
         _ => Color.Default
     };
 }
-
-
