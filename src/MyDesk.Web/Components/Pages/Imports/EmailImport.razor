@@ -1,0 +1,551 @@
+@page "/imports/email"
+@attribute [Authorize(Roles = "Director,Administrator,Accounts")]
+@inject ISnackbar Snackbar
+
+<PageTitle>Email Import - DR MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <MudLink Href="/" Underline="Underline.None">Home</MudLink>
+            <MudIcon Icon="@Icons.Material.Rounded.ChevronRight" Size="Size.Small" />
+            <span>Email Import</span>
+        </div>
+        <h1 class="tl-page-title">
+            <MudIcon Icon="@Icons.Material.Rounded.MailOutline" Class="mr-2" Style="color: var(--tl-accent)" />
+            Email Import
+        </h1>
+        <div class="tl-page-sub">Scan your inbox for invoices, quotes, and purchase orders, then import directly into MyDesk.</div>
+    </div>
+</div>
+
+@* ── Stepper ────────────────────────────────────────────────────────── *@
+<MudStepper @ref="_stepper" NonLinear="false" Class="mb-6" HeaderBadgeView="HeaderBadgeView.All">
+    <ChildContent>
+
+        @* Step 1 — Email Settings *@
+        <MudStep Title="Email Settings" Icon="@Icons.Material.Rounded.Settings">
+            <MudGrid Spacing="3">
+                @* Connection Status *@
+                <MudItem xs="12">
+                    <MudCard Elevation="0" Outlined="true">
+                        <MudCardContent>
+                            <div class="d-flex align-center gap-3">
+                                <MudAvatar Style="background:#0078D4;">
+                                    <MudIcon Icon="@Icons.Material.Rounded.Email" Style="color:#fff;" />
+                                </MudAvatar>
+                                <div>
+                                    <MudText Typo="Typo.subtitle1" Style="font-weight:600;">Microsoft Outlook / Exchange</MudText>
+                                    @if (_outlookConnected)
+                                    {
+                                        <MudText Typo="Typo.body2" Color="Color.Success">
+                                            Connected as <strong>@_outlookEmail</strong>
+                                        </MudText>
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.body2" Color="Color.Default">
+                                            Not connected. Connect your Outlook account to scan your inbox.
+                                        </MudText>
+                                    }
+                                </div>
+                                <div class="ml-auto">
+                                    @if (_outlookConnected)
+                                    {
+                                        <MudChip T="string" Color="Color.Success" Size="Size.Small" Icon="@Icons.Material.Rounded.CheckCircle">
+                                            Connected
+                                        </MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                                   StartIcon="@Icons.Material.Rounded.Link" OnClick="ConnectOutlook">
+                                            Connect Outlook
+                                        </MudButton>
+                                    }
+                                </div>
+                            </div>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                @* Scan Date Range *@
+                <MudItem xs="12" sm="6" md="4">
+                    <MudDatePicker @bind-Date="_scanFrom" Label="Scan From" Variant="Variant.Outlined"
+                                   DateFormat="dd/MM/yyyy" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudDatePicker @bind-Date="_scanTo" Label="Scan To" Variant="Variant.Outlined"
+                                   DateFormat="dd/MM/yyyy" />
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudSelect T="string" @bind-Value="_scanFolder" Label="Inbox Folder" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@("Inbox")">Inbox</MudSelectItem>
+                        <MudSelectItem Value="@("Accounts")">Accounts</MudSelectItem>
+                        <MudSelectItem Value="@("Invoices")">Invoices</MudSelectItem>
+                        <MudSelectItem Value="@("Orders")">Orders</MudSelectItem>
+                        <MudSelectItem Value="@("All Folders")">All Folders</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                @* Document Types *@
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Document Types to Detect</MudText>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <MudChip T="bool" Color="Color.Primary" Variant="@(_detectInvoices ? Variant.Filled : Variant.Outlined)"
+                                 OnClick="@(() => _detectInvoices = !_detectInvoices)">
+                            Supplier Invoices
+                        </MudChip>
+                        <MudChip T="bool" Color="Color.Secondary" Variant="@(_detectQuotes ? Variant.Filled : Variant.Outlined)"
+                                 OnClick="@(() => _detectQuotes = !_detectQuotes)">
+                            Supplier Quotes
+                        </MudChip>
+                        <MudChip T="bool" Color="Color.Info" Variant="@(_detectOrders ? Variant.Filled : Variant.Outlined)"
+                                 OnClick="@(() => _detectOrders = !_detectOrders)">
+                            Purchase Orders
+                        </MudChip>
+                        <MudChip T="bool" Color="Color.Tertiary" Variant="@(_detectStatements ? Variant.Filled : Variant.Outlined)"
+                                 OnClick="@(() => _detectStatements = !_detectStatements)">
+                            Statements
+                        </MudChip>
+                        <MudChip T="bool" Color="Color.Warning" Variant="@(_detectRemittances ? Variant.Filled : Variant.Outlined)"
+                                 OnClick="@(() => _detectRemittances = !_detectRemittances)">
+                            Remittance Advices
+                        </MudChip>
+                    </div>
+                </MudItem>
+
+                @* Note *@
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Info" Dense="true">
+                        <strong>Outlook Add-in:</strong> For the best experience, install the MyDesk Outlook Add-in from the Microsoft 365 App Store.
+                        This allows one-click import from within Outlook without leaving your email client.
+                    </MudAlert>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Rounded.Search" OnClick="StartScan"
+                               Disabled="@(!_outlookConnected || _scanning)">
+                        @(_scanning ? "Scanning..." : "Scan Inbox")
+                    </MudButton>
+                    @if (!_outlookConnected)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Default" Class="ml-3">
+                            Connect your Outlook account first to begin scanning.
+                        </MudText>
+                    }
+                </MudItem>
+            </MudGrid>
+        </MudStep>
+
+        @* Step 2 — Review Items *@
+        <MudStep Title="Review Items" Icon="@Icons.Material.Rounded.Preview">
+            @if (_scanning)
+            {
+                <div class="text-center pa-8">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" Class="mb-4" />
+                    <MudText Typo="Typo.body1">Scanning your inbox for documents...</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Default" Class="mt-1">This may take a few moments</MudText>
+                </div>
+            }
+            else
+            {
+                <div class="d-flex align-center justify-space-between mb-4">
+                    <div>
+                        <MudText Typo="Typo.h6">@_scannedItems.Count items found</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Default">
+                            Review each item and choose an action before importing.
+                        </MudText>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="SelectAllItems">
+                            Select All
+                        </MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="SkipAllItems">
+                            Skip All
+                        </MudButton>
+                    </div>
+                </div>
+
+                <MudCard Elevation="0" Outlined="true">
+                    <MudCardContent Class="pa-0">
+                        <div style="overflow-x:auto;">
+                            <MudSimpleTable Dense="true" Hover="true">
+                                <thead>
+                                    <tr>
+                                        <th style="width:40px;"></th>
+                                        <th>Subject / Sender</th>
+                                        <th style="width:130px;">Type</th>
+                                        <th style="width:120px;">Date</th>
+                                        <th style="width:110px;">Amount</th>
+                                        <th style="width:130px;">Action</th>
+                                        <th style="width:44px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in _scannedItems)
+                                    {
+                                        <tr style="@(item.Action == "Skip" ? "opacity:0.5;" : "")">
+                                            <td>
+                                                <MudCheckBox T="bool" Value="@(item.Action != "Skip")"
+                                                             ValueChanged="@(v => item.Action = v ? item.SuggestedAction : "Skip")"
+                                                             Color="Color.Primary" />
+                                            </td>
+                                            <td>
+                                                <div class="d-flex flex-column">
+                                                    <span style="font-weight:600;font-size:13px;">@item.Subject</span>
+                                                    <span style="font-size:11px;color:var(--gray-500);">@item.Sender &middot; @item.AttachmentName</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <MudChip T="string" Size="Size.Small"
+                                                         Color="@GetItemTypeColor(item.DocumentType)"
+                                                         Variant="Variant.Text">
+                                                    @item.DocumentType
+                                                </MudChip>
+                                            </td>
+                                            <td>
+                                                <span style="font-size:13px;">@item.EmailDate.ToString("dd MMM yyyy")</span>
+                                            </td>
+                                            <td>
+                                                @if (item.DetectedAmount.HasValue)
+                                                {
+                                                    <span style="font-size:13px;font-weight:600;">$@item.DetectedAmount.Value.ToString("N2")</span>
+                                                }
+                                                else
+                                                {
+                                                    <span style="color:var(--gray-400);">—</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <MudSelect T="string" @bind-Value="item.Action"
+                                                           Variant="Variant.Text" Margin="Margin.Dense"
+                                                           Style="font-size:12px;">
+                                                    @foreach (var action in GetAvailableActions(item.DocumentType))
+                                                    {
+                                                        <MudSelectItem Value="@action">@action</MudSelectItem>
+                                                    }
+                                                    <MudSelectItem Value="@("Skip")">Skip</MudSelectItem>
+                                                </MudSelect>
+                                            </td>
+                                            <td>
+                                                <MudIconButton Icon="@Icons.Material.Rounded.Visibility"
+                                                               Size="Size.Small" Color="Color.Default"
+                                                               Title="Preview" OnClick="@(() => PreviewItem(item))" />
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </MudSimpleTable>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+
+                <div class="d-flex justify-end mt-4">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Rounded.FileDownload" OnClick="RunImport"
+                               Disabled="@(!_scannedItems.Any(i => i.Action != "Skip"))">
+                        Import @_scannedItems.Count(i => i.Action != "Skip") Selected Items
+                    </MudButton>
+                </div>
+            }
+        </MudStep>
+
+        @* Step 3 — Import Result *@
+        <MudStep Title="Import Result" Icon="@Icons.Material.Rounded.CheckCircle">
+            <div class="text-center pa-4 mb-6">
+                @if (_importResult != null)
+                {
+                    <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Style="font-size:56px;" Class="mb-3" />
+                    <MudText Typo="Typo.h5" Class="mb-1">Import Complete</MudText>
+                    <MudText Typo="Typo.body1" Color="Color.Default">@_importResult.Summary</MudText>
+                }
+            </div>
+
+            @if (_importResult != null)
+            {
+                @* Result tiles *@
+                <div class="tl-mkt-grid mb-6">
+                    <div class="tl-mkt-stat-card">
+                        <div class="tl-mkt-stat-label">Invoices Created</div>
+                        <div class="tl-mkt-stat-value">@_importResult.InvoicesCreated</div>
+                    </div>
+                    <div class="tl-mkt-stat-card">
+                        <div class="tl-mkt-stat-label">Purchase Orders</div>
+                        <div class="tl-mkt-stat-value">@_importResult.POsCreated</div>
+                    </div>
+                    <div class="tl-mkt-stat-card">
+                        <div class="tl-mkt-stat-label">Quotes Saved</div>
+                        <div class="tl-mkt-stat-value">@_importResult.QuotesSaved</div>
+                    </div>
+                    <div class="tl-mkt-stat-card">
+                        <div class="tl-mkt-stat-label">Files Attached</div>
+                        <div class="tl-mkt-stat-value">@_importResult.FilesAttached</div>
+                    </div>
+                    <div class="tl-mkt-stat-card">
+                        <div class="tl-mkt-stat-label">Skipped</div>
+                        <div class="tl-mkt-stat-value" style="color:var(--mud-palette-text-secondary);">@_importResult.Skipped</div>
+                    </div>
+                </div>
+
+                @* Detail lines *@
+                <MudCard Elevation="0" Outlined="true">
+                    <MudCardContent Class="pa-0">
+                        <MudList T="string" Dense="true">
+                            @foreach (var line in _importResult.Lines)
+                            {
+                                <MudListItem Icon="@(line.Success ? Icons.Material.Rounded.CheckCircle : Icons.Material.Rounded.Warning)"
+                                             IconColor="@(line.Success ? Color.Success : Color.Warning)">
+                                    <MudText Typo="Typo.body2">@line.Message</MudText>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    </MudCardContent>
+                </MudCard>
+
+                <div class="d-flex gap-2 mt-4">
+                    <MudButton Variant="Variant.Outlined" OnClick="StartOver" StartIcon="@Icons.Material.Rounded.Refresh">
+                        Import More
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/purchase-orders"
+                               StartIcon="@Icons.Material.Rounded.ShoppingCart">
+                        View Purchase Orders
+                    </MudButton>
+                </div>
+            }
+        </MudStep>
+    </ChildContent>
+</MudStepper>
+
+@code {
+    private MudStepper? _stepper;
+
+    // Settings
+    private bool _outlookConnected = true; // mock: connected
+    private string _outlookEmail = "accounts@techlight.com.au";
+    private DateTime? _scanFrom = DateTime.Today.AddDays(-30);
+    private DateTime? _scanTo = DateTime.Today;
+    private string _scanFolder = "Inbox";
+    private bool _detectInvoices = true;
+    private bool _detectQuotes = true;
+    private bool _detectOrders = true;
+    private bool _detectStatements = false;
+    private bool _detectRemittances = false;
+    private bool _scanning = false;
+
+    private List<ScannedEmailItem> _scannedItems = new();
+    private ImportResult? _importResult;
+
+    private void ConnectOutlook()
+    {
+        Snackbar.Add("Redirecting to Microsoft Outlook authorisation...", Severity.Info);
+        // In production: initiate OAuth2 flow
+        _outlookConnected = true;
+    }
+
+    private async Task StartScan()
+    {
+        _scanning = true;
+        await _stepper!.SetActiveIndex(1); // move to step 2
+        await Task.Delay(1800); // simulate scan
+        _scannedItems = GenerateMockScanResults();
+        _scanning = false;
+        StateHasChanged();
+    }
+
+    private async Task RunImport()
+    {
+        var toImport = _scannedItems.Where(i => i.Action != "Skip").ToList();
+        await Task.Delay(900); // simulate import
+
+        _importResult = new ImportResult
+        {
+            InvoicesCreated = toImport.Count(i => i.DocumentType == "Supplier Invoice"),
+            POsCreated      = toImport.Count(i => i.DocumentType == "Purchase Order"),
+            QuotesSaved     = toImport.Count(i => i.DocumentType == "Supplier Quote"),
+            FilesAttached   = toImport.Count,
+            Skipped         = _scannedItems.Count(i => i.Action == "Skip"),
+            Summary         = $"{toImport.Count} document{(toImport.Count == 1 ? "" : "s")} imported successfully.",
+            Lines           = toImport.Select(i => new ImportResultLine
+            {
+                Success = true,
+                Message = $"{i.DocumentType}: \"{i.Subject}\" from {i.Sender} — {i.Action}"
+            }).Concat(_scannedItems.Where(i => i.Action == "Skip").Select(i => new ImportResultLine
+            {
+                Success = false,
+                Message = $"Skipped: \"{i.Subject}\""
+            })).ToList()
+        };
+
+        await _stepper!.SetActiveIndex(2);
+        Snackbar.Add($"{toImport.Count} items imported", Severity.Success);
+    }
+
+    private async Task StartOver()
+    {
+        _scannedItems.Clear();
+        _importResult = null;
+        _scanning = false;
+        await _stepper!.SetActiveIndex(0);
+    }
+
+    private void SelectAllItems()
+    {
+        foreach (var item in _scannedItems)
+            item.Action = item.SuggestedAction;
+    }
+
+    private void SkipAllItems()
+    {
+        foreach (var item in _scannedItems)
+            item.Action = "Skip";
+    }
+
+    private void PreviewItem(ScannedEmailItem item)
+    {
+        Snackbar.Add($"Preview: {item.AttachmentName} ({item.DocumentType})", Severity.Info);
+    }
+
+    private static string[] GetAvailableActions(string docType) => docType switch
+    {
+        "Supplier Invoice" => new[] { "Create Purchase Invoice", "Attach to Existing PO", "Save to Files" },
+        "Supplier Quote"   => new[] { "Save as Supplier Quote", "Save to Files" },
+        "Purchase Order"   => new[] { "Create Purchase Order", "Update Existing PO", "Save to Files" },
+        "Statement"        => new[] { "Save to Files", "Log for Reconciliation" },
+        "Remittance"       => new[] { "Log Remittance", "Save to Files" },
+        _                  => new[] { "Save to Files" }
+    };
+
+    private static Color GetItemTypeColor(string docType) => docType switch
+    {
+        "Supplier Invoice" => Color.Warning,
+        "Supplier Quote"   => Color.Secondary,
+        "Purchase Order"   => Color.Primary,
+        "Statement"        => Color.Info,
+        "Remittance"       => Color.Tertiary,
+        _                  => Color.Default
+    };
+
+    private static List<ScannedEmailItem> GenerateMockScanResults() => new()
+    {
+        new()
+        {
+            Subject = "Invoice #INV-24891 from Thorn Lighting",
+            Sender = "accounts@thornlighting.com.au",
+            DocumentType = "Supplier Invoice",
+            EmailDate = DateTime.Today.AddDays(-3),
+            AttachmentName = "INV-24891.pdf",
+            DetectedAmount = 4_850.00m,
+            SuggestedAction = "Create Purchase Invoice",
+            Action = "Create Purchase Invoice"
+        },
+        new()
+        {
+            Subject = "PO Confirmation — PO-7741",
+            Sender = "orders@elcoelectric.com.au",
+            DocumentType = "Purchase Order",
+            EmailDate = DateTime.Today.AddDays(-5),
+            AttachmentName = "PO-7741_confirmation.pdf",
+            DetectedAmount = 12_300.00m,
+            SuggestedAction = "Update Existing PO",
+            Action = "Update Existing PO"
+        },
+        new()
+        {
+            Subject = "Quote for LED Downlights — Ref Q2026-0312",
+            Sender = "sales@premiumlighting.com.au",
+            DocumentType = "Supplier Quote",
+            EmailDate = DateTime.Today.AddDays(-7),
+            AttachmentName = "Q2026-0312.pdf",
+            DetectedAmount = 8_990.00m,
+            SuggestedAction = "Save as Supplier Quote",
+            Action = "Save as Supplier Quote"
+        },
+        new()
+        {
+            Subject = "Monthly Statement — March 2026",
+            Sender = "statements@philipslighting.com",
+            DocumentType = "Statement",
+            EmailDate = DateTime.Today.AddDays(-2),
+            AttachmentName = "Statement_Mar2026.pdf",
+            DetectedAmount = null,
+            SuggestedAction = "Save to Files",
+            Action = "Save to Files"
+        },
+        new()
+        {
+            Subject = "Invoice #2026-00445",
+            Sender = "billing@globalelectric.com.au",
+            DocumentType = "Supplier Invoice",
+            EmailDate = DateTime.Today.AddDays(-10),
+            AttachmentName = "Invoice_2026-00445.pdf",
+            DetectedAmount = 2_145.60m,
+            SuggestedAction = "Create Purchase Invoice",
+            Action = "Create Purchase Invoice"
+        },
+        new()
+        {
+            Subject = "Remittance Advice — Payment 89002",
+            Sender = "accounts@techlight.com.au",
+            DocumentType = "Remittance",
+            EmailDate = DateTime.Today.AddDays(-1),
+            AttachmentName = "Remittance_89002.pdf",
+            DetectedAmount = 18_430.00m,
+            SuggestedAction = "Log Remittance",
+            Action = "Log Remittance"
+        },
+        new()
+        {
+            Subject = "Supplier Quote — Emergency Lighting Pack",
+            Sender = "quotes@exitpro.com.au",
+            DocumentType = "Supplier Quote",
+            EmailDate = DateTime.Today.AddDays(-8),
+            AttachmentName = "EmergencyLighting_Quote.pdf",
+            DetectedAmount = 3_620.00m,
+            SuggestedAction = "Save as Supplier Quote",
+            Action = "Save as Supplier Quote"
+        },
+        new()
+        {
+            Subject = "Tax Invoice — Freight Charges Feb 2026",
+            Sender = "freight@auspak.com.au",
+            DocumentType = "Supplier Invoice",
+            EmailDate = DateTime.Today.AddDays(-14),
+            AttachmentName = "FreightInv_Feb2026.pdf",
+            DetectedAmount = 387.50m,
+            SuggestedAction = "Create Purchase Invoice",
+            Action = "Create Purchase Invoice"
+        },
+    };
+
+    // ── Local record types ───────────────────────────────────────────────────
+    private class ScannedEmailItem
+    {
+        public string Subject { get; set; } = "";
+        public string Sender { get; set; } = "";
+        public string DocumentType { get; set; } = "";
+        public DateTime EmailDate { get; set; }
+        public string AttachmentName { get; set; } = "";
+        public decimal? DetectedAmount { get; set; }
+        public string SuggestedAction { get; set; } = "Save to Files";
+        public string Action { get; set; } = "Save to Files";
+    }
+
+    private class ImportResult
+    {
+        public string Summary { get; set; } = "";
+        public int InvoicesCreated { get; set; }
+        public int POsCreated { get; set; }
+        public int QuotesSaved { get; set; }
+        public int FilesAttached { get; set; }
+        public int Skipped { get; set; }
+        public List<ImportResultLine> Lines { get; set; } = new();
+    }
+
+    private class ImportResultLine
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = "";
+    }
+}
