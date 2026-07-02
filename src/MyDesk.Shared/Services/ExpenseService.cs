@@ -7,11 +7,13 @@ namespace MyDesk.Shared.Services;
 public class ExpenseService
 {
     private readonly DatabaseService _db;
+    private readonly EmailService _email;
     private readonly ILogger<ExpenseService> _logger;
 
-    public ExpenseService(DatabaseService db, ILogger<ExpenseService> logger)
+    public ExpenseService(DatabaseService db, EmailService email, ILogger<ExpenseService> logger)
     {
         _db = db;
+        _email = email;
         _logger = logger;
     }
 
@@ -171,7 +173,375 @@ END");
             // rows will get the correct AmountAud via the service Normalise() step.
             _logger.LogWarning(ex, "Expense AUD-equivalent backfill skipped (non-fatal).");
         }
+
+        // ── Expense Claims tables ────────────────────────────────────────────
+        await _db.ExecuteNonQueryAsync(@"
+            IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ExpenseClaims')
+            BEGIN
+                CREATE TABLE ExpenseClaims (
+                    ClaimId INT IDENTITY(1,1) PRIMARY KEY,
+                    TenantId UNIQUEIDENTIFIER NOT NULL,
+                    ClaimRef NVARCHAR(20) NOT NULL DEFAULT '',
+                    ClaimPeriod NVARCHAR(50) NOT NULL DEFAULT '',
+                    SubmittedBy NVARCHAR(100) NOT NULL DEFAULT '',
+                    SubmittedByUserId INT NULL,
+                    ApproverId INT NULL,
+                    ApproverName NVARCHAR(100) NULL,
+                    Status NVARCHAR(50) NOT NULL DEFAULT 'Draft',
+                    TotalAmount DECIMAL(18,2) NOT NULL DEFAULT 0,
+                    TotalGst DECIMAL(18,2) NOT NULL DEFAULT 0,
+                    RejectionReason NVARCHAR(1000) NULL,
+                    Notes NVARCHAR(2000) NULL,
+                    SubmittedAt DATETIME NULL,
+                    ApprovedAt DATETIME NULL,
+                    FinalisedAt DATETIME NULL,
+                    FinalisedBy NVARCHAR(100) NULL,
+                    CreatedAt DATETIME NOT NULL DEFAULT GETDATE(),
+                    UpdatedAt DATETIME NOT NULL DEFAULT GETDATE()
+                );
+                CREATE INDEX IX_ExpenseClaims_Status ON ExpenseClaims(Status);
+            END");
+
+        await _db.ExecuteNonQueryAsync(@"
+            IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ExpenseClaimItems')
+            BEGIN
+                CREATE TABLE ExpenseClaimItems (
+                    ItemId INT IDENTITY(1,1) PRIMARY KEY,
+                    ClaimId INT NOT NULL,
+                    TenantId UNIQUEIDENTIFIER NOT NULL,
+                    Date DATE NOT NULL DEFAULT GETDATE(),
+                    Category NVARCHAR(100) NOT NULL DEFAULT 'General',
+                    Supplier NVARCHAR(200) NULL,
+                    Description NVARCHAR(500) NOT NULL DEFAULT '',
+                    AmountExGst DECIMAL(18,2) NOT NULL DEFAULT 0,
+                    GstAmount DECIMAL(18,2) NOT NULL DEFAULT 0,
+                    TotalAmount DECIMAL(18,2) NOT NULL DEFAULT 0,
+                    HasGst BIT NOT NULL DEFAULT 1,
+                    ReceiptFileName NVARCHAR(255) NULL,
+                    ReceiptFilePath NVARCHAR(500) NULL,
+                    Notes NVARCHAR(500) NULL,
+                    CreatedAt DATETIME NOT NULL DEFAULT GETDATE()
+                );
+                CREATE INDEX IX_ExpenseClaimItems_ClaimId ON ExpenseClaimItems(ClaimId);
+            END");
     }
+
+    // ════════════════════════════════════════════════════════════════════════
+    //  EXPENSE CLAIMS
+    // ════════════════════════════════════════════════════════════════════════
+
+    public async Task<List<ExpenseClaim>> GetClaimsAsync(string? status = null, string? submittedBy = null)
+    {
+        var sql = "SELECT * FROM ExpenseClaims WHERE 1=1";
+        var p = new Dictionary<string, object?>();
+        if (!string.IsNullOrWhiteSpace(status)) { sql += " AND Status = @Status"; p["Status"] = status; }
+        if (!string.IsNullOrWhiteSpace(submittedBy)) { sql += " AND SubmittedBy = @SubmittedBy"; p["SubmittedBy"] = submittedBy; }
+        sql += " ORDER BY CreatedAt DESC";
+        var dt = await _db.QueryAsync(sql, p);
+        return dt.Map(MapClaimRow);
+    }
+
+    public async Task<ExpenseClaim?> GetClaimAsync(int claimId)
+    {
+        var dt = await _db.QueryAsync("SELECT * FROM ExpenseClaims WHERE ClaimId = @Id", new() { ["Id"] = claimId });
+        var claim = dt.Map(MapClaimRow).FirstOrDefault();
+        if (claim == null) return null;
+
+        var itemsDt = await _db.QueryAsync("SELECT * FROM ExpenseClaimItems WHERE ClaimId = @Id ORDER BY Date, ItemId", new() { ["Id"] = claimId });
+        claim.Items = itemsDt.Map(MapClaimItemRow);
+        return claim;
+    }
+
+    public async Task<int> SaveClaimAsync(ExpenseClaim claim)
+    {
+        // Recalculate totals from items if we have them
+        if (claim.Items.Count > 0)
+        {
+            claim.TotalAmount = claim.Items.Sum(i => i.TotalAmount);
+            claim.TotalGst    = claim.Items.Sum(i => i.GstAmount);
+        }
+
+        if (claim.ClaimId == 0)
+        {
+            if (string.IsNullOrWhiteSpace(claim.ClaimRef))
+                claim.ClaimRef = await GenerateClaimRefAsync();
+
+            var sql = @"
+                INSERT INTO ExpenseClaims
+                    (ClaimRef, ClaimPeriod, SubmittedBy, SubmittedByUserId, ApproverId, ApproverName,
+                     Status, TotalAmount, TotalGst, RejectionReason, Notes,
+                     SubmittedAt, ApprovedAt, FinalisedAt, FinalisedBy, CreatedAt, UpdatedAt)
+                VALUES
+                    (@ClaimRef, @ClaimPeriod, @SubmittedBy, @SubmittedByUserId, @ApproverId, @ApproverName,
+                     @Status, @TotalAmount, @TotalGst, @RejectionReason, @Notes,
+                     @SubmittedAt, @ApprovedAt, @FinalisedAt, @FinalisedBy, @CreatedAt, @UpdatedAt);
+                SELECT CAST(SCOPE_IDENTITY() AS int);";
+            claim.ClaimId = await _db.ScalarAsync<int>(sql, ClaimParams(claim));
+        }
+        else
+        {
+            var sql = @"
+                UPDATE ExpenseClaims SET
+                    ClaimPeriod = @ClaimPeriod, SubmittedBy = @SubmittedBy,
+                    SubmittedByUserId = @SubmittedByUserId,
+                    ApproverId = @ApproverId, ApproverName = @ApproverName,
+                    Status = @Status, TotalAmount = @TotalAmount, TotalGst = @TotalGst,
+                    RejectionReason = @RejectionReason, Notes = @Notes,
+                    SubmittedAt = @SubmittedAt, ApprovedAt = @ApprovedAt,
+                    FinalisedAt = @FinalisedAt, FinalisedBy = @FinalisedBy,
+                    UpdatedAt = GETDATE()
+                WHERE ClaimId = @ClaimId";
+            await _db.ExecuteNonQueryAsync(sql, ClaimParams(claim));
+        }
+        return claim.ClaimId;
+    }
+
+    public async Task<int> SaveClaimItemAsync(ExpenseClaimItem item)
+    {
+        // Auto-calculate GST
+        if (item.HasGst && item.GstAmount == 0 && item.AmountExGst > 0)
+            item.GstAmount = Math.Round(item.AmountExGst * 0.1m, 2);
+        if (!item.HasGst) item.GstAmount = 0;
+        item.TotalAmount = item.AmountExGst + item.GstAmount;
+
+        if (item.ItemId == 0)
+        {
+            var sql = @"
+                INSERT INTO ExpenseClaimItems
+                    (ClaimId, Date, Category, Supplier, Description,
+                     AmountExGst, GstAmount, TotalAmount, HasGst,
+                     ReceiptFileName, ReceiptFilePath, Notes, CreatedAt)
+                VALUES
+                    (@ClaimId, @Date, @Category, @Supplier, @Description,
+                     @AmountExGst, @GstAmount, @TotalAmount, @HasGst,
+                     @ReceiptFileName, @ReceiptFilePath, @Notes, @CreatedAt);
+                SELECT CAST(SCOPE_IDENTITY() AS int);";
+            item.ItemId = await _db.ScalarAsync<int>(sql, ClaimItemParams(item));
+        }
+        else
+        {
+            var sql = @"
+                UPDATE ExpenseClaimItems SET
+                    Date = @Date, Category = @Category, Supplier = @Supplier,
+                    Description = @Description, AmountExGst = @AmountExGst,
+                    GstAmount = @GstAmount, TotalAmount = @TotalAmount,
+                    HasGst = @HasGst, ReceiptFileName = @ReceiptFileName,
+                    ReceiptFilePath = @ReceiptFilePath, Notes = @Notes
+                WHERE ItemId = @ItemId";
+            await _db.ExecuteNonQueryAsync(sql, ClaimItemParams(item));
+        }
+
+        // Refresh parent claim totals
+        await RefreshClaimTotalsAsync(item.ClaimId);
+        return item.ItemId;
+    }
+
+    public async Task DeleteClaimItemAsync(int itemId)
+    {
+        var dt = await _db.QueryAsync("SELECT ClaimId FROM ExpenseClaimItems WHERE ItemId = @Id", new() { ["Id"] = itemId });
+        await _db.ExecuteNonQueryAsync("DELETE FROM ExpenseClaimItems WHERE ItemId = @Id", new() { ["Id"] = itemId });
+        if (dt.Rows.Count > 0)
+        {
+            var claimId = Convert.ToInt32(dt.Rows[0]["ClaimId"]);
+            await RefreshClaimTotalsAsync(claimId);
+        }
+    }
+
+    private async Task RefreshClaimTotalsAsync(int claimId)
+    {
+        await _db.ExecuteNonQueryAsync(@"
+            UPDATE ExpenseClaims SET
+                TotalAmount = ISNULL((SELECT SUM(TotalAmount) FROM ExpenseClaimItems WHERE ClaimId = @Id), 0),
+                TotalGst    = ISNULL((SELECT SUM(GstAmount)   FROM ExpenseClaimItems WHERE ClaimId = @Id), 0),
+                UpdatedAt   = GETDATE()
+            WHERE ClaimId = @Id",
+            new() { ["Id"] = claimId });
+    }
+
+    public async Task SubmitClaimAsync(int claimId, int approverId, string approverName, string? approverEmail = null)
+    {
+        await _db.ExecuteNonQueryAsync(@"
+            UPDATE ExpenseClaims SET
+                Status = 'Submitted', ApproverId = @ApproverId, ApproverName = @ApproverName,
+                SubmittedAt = GETDATE(), UpdatedAt = GETDATE()
+            WHERE ClaimId = @ClaimId",
+            new() { ["ClaimId"] = claimId, ["ApproverId"] = approverId, ["ApproverName"] = approverName });
+
+        if (!string.IsNullOrWhiteSpace(approverEmail))
+        {
+            try
+            {
+                var claim = await GetClaimAsync(claimId);
+                if (claim != null)
+                {
+                    await _email.SendAsync(
+                        approverEmail,
+                        $"Expense Claim {claim.ClaimRef} Awaiting Your Approval",
+                        $"<p>Hi {approverName},</p>" +
+                        $"<p>{claim.SubmittedBy} has submitted expense claim <strong>{claim.ClaimRef}</strong> " +
+                        $"for period <strong>{claim.ClaimPeriod}</strong> totalling <strong>${claim.TotalAmount:N2}</strong> for your approval.</p>" +
+                        $"<p>Please log in to MyDesk to review and approve or reject this claim.</p>");
+                }
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "Failed to send submission email for claim {Id}", claimId); }
+        }
+    }
+
+    public async Task ApproveClaimAsync(int claimId, string approverName, string? submitterEmail = null)
+    {
+        await _db.ExecuteNonQueryAsync(@"
+            UPDATE ExpenseClaims SET
+                Status = 'Approved', ApprovedAt = GETDATE(), UpdatedAt = GETDATE()
+            WHERE ClaimId = @ClaimId",
+            new() { ["ClaimId"] = claimId });
+
+        if (!string.IsNullOrWhiteSpace(submitterEmail))
+        {
+            try
+            {
+                var claim = await GetClaimAsync(claimId);
+                if (claim != null)
+                {
+                    await _email.SendAsync(
+                        submitterEmail,
+                        $"Expense Claim {claim.ClaimRef} Approved",
+                        $"<p>Hi {claim.SubmittedBy},</p>" +
+                        $"<p>Your expense claim <strong>{claim.ClaimRef}</strong> " +
+                        $"({claim.ClaimPeriod}) totalling <strong>${claim.TotalAmount:N2}</strong> " +
+                        $"has been <strong>approved</strong> by {approverName}.</p>" +
+                        $"<p>It will now be processed by the Accounts team.</p>");
+                }
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "Failed to send approval email for claim {Id}", claimId); }
+        }
+    }
+
+    public async Task RejectClaimAsync(int claimId, string reason, string approverName, string? submitterEmail = null)
+    {
+        await _db.ExecuteNonQueryAsync(@"
+            UPDATE ExpenseClaims SET
+                Status = 'Rejected', RejectionReason = @Reason, UpdatedAt = GETDATE()
+            WHERE ClaimId = @ClaimId",
+            new() { ["ClaimId"] = claimId, ["Reason"] = reason });
+
+        if (!string.IsNullOrWhiteSpace(submitterEmail))
+        {
+            try
+            {
+                var claim = await GetClaimAsync(claimId);
+                if (claim != null)
+                {
+                    await _email.SendAsync(
+                        submitterEmail,
+                        $"Expense Claim {claim.ClaimRef} Rejected",
+                        $"<p>Hi {claim.SubmittedBy},</p>" +
+                        $"<p>Your expense claim <strong>{claim.ClaimRef}</strong> " +
+                        $"({claim.ClaimPeriod}) has been <strong>rejected</strong> by {approverName}.</p>" +
+                        $"<p><strong>Reason:</strong> {reason}</p>" +
+                        $"<p>You may edit and resubmit the claim from MyDesk.</p>");
+                }
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "Failed to send rejection email for claim {Id}", claimId); }
+        }
+    }
+
+    public async Task FinaliseClaimAsync(int claimId, string finalisedBy)
+    {
+        await _db.ExecuteNonQueryAsync(@"
+            UPDATE ExpenseClaims SET
+                Status = 'Finalised', FinalisedAt = GETDATE(), FinalisedBy = @FinalisedBy, UpdatedAt = GETDATE()
+            WHERE ClaimId = @ClaimId",
+            new() { ["ClaimId"] = claimId, ["FinalisedBy"] = finalisedBy });
+    }
+
+    public async Task<string> GenerateClaimRefAsync()
+    {
+        var year = DateTime.Today.Year;
+        var count = await _db.ScalarAsync<int>(
+            "SELECT COUNT(*) FROM ExpenseClaims WHERE YEAR(CreatedAt) = @Year",
+            new() { ["Year"] = year });
+        return $"EXP-{year}-{(count + 1):D3}";
+    }
+
+    private static ExpenseClaim MapClaimRow(DataRow r) => new()
+    {
+        ClaimId           = Convert.ToInt32(r["ClaimId"]),
+        ClaimRef          = r["ClaimRef"]?.ToString() ?? "",
+        ClaimPeriod       = r["ClaimPeriod"]?.ToString() ?? "",
+        SubmittedBy       = r["SubmittedBy"]?.ToString() ?? "",
+        SubmittedByUserId = r["SubmittedByUserId"] == DBNull.Value ? null : Convert.ToInt32(r["SubmittedByUserId"]),
+        ApproverId        = r["ApproverId"] == DBNull.Value ? null : Convert.ToInt32(r["ApproverId"]),
+        ApproverName      = r["ApproverName"]?.ToString(),
+        Status            = r["Status"]?.ToString() ?? "Draft",
+        TotalAmount       = r["TotalAmount"] != DBNull.Value ? Convert.ToDecimal(r["TotalAmount"]) : 0,
+        TotalGst          = r["TotalGst"] != DBNull.Value ? Convert.ToDecimal(r["TotalGst"]) : 0,
+        RejectionReason   = r["RejectionReason"]?.ToString(),
+        Notes             = r["Notes"]?.ToString(),
+        SubmittedAt       = r["SubmittedAt"] == DBNull.Value ? null : Convert.ToDateTime(r["SubmittedAt"]),
+        ApprovedAt        = r["ApprovedAt"] == DBNull.Value ? null : Convert.ToDateTime(r["ApprovedAt"]),
+        FinalisedAt       = r["FinalisedAt"] == DBNull.Value ? null : Convert.ToDateTime(r["FinalisedAt"]),
+        FinalisedBy       = r["FinalisedBy"]?.ToString(),
+        CreatedAt         = r["CreatedAt"] != DBNull.Value ? Convert.ToDateTime(r["CreatedAt"]) : DateTime.Now,
+        UpdatedAt         = r["UpdatedAt"] != DBNull.Value ? Convert.ToDateTime(r["UpdatedAt"]) : DateTime.Now,
+    };
+
+    private static ExpenseClaimItem MapClaimItemRow(DataRow r) => new()
+    {
+        ItemId          = Convert.ToInt32(r["ItemId"]),
+        ClaimId         = Convert.ToInt32(r["ClaimId"]),
+        Date            = r["Date"] != DBNull.Value ? Convert.ToDateTime(r["Date"]) : DateTime.Today,
+        Category        = r["Category"]?.ToString() ?? "General",
+        Supplier        = r["Supplier"]?.ToString(),
+        Description     = r["Description"]?.ToString() ?? "",
+        AmountExGst     = r["AmountExGst"] != DBNull.Value ? Convert.ToDecimal(r["AmountExGst"]) : 0,
+        GstAmount       = r["GstAmount"] != DBNull.Value ? Convert.ToDecimal(r["GstAmount"]) : 0,
+        TotalAmount     = r["TotalAmount"] != DBNull.Value ? Convert.ToDecimal(r["TotalAmount"]) : 0,
+        HasGst          = r["HasGst"] != DBNull.Value && Convert.ToBoolean(r["HasGst"]),
+        ReceiptFileName = r["ReceiptFileName"]?.ToString(),
+        ReceiptFilePath = r["ReceiptFilePath"]?.ToString(),
+        Notes           = r["Notes"]?.ToString(),
+        CreatedAt       = r["CreatedAt"] != DBNull.Value ? Convert.ToDateTime(r["CreatedAt"]) : DateTime.Now,
+    };
+
+    private static Dictionary<string, object?> ClaimParams(ExpenseClaim c) => new()
+    {
+        ["ClaimId"]           = c.ClaimId,
+        ["ClaimRef"]          = c.ClaimRef,
+        ["ClaimPeriod"]       = c.ClaimPeriod,
+        ["SubmittedBy"]       = c.SubmittedBy,
+        ["SubmittedByUserId"] = (object?)c.SubmittedByUserId ?? DBNull.Value,
+        ["ApproverId"]        = (object?)c.ApproverId ?? DBNull.Value,
+        ["ApproverName"]      = (object?)c.ApproverName ?? DBNull.Value,
+        ["Status"]            = c.Status,
+        ["TotalAmount"]       = c.TotalAmount,
+        ["TotalGst"]          = c.TotalGst,
+        ["RejectionReason"]   = (object?)c.RejectionReason ?? DBNull.Value,
+        ["Notes"]             = (object?)c.Notes ?? DBNull.Value,
+        ["SubmittedAt"]       = (object?)c.SubmittedAt ?? DBNull.Value,
+        ["ApprovedAt"]        = (object?)c.ApprovedAt ?? DBNull.Value,
+        ["FinalisedAt"]       = (object?)c.FinalisedAt ?? DBNull.Value,
+        ["FinalisedBy"]       = (object?)c.FinalisedBy ?? DBNull.Value,
+        ["CreatedAt"]         = c.CreatedAt,
+        ["UpdatedAt"]         = c.UpdatedAt,
+    };
+
+    private static Dictionary<string, object?> ClaimItemParams(ExpenseClaimItem i) => new()
+    {
+        ["ItemId"]          = i.ItemId,
+        ["ClaimId"]         = i.ClaimId,
+        ["Date"]            = i.Date,
+        ["Category"]        = i.Category,
+        ["Supplier"]        = (object?)i.Supplier ?? DBNull.Value,
+        ["Description"]     = i.Description,
+        ["AmountExGst"]     = i.AmountExGst,
+        ["GstAmount"]       = i.GstAmount,
+        ["TotalAmount"]     = i.TotalAmount,
+        ["HasGst"]          = i.HasGst,
+        ["ReceiptFileName"] = (object?)i.ReceiptFileName ?? DBNull.Value,
+        ["ReceiptFilePath"] = (object?)i.ReceiptFilePath ?? DBNull.Value,
+        ["Notes"]           = (object?)i.Notes ?? DBNull.Value,
+        ["CreatedAt"]       = i.CreatedAt,
+    };
 
     public async Task<List<Expense>> GetExpensesAsync(string? searchTerm = null)
     {
