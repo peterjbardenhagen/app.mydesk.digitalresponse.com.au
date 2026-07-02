@@ -10,6 +10,18 @@
 
 <PageTitle>Dashboard - Techlight Customer Portal</PageTitle>
 
+@* ── Impersonation Banner ─────────────────────────────────────────── *@
+@if (Impersonate.HasValue && _contact != null)
+{
+    <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-4" NoIcon="false">
+        You are viewing the portal as <strong>@_contact.FullName</strong>
+        @if (!string.IsNullOrWhiteSpace(_contact.CompanyName)) { <span> (@_contact.CompanyName)</span> }.
+        <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="StopImpersonating" Class="ml-2">
+            Stop Impersonating
+        </MudButton>
+    </MudAlert>
+}
+
 <MudText Typo="Typo.h4" Class="mb-1">Welcome back, @_contact?.FirstName!</MudText>
 <MudText Typo="Typo.body1" Color="Color.Default" Class="mb-6">Here's an overview of your account</MudText>
 
@@ -25,7 +37,7 @@
             </div>
         </MudPaper>
     </MudItem>
-    
+
     <MudItem xs="12" sm="6" md="3">
         <MudPaper Class="pa-4 cursor-pointer" Elevation="2" onclick="@(() => Nav.NavigateTo("/customer-portal/invoices"))">
             <div class="d-flex align-center gap-3">
@@ -37,7 +49,7 @@
             </div>
         </MudPaper>
     </MudItem>
-    
+
     <MudItem xs="12" sm="6" md="3">
         <MudPaper Class="pa-4 cursor-pointer" Elevation="2" onclick="@(() => Nav.NavigateTo("/customer-portal/orders"))">
             <div class="d-flex align-center gap-3">
@@ -49,7 +61,7 @@
             </div>
         </MudPaper>
     </MudItem>
-    
+
     <MudItem xs="12" sm="6" md="3">
         <MudPaper Class="pa-4 cursor-pointer" Elevation="2" onclick="@(() => Nav.NavigateTo("/customer-portal/files"))">
             <div class="d-flex align-center gap-3">
@@ -91,7 +103,7 @@
             }
         </MudPaper>
     </MudItem>
-    
+
     <MudItem xs="12" md="6">
         <MudPaper Class="pa-4" Elevation="2">
             <MudText Typo="Typo.h6" Class="mb-4">Recent Invoices</MudText>
@@ -140,6 +152,10 @@
 </MudGrid>
 
 @code {
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public int? Impersonate { get; set; }
+
     private Contact? _contact;
     private List<Quote> _recentQuotes = new();
     private List<Invoice> _recentInvoices = new();
@@ -150,11 +166,25 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _contact = await ContactService.GetCurrentPortalContactAsync();
-        if (_contact == null)
+        if (Impersonate.HasValue)
         {
-            Nav.NavigateTo("/customer-login");
-            return;
+            // Staff impersonating a customer — load by ID directly
+            _contact = await ContactService.GetContactAsync(Impersonate.Value);
+            if (_contact == null)
+            {
+                Snackbar.Add("Contact not found for impersonation.", Severity.Error);
+                Nav.NavigateTo("/customer-portal");
+                return;
+            }
+        }
+        else
+        {
+            _contact = await ContactService.GetCurrentPortalContactAsync();
+            if (_contact == null)
+            {
+                Nav.NavigateTo("/customer-login");
+                return;
+            }
         }
 
         await LoadDataAsync();
@@ -164,8 +194,6 @@
     {
         if (_contact == null) return;
 
-        var companyId = _contact.CompanyId;
-        
         _recentQuotes = await QuoteService.GetQuotesAsync(null, null, null, null, 0, null);
         _recentQuotes = _recentQuotes.Where(q => q.CompanyName == _contact.CompanyName && q.QuoteStatusId != 1).Take(5).ToList();
         _quoteCount = _recentQuotes.Count;
@@ -176,6 +204,8 @@
         _poCount = 0;
         _fileCount = 0;
     }
+
+    private void StopImpersonating() => Nav.NavigateTo("/customer-portal");
 
     private Color GetStatusColor(int statusId) => statusId switch
     {
@@ -194,5 +224,3 @@
         _ => Color.Default
     };
 }
-
-

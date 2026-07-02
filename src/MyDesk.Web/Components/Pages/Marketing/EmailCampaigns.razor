@@ -18,7 +18,7 @@
             <MudIcon Icon="@Icons.Material.Rounded.Send" Class="mr-2" Style="color: var(--tl-accent)" />
             Email Campaigns
         </h1>
-        <div class="tl-page-sub">Compose and send tailored campaigns to Champions, Top-50, or custom audiences — directly from MyDesk.</div>
+        <div class="tl-page-sub">Precision campaigns with A/B testing, drip sequences, and engagement telemetry.</div>
     </div>
     <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add" OnClick="CreateCampaign">
         New Campaign
@@ -42,6 +42,7 @@ else if (_campaigns == null || !_campaigns.Any())
 }
 else
 {
+    @* Stats strip *@
     <div class="tl-mkt-grid mb-6">
         <div class="tl-mkt-stat-card">
             <div class="tl-mkt-stat-label">Total Sent</div>
@@ -56,6 +57,18 @@ else
             <div class="tl-mkt-stat-value">@_stats.AvgClickRate%</div>
         </div>
         <div class="tl-mkt-stat-card">
+            <div class="tl-mkt-stat-label">Bounce Rate</div>
+            <div class="tl-mkt-stat-value" style="color: var(--mud-palette-warning-dark);">@_stats.AvgBounceRate.ToString("F1")%</div>
+        </div>
+        <div class="tl-mkt-stat-card">
+            <div class="tl-mkt-stat-label">Unsubscribe Rate</div>
+            <div class="tl-mkt-stat-value" style="color: var(--mud-palette-error-default);">@_stats.AvgUnsubscribeRate.ToString("F1")%</div>
+        </div>
+        <div class="tl-mkt-stat-card">
+            <div class="tl-mkt-stat-label">Conversion Rate</div>
+            <div class="tl-mkt-stat-value" style="color: var(--mud-palette-success-default);">@_stats.AvgConversionRate.ToString("F1")%</div>
+        </div>
+        <div class="tl-mkt-stat-card">
             <div class="tl-mkt-stat-label">Active Campaigns</div>
             <div class="tl-mkt-stat-value">@_campaigns.Count(c => c.Status == "Draft" || c.Status == "Scheduled")</div>
         </div>
@@ -66,11 +79,15 @@ else
             <MudTable Items="_campaigns" Dense="true" Hover="true" Striped="true">
                 <HeaderContent>
                     <MudTh>Campaign</MudTh>
+                    <MudTh>Type</MudTh>
                     <MudTh>Audience</MudTh>
                     <MudTh>Status</MudTh>
                     <MudTh>Sent</MudTh>
                     <MudTh>Open Rate</MudTh>
                     <MudTh>Click Rate</MudTh>
+                    <MudTh>Bounce</MudTh>
+                    <MudTh>Unsub.</MudTh>
+                    <MudTh>Conv.</MudTh>
                     <MudTh>Sent Date</MudTh>
                     <MudTh></MudTh>
                 </HeaderContent>
@@ -78,8 +95,21 @@ else
                     <MudTd>
                         <div class="d-flex flex-column">
                             <span style="font-weight: 600;">@context.Name</span>
-                            <span style="font-size: 12px; color: var(--gray-500);">@context.Subject</span>
+                            @if (context.AbTestEnabled)
+                            {
+                                <span style="font-size: 11px; color: var(--gray-500);">A: @context.SubjectVariantA</span>
+                                <span style="font-size: 11px; color: var(--gray-500);">B: @context.SubjectVariantB</span>
+                            }
+                            else
+                            {
+                                <span style="font-size: 12px; color: var(--gray-500);">@context.Subject</span>
+                            }
                         </div>
+                    </MudTd>
+                    <MudTd>
+                        <MudChip T="string" Size="Size.Small" Color="@GetTypeColor(context.CampaignType)" Variant="Variant.Text">
+                            @context.CampaignType
+                        </MudChip>
                     </MudTd>
                     <MudTd>
                         <span class="tl-mkt-segment-chip @GetAudienceClass(context.Audience)">@context.Audience</span>
@@ -88,8 +118,42 @@ else
                         <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
                     </MudTd>
                     <MudTd>@context.SentCount</MudTd>
-                    <MudTd>@context.OpenRate%</MudTd>
+                    <MudTd>
+                        @if (context.AbTestEnabled && context.Status == "Sent")
+                        {
+                            <span>A: @context.OpenRateVariantA% / B: @context.OpenRateVariantB%</span>
+                        }
+                        else
+                        {
+                            <span>@context.OpenRate%</span>
+                        }
+                    </MudTd>
                     <MudTd>@context.ClickRate%</MudTd>
+                    <MudTd>
+                        @if (context.Status == "Sent")
+                        {
+                            <span style="color: @(context.BounceRate > 3 ? "var(--mud-palette-error-default)" : "inherit");">
+                                @context.BounceRate.ToString("F1")%
+                            </span>
+                        }
+                        else { <span>—</span> }
+                    </MudTd>
+                    <MudTd>
+                        @if (context.Status == "Sent")
+                        {
+                            <span>@context.UnsubscribeRate.ToString("F1")%</span>
+                        }
+                        else { <span>—</span> }
+                    </MudTd>
+                    <MudTd>
+                        @if (context.Status == "Sent")
+                        {
+                            <span style="color: var(--mud-palette-success-default); font-weight:600;">
+                                @context.ConversionRate.ToString("F1")%
+                            </span>
+                        }
+                        else { <span>—</span> }
+                    </MudTd>
                     <MudTd>@(context.SentAt?.ToString("dd MMM yyyy") ?? "—")</MudTd>
                     <MudTd>
                         @if (context.Status == "Draft")
@@ -117,6 +181,12 @@ else
     private CampaignStats _stats = new();
     private bool _loading = true;
 
+    private static readonly string[] AudienceOptions =
+    {
+        "Champions", "Loyal", "At Risk", "Win-Back", "New / Promising",
+        "All Customers", "Top-50", "Custom Segment"
+    };
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -136,25 +206,36 @@ else
 
     private string GetAudienceClass(string audience) => audience?.ToLower() switch
     {
-        "champions" => "champion",
-        "top-50" => "strategic",
-        "all customers" => "loyal",
-        "at-risk" => "at-risk",
-        _ => ""
+        "champions"      => "champion",
+        "top-50"         => "strategic",
+        "all customers"  => "loyal",
+        "at risk"        => "at-risk",
+        "win-back"       => "at-risk",
+        _                => ""
     };
 
     private Color GetStatusColor(string status) => status switch
     {
-        "Sent" => Color.Success,
+        "Sent"      => Color.Success,
         "Scheduled" => Color.Info,
-        "Draft" => Color.Default,
-        "Sending" => Color.Warning,
-        _ => Color.Default
+        "Draft"     => Color.Default,
+        "Sending"   => Color.Warning,
+        _           => Color.Default
+    };
+
+    private Color GetTypeColor(string? type) => type switch
+    {
+        "Drip Sequence"  => Color.Secondary,
+        "Trigger-Based"  => Color.Tertiary,
+        _                => Color.Primary
     };
 
     private async Task CreateCampaign()
     {
-        var parameters = new DialogParameters { ["AudienceOptions"] = new[] { "Champions", "Top-50", "All Customers", "At-Risk", "Custom Segment" } };
+        var parameters = new DialogParameters
+        {
+            ["AudienceOptions"] = AudienceOptions
+        };
         var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
         var dialog = await Dialogs.ShowAsync<CampaignEditorDialog>("New Campaign", parameters, options);
         var result = await dialog.Result;
@@ -168,7 +249,11 @@ else
 
     private async Task EditCampaign(EmailCampaign campaign)
     {
-        var parameters = new DialogParameters { ["Campaign"] = campaign };
+        var parameters = new DialogParameters
+        {
+            ["Campaign"] = campaign,
+            ["AudienceOptions"] = AudienceOptions
+        };
         var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
         var dialog = await Dialogs.ShowAsync<CampaignEditorDialog>("Edit Campaign", parameters, options);
         var result = await dialog.Result;
@@ -228,5 +313,3 @@ else
         // Show campaign details / report
     }
 }
-
-

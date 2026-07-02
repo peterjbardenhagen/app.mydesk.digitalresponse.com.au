@@ -191,6 +191,35 @@ public class EmailCampaign
     public DateTime? SentDate { get; set; }
     public DateTime? ScheduledDate { get; set; }
     public List<string> Log { get; set; } = new();
+
+    // ── Precision Campaigns enhancements ────────────────────────────────
+    /// <summary>Campaign type: Single Send, Drip Sequence, Trigger-Based</summary>
+    public string CampaignType { get; set; } = "Single Send";
+
+    /// <summary>Steps for drip sequences (only used when CampaignType = Drip Sequence)</summary>
+    public List<DripStep> DripSteps { get; set; } = new();
+
+    // A/B Testing
+    public bool AbTestEnabled { get; set; } = false;
+    public string SubjectVariantA { get; set; } = "";
+    public string SubjectVariantB { get; set; } = "";
+    public int AbSplitPercent { get; set; } = 50;  // % going to variant A; remainder to B
+    public int OpenRateVariantA { get; set; }
+    public int OpenRateVariantB { get; set; }
+
+    // Engagement Telemetry
+    public decimal BounceRate { get; set; }
+    public decimal UnsubscribeRate { get; set; }
+    public decimal ConversionRate { get; set; }
+}
+
+/// <summary>A single step in a drip email sequence.</summary>
+public class DripStep
+{
+    public int Order { get; set; }
+    public int DelayDays { get; set; }
+    public string Subject { get; set; } = "";
+    public string BodyHtml { get; set; } = "";
 }
 
 public class CampaignRecipient
@@ -214,6 +243,11 @@ public class CampaignStats
     public int EmailsSent { get; set; }
     public decimal OpenRate { get; set; }
     public decimal ClickRate { get; set; }
+
+    // Engagement Telemetry
+    public decimal AvgBounceRate { get; set; }
+    public decimal AvgUnsubscribeRate { get; set; }
+    public decimal AvgConversionRate { get; set; }
 }
 
 // ============================================================================
@@ -238,6 +272,37 @@ public class MarketingStrategyDoc
     public decimal KpiCacTarget { get; set; }
     public decimal KpiNpsTarget { get; set; }
     public string Notes { get; set; } = "";
+
+    // ── Brand Positioning Canvas ────────────────────────────────────────────
+    /// <summary>Brand voice / tone: Professional, Conversational, Bold, Technical, Friendly, Authoritative, Empathetic</summary>
+    public string BrandVoiceTone { get; set; } = "Professional";
+    public string TargetPersona { get; set; } = "";
+
+    // ── Market Initiatives and KPI rows stored as JSON ──────────────────────
+    public string MarketInitiativesJson { get; set; } = "[]";
+    public string KpiRowsJson { get; set; } = "[]";
+}
+
+public class MarketInitiative
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N")[..8];
+    public string Name { get; set; } = "";
+    public string Owner { get; set; } = "";
+    public DateTime? DueDate { get; set; }
+    /// <summary>Not Started, In Progress, Completed, On Hold, Cancelled</summary>
+    public string Status { get; set; } = "Not Started";
+    public int ProgressPercent { get; set; }
+}
+
+public class KpiRow
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N")[..8];
+    public string KpiName { get; set; } = "";
+    public string Target { get; set; } = "";
+    public string Current { get; set; } = "";
+    public string Unit { get; set; } = "";
+    /// <summary>Improving, Stable, Declining</summary>
+    public string Trend { get; set; } = "Stable";
 }
 
 // ============================================================================

@@ -2,22 +2,144 @@
 @using MudBlazor
 
 <MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(Campaign != null ? "Edit Campaign" : "New Campaign")</MudText>
+    </TitleContent>
     <DialogContent>
-        <MudTextField @bind-Value="_campaign.Name" Label="Campaign Name" Variant="Variant.Outlined" Required="true" Margin="Margin.Dense" Class="mb-2" />
-        <MudTextField @bind-Value="_campaign.Subject" Label="Subject Line" Variant="Variant.Outlined" Required="true" Margin="Margin.Dense" Class="mb-2" />
-        <MudTextField @bind-Value="_campaign.FromName" Label="From Name" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2" />
-        <MudTextField @bind-Value="_campaign.FromAddress" Label="From Email" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2" />
-        <MudSelect T="string" @bind-Value="_campaign.Audience" Label="Audience" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2">
-            @foreach (var opt in _audienceOptions)
+        <MudGrid Spacing="2">
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_campaign.Name" Label="Campaign Name" Variant="Variant.Outlined"
+                              Required="true" Margin="Margin.Dense" />
+            </MudItem>
+
+            @* Campaign Type *@
+            <MudItem xs="12">
+                <MudSelect T="string" @bind-Value="_campaign.CampaignType" Label="Campaign Type"
+                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                           HelperText="Single Send = one email blast; Drip Sequence = multi-step; Trigger-Based = behavioural">
+                    <MudSelectItem Value="@("Single Send")">Single Send</MudSelectItem>
+                    <MudSelectItem Value="@("Drip Sequence")">Drip Sequence</MudSelectItem>
+                    <MudSelectItem Value="@("Trigger-Based")">Trigger-Based</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+
+            @* Subject (single send / trigger) *@
+            @if (_campaign.CampaignType != "Drip Sequence")
             {
-                <MudSelectItem Value="@opt">@opt</MudSelectItem>
+                @if (_campaign.AbTestEnabled)
+                {
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_campaign.SubjectVariantA" Label="Subject — Variant A"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_campaign.SubjectVariantB" Label="Subject — Variant B"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="int" @bind-Value="_campaign.AbSplitPercent"
+                                         Label="Variant A Split %" Variant="Variant.Outlined"
+                                         Min="10" Max="90" Margin="Margin.Dense"
+                                         HelperText="@($"Variant A: {_campaign.AbSplitPercent}%  |  Variant B: {100 - _campaign.AbSplitPercent}%")" />
+                    </MudItem>
+                }
+                else
+                {
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_campaign.Subject" Label="Subject Line"
+                                      Variant="Variant.Outlined" Required="true" Margin="Margin.Dense" />
+                    </MudItem>
+                }
             }
-        </MudSelect>
-        <MudTextField @bind-Value="_campaign.BodyHtml" Label="Body HTML" Variant="Variant.Outlined" Lines="5" Margin="Margin.Dense" Class="mb-2" />
+
+            @* A/B Test Toggle *@
+            @if (_campaign.CampaignType != "Drip Sequence")
+            {
+                <MudItem xs="12">
+                    <MudSwitch @bind-Value="_campaign.AbTestEnabled" Color="Color.Primary"
+                               Label="Enable A/B Test" />
+                </MudItem>
+            }
+
+            @* Audience *@
+            <MudItem xs="12">
+                <MudSelect T="string" @bind-Value="_campaign.Audience" Label="Audience"
+                           Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var opt in _audienceOptions)
+                    {
+                        <MudSelectItem Value="@opt">@AudienceLabel(opt)</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            @* Custom Segment preview *@
+            @if (_campaign.Audience == "Custom Segment")
+            {
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Info" Dense="true">
+                        Custom segment: use filters below to define your audience. Preview: ~@_customPreviewCount contacts.
+                    </MudAlert>
+                </MudItem>
+            }
+
+            @* Drip Steps *@
+            @if (_campaign.CampaignType == "Drip Sequence")
+            {
+                <MudItem xs="12">
+                    <div class="d-flex align-center gap-2 mb-2">
+                        <MudText Typo="Typo.subtitle2">Sequence Steps</MudText>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Add"
+                                   OnClick="AddDripStep">Add Step</MudButton>
+                    </div>
+                    @foreach (var step in _campaign.DripSteps.OrderBy(s => s.Order))
+                    {
+                        <MudCard Elevation="0" Outlined="true" Class="mb-2 pa-2">
+                            <MudGrid Spacing="1">
+                                <MudItem xs="3">
+                                    <MudNumericField T="int" @bind-Value="step.DelayDays" Label="Delay (days)"
+                                                     Variant="Variant.Outlined" Min="0" Margin="Margin.Dense"
+                                                     HelperText="@(step.Order == 1 ? "Send immediately" : "After previous step")" />
+                                </MudItem>
+                                <MudItem xs="8">
+                                    <MudTextField @bind-Value="step.Subject" Label="Subject" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                </MudItem>
+                                <MudItem xs="1" Class="d-flex align-center">
+                                    <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small"
+                                                   Color="Color.Error" OnClick="@(() => RemoveDripStep(step))" />
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudTextField @bind-Value="step.BodyHtml" Label="Email body (HTML or text)"
+                                                  Variant="Variant.Outlined" Lines="3" Margin="Margin.Dense" />
+                                </MudItem>
+                            </MudGrid>
+                        </MudCard>
+                    }
+                </MudItem>
+            }
+            else
+            {
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_campaign.FromName" Label="From Name"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Placeholder="e.g. Techlight Sales" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_campaign.FromAddress" Label="From Email"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Placeholder="e.g. sales@techlight.com.au" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_campaign.BodyHtml" Label="Body HTML"
+                                  Variant="Variant.Outlined" Lines="5" Margin="Margin.Dense"
+                                  Placeholder="&lt;p&gt;Your email body here...&lt;/p&gt;" />
+                </MudItem>
+            }
+        </MudGrid>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Save</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit"
+                   Disabled="@string.IsNullOrWhiteSpace(_campaign.Name)">Save</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -28,13 +150,33 @@
 
     private EmailCampaign _campaign = new();
     private string[] _audienceOptions = Array.Empty<string>();
+    private int _customPreviewCount = 47; // mock preview count
 
     protected override void OnInitialized()
     {
         _audienceOptions = AudienceOptions ?? new[] { "All Customers", "Custom Segment" };
         if (Campaign != null)
             _campaign = Campaign;
+        else
+            _campaign.DripSteps.Add(new DripStep { Order = 1, DelayDays = 0, Subject = "Step 1" });
     }
+
+    private void AddDripStep()
+    {
+        var nextOrder = _campaign.DripSteps.Count > 0 ? _campaign.DripSteps.Max(s => s.Order) + 1 : 1;
+        _campaign.DripSteps.Add(new DripStep { Order = nextOrder, DelayDays = 3, Subject = $"Step {nextOrder}" });
+    }
+
+    private void RemoveDripStep(DripStep step) => _campaign.DripSteps.Remove(step);
+
+    private static string AudienceLabel(string audience) => audience switch
+    {
+        "Champions"      => "Champions (RFM Top Segment)",
+        "At Risk"        => "At Risk (Disengaging)",
+        "Win-Back"       => "Win-Back (Lapsed Customers)",
+        "Custom Segment" => "Custom Segment (Filtered List)",
+        _ => audience
+    };
 
     private void Submit() => Dialog?.Close(DialogResult.Ok(_campaign));
     private void Cancel() => Dialog?.Cancel();

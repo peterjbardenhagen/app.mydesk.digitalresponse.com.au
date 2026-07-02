@@ -152,6 +152,13 @@ if (azureAdConfigured)
                 var userService = ctx.HttpContext.RequestServices.GetRequiredService<UserService>();
                 var tenantService = ctx.HttpContext.RequestServices.GetRequiredService<TenantService>();
 
+                // Helper: redirect and swallow the event so no exception propagates to the error page.
+                void Redirect(string path)
+                {
+                    ctx.Response.Redirect(path);
+                    ctx.HandleResponse();
+                }
+
                 var oid = ctx.Principal?.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value
                           ?? ctx.Principal?.FindFirst("oid")?.Value;
                 var email = ctx.Principal?.FindFirst("preferred_username")?.Value
@@ -163,29 +170,48 @@ if (azureAdConfigured)
                 if (string.IsNullOrEmpty(email))
                 {
                     logger.LogWarning("Azure AD login succeeded but no email claim found for OID {Oid}", oid);
-                    ctx.Fail("Unable to identify user from Azure AD claims.");
+                    Redirect("/login?error=azure_noclaim");
                     return;
                 }
 
                 try
                 {
-                    var user = await userService.GetByEmailAsync(email);
-                    if (user == null)
+                    User? user;
+                    List<UserTenantInfo> memberships;
+
+                    // GetByEmailAsync and GetUserTenantsAsync use DatabaseService which needs
+                    // SESSION_CONTEXT set. SystemBypass lets them run without a tenant claim.
+                    using (TenantImpersonation.SystemBypass())
                     {
-                        logger.LogWarning("Azure AD user {Email} not found in MyDesk — access denied", email);
-                        ctx.Fail("No matching MyDesk account found for {Email}. Contact your administrator to set up access.".Replace("{Email}", email));
-                        return;
+                        user = await userService.GetByEmailAsync(email);
+                        if (user == null)
+                        {
+                            logger.LogWarning("Azure AD user {Email} not found in MyDesk — access denied", email);
+                            Redirect("/login?error=azure_nouser");
+                            return;
+                        }
+
+                        memberships = await tenantService.GetUserTenantsAsync(user.UserId);
                     }
 
-                    var memberships = await tenantService.GetUserTenantsAsync(user.UserId);
                     if (memberships.Count == 0)
                     {
                         logger.LogWarning("Azure AD user {Email} has no tenant memberships", email);
-                        ctx.Fail("No workspace access configured. Contact your administrator.");
+                        Redirect("/login?error=azure_notenant");
                         return;
                     }
 
                     var defaultMembership = memberships.FirstOrDefault(m => m.IsDefault) ?? memberships[0];
+
+                    // Map RoleType to ASP.NET Core role name so [Authorize(Roles=...)] checks work.
+                    var roleName = user.Role switch
+                    {
+                        RoleType.Director     => "Director",
+                        RoleType.Administrator => "Administrator",
+                        RoleType.Accounts     => "Accounts",
+                        _                     => "User"
+                    };
+
                     var claims = new List<Claim>
                     {
                         new(ClaimTypes.NameIdentifier, user.UserId.ToString()),
@@ -193,7 +219,7 @@ if (azureAdConfigured)
                         new(ClaimTypes.Email, user.Email),
                         new("tenant_id", defaultMembership.TenantId.ToString()),
                         new("azure_oid", oid ?? ""),
-                        new(ClaimTypes.Role, "Administrator"),
+                        new(ClaimTypes.Role, roleName),
                     };
 
                     var appIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -202,7 +228,7 @@ if (azureAdConfigured)
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Azure AD token validation failed for user {Email}", email);
-                    ctx.Fail("Failed to resolve MyDesk account. Contact support.");
+                    Redirect("/login?error=azure");
                 }
             },
             OnAuthenticationFailed = ctx =>

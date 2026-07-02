@@ -57,7 +57,7 @@
 
                 <MudNavGroup Icon="@Icons.Material.Rounded.ShoppingCart" Title="Purchasing" Expanded="true" HideExpandIcon="true">
                     @if (NavMenuSvc.IsVisible("purchase-orders")) { <MudNavLink Href="/purchase-orders" Icon="@Icons.Material.Rounded.ShoppingBasket">Purchase Orders</MudNavLink> }
-                    @if (NavMenuSvc.IsVisible("expenses"))        { <MudNavLink Href="/expenses"        Icon="@Icons.Material.Rounded.Payment">Expenses</MudNavLink> }
+                    @if (NavMenuSvc.IsVisible("expenses"))        { <MudNavLink Href="/expenses"        Icon="@Icons.Material.Rounded.Payment">Expense Claims</MudNavLink> }
                     @if (NavMenuSvc.IsVisible("rfq"))             { <MudNavLink Href="/rfq"             Icon="@Icons.Material.Rounded.Quiz">RFQ</MudNavLink> }
                 </MudNavGroup>
 
@@ -72,6 +72,10 @@
                     <MudNavLink Href="/staff-whereabouts"   Icon="@Icons.Material.Rounded.LocationOn">Staff Whereabouts</MudNavLink>
                     <MudNavLink Href="/subscriptions"       Icon="@Icons.Material.Rounded.Subscriptions">Subscriptions</MudNavLink>
                     @if (NavMenuSvc.IsVisible("financial-extraction")) { <MudNavLink Href="/financial-extraction" Icon="@Icons.Material.Rounded.DocumentScanner">Financial Extraction</MudNavLink> }
+                </MudNavGroup>
+
+                <MudNavGroup Icon="@Icons.Material.Rounded.FileDownload" Title="Imports" Expanded="false" HideExpandIcon="true">
+                    <MudNavLink Href="/imports/email" Icon="@Icons.Material.Rounded.MailOutline">Email Import</MudNavLink>
                 </MudNavGroup>
 
                 @if (_isAdminOrDirector)

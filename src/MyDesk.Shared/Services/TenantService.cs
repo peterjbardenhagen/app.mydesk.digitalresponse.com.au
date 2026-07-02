@@ -269,12 +269,29 @@ BEGIN
         Slug = COALESCE(NULLIF(Slug, ''), 'demo'),
         ContactEmail = COALESCE(NULLIF(ContactEmail, ''), 'demo@bardenhagen.xyz')
     WHERE TenantId = @DemoTenantId;
+END
+
+-- Carter Capner Law: Brisbane law firm client.
+IF NOT EXISTS (SELECT 1 FROM Tenants WHERE TenantId = @CarterCapnerTenantId)
+BEGIN
+    INSERT INTO Tenants (TenantId, TenantName, Name, Slug, ContactEmail, AddressLine1, Suburb, State, PostCode, Country, SubscriptionPlan, MaxUsers, IsActive)
+    VALUES (@CarterCapnerTenantId, 'Carter Capner Law', 'Carter Capner Law', 'carter-capner-law', 'admin@cartercapner.com.au', 'Level 5, 231 George Street', 'Brisbane', 'QLD', '4000', 'Australia', 'Enterprise', 999, 1);
+END
+ELSE
+BEGIN
+    UPDATE Tenants
+    SET TenantName = COALESCE(NULLIF(TenantName, ''), 'Carter Capner Law'),
+        Name = COALESCE(NULLIF(Name, ''), 'Carter Capner Law'),
+        Slug = COALESCE(NULLIF(Slug, ''), 'carter-capner-law'),
+        ContactEmail = COALESCE(NULLIF(ContactEmail, ''), 'admin@cartercapner.com.au')
+    WHERE TenantId = @CarterCapnerTenantId;
 END",
             new()
             {
-                ["TechlightTenantId"] = TenantConstants.TechlightTenantId,
+                ["TechlightTenantId"]    = TenantConstants.TechlightTenantId,
                 ["DigitalResponseTenantId"] = TenantConstants.DigitalResponseTenantId,
-                ["DemoTenantId"] = TenantConstants.DemoTenantId
+                ["DemoTenantId"]         = TenantConstants.DemoTenantId,
+                ["CarterCapnerTenantId"] = TenantConstants.CarterCapnerTenantId
             });
 
         await SeedTenantHostnamesAsync();
@@ -282,9 +299,10 @@ END",
 
     private async Task SeedTenantHostnamesAsync()
     {
-        // Techlight:        techlight.digitalresponse.com.au + localhost (dev default)
-        // Digital Response: portal.digitalresponse.com.au
-        // Demo MyDesk:      demo.localhost + demo.mydesk.local + demo.digitalresponse.com.au
+        // Techlight:          techlight.digitalresponse.com.au + localhost (dev default)
+        // Digital Response:   portal.digitalresponse.com.au + app.dr.mydesk.digitalresponse.com.au
+        // Demo MyDesk:        demo.localhost + demo.mydesk.local + demo.digitalresponse.com.au
+        // Carter Capner Law:  app.ccl.mydesk.digitalresponse.com.au
         var seedSql = @"
 IF NOT EXISTS (SELECT 1 FROM TenantHostnames WHERE Hostname = @H1)
     INSERT INTO TenantHostnames (TenantId, Hostname, IsPrimary) VALUES (@TechlightTenantId, @H1, 1);
@@ -302,19 +320,28 @@ IF NOT EXISTS (SELECT 1 FROM TenantHostnames WHERE Hostname = @H5)
     INSERT INTO TenantHostnames (TenantId, Hostname, IsPrimary) VALUES (@DemoTenantId, @H5, 0);
 
 IF NOT EXISTS (SELECT 1 FROM TenantHostnames WHERE Hostname = @H6)
-    INSERT INTO TenantHostnames (TenantId, Hostname, IsPrimary) VALUES (@DemoTenantId, @H6, 0);";
+    INSERT INTO TenantHostnames (TenantId, Hostname, IsPrimary) VALUES (@DemoTenantId, @H6, 0);
+
+IF NOT EXISTS (SELECT 1 FROM TenantHostnames WHERE Hostname = @H7)
+    INSERT INTO TenantHostnames (TenantId, Hostname, IsPrimary) VALUES (@DigitalResponseTenantId, @H7, 0);
+
+IF NOT EXISTS (SELECT 1 FROM TenantHostnames WHERE Hostname = @H8)
+    INSERT INTO TenantHostnames (TenantId, Hostname, IsPrimary) VALUES (@CarterCapnerTenantId, @H8, 1);";
 
         await _db.ExecuteNonQueryAsync(seedSql, new()
         {
             ["TechlightTenantId"]        = TenantConstants.TechlightTenantId,
             ["DigitalResponseTenantId"]  = TenantConstants.DigitalResponseTenantId,
             ["DemoTenantId"]             = TenantConstants.DemoTenantId,
+            ["CarterCapnerTenantId"]     = TenantConstants.CarterCapnerTenantId,
             ["H1"] = "techlight.digitalresponse.com.au",
             ["H2"] = "localhost",
             ["H3"] = "portal.digitalresponse.com.au",
             ["H4"] = "demo.localhost",
             ["H5"] = "demo.mydesk.local",
-            ["H6"] = "demo.digitalresponse.com.au"
+            ["H6"] = "demo.digitalresponse.com.au",
+            ["H7"] = "app.dr.mydesk.digitalresponse.com.au",
+            ["H8"] = "app.ccl.mydesk.digitalresponse.com.au"
         });
     }
 
@@ -399,14 +426,14 @@ IF NOT EXISTS (SELECT 1 FROM TenantHostnames WHERE Hostname = @H6)
             "\"PrivacyPolicyUrl\":\"https://www.digitalresponse.com.au/privacy-policy\"," +
             "\"TermsAndConditionsUrl\":\"https://www.digitalresponse.com.au/terms-and-conditions\"," +
             "\"CopyrightText\":\"\\u00A9 2026 Digital Response. iFusion Pty Ltd ABN 91 071 383 401.\"," +
-            "\"LogoUrl\":\"/images/DR-White-Logo.png\"," +
-            "\"LoginLogoUrl\":\"/images/DR-White-Logo.png\"," +
-            "\"LoginMarkUrl\":\"/images/DR-White-Logo.png\"," +
+            "\"LogoUrl\":\"/images/dr-logo-white.png\"," +
+            "\"LoginLogoUrl\":\"/images/dr-logo-white.png\"," +
+            "\"LoginMarkUrl\":\"/images/dr-mark.png\"," +
             "\"LoginHeading\":\"Sign in to MyDesk\"," +
             "\"LoginSubheading\":\"Digital Response client portal\"," +
-            "\"LoginPrimaryColor\":\"#0ea5e9\"," +
-            "\"LoginAccentColor\":\"#14b8a6\"," +
-            "\"LoginBackgroundColor\":\"#08121a\"," +
+            "\"LoginPrimaryColor\":\"#12261d\"," +
+            "\"LoginAccentColor\":\"#3d7a32\"," +
+            "\"LoginBackgroundColor\":\"#0a1510\"," +
             "\"IsMultiTenant\":true" +
             "}";
 
@@ -433,6 +460,32 @@ IF NOT EXISTS (SELECT 1 FROM TenantHostnames WHERE Hostname = @H6)
             "\"DisableAllEmails\":false" +
             "}";
 
+        // Carter Capner Law — Brisbane law firm. Brand: yellow #FFED00, blue #1C7BC4, black #1A1A1A.
+        // Hero uses dark→blue gradient so white text remains readable; yellow shows in mark and logo accent.
+        var carterCapnerJson = "{" +
+            "\"PlatformName\":\"MyDesk\"," +
+            "\"BrandName\":\"Carter Capner Law\"," +
+            "\"CompanyName\":\"Carter Capner Law\"," +
+            "\"CompanyLegalName\":\"Carter Capner Law\"," +
+            "\"CompanyWebsite\":\"https://www.cartercapner.com.au\"," +
+            "\"SupportEmail\":\"admin@cartercapner.com.au\"," +
+            "\"SalesEmail\":\"admin@cartercapner.com.au\"," +
+            "\"ContactEmail\":\"admin@cartercapner.com.au\"," +
+            "\"CompanyAddress\":\"Level 5, 231 George Street, Brisbane QLD 4000\"," +
+            "\"PdfAddress1\":\"Level 5, 231 George Street\"," +
+            "\"PdfSuburb\":\"Brisbane\"," +
+            "\"PdfState\":\"QLD\"," +
+            "\"LoginLogoUrl\":\"/images/ccl-logo-white.svg\"," +
+            "\"LoginMarkUrl\":\"/images/ccl-mark.svg\"," +
+            "\"LoginHeading\":\"Carter Capner Law\"," +
+            "\"LoginSubheading\":\"Staff & client portal\"," +
+            "\"LoginPrimaryColor\":\"#1a1a1a\"," +
+            "\"LoginAccentColor\":\"#1C7BC4\"," +
+            "\"LoginBackgroundColor\":\"#0c1620\"," +
+            "\"CopyrightText\":\"\\u00A9 2026 Carter Capner Law.\"," +
+            "\"IsMultiTenant\":true" +
+            "}";
+
         // Insert if missing; refresh if still flagged as 'system' (so we don't trample user edits via admin UI)
         await _db.ExecuteNonQueryAsync(@"
 IF NOT EXISTS (SELECT 1 FROM PlatformSettingsEntities WHERE TenantId = @TechlightTenantId)
@@ -448,15 +501,22 @@ ELSE IF EXISTS (SELECT 1 FROM PlatformSettingsEntities WHERE TenantId = @Digital
 IF NOT EXISTS (SELECT 1 FROM PlatformSettingsEntities WHERE TenantId = @DemoTenantId)
     INSERT INTO PlatformSettingsEntities (TenantId, SettingsJson, UpdatedAt, UpdatedBy) VALUES (@DemoTenantId, @DemoJson, GETDATE(), 'system');
 ELSE IF EXISTS (SELECT 1 FROM PlatformSettingsEntities WHERE TenantId = @DemoTenantId AND (UpdatedBy IS NULL OR UpdatedBy = 'system'))
-    UPDATE PlatformSettingsEntities SET SettingsJson = @DemoJson, UpdatedAt = GETDATE(), UpdatedBy = 'system' WHERE TenantId = @DemoTenantId;",
+    UPDATE PlatformSettingsEntities SET SettingsJson = @DemoJson, UpdatedAt = GETDATE(), UpdatedBy = 'system' WHERE TenantId = @DemoTenantId;
+
+IF NOT EXISTS (SELECT 1 FROM PlatformSettingsEntities WHERE TenantId = @CarterCapnerTenantId)
+    INSERT INTO PlatformSettingsEntities (TenantId, SettingsJson, UpdatedAt, UpdatedBy) VALUES (@CarterCapnerTenantId, @CarterCapnerJson, GETDATE(), 'system');
+ELSE IF EXISTS (SELECT 1 FROM PlatformSettingsEntities WHERE TenantId = @CarterCapnerTenantId AND (UpdatedBy IS NULL OR UpdatedBy = 'system'))
+    UPDATE PlatformSettingsEntities SET SettingsJson = @CarterCapnerJson, UpdatedAt = GETDATE(), UpdatedBy = 'system' WHERE TenantId = @CarterCapnerTenantId;",
             new()
             {
-                ["TechlightTenantId"] = TenantConstants.TechlightTenantId,
-                ["DigitalResponseTenantId"] = TenantConstants.DigitalResponseTenantId,
-                ["DemoTenantId"] = TenantConstants.DemoTenantId,
-                ["TechlightJson"] = techlightJson,
-                ["DigitalResponseJson"] = digitalResponseJson,
-                ["DemoJson"] = demoJson
+                ["TechlightTenantId"]        = TenantConstants.TechlightTenantId,
+                ["DigitalResponseTenantId"]  = TenantConstants.DigitalResponseTenantId,
+                ["DemoTenantId"]             = TenantConstants.DemoTenantId,
+                ["CarterCapnerTenantId"]     = TenantConstants.CarterCapnerTenantId,
+                ["TechlightJson"]            = techlightJson,
+                ["DigitalResponseJson"]      = digitalResponseJson,
+                ["DemoJson"]                 = demoJson,
+                ["CarterCapnerJson"]         = carterCapnerJson
             });
     }
 
@@ -504,13 +564,24 @@ BEGIN
     WHERE ISNULL(u.Deleted,0) = 0
       AND (UPPER(ISNULL(u.Code,'')) = 'TL0025' OR ISNULL(u.UserTypeId, 0) IN (1,2))
       AND NOT EXISTS (SELECT 1 FROM UserTenants ut WHERE ut.UserId = u.UserId AND ut.TenantId = @DemoTenantId);
+
+    -- Carter Capner Law: admins and TL0025 get admin access; CCL staff are added manually via admin UI.
+    INSERT INTO UserTenants (UserId, TenantId, Role, IsDefault, IsActive, AcceptedAt)
+    SELECT u.UserId, @CarterCapnerTenantId,
+           'Admin',
+           0, 1, GETDATE()
+    FROM Users u
+    WHERE ISNULL(u.Deleted,0) = 0
+      AND (UPPER(ISNULL(u.Code,'')) = 'TL0025' OR ISNULL(u.UserTypeId, 0) IN (1,2))
+      AND NOT EXISTS (SELECT 1 FROM UserTenants ut WHERE ut.UserId = u.UserId AND ut.TenantId = @CarterCapnerTenantId);
 END";
 
         await _db.ExecuteNonQueryAsync(sql, new()
         {
-            ["TechlightTenantId"] = TenantConstants.TechlightTenantId,
-            ["DigitalResponseTenantId"] = TenantConstants.DigitalResponseTenantId,
-            ["DemoTenantId"] = TenantConstants.DemoTenantId
+            ["TechlightTenantId"]        = TenantConstants.TechlightTenantId,
+            ["DigitalResponseTenantId"]  = TenantConstants.DigitalResponseTenantId,
+            ["DemoTenantId"]             = TenantConstants.DemoTenantId,
+            ["CarterCapnerTenantId"]     = TenantConstants.CarterCapnerTenantId
         });
     }
 

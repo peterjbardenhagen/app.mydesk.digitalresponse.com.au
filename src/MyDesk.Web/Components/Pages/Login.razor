@@ -16,7 +16,16 @@
     public string? Password { get; set; }
     public bool RememberMe { get; set; } = true;
 
-    private bool ShowError => Error == "1";
+    private bool ShowError => !string.IsNullOrEmpty(Error);
+    private string ErrorMessage => Error switch
+    {
+        "1"               => "Invalid login credentials. Please try again.",
+        "azure"           => "Microsoft sign-in failed. Please try again or contact support.",
+        "azure_nouser"    => "Your Microsoft account is not registered in MyDesk. Contact your administrator.",
+        "azure_notenant"  => "Your account has no workspace access configured. Contact your administrator.",
+        "azure_noclaim"   => "Could not identify your Microsoft account. Please try again.",
+        _                 => "Sign-in failed. Please try again."
+    };
     private bool _isDarkMode;
     private PlatformSettingsService.LoginColorScheme? _colorScheme;
 
@@ -81,6 +90,14 @@
 }
 
 <div class="tl-login-root @(_isDarkMode ? "dark-mode" : "")">
+
+    @* Mobile-only brand strip at the very top — mirrors the hero gradient *@
+    <div class="tl-login-mobile-brand d-flex d-lg-none" style="background: linear-gradient(135deg, @(_colorScheme?.PrimaryColor ?? PlatformSettings.Current.LoginPrimaryColor ?? "#1e40af") 0%, @(_colorScheme?.AccentColor ?? PlatformSettings.Current.LoginAccentColor ?? "#0ea5e9") 100%);">
+        <a href="@PlatformSettings.Current.CompanyWebsite" target="_blank" rel="noreferrer">
+            <img src="@PlatformSettings.Current.LoginLogoUrl" alt="@PlatformSettings.Current.PlatformName" class="mobile-hero-logo" onerror="this.onerror=null;this.src='/images/mydesk-logo-white-text.svg';" />
+        </a>
+    </div>
+
     <!-- LEFT: Brand Hero -->
     <aside class="tl-login-hero" style="background: linear-gradient(135deg, @(_colorScheme?.PrimaryColor ?? PlatformSettings.Current.LoginPrimaryColor ?? "#1e40af") 0%, @(_colorScheme?.AccentColor ?? PlatformSettings.Current.LoginAccentColor ?? "#0ea5e9") 100%);">
         <div class="tl-login-hero-inner">
@@ -151,7 +168,7 @@
                 @if (ShowError)
                 {
                     <MudAlert Severity="Severity.Error" Dense="true" Class="mb-6 rounded-lg" Variant="Variant.Filled">
-                        Invalid login credentials. Please try again.
+                        @ErrorMessage
                     </MudAlert>
                 }
 
@@ -270,6 +287,14 @@
         --tl-login-bg: @PlatformSettings.Current.LoginBackgroundColor;
     }
 
+    /* Mobile brand strip */
+    .tl-login-mobile-brand {
+        align-items: center;
+        justify-content: center;
+        padding: 20px 24px;
+    }
+    .mobile-hero-logo { height: 36px; width: auto; }
+
     .tl-login-root {
         display: grid;
         grid-template-columns: 1fr;
@@ -356,6 +381,8 @@
         align-items: center;
         justify-content: center;
         padding: 40px 24px;
+        /* Safe area bottom for phones with notch / home bar */
+        padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
     }
 
     .tl-login-form-container { width: 100%; max-width: 440px; }
@@ -367,6 +394,16 @@
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
         border: 1px solid #f1f5f9;
         transition: all 0.3s ease;
+    }
+
+    /* Compact card on small phones */
+    @@media (max-width: 480px) {
+        .tl-login-form-area { padding: 16px 12px; }
+        .tl-form-card { padding: 24px 20px; border-radius: 16px; }
+        .tl-mark-container { margin-bottom: 20px !important; }
+        .tl-form-mark { height: 44px !important; }
+        .tl-form-header h1 { font-size: 26px !important; margin-bottom: 6px !important; }
+        .sub-text { font-size: 14px !important; margin-bottom: 20px !important; }
     }
 
     .tl-mark-container { margin-bottom: 32px; }

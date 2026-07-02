@@ -2,404 +2,197 @@
 @attribute [Authorize]
 @using MyDesk.Shared.Models
 @using MyDesk.Shared.Services
-@using MyDesk.Shared.Services.Extraction
 @using MyDesk.Web.Services
 @using MudBlazor
 @inject ExpenseService ExpenseService
-@inject CompanyService CompanyService
-@inject DocumentExtractionService ExtractionService
+@inject UserService UserService
 @inject ISnackbar Snackbar
-@inject IDialogService DialogService
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthState
 
-<PageTitle>Expenses - MyDesk</PageTitle>
+<PageTitle>Expense Claims - MyDesk</PageTitle>
 
 <div class="tl-page-header">
     <div>
-        <div class="tl-breadcrumb"><a href="/">MyDesk</a><span class="sep">/</span><span>Expenses</span></div>
-        <h1>Expenses</h1>
-        <p class="tl-subtitle">Manage business expenses, upload receipts, and use AI to auto-process PDFs.</p>
+        <div class="tl-breadcrumb"><a href="/">MyDesk</a><span class="sep">/</span><span>Expense Claims</span></div>
+        <h1>Expense Claims</h1>
+        <p class="tl-subtitle">Submit and manage expense claims for approval and reimbursement.</p>
     </div>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add" OnClick="OnAddExpense" Class="ml-auto mr-0">
-        New Expense
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
+               OnClick="NewClaim" Class="ml-auto mr-0">
+        New Claim
     </MudButton>
 </div>
 
-<MudGrid Class="mb-6">
-    <MudItem xs="12" md="8">
-        <MudPaper Class="pa-4" Elevation="0">
-            <MudText Typo="Typo.h6" Class="mb-4">Upload Receipts</MudText>
-            <MudFileUpload T="IReadOnlyList<IBrowserFile>" OnFilesChanged="UploadFiles" Hidden="false" Class="mb-4"
-                          InputClass="mb-2"
-                          @ondragenter="@(() => _dragClass = "tl-upload-zone-active")"
-                          @ondragleave="@(() => _dragClass = "")"
-                          @onfocusout="@(() => _dragClass = "")">
-                <ButtonTemplate>
-                    <div class="d-flex flex-column align-center pa-4 @_dragClass" 
-                         style="border: 2px dashed var(--mud-palette-lines-default); background: var(--mud-palette-background-grey); min-height: 120px; border-radius: 8px;">
-                        <MudIcon Icon="@Icons.Material.Rounded.CloudUpload" Size="Size.Large" Color="Color.Primary" />
-                        <MudText Typo="Typo.h6" Class="mt-2">Drag and drop PDFs here</MudText>
-                        <MudText Typo="Typo.body2">or click to browse files</MudText>
-                    </div>
-                </ButtonTemplate>
-            </MudFileUpload>
-            @if (_uploading)
-            {
-                <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mt-4" />
-                <MudText Typo="Typo.caption" Class="mt-2">AI is processing your documents...</MudText>
-            }
+@* Stats strip *@
+<MudGrid Class="mb-4">
+    <MudItem xs="6" sm="3">
+        <MudPaper Class="pa-3 text-center" Elevation="1">
+            <MudText Typo="Typo.h5">@_allClaims.Count</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Default">Total Claims</MudText>
         </MudPaper>
     </MudItem>
-    <MudItem xs="12" md="4">
-        <MudPaper Class="pa-4" Elevation="1">
-            <MudText Typo="Typo.subtitle2" Class="mb-4">Expense Insights</MudText>
-            <div class="d-flex justify-space-between mb-2">
-                <MudText Typo="Typo.body2">Total This Month</MudText>
-                <MudText Typo="Typo.body2" Style="font-weight:600;">@_totalThisMonth.ToString("C")</MudText>
-            </div>
-            <div class="d-flex justify-space-between mb-2">
-                <MudText Typo="Typo.body2">Pending Approval</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Warning" Style="font-weight:600;">@_pendingCount</MudText>
-            </div>
-            <MudDivider Class="my-4" />
-            <MudButton Variant="Variant.Text" Color="Color.Primary" FullWidth="true" StartIcon="@Icons.Material.Rounded.BarChart">View Reports</MudButton>
+    <MudItem xs="6" sm="3">
+        <MudPaper Class="pa-3 text-center" Elevation="1">
+            <MudText Typo="Typo.h5" Color="Color.Warning">@_allClaims.Count(c => c.Status == "Submitted")</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Default">Awaiting Approval</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="6" sm="3">
+        <MudPaper Class="pa-3 text-center" Elevation="1">
+            <MudText Typo="Typo.h5" Color="Color.Success">@_allClaims.Count(c => c.Status == "Approved")</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Default">Approved</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="6" sm="3">
+        <MudPaper Class="pa-3 text-center" Elevation="1">
+            <MudText Typo="Typo.h5" Color="Color.Primary">@_allClaims.Where(c => c.Status == "Approved" || c.Status == "Finalised").Sum(c => c.TotalAmount).ToString("C")</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Default">Total Approved</MudText>
         </MudPaper>
     </MudItem>
 </MudGrid>
 
-<MudPaper Elevation="1">
-    @if (_expenses.Count == 0 && !_uploading)
+@* Status tabs *@
+<MudTabs @bind-ActivePanelIndex="_tabIndex" Rounded="true" Border="true" PanelClass="pa-0">
+    <MudTabPanel Text="All" />
+    <MudTabPanel Text="Draft" />
+    <MudTabPanel Text="Submitted" />
+    <MudTabPanel Text="Approved" />
+    <MudTabPanel Text="Rejected" />
+    <MudTabPanel Text="Finalised" />
+</MudTabs>
+
+<MudPaper Elevation="1" Class="mt-2">
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (!_filteredClaims.Any())
     {
         <div class="tl-empty-state pa-8">
             <MudIcon Icon="@Icons.Material.Rounded.ReceiptLong" Size="Size.Large" Color="Color.Default" />
-            <MudText Typo="Typo.h6" Class="mt-4">No expenses yet</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Default" Class="mt-2">Upload a receipt using the form above, or click "New Expense" to add one manually.</MudText>
+            <MudText Typo="Typo.h6" Class="mt-4">No @(_currentStatusFilter ?? "") claims</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Default" Class="mt-2">
+                @if (_tabIndex == 0) { <span>Click <strong>New Claim</strong> to create your first expense claim.</span> }
+                else { <span>No claims with status "@_currentStatusFilter".</span> }
+            </MudText>
         </div>
     }
     else
     {
-        <MudDataGrid T="Expense" Items="_expenses" Dense="true" Hover="true" Bordered="false" Striped="true"
-                     Filterable="true" QuickFilter="@QuickFilter" Class="tl-data-grid">
-        <ToolBarContent>
-            <MudText Typo="Typo.h6">Expense Records</MudText>
-            <MudSpacer />
-            <MudTextField @bind-Value="_searchString" Placeholder="Search description, supplier, category..." 
-                          Adornment="Adornment.Start" Immediate="true"
-                          AdornmentIcon="@Icons.Material.Rounded.Search" IconSize="Size.Medium" Class="mt-0" />
-        </ToolBarContent>
-        <Columns>
-            <PropertyColumn Property="x => x.Date" Title="Date" Format="dd MMM yyyy" />
-            <PropertyColumn Property="x => x.SupplierName" Title="Supplier" />
-            <PropertyColumn Property="x => x.Description" Title="Description" />
-            <PropertyColumn Property="x => x.Category" Title="Category" />
-            <PropertyColumn Property="x => x.Total" Title="Total" Format="C" />
-            <TemplateColumn Title="Status" CellStyle="width:120px;">
-                <CellTemplate>
-                    <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Item.Status)" Variant="Variant.Text">
-                        @context.Item.Status
-                    </MudChip>
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Receipt" CellStyle="width:80px;">
-                <CellTemplate>
-                    @if (!string.IsNullOrEmpty(context.Item.FilePath))
-                    {
-                        <MudIconButton Icon="@Icons.Material.Rounded.PictureAsPdf" Color="Color.Error" Size="Size.Small" 
-                                       Href="@(context.Item.FilePath)" Target="_blank" />
-                    }
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn CellStyle="width:100px;" Sortable="false">
-                <CellTemplate>
-                    <div class="d-flex gap-1">
-                        <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" OnClick="@(() => OnEditExpense(context.Item))" />
-                        <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => OnDeleteExpense(context.Item))" />
-                    </div>
-                </CellTemplate>
-            </TemplateColumn>
-        </Columns>
-        <PagerContent>
-            <MudDataGridPager T="Expense" />
-        </PagerContent>
+        <MudDataGrid T="ExpenseClaim" Items="_filteredClaims" Dense="true" Hover="true" Bordered="false"
+                     Striped="true" Class="tl-data-grid" RowClick="@(e => Nav.NavigateTo($"/expenses/claim/{e.Item.ClaimId}"))">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">@(_currentStatusFilter == null ? "All Claims" : _currentStatusFilter + " Claims")</MudText>
+                <MudSpacer />
+                @if (_isManagerOrAccounts)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text">Showing all team claims</MudChip>
+                }
+            </ToolBarContent>
+            <Columns>
+                <PropertyColumn Property="x => x.ClaimRef" Title="Claim Ref" />
+                <PropertyColumn Property="x => x.ClaimPeriod" Title="Period" />
+                <PropertyColumn Property="x => x.TotalAmount" Title="Total" Format="C" />
+                <TemplateColumn Title="Status">
+                    <CellTemplate>
+                        <MudChip T="string" Size="Size.Small" Color="@StatusColour(context.Item.Status)" Variant="Variant.Text">
+                            @context.Item.Status
+                        </MudChip>
+                    </CellTemplate>
+                </TemplateColumn>
+                <PropertyColumn Property="x => x.SubmittedBy" Title="Submitted By" />
+                <PropertyColumn Property="x => x.ApproverName" Title="Approver" />
+                <TemplateColumn Title="Date">
+                    <CellTemplate>
+                        <MudText Typo="Typo.body2">@context.Item.CreatedAt.ToString("dd MMM yyyy")</MudText>
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="" Sortable="false" CellStyle="width:60px;">
+                    <CellTemplate>
+                        <MudIconButton Icon="@Icons.Material.Rounded.ChevronRight" Size="Size.Small"
+                                       Href="@($"/expenses/claim/{context.Item.ClaimId}")" />
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager T="ExpenseClaim" />
+            </PagerContent>
         </MudDataGrid>
     }
 </MudPaper>
 
 @code {
-    private List<Expense> _expenses = new();
-    private string _searchString = "";
-    private bool _uploading = false;
-    private string _dragClass = "";
-    private decimal _totalThisMonth = 0;
-    private int _pendingCount = 0;
+    private List<ExpenseClaim> _allClaims = new();
+    private bool _loading = true;
+    private int _tabIndex = 0;
+    private bool _isManagerOrAccounts = false;
+    private string? _currentUserName;
+
+    private static readonly string?[] TabStatuses = { null, "Draft", "Submitted", "Approved", "Rejected", "Finalised" };
+
+    private string? _currentStatusFilter => TabStatuses[_tabIndex];
+
+    private List<ExpenseClaim> _filteredClaims => _currentStatusFilter == null
+        ? _allClaims
+        : _allClaims.Where(c => c.Status == _currentStatusFilter).ToList();
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadExpenses();
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        _currentUserName = auth.User.Identity?.Name ?? auth.User.FindFirst("name")?.Value;
+        _isManagerOrAccounts =
+            auth.User.IsInRole("Director") ||
+            auth.User.IsInRole("Administrator") ||
+            auth.User.IsInRole("Accounts") ||
+            auth.User.FindFirst("IsAdmin")?.Value == "True" ||
+            auth.User.FindFirst("IsAccounts")?.Value == "True";
+
+        await LoadClaimsAsync();
     }
 
-    private async Task LoadExpenses()
+    private async Task LoadClaimsAsync()
     {
-        _expenses = await ExpenseService.GetExpensesAsync();
-        _totalThisMonth = _expenses.Where(e => e.Date.Month == DateTime.Today.Month && e.Date.Year == DateTime.Today.Year).Sum(e => e.Total);
-        _pendingCount = _expenses.Count(e => e.Status == "Pending");
-    }
-
-    private Func<Expense, bool> QuickFilter => x =>
-    {
-        if (string.IsNullOrWhiteSpace(_searchString)) return true;
-        if (x.Description.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) return true;
-        if (x.SupplierName?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false) return true;
-        if (x.Category.Contains(_searchString, StringComparison.OrdinalIgnoreCase)) return true;
-        return false;
-    };
-
-    private static string MapCategory(string? documentType, string? supplier)
-    {
-        var s = (supplier ?? "").ToLowerInvariant();
-        if (s.Contains("officeworks") || s.Contains("staples")) return "Office Supplies";
-        if (s.Contains("bunnings") || s.Contains("mitre 10") || s.Contains("masters")) return "Hardware";
-        if (s.Contains("kogan") || s.Contains("jb hi-fi") || s.Contains("harvey norman") || s.Contains("dick smith")) return "Equipment";
-        if (s.Contains("uber") || s.Contains("taxi") || s.Contains("cabcharge") || s.Contains("13cabs")) return "Travel";
-        if (s.Contains("shell") || s.Contains("bp ") || s.Contains("caltex") || s.Contains("7-eleven") || s.Contains("ampol")) return "Fuel";
-        if (s.Contains("telstra") || s.Contains("optus") || s.Contains("vodafone")) return "Telecommunications";
-        return "General";
-    }
-
-    private Color GetStatusColor(string status) => status switch
-    {
-        "Approved" => Color.Success,
-        "Pending" => Color.Warning,
-        "Rejected" => Color.Error,
-        "Paid" => Color.Info,
-        _ => Color.Default
-    };
-
-    private async Task UploadFiles(InputFileChangeEventArgs e)
-    {
-        _uploading = true;
+        _loading = true;
         try
         {
-            foreach (var file in e.GetMultipleFiles())
-            {
-                var uploadsPath = Path.Combine("wwwroot", "uploads", "expenses");
-                if (!Directory.Exists(uploadsPath)) Directory.CreateDirectory(uploadsPath);
-
-                var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
-                var filePath = Path.Combine(uploadsPath, fileName);
-
-                using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-                using var fs = new FileStream(filePath, FileMode.Create);
-                await stream.CopyToAsync(fs);
-
-                await using var readStream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-                var extracted = await ExtractionService.ProcessAsync(readStream, file.ContentType, file.Name);
-
-                var totalAmount = extracted.TotalAmount ?? extracted.Subtotal ?? 0;
-                var supplier = string.IsNullOrWhiteSpace(extracted.SupplierName)
-                    ? Path.GetFileNameWithoutExtension(file.Name)
-                    : extracted.SupplierName;
-
-                string description;
-                if (extracted.LineItems.Count > 0)
-                {
-                    description = string.Join("; ", extracted.LineItems
-                        .Where(li => !string.IsNullOrWhiteSpace(li.Description))
-                        .Take(3)
-                        .Select(li => li.Description!.Trim()));
-                }
-                else
-                {
-                    description = $"Receipt: {Path.GetFileNameWithoutExtension(file.Name)}";
-                }
-                if (string.IsNullOrWhiteSpace(description))
-                    description = $"Receipt: {Path.GetFileNameWithoutExtension(file.Name)}";
-
-                var expense = new Expense
-                {
-                    Date = extracted.DocumentDate ?? DateTime.Today,
-                    Description = description,
-                    Amount = totalAmount,
-                    Total = totalAmount,
-                    TaxAmount = extracted.GstAmount ?? 0,
-                    SupplierName = supplier,
-                    FileName = file.Name,
-                    FilePath = $"/uploads/expenses/{fileName}",
-                    Status = "Pending",
-                    // Document type maps to a coarse category bucket. Users can re-categorise
-                    // in the edit dialog. Default to General for retail receipts.
-                    Category = MapCategory(extracted.DocumentType, supplier)
-                };
-
-                if (!extracted.AuditPassed && extracted.Discrepancies.Count > 0)
-                {
-                    Snackbar.Add($"Extraction warnings: {string.Join("; ", extracted.Discrepancies.Take(2))}", Severity.Warning);
-                }
-
-                // Duplicate detection — for PDF upload we use a non-blocking confirm dialog.
-                // Cancel = skip this file (the receipt remains uploaded but no Expense row is created).
-                if (!await ConfirmNotDuplicateAsync(expense, $"AI-extracted from {file.Name}"))
-                {
-                    Snackbar.Add($"Skipped {file.Name} (duplicate)", Severity.Info);
-                    continue;
-                }
-
-                await ExpenseService.SaveExpenseAsync(expense);
-                Snackbar.Add($"Processed {file.Name} (confidence: {extracted.Confidence:P0})", Severity.Success);
-            }
-            await LoadExpenses();
+            // Managers/Accounts see all claims; regular users see only their own.
+            _allClaims = _isManagerOrAccounts
+                ? await ExpenseService.GetClaimsAsync()
+                : await ExpenseService.GetClaimsAsync(submittedBy: _currentUserName);
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Upload failed: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error loading claims: {ex.Message}", Severity.Error);
         }
-        finally
-        {
-            _uploading = false;
-        }
+        finally { _loading = false; }
     }
 
-    private async Task OnAddExpense()
+    private async Task NewClaim()
     {
-        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<Shared.ExpenseDialog>("New Expense", options);
-        var result = await dialog.Result;
-
-        if (result != null && !result.Canceled && result.Data is Expense newExpense)
+        var claim = new ExpenseClaim
         {
-            if (!await ConfirmNotDuplicateAsync(newExpense, "Manual entry"))
-            {
-                Snackbar.Add("Cancelled — looked like a duplicate.", Severity.Info);
-                return;
-            }
-            await ExpenseService.SaveExpenseAsync(newExpense);
-            await LoadExpenses();
-            Snackbar.Add("Expense added successfully", Severity.Success);
-        }
-    }
-
-    /// <summary>
-    /// Runs duplicate detection. If matches are found, opens DuplicateExpenseDialog
-    /// and returns:
-    ///   * <c>true</c> to proceed with the save (no matches OR user chose "Save anyway")
-    ///   * <c>false</c> to skip (user chose "Cancel" or "Open existing")
-    /// In the "Open existing" case the user is navigated to the matched row.
-    /// </summary>
-    private async Task<bool> ConfirmNotDuplicateAsync(Expense candidate, string sourceLabel)
-    {
-        try
-        {
-            var matches = await ExpenseService.FindPotentialDuplicatesAsync(candidate);
-            if (matches.Count == 0) return true;
-
-            var parameters = new DialogParameters<Shared.DuplicateExpenseDialog>
-            {
-                { x => x.Candidate, candidate },
-                { x => x.Existing,  matches },
-            };
-            var dialog = await DialogService.ShowAsync<Shared.DuplicateExpenseDialog>(
-                $"Possible duplicate ({sourceLabel})",
-                parameters,
-                new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Medium, FullWidth = true });
-            var result = await dialog.Result;
-            if (result is null || result.Canceled) return false;
-
-            if (result.Data is Shared.DuplicateExpenseDialog.DuplicateAction action)
-            {
-                switch (action)
-                {
-                    case Shared.DuplicateExpenseDialog.DuplicateAction.SaveAnyway:    return true;
-                    case Shared.DuplicateExpenseDialog.DuplicateAction.OpenExisting:
-                        // We can't currently open an inline detail page (Expenses is list+dialog).
-                        // Open the edit dialog for the first match.
-                        var existing = matches.First();
-                        var editParams = new DialogParameters<Shared.ExpenseDialog> { { "Expense", existing } };
-                        await DialogService.ShowAsync<Shared.ExpenseDialog>("Existing expense", editParams,
-                            new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true });
-                        return false;
-                    case Shared.DuplicateExpenseDialog.DuplicateAction.Cancel:
-                    default:                                                          return false;
-                }
-            }
-            return false;
-        }
-        catch (Exception ex)
-        {
-            // Don't block the user if the detection itself fails — log and proceed.
-            Snackbar.Add($"Duplicate check failed ({ex.Message}); proceeding with save.", Severity.Warning);
-            return true;
-        }
-    }
-
-    private async Task OnEditExpense(Expense expense)
-    {
-        var parameters = new DialogParameters<Shared.ExpenseDialog> { { "Expense", expense } };
-        var options = new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<Shared.ExpenseDialog>("Edit Expense", parameters, options);
-        var result = await dialog.Result;
-
-        if (result != null && !result.Canceled && result.Data is Expense updatedExpense)
-        {
-            await ExpenseService.SaveExpenseAsync(updatedExpense);
-            await LoadExpenses();
-            Snackbar.Add("Expense updated successfully", Severity.Success);
-        }
-    }
-
-    private async Task OnDeleteExpense(Expense expense)
-    {
-        // Build a friendly confirmation summary so the user knows exactly which row is going.
-        var supplier = string.IsNullOrWhiteSpace(expense.SupplierName) ? "(no supplier)" : expense.SupplierName;
-        var amount = expense.Total > 0 ? expense.Total.ToString("C") : "$0.00";
-        var message = $"Delete expense \"{expense.Description}\" from {supplier} ({amount}, {expense.Date:dd MMM yyyy})? This cannot be undone.";
-
-        var parameters = new DialogParameters
-        {
-            { nameof(MudMessageBox.Message),    message },
-            { nameof(MudMessageBox.YesText),    "Delete" },
-            { nameof(MudMessageBox.NoText),     string.Empty },
-            { nameof(MudMessageBox.CancelText), "Cancel" }
+            SubmittedBy = _currentUserName ?? "",
+            ClaimPeriod = DateTime.Today.ToString("MMMM yyyy"),
         };
-        var options = new DialogOptions
-        {
-            CloseButton = true,
-            CloseOnEscapeKey = true,
-            BackdropClick = true,
-            MaxWidth = MaxWidth.ExtraSmall,
-            FullWidth = true
-        };
-        var handle = await DialogService.ShowAsync<MudMessageBox>("Delete Expense", parameters, options);
-        var ok = (await handle.Result)?.Data as bool?;
-        if (ok != true) return;
-
         try
         {
-            await ExpenseService.DeleteExpenseAsync(expense.ExpenseId);
-
-            // Best-effort cleanup of the uploaded receipt file. Failures here are non-fatal —
-            // the expense row is already gone and orphaned files are tolerable.
-            if (!string.IsNullOrWhiteSpace(expense.FilePath) &&
-                expense.FilePath.StartsWith("/uploads/expenses/", StringComparison.OrdinalIgnoreCase))
-            {
-                try
-                {
-                    var rel = expense.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
-                    var diskPath = Path.Combine("wwwroot", rel);
-                    if (File.Exists(diskPath)) File.Delete(diskPath);
-                }
-                catch { /* swallowed — see comment above */ }
-            }
-
-            // Remove from in-memory list immediately for a snappy UI; LoadExpenses also
-            // refreshes the totals/pending counters from the source of truth.
-            _expenses.RemoveAll(e => e.ExpenseId == expense.ExpenseId);
-            await LoadExpenses();
-            Snackbar.Add($"Deleted expense \"{expense.Description}\".", Severity.Success);
+            var id = await ExpenseService.SaveClaimAsync(claim);
+            Nav.NavigateTo($"/expenses/claim/{id}");
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Delete failed: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error creating claim: {ex.Message}", Severity.Error);
         }
     }
+
+    private Color StatusColour(string status) => status switch
+    {
+        "Approved"  => Color.Success,
+        "Submitted" => Color.Warning,
+        "Rejected"  => Color.Error,
+        "Finalised" => Color.Info,
+        "Draft"     => Color.Default,
+        _           => Color.Default
+    };
 }
-
-

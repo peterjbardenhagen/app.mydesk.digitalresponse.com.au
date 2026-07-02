@@ -1,8 +1,12 @@
-# Agent Guidelines for Techlight.MyDesk
+# Agent Guidelines for MyDesk
 
 This file is the **single source of truth** for any agent (AI or human) working on this codebase.
 Read it completely before starting any task. Follow every section autonomously — do not ask the user
 for permission to run a build, fix a compile error, or restart Kestrel. These are expected steps.
+
+**Language standard: UK English** — use "analyse" not "analyze", "colour" not "color", "behaviour" not "behavior",
+"authorise" not "authorize", "organise" not "organize", "recognise" not "recognize", "centre" not "center",
+"programme" not "program" (except for software/code contexts), "licence" (noun) / "license" (verb).
 
 ---
 
@@ -25,8 +29,9 @@ MyDesk is multi-tenant. Built-in tenants (per `TenantConstants`):
 | Tenant | GUID | Default hostnames |
 |--------|------|-------------------|
 | Techlight | `11111111-1111-1111-1111-111111111111` | `techlight.digitalresponse.com.au`, `localhost` |
-| Digital Response | `22222222-2222-2222-2222-222222222222` | `portal.digitalresponse.com.au` |
+| Digital Response | `22222222-2222-2222-2222-222222222222` | `portal.digitalresponse.com.au`, `app.dr.mydesk.digitalresponse.com.au` |
 | Demo MyDesk | `33333333-3333-3333-3333-333333333333` | `demo.localhost`, `demo.mydesk.local`, `demo.digitalresponse.com.au` |
+| Carter Capner Law | `44444444-4444-4444-4444-444444444444` | `app.ccl.mydesk.digitalresponse.com.au` |
 
 Hostnames live in `TenantHostnames`; the login page resolves the tenant from `Request.Host` so branding is correct before sign-in.
 
@@ -337,10 +342,17 @@ IF NOT EXISTS (SELECT 1 FROM UserTenants WHERE UserId=2 AND TenantId='11111111-1
 
 ## Known Tenant IDs
 
-| Tenant | GUID |
-|--------|------|
-| Techlight | `11111111-1111-1111-1111-111111111111` |
-| Digital Response | `22222222-2222-2222-2222-222222222222` |
+| Tenant | GUID | Brand primary / accent |
+|--------|------|------------------------|
+| Techlight | `11111111-1111-1111-1111-111111111111` | `#00c8c8` teal / `#cca05a` gold (midnight bg `#08121a`) |
+| Digital Response | `22222222-2222-2222-2222-222222222222` | `#12261d` dark green / `#3d7a32` forest green |
+| Demo MyDesk | `33333333-3333-3333-3333-333333333333` | `#a855f7` purple / `#facc15` yellow |
+| Carter Capner Law | `44444444-4444-4444-4444-444444444444` | `#1a1a1a` dark / `#1C7BC4` CCL blue (brand yellow `#FFED00` on mark) |
+
+Techlight brand verified against v1.4 Brand Guidelines (June 2026):
+- Teal Primary `#00c8c8`, Teal Light `#00e0e0`, Teal Dark `#008b8b`, Midnight `#08121a`
+- Gold `#cca05a`, Gold Dark `#b98745`, Charcoal `#1a2a3a`
+- Primary typeface: Inter (fallback: Segoe UI)
 
 These are hardcoded in `TenantConstants.cs`. The database **must** have matching rows in `Tenants`.
 
@@ -558,19 +570,19 @@ On option `[4] → [1]` (Kestrel), it:
 
 ### Popup Dialog Pattern
 
-Use `QuickNavDialog.razor` as the reference design pattern for popup dialogs across MyDesk.
+Use `QuickNavDialog.razor` as the reference design pattern for popup dialogues across MyDesk.
 
-- Open dialogs through `IDialogService.ShowAsync(...)` with explicit `DialogOptions`.
+- Open dialogues through `IDialogService.ShowAsync(...)` with explicit `DialogOptions`.
 - Default options should be:
-  - `CloseButton = false` for command-palette / focused task dialogs unless the dialog is form-heavy
+  - `CloseButton = false` for command-palette / focused task dialogues unless the dialogue is form-heavy
   - `CloseOnEscapeKey = true`
   - `BackdropClick = true`
-  - `NoHeader = true` when the dialog supplies its own visual header/search chrome
+  - `NoHeader = true` when the dialogue supplies its own visual header/search chrome
   - `MaxWidth = MaxWidth.Small` and `FullWidth = true` unless the content genuinely needs more space
-- The dialog body should own the interaction model:
+- The dialogue body should own the interaction model:
   - autofocus the primary input on first render
   - support keyboard navigation (`ArrowUp`, `ArrowDown`, `Enter`, `Escape`)
-  - provide a compact footer with keyboard hints when the dialog is command-oriented
+  - provide a compact footer with keyboard hints when the dialogue is command-oriented
 - Styling pattern:
   - rounded outer shell (`border-radius: 12px` or larger)
   - a distinct top interaction row (search, title, or filter area)
@@ -578,9 +590,9 @@ Use `QuickNavDialog.razor` as the reference design pattern for popup dialogs acr
   - restrained footer/status bar at the bottom
 - Visual behaviour:
   - selected/hovered rows should use a soft background treatment plus a strong left accent or inset highlight
-  - avoid browser-default button/input styling inside dialogs; dialog content should look like part of the MyDesk design system
-- If a dialog diverges from this pattern, there should be a specific product reason rather than convenience.
+  - avoid browser-default button/input styling inside dialogues; dialogue content should look like part of the MyDesk design system
+- If a dialogue diverges from this pattern, there should be a specific product reason rather than convenience.
 
 ---
 
-*Last updated: May 2026 — Powered by Digital Response*
+*Last updated: July 2026 — Maintained by Digital Response*
