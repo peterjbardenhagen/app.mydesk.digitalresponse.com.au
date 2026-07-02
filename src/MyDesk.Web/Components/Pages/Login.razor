@@ -16,7 +16,16 @@
     public string? Password { get; set; }
     public bool RememberMe { get; set; } = true;
 
-    private bool ShowError => Error == "1";
+    private bool ShowError => !string.IsNullOrEmpty(Error);
+    private string ErrorMessage => Error switch
+    {
+        "1"               => "Invalid login credentials. Please try again.",
+        "azure"           => "Microsoft sign-in failed. Please try again or contact support.",
+        "azure_nouser"    => "Your Microsoft account is not registered in MyDesk. Contact your administrator.",
+        "azure_notenant"  => "Your account has no workspace access configured. Contact your administrator.",
+        "azure_noclaim"   => "Could not identify your Microsoft account. Please try again.",
+        _                 => "Sign-in failed. Please try again."
+    };
     private bool _isDarkMode;
     private PlatformSettingsService.LoginColorScheme? _colorScheme;
 
@@ -159,7 +168,7 @@
                 @if (ShowError)
                 {
                     <MudAlert Severity="Severity.Error" Dense="true" Class="mb-6 rounded-lg" Variant="Variant.Filled">
-                        Invalid login credentials. Please try again.
+                        @ErrorMessage
                     </MudAlert>
                 }
 
