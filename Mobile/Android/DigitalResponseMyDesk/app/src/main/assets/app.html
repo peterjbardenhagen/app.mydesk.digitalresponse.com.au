@@ -824,6 +824,8 @@ const state = {
   deskyTyping: false,
 };
 
+const DESKY_API_URL = 'https://app.mydesk.digitalresponse.com.au/api/chat/desky';
+
 const brandData = {
   techlight: { name: 'Techlight', workspace: 'Techlight', revenue: '$42,850.00', badge: '+12.4%', quotes: 14, invoices: '$8.2k', overdue: 3, pending: 8 },
   ccl:       { name: 'Carter Capner', workspace: 'Carter Capner Law', revenue: '$128,400.00', badge: '+8.2%', quotes: 7, invoices: '$22.5k', overdue: 1, pending: 3 },
@@ -1005,9 +1007,11 @@ function buildStats() {
 // ── Chat ───────────────────────────────────────────────────
 function addDeskyOpener() {
   const greet = deskyResponses.greet[Math.floor(Math.random() * deskyResponses.greet.length)];
+  // Seed history so subsequent messages have this opener as context
+  state.chatHistory.push({ role: 'assistant', content: greet });
   appendMsg('desky', greet, [
-    { label: 'Yes, prepare brief', action: 'brief' },
-    { label: 'Show me the quotes', action: 'quotes' },
+    { label: 'Yes, prepare brief', text: 'Prepare a brief for my next meeting' },
+    { label: 'Show me the quotes', text: 'What quotes are open right now?' },
   ]);
 }
 
@@ -1022,21 +1026,22 @@ function appendMsg(from, text, qrs) {
     <div class="msg-body">
       <div class="msg-sender">${isDesky ? 'Desky' : 'You'}</div>
       <div class="msg-bubble">${formattedText}</div>
-      ${qrs && qrs.length ? '<div class="quick-replies">' + qrs.map(q => `<button class="qr-btn" onclick="handleQR('${q.action}','${q.label}')">${q.label}</button>`).join('') + '</div>' : ''}
+      ${qrs && qrs.length ? '<div class="quick-replies">' + qrs.map(q => `<button class="qr-btn" onclick="handleQR(${JSON.stringify(q.text)})">${q.label}</button>`).join('') + '</div>' : ''}
     </div>
   `;
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
 }
 
-function handleQR(action, label) {
+function handleQR(text) {
   document.querySelectorAll('.quick-replies').forEach(r => r.remove());
-  appendMsg('user', label);
-  showTypingThenReply(action);
+  appendMsg('user', text);
+  askDesky(text);
 }
 
-function showTypingThenReply(action) {
+function showTyping() {
   const container = document.getElementById('chatMessages');
+  if (document.getElementById('typing-indicator')) return;
   const typing = document.createElement('div');
   typing.className = 'msg';
   typing.id = 'typing-indicator';
@@ -1051,45 +1056,62 @@ function showTypingThenReply(action) {
   `;
   container.appendChild(typing);
   container.scrollTop = container.scrollHeight;
-  const delay = 1200 + Math.random() * 600;
-  setTimeout(() => {
-    const t = document.getElementById('typing-indicator');
-    if (t) t.remove();
-    const responses = deskyResponses[action] || deskyResponses.default;
-    const reply = responses[Math.floor(Math.random() * responses.length)];
-    let qrs = [];
-    if (action === 'brief' || action === 'quotes') {
-      qrs = [{ label: 'Draft follow-up', action: 'default' }, { label: 'View in browser', action: 'browser' }];
-    } else if (action === 'prediction') {
-      qrs = [{ label: 'Show me the bills', action: 'default' }, { label: 'Check OKRs', action: 'okr' }];
-    }
-    appendMsg('desky', reply, qrs);
-  }, delay);
+}
+
+function removeTyping() {
+  const t = document.getElementById('typing-indicator');
+  if (t) t.remove();
+}
+
+async function askDesky(userText) {
+  if (state.deskyTyping) return;
+  state.deskyTyping = true;
+  showTyping();
+
+  const historyToSend = [...state.chatHistory].slice(-20);
+
+  try {
+    const resp = await fetch(DESKY_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: userText, history: historyToSend, brand: state.brand })
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    const reply = data.reply || "I couldn't retrieve that right now.";
+    state.chatHistory.push({ role: 'user', content: userText });
+    state.chatHistory.push({ role: 'assistant', content: reply });
+    removeTyping();
+    appendMsg('desky', reply);
+  } catch(err) {
+    removeTyping();
+    const offline = !navigator.onLine || (window.MyDeskAndroid && !window.MyDeskAndroid.isOnline());
+    appendMsg('desky', offline
+      ? "I'm offline right now. Check your connection and I'll be back in a moment."
+      : "I hit a snag checking my notes. Try again shortly.");
+  } finally {
+    state.deskyTyping = false;
+  }
 }
 
 function sendMessage() {
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
-  if (!text) return;
+  if (!text || state.deskyTyping) return;
   input.value = '';
   input.style.height = '';
   appendMsg('user', text);
-  showTypingThenReply(classifyIntent(text));
-}
-
-function classifyIntent(text) {
-  const t = text.toLowerCase();
-  if (t.includes('brief') || t.includes('meeting') || t.includes('quote')) return 'brief';
-  if (t.includes('invoice') || t.includes('overdue') || t.includes('payment')) return 'quotes';
-  if (t.includes('cashflow') || t.includes('cash') || t.includes('dip')) return 'prediction';
-  if (t.includes('okr') || t.includes('target') || t.includes('goal')) return 'okr';
-  return 'default';
+  askDesky(text);
 }
 
 function deskyChatTap(topic) {
   navigate('home');
-  showTypingThenReply(topic);
+  const text = topic === 'prediction'
+    ? 'Tell me more about your latest prediction'
+    : topic;
   setTimeout(() => {
+    appendMsg('user', text);
+    askDesky(text);
     const chat = document.getElementById('chatMessages');
     if (chat) chat.scrollTop = chat.scrollHeight;
   }, 100);
