@@ -289,7 +289,7 @@ public class MainActivity extends AppCompatActivity {
             "p{font-size:14px;color:#888;line-height:1.5;}" +
             "</style></head><body>" +
             "<div class='c'><div class='ic'>✦</div>" +
-            "<h2>Desky is offline</h2>" +
+            "<h2>MyDeskAI is offline</h2>" +
             "<p>Check your connection.<br>Desky will be back shortly.</p>" +
             "</div></body></html>";
         webView.loadDataWithBaseURL(null, offlineHtml, "text/html", "UTF-8", null);
@@ -353,7 +353,7 @@ public class MainActivity extends AppCompatActivity {
             webView.goBack();
         } else {
             new AlertDialog.Builder(this)
-                .setTitle("Exit MyDesk")
+                .setTitle("Exit MyDeskAI")
                 .setMessage("Are you sure you want to exit?")
                 .setPositiveButton("Exit", (dialog, which) -> finish())
                 .setNegativeButton("Cancel", null)
