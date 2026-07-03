@@ -44,8 +44,8 @@ public class MainActivity extends AppCompatActivity {
 
     // Local chat app — the primary mobile experience
     private static final String LOCAL_APP_URL = "file:///android_asset/app.html";
-    // Full web app (fallback / "open in browser" target)
-    private static final String WEB_APP_URL = "https://app.mydesk.digitalresponse.com.au";
+    // Full web app URL — driven by build variant (debug = dev endpoint, release = prod)
+    private static final String WEB_APP_URL = BuildConfig.WEB_APP_URL;
 
     private static final String PREFS_NAME = "MyDeskPrefs";
     private static final String PREF_THEME = "theme";
@@ -151,6 +151,7 @@ public class MainActivity extends AppCompatActivity {
         webView.setBackgroundColor(Color.TRANSPARENT);
 
         webView.addJavascriptInterface(new WebAppInterface(), "MyDeskAndroid");
+        webView.addJavascriptInterface(new ConfigInterface(), "MyDeskConfig");
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -358,6 +359,19 @@ public class MainActivity extends AppCompatActivity {
                 .setNegativeButton("Cancel", null)
                 .show();
         }
+    }
+
+    /// Exposed as window.MyDeskConfig in JavaScript — lets app.html resolve
+    /// the correct API endpoint without hardcoding it in the asset.
+    public class ConfigInterface {
+        @JavascriptInterface
+        public String getApiUrl() { return BuildConfig.API_BASE_URL; }
+
+        @JavascriptInterface
+        public boolean isDebug() { return BuildConfig.DEBUG; }
+
+        @JavascriptInterface
+        public String getPlatform() { return "android"; }
     }
 
     public class WebAppInterface {

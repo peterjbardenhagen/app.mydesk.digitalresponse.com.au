@@ -255,6 +255,8 @@ if (azureAdConfigured)
 
 authBuilder.AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, MyDesk.Web.Api.ApiKeyAuthenticationHandler>(
     MyDesk.Web.Api.ApiKeyAuthenticationHandler.SchemeName, _ => { });
+authBuilder.AddScheme<MyDesk.Web.Api.PatAuthOptions, MyDesk.Web.Api.PersonalAccessTokenAuthHandler>(
+    MyDesk.Web.Api.PersonalAccessTokenAuthHandler.SchemeName, _ => { });
 builder.Services.AddAuthorization(options =>
 {
     options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder(
@@ -435,6 +437,7 @@ builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.IDocumentExtraction
 builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.DocumentExtractionService>();
 builder.Services.AddScoped<SupplierQuoteParseService>();
 builder.Services.AddScoped<McpIntegrationService>();
+builder.Services.AddScoped<PersonalAccessTokenService>();
 
 // Proposal #272: AI Enhancement services
 builder.Services.AddScoped<ReconciliationService>();
@@ -1244,6 +1247,55 @@ app.MapPost("/api/chat/desky", async (HttpContext ctx, MyDesk.Web.AI.AiProviderF
     }
 }).RequireRateLimiting("desky");
 
+// ── Personal Access Token API (used by AI Agents page) ──────────────────────
+// All three endpoints require a logged-in browser session (cookie auth).
+// They operate on tokens belonging only to the calling user + their active tenant.
+
+app.MapGet("/api/tokens", async (HttpContext ctx, PersonalAccessTokenService patSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var userIdClaim = ctx.User.FindFirstValue("UserId");
+    var tenantIdClaim = ctx.User.FindFirstValue("tenant_id");
+    if (!int.TryParse(userIdClaim, out var userId) || !Guid.TryParse(tenantIdClaim, out var tenantId))
+        return Results.Unauthorized();
+    var tokens = await patSvc.ListAsync(userId, tenantId);
+    return Results.Ok(tokens);
+}).RequireAuthorization();
+
+app.MapPost("/api/tokens", async (HttpContext ctx, PersonalAccessTokenService patSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var userIdClaim = ctx.User.FindFirstValue("UserId");
+    var tenantIdClaim = ctx.User.FindFirstValue("tenant_id");
+    if (!int.TryParse(userIdClaim, out var userId) || !Guid.TryParse(tenantIdClaim, out var tenantId))
+        return Results.Unauthorized();
+
+    PatCreateRequest? req;
+    try { req = await ctx.Request.ReadFromJsonAsync<PatCreateRequest>(); }
+    catch { return Results.BadRequest(new { error = "Invalid JSON" }); }
+
+    if (req is null || string.IsNullOrWhiteSpace(req.Name))
+        return Results.BadRequest(new { error = "name required" });
+
+    DateTime? expiresAt = req.ExpiryDays.HasValue && req.ExpiryDays > 0
+        ? DateTime.UtcNow.AddDays(req.ExpiryDays.Value)
+        : null;
+
+    var (rawToken, record) = await patSvc.GenerateAsync(userId, tenantId, req.Name, req.Scopes ?? "chat tools", expiresAt);
+    return Results.Ok(new { rawToken, record.TokenId, record.TokenName, record.CreatedAt, record.ExpiresAt });
+}).RequireAuthorization();
+
+app.MapDelete("/api/tokens/{tokenId:guid}", async (Guid tokenId, HttpContext ctx, PersonalAccessTokenService patSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var userIdClaim = ctx.User.FindFirstValue("UserId");
+    var tenantIdClaim = ctx.User.FindFirstValue("tenant_id");
+    if (!int.TryParse(userIdClaim, out var userId) || !Guid.TryParse(tenantIdClaim, out var tenantId))
+        return Results.Unauthorized();
+    var ok = await patSvc.RevokeAsync(tokenId, userId, tenantId);
+    return ok ? Results.Ok() : Results.NotFound();
+}).RequireAuthorization();
+
 // ── Log Viewer API endpoints ─────────────────────────────────────────────────
 app.MapGet("/api/logs", (HttpContext ctx) =>
 {
@@ -1557,3 +1609,9 @@ public record EmailRequest(
     string? Subject    = null,
     string? Message    = null,
     bool    AttachPdf  = true);
+
+/// <summary>Body model for POST /api/tokens.</summary>
+public record PatCreateRequest(
+    string  Name,
+    string? Scopes     = null,
+    int?    ExpiryDays = null);

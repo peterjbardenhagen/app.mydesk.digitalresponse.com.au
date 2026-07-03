@@ -824,7 +824,30 @@ const state = {
   deskyTyping: false,
 };
 
-const DESKY_API_URL = 'https://app.mydesk.digitalresponse.com.au/api/chat/desky';
+// ── Native bridge abstraction (Android + iOS) ──────────────────────────────
+// Android: window.MyDeskAndroid.method(arg)
+// iOS:     window.webkit.messageHandlers.method.postMessage(arg)
+// Config:  window.MyDeskConfig injected by native layer (Android JavascriptInterface
+//          or iOS WKUserScript at document start)
+function nativeCall(name, data) {
+  try {
+    if (window.MyDeskAndroid?.[name]) return window.MyDeskAndroid[name](data ?? null);
+    window.webkit?.messageHandlers?.[name]?.postMessage(data ?? null);
+  } catch(e) {}
+}
+function nativeGet(name) {
+  try {
+    if (window.MyDeskAndroid?.[name]) return window.MyDeskAndroid[name]();
+  } catch(e) {}
+  return null;
+}
+
+// API base URL: native layer injects window.MyDeskConfig.apiUrl (or getApiUrl())
+// Fallback to production URL so plain browser testing also works.
+const API_BASE = window.MyDeskConfig?.apiUrl
+              ?? nativeGet('getApiUrl')
+              ?? 'https://app.mydesk.digitalresponse.com.au';
+const DESKY_API_URL = API_BASE + '/api/chat/desky';
 
 const brandData = {
   techlight: { name: 'Techlight', workspace: 'Techlight', revenue: '$42,850.00', badge: '+12.4%', quotes: 14, invoices: '$8.2k', overdue: 3, pending: 8 },
@@ -919,7 +942,7 @@ function applyTheme(theme, save = true) {
   state.theme = theme;
   if (save) try {
     localStorage.setItem('md_theme', theme);
-    if (window.MyDeskAndroid) window.MyDeskAndroid.saveTheme(theme);
+    nativeCall('saveTheme', theme);
   } catch(e) {}
 }
 
@@ -944,7 +967,7 @@ function applyBrand(brand, save = true) {
   if (document.getElementById('workspaceName')) document.getElementById('workspaceName').textContent = d.workspace;
   if (save) try {
     localStorage.setItem('md_brand', brand);
-    if (window.MyDeskAndroid) window.MyDeskAndroid.saveBrand(brand);
+    nativeCall('saveBrand', brand);
   } catch(e) {}
 }
 
@@ -1085,7 +1108,7 @@ async function askDesky(userText) {
     appendMsg('desky', reply);
   } catch(err) {
     removeTyping();
-    const offline = !navigator.onLine || (window.MyDeskAndroid && !window.MyDeskAndroid.isOnline());
+    const offline = !navigator.onLine || (window.MyDeskAndroid && !window.MyDeskAndroid.isOnline?.());
     appendMsg('desky', offline
       ? "I'm offline right now. Check your connection and I'll be back in a moment."
       : "I hit a snag checking my notes. Try again shortly.");
@@ -1129,7 +1152,9 @@ function autoResize(el) {
 // ── Voice ──────────────────────────────────────────────────
 function startVoice() {
   try {
-    if (window.MyDeskAndroid) { window.MyDeskAndroid.startVoiceRecognition(); return; }
+    if (window.MyDeskAndroid || window.webkit?.messageHandlers?.startVoiceRecognition) {
+      nativeCall('startVoiceRecognition'); return;
+    }
     if (window.SpeechRecognition || window.webkitSpeechRecognition) {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       const r = new SR();
