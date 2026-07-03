@@ -107,6 +107,16 @@ builder.Services.AddRateLimiter(options =>
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 QueueLimit = 0
             }));
+    options.AddPolicy("desky", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
 });
 
 builder.Services.AddMemoryCache();
@@ -245,6 +255,8 @@ if (azureAdConfigured)
 
 authBuilder.AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, MyDesk.Web.Api.ApiKeyAuthenticationHandler>(
     MyDesk.Web.Api.ApiKeyAuthenticationHandler.SchemeName, _ => { });
+authBuilder.AddScheme<MyDesk.Web.Api.PatAuthOptions, MyDesk.Web.Api.PersonalAccessTokenAuthHandler>(
+    MyDesk.Web.Api.PersonalAccessTokenAuthHandler.SchemeName, _ => { });
 builder.Services.AddAuthorization(options =>
 {
     options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder(
@@ -425,6 +437,7 @@ builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.IDocumentExtraction
 builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.DocumentExtractionService>();
 builder.Services.AddScoped<SupplierQuoteParseService>();
 builder.Services.AddScoped<McpIntegrationService>();
+builder.Services.AddScoped<PersonalAccessTokenService>();
 
 // Proposal #272: AI Enhancement services
 builder.Services.AddScoped<ReconciliationService>();
@@ -1151,6 +1164,138 @@ app.MapPost("/api/telegram/webhook", async (HttpRequest request, TelegramBotServ
     }
 });
 
+// ── Desky Mobile Chat API ─────────────────────────────────────────────────────
+// Anonymous endpoint — no tenant context; uses platform AI config.
+// The Android app loads from file:// so cookies don't cross origins; this
+// endpoint provides general Desky AI chat without DB tool access.
+// Tool access (pipeline, quotes, etc.) requires authentication and is a phase-2 concern.
+app.MapPost("/api/chat/desky", async (HttpContext ctx, MyDesk.Web.AI.AiProviderFactory providerFactory) =>
+{
+    DeskyChatRequest? req;
+    try { req = await ctx.Request.ReadFromJsonAsync<DeskyChatRequest>(); }
+    catch { return Results.BadRequest(new { error = "Invalid JSON" }); }
+
+    if (req is null || string.IsNullOrWhiteSpace(req.Message))
+        return Results.BadRequest(new { error = "message required" });
+
+    var provider = providerFactory.Resolve();
+    if (!provider.IsConfigured)
+    {
+        return Results.Ok(new
+        {
+            reply = "Desky isn't connected to an AI provider yet. Ask your administrator to configure one in Settings → AI Provider."
+        });
+    }
+
+    var brandLabel = (req.Brand ?? "techlight").ToLowerInvariant() switch
+    {
+        "ccl" or "cartercapner" => "Carter Capner Law",
+        "dr"  or "digitalresponse" => "Digital Response",
+        _ => "Techlight"
+    };
+
+    const string deskyPersona = """
+        You are Desky — the AI at the heart of MyDesk, a business management platform.
+
+        Your character:
+        • You are a Virtual MBA in the user's pocket. Concise, sharp, commercially focused.
+        • You know more about this business than anyone in the room. You see around corners.
+        • Risk-averse but ruthless about never leaving money on the table.
+        • You run 24/7 background simulations to ensure OKRs stay on track. When you surface
+          an insight, the numbers already told you to.
+        • Australian English. Warm but direct. No fluff. No bullet-point walls.
+
+        Scope:
+        • Help with business strategy, pipeline, quotes, invoicing, cash flow, OKRs, client
+          relationships, and operational decisions.
+        • You currently lack live database access (the user hasn't signed in). Be transparent:
+          tell the user what you *would* look up if you had access, and give your best-estimate
+          answer using general business intelligence. Never fabricate specific figures without
+          flagging them as estimates ("I'd estimate…", "For a business like this, typically…").
+        • Replies: under 100 words unless the user explicitly asks for detail. Plain text only —
+          no markdown headers or excessive bullets.
+        """;
+
+    var systemPrompt = $"You are advising the team at **{brandLabel}**.\n\n{deskyPersona}";
+
+    var messages = new List<object>
+    {
+        new Dictionary<string, object?> { ["role"] = "system", ["content"] = systemPrompt }
+    };
+
+    if (req.History is { Count: > 0 })
+    {
+        foreach (var h in req.History.TakeLast(20))
+        {
+            if (string.IsNullOrWhiteSpace(h.Role) || string.IsNullOrWhiteSpace(h.Content)) continue;
+            var role = h.Role.ToLowerInvariant() is "assistant" or "user" ? h.Role.ToLowerInvariant() : "user";
+            messages.Add(new Dictionary<string, object?> { ["role"] = role, ["content"] = h.Content });
+        }
+    }
+
+    messages.Add(new Dictionary<string, object?> { ["role"] = "user", ["content"] = req.Message });
+
+    try
+    {
+        var resp = await provider.ChatWithToolsAsync(messages, null, 500, 0.75, ctx.RequestAborted);
+        return Results.Ok(new { reply = resp.Text });
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "Desky chat endpoint error");
+        return Results.Ok(new { reply = "I hit a snag checking my notes. Try again in a moment." });
+    }
+}).RequireRateLimiting("desky");
+
+// ── Personal Access Token API (used by AI Agents page) ──────────────────────
+// All three endpoints require a logged-in browser session (cookie auth).
+// They operate on tokens belonging only to the calling user + their active tenant.
+
+app.MapGet("/api/tokens", async (HttpContext ctx, PersonalAccessTokenService patSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var userIdClaim = ctx.User.FindFirstValue("UserId");
+    var tenantIdClaim = ctx.User.FindFirstValue("tenant_id");
+    if (!int.TryParse(userIdClaim, out var userId) || !Guid.TryParse(tenantIdClaim, out var tenantId))
+        return Results.Unauthorized();
+    var tokens = await patSvc.ListAsync(userId, tenantId);
+    return Results.Ok(tokens);
+}).RequireAuthorization();
+
+app.MapPost("/api/tokens", async (HttpContext ctx, PersonalAccessTokenService patSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var userIdClaim = ctx.User.FindFirstValue("UserId");
+    var tenantIdClaim = ctx.User.FindFirstValue("tenant_id");
+    if (!int.TryParse(userIdClaim, out var userId) || !Guid.TryParse(tenantIdClaim, out var tenantId))
+        return Results.Unauthorized();
+
+    PatCreateRequest? req;
+    try { req = await ctx.Request.ReadFromJsonAsync<PatCreateRequest>(); }
+    catch { return Results.BadRequest(new { error = "Invalid JSON" }); }
+
+    if (req is null || string.IsNullOrWhiteSpace(req.Name))
+        return Results.BadRequest(new { error = "name required" });
+
+    DateTime? expiresAt = req.ExpiryDays.HasValue && req.ExpiryDays > 0
+        ? DateTime.UtcNow.AddDays(req.ExpiryDays.Value)
+        : null;
+
+    var (rawToken, record) = await patSvc.GenerateAsync(userId, tenantId, req.Name, req.Scopes ?? "chat tools", expiresAt);
+    return Results.Ok(new { rawToken, record.TokenId, record.TokenName, record.CreatedAt, record.ExpiresAt });
+}).RequireAuthorization();
+
+app.MapDelete("/api/tokens/{tokenId:guid}", async (Guid tokenId, HttpContext ctx, PersonalAccessTokenService patSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var userIdClaim = ctx.User.FindFirstValue("UserId");
+    var tenantIdClaim = ctx.User.FindFirstValue("tenant_id");
+    if (!int.TryParse(userIdClaim, out var userId) || !Guid.TryParse(tenantIdClaim, out var tenantId))
+        return Results.Unauthorized();
+    var ok = await patSvc.RevokeAsync(tokenId, userId, tenantId);
+    return ok ? Results.Ok() : Results.NotFound();
+}).RequireAuthorization();
+
 // ── Log Viewer API endpoints ─────────────────────────────────────────────────
 app.MapGet("/api/logs", (HttpContext ctx) =>
 {
@@ -1450,9 +1595,23 @@ finally
     Log.CloseAndFlush();
 }
 
+/// <summary>Body model for POST /api/chat/desky.</summary>
+public record DeskyChatRequest(
+    string Message,
+    string? Brand = null,
+    List<DeskyChatMessage>? History = null);
+
+public record DeskyChatMessage(string Role, string Content);
+
 /// <summary>Body model for POST /api/email/* endpoints.</summary>
 public record EmailRequest(
     string To,
     string? Subject    = null,
     string? Message    = null,
     bool    AttachPdf  = true);
+
+/// <summary>Body model for POST /api/tokens.</summary>
+public record PatCreateRequest(
+    string  Name,
+    string? Scopes     = null,
+    int?    ExpiryDays = null);

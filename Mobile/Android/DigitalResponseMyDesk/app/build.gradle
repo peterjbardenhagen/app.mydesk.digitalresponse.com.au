@@ -16,10 +16,20 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    buildFeatures {
+        buildConfig true
+    }
+
     buildTypes {
+        debug {
+            buildConfigField "String", "API_BASE_URL", '"https://dev.digitalresponse.com.au"'
+            buildConfigField "String", "WEB_APP_URL",  '"https://dev.digitalresponse.com.au"'
+        }
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            buildConfigField "String", "API_BASE_URL", '"https://app.mydesk.digitalresponse.com.au"'
+            buildConfigField "String", "WEB_APP_URL",  '"https://app.mydesk.digitalresponse.com.au"'
         }
     }
     

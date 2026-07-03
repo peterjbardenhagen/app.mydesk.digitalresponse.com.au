@@ -1,0 +1,347 @@
+@page "/ai-agents"
+@using MyDesk.Shared.Models
+@using MyDesk.Web.Services
+@inject PersonalAccessTokenService TokenService
+@inject ICurrentTenantAccessor TenantAccessor
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<PageTitle>AI Agents — MyDesk</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+
+    <MudText Typo="Typo.h4" GutterBottom="true" Style="font-weight:700;">
+        AI Agents & Integrations
+    </MudText>
+    <MudText Typo="Typo.body1" Class="mb-6" Style="color:var(--gray-500); max-width:640px;">
+        Connect Desky to your favourite AI assistant. Generate a personal access token once,
+        then paste it into Claude, ChatGPT, Copilot, or Gemini.
+        Each token is scoped to your account and workspace — it never accesses other tenants' data.
+    </MudText>
+
+    <MudGrid Spacing="4">
+
+        @* ── Left column: token management ─────────────────────────────────── *@
+        <MudItem xs="12" md="5">
+
+            <MudPaper Elevation="1" Class="pa-4 mb-4" Style="border-radius:12px;">
+                <MudText Typo="Typo.h6" GutterBottom="true" Style="font-weight:700;">
+                    Your Access Tokens
+                </MudText>
+
+                @if (_tokens.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Style="color:var(--gray-500);">
+                        No tokens yet. Create one below to connect an AI agent.
+                    </MudText>
+                }
+                else
+                {
+                    @foreach (var tok in _tokens)
+                    {
+                        <div class="d-flex align-center justify-space-between py-2" style="border-bottom:1px solid var(--gray-200);">
+                            <div>
+                                <MudText Typo="Typo.body2" Style="font-weight:600;">@tok.TokenName</MudText>
+                                <MudText Typo="Typo.caption" Style="color:var(--gray-500);">
+                                    Created @tok.CreatedAt.ToString("dd MMM yyyy")
+                                    @if (tok.LastUsedAt.HasValue)
+                                    { <text> · Last used @tok.LastUsedAt.Value.ToString("dd MMM")</text> }
+                                    @if (tok.ExpiresAt.HasValue)
+                                    { <text> · Expires @tok.ExpiresAt.Value.ToString("dd MMM yyyy")</text> }
+                                </MudText>
+                                <MudText Typo="Typo.caption" Style="color:var(--gray-400);">@tok.Scopes</MudText>
+                            </div>
+                            <MudIconButton Icon="@Icons.Material.Rounded.DeleteOutline"
+                                           Size="Size.Small" Color="Color.Error"
+                                           OnClick="() => RevokeToken(tok.TokenId)"
+                                           Title="Revoke token" />
+                        </div>
+                    }
+                }
+            </MudPaper>
+
+            @* New token form *@
+            <MudPaper Elevation="1" Class="pa-4" Style="border-radius:12px;">
+                <MudText Typo="Typo.h6" GutterBottom="true" Style="font-weight:700;">
+                    New Token
+                </MudText>
+
+                <MudTextField @bind-Value="_newTokenName" Label="Token name"
+                              Placeholder="e.g. Claude Desktop — home laptop"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Class="mb-3" />
+
+                <MudSelect @bind-Value="_newTokenScopes" Label="Scopes"
+                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                           Class="mb-3">
+                    <MudSelectItem Value="@("chat tools")">Chat + Tools (recommended)</MudSelectItem>
+                    <MudSelectItem Value="@("chat")">Chat only</MudSelectItem>
+                    <MudSelectItem Value="@("chat tools accounting")">Chat + Tools + Accounting</MudSelectItem>
+                </MudSelect>
+
+                <MudSelect @bind-Value="_newTokenExpiry" Label="Expiry"
+                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                           Class="mb-4">
+                    <MudSelectItem Value="@((DateTime?)null)">Never</MudSelectItem>
+                    <MudSelectItem Value="@((DateTime?)DateTime.UtcNow.AddDays(30))">30 days</MudSelectItem>
+                    <MudSelectItem Value="@((DateTime?)DateTime.UtcNow.AddDays(90))">90 days</MudSelectItem>
+                    <MudSelectItem Value="@((DateTime?)DateTime.UtcNow.AddDays(365))">1 year</MudSelectItem>
+                </MudSelect>
+
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                           OnClick="GenerateToken" Disabled="@(string.IsNullOrWhiteSpace(_newTokenName))">
+                    Generate Token
+                </MudButton>
+            </MudPaper>
+
+            @* Reveal newly generated token (shown once) *@
+            @if (!string.IsNullOrEmpty(_newRawToken))
+            {
+                <MudAlert Severity="Severity.Success" Class="mt-4" Style="border-radius:12px;">
+                    <MudText Typo="Typo.body2" Style="font-weight:700; margin-bottom:4px;">
+                        Token created — copy it now. It won't be shown again.
+                    </MudText>
+                    <div class="d-flex align-center gap-2 mt-1"
+                         style="background:rgba(0,0,0,.08); border-radius:6px; padding:8px 12px; font-family:monospace; font-size:12px; word-break:break-all;">
+                        @_newRawToken
+                        <MudIconButton Icon="@Icons.Material.Rounded.ContentCopy"
+                                       Size="Size.Small"
+                                       OnClick='() => JS.InvokeVoidAsync("navigator.clipboard.writeText", _newRawToken)' />
+                    </div>
+                </MudAlert>
+            }
+
+        </MudItem>
+
+        @* ── Right column: per-agent setup guides ───────────────────────────── *@
+        <MudItem xs="12" md="7">
+
+            <MudText Typo="Typo.h6" GutterBottom="true" Style="font-weight:700;">Connect an AI Agent</MudText>
+
+            <MudExpansionPanels MultiExpansion="true">
+
+                @* Claude / Anthropic *@
+                <MudExpansionPanel>
+                    <TitleContent>
+                        <div class="d-flex align-center gap-3">
+                            <MudIcon Icon="@Icons.Material.Rounded.AutoAwesome" Color="Color.Primary" />
+                            <MudText Style="font-weight:700;">Claude (Desktop or claude.ai)</MudText>
+                        </div>
+                    </TitleContent>
+                    <ChildContent>
+                        <MudText Typo="Typo.body2" Class="mb-2">
+                            MyDesk exposes a native <strong>Model Context Protocol (MCP)</strong> server.
+                            Claude can call your real MyDesk tools directly — quotes, invoices, pipeline, Desky AI, and more.
+                        </MudText>
+                        <MudText Typo="Typo.overline" Style="color:var(--gray-500);">Step 1 — Claude Desktop</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-1">
+                            Add this to your <code>claude_desktop_config.json</code>
+                            (macOS: <code>~/Library/Application Support/Claude/</code>,
+                             Windows: <code>%APPDATA%\Claude\</code>):
+                        </MudText>
+                        <pre style="background:var(--gray-100);border-radius:8px;padding:12px;font-size:12px;overflow-x:auto;"><code>@McpConfigSnippet()</code></pre>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="mt-2"
+                                   OnClick='() => JS.InvokeVoidAsync("navigator.clipboard.writeText", McpConfigSnippet())'>
+                            Copy config
+                        </MudButton>
+                        <MudDivider Class="my-3" />
+                        <MudText Typo="Typo.overline" Style="color:var(--gray-500);">Step 2 — claude.ai (Projects)</MudText>
+                        <MudText Typo="Typo.body2">
+                            In a Claude Project, go to <strong>Project Settings → Integrations → Add integration</strong>.
+                            Enter the MCP URL: <code>@McpUrl()</code> and your token above.
+                        </MudText>
+                    </ChildContent>
+                </MudExpansionPanel>
+
+                @* ChatGPT *@
+                <MudExpansionPanel>
+                    <TitleContent>
+                        <div class="d-flex align-center gap-3">
+                            <MudIcon Icon="@Icons.Material.Rounded.Chat" Color="Color.Success" />
+                            <MudText Style="font-weight:700;">ChatGPT (Custom GPT Actions)</MudText>
+                        </div>
+                    </TitleContent>
+                    <ChildContent>
+                        <MudText Typo="Typo.body2" Class="mb-2">
+                            Add MyDesk as an <strong>Action</strong> in a Custom GPT so ChatGPT can call your real business data.
+                        </MudText>
+                        <ol style="font-size:14px; line-height:1.8; padding-left:20px;">
+                            <li>Go to <strong>chatgpt.com → Explore GPTs → Create</strong>.</li>
+                            <li>Click <strong>Configure → Add actions</strong>.</li>
+                            <li>Under <em>Import from URL</em> paste: <code>@OpenApiUrl()</code></li>
+                            <li>Set <strong>Authentication</strong> to <em>API Key</em>, header <code>Authorization</code>, value <code>Bearer YOUR_TOKEN</code>.</li>
+                            <li>Paste your token from the left panel.</li>
+                            <li>Save and test — ask "What quotes are open?"</li>
+                        </ol>
+                    </ChildContent>
+                </MudExpansionPanel>
+
+                @* Microsoft Copilot *@
+                <MudExpansionPanel>
+                    <TitleContent>
+                        <div class="d-flex align-center gap-3">
+                            <MudIcon Icon="@Icons.Material.Rounded.Cloud" Color="Color.Info" />
+                            <MudText Style="font-weight:700;">Microsoft Copilot (Copilot Studio)</MudText>
+                        </div>
+                    </TitleContent>
+                    <ChildContent>
+                        <MudText Typo="Typo.body2" Class="mb-2">
+                            Create a <strong>Copilot Studio connector</strong> using the MyDesk OpenAPI spec.
+                        </MudText>
+                        <ol style="font-size:14px; line-height:1.8; padding-left:20px;">
+                            <li>Sign in to <strong>copilotstudio.microsoft.com</strong>.</li>
+                            <li>Create or open a Copilot.</li>
+                            <li>Go to <strong>Settings → AI plugins → Add a plugin</strong>.</li>
+                            <li>Choose <em>REST API (OpenAPI)</em> and enter: <code>@OpenApiUrl()</code></li>
+                            <li>Set authentication to <em>API key (Bearer)</em>.</li>
+                            <li>Paste your personal access token.</li>
+                            <li>Publish your Copilot to Microsoft 365 Chat or Teams.</li>
+                        </ol>
+                        <MudText Typo="Typo.body2" Class="mt-2" Style="color:var(--gray-500);">
+                            Copilot plugin manifest: <MudLink Href="@CopilotManifestUrl()" Target="_blank">@CopilotManifestUrl()</MudLink>
+                        </MudText>
+                    </ChildContent>
+                </MudExpansionPanel>
+
+                @* Gemini *@
+                <MudExpansionPanel>
+                    <TitleContent>
+                        <div class="d-flex align-center gap-3">
+                            <MudIcon Icon="@Icons.Material.Rounded.AutoFixHigh" Color="Color.Warning" />
+                            <MudText Style="font-weight:700;">Google Gemini (Gems)</MudText>
+                        </div>
+                    </TitleContent>
+                    <ChildContent>
+                        <MudText Typo="Typo.body2" Class="mb-2">
+                            Connect MyDesk to a <strong>Gemini Gem</strong> via the OpenAPI action URL.
+                        </MudText>
+                        <ol style="font-size:14px; line-height:1.8; padding-left:20px;">
+                            <li>Go to <strong>gemini.google.com → Gems → New Gem</strong>.</li>
+                            <li>Under <em>Actions / Extensions</em>, choose <em>Add an API</em>.</li>
+                            <li>Enter the OpenAPI spec URL: <code>@OpenApiUrl()</code></li>
+                            <li>Set the auth header: <code>Authorization: Bearer YOUR_TOKEN</code>.</li>
+                            <li>Paste your personal access token and save.</li>
+                            <li>Test: "What's my pipeline worth this month?"</li>
+                        </ol>
+                    </ChildContent>
+                </MudExpansionPanel>
+
+                @* n8n / Zapier / Make *@
+                <MudExpansionPanel>
+                    <TitleContent>
+                        <div class="d-flex align-center gap-3">
+                            <MudIcon Icon="@Icons.Material.Rounded.AccountTree" Color="Color.Secondary" />
+                            <MudText Style="font-weight:700;">Automation (n8n · Zapier · Make)</MudText>
+                        </div>
+                    </TitleContent>
+                    <ChildContent>
+                        <MudText Typo="Typo.body2" Class="mb-2">
+                            Use MyDesk as an HTTP data source in any automation platform.
+                        </MudText>
+                        <MudText Typo="Typo.overline" Style="color:var(--gray-500);">n8n</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-2">
+                            Add an <em>HTTP Request</em> node. URL: <code>@McpUrl()</code>.
+                            Method: POST. Auth: Header, <code>Authorization: Bearer YOUR_TOKEN</code>.
+                            Body: <code>@("{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"get_quotes\",\"arguments\":{}}}")</code>
+                        </MudText>
+                        <MudText Typo="Typo.overline" Style="color:var(--gray-500);">Zapier / Make</MudText>
+                        <MudText Typo="Typo.body2">
+                            Use a <em>Webhooks → POST</em> action pointing to <code>@McpUrl()</code>
+                            with the same JSON-RPC payload and Bearer token header.
+                        </MudText>
+                    </ChildContent>
+                </MudExpansionPanel>
+
+                @* Mobile (Desky app) *@
+                <MudExpansionPanel>
+                    <TitleContent>
+                        <div class="d-flex align-center gap-3">
+                            <MudIcon Icon="@Icons.Material.Rounded.PhoneIphone" Color="Color.Default" />
+                            <MudText Style="font-weight:700;">MyDesk Mobile (Desky app)</MudText>
+                        </div>
+                    </TitleContent>
+                    <ChildContent>
+                        <MudText Typo="Typo.body2" Class="mb-2">
+                            The Desky Android/iOS app uses your personal access token to authenticate
+                            chat and data requests. Tokens are injected automatically when you sign in
+                            through the app's built-in login flow.
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                            <strong>Android:</strong> Available on request — contact your administrator. <br/>
+                            <strong>iOS:</strong> Available on request — contact your administrator.
+                        </MudText>
+                    </ChildContent>
+                </MudExpansionPanel>
+
+            </MudExpansionPanels>
+        </MudItem>
+    </MudGrid>
+
+</MudContainer>
+
+@code {
+    private List<PersonalAccessToken> _tokens    = new();
+    private string  _newTokenName   = "";
+    private string  _newTokenScopes = "chat tools";
+    private DateTime? _newTokenExpiry = null;
+    private string? _newRawToken;
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private int?  _userId;
+    private Guid? _tenantId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthState is not null)
+        {
+            var state = await AuthState;
+            var user  = state.User;
+            if (int.TryParse(user.FindFirst("UserId")?.Value, out var uid)) _userId = uid;
+            _tenantId = TenantAccessor.TenantId;
+        }
+        await LoadTokensAsync();
+    }
+
+    private async Task LoadTokensAsync()
+    {
+        if (_userId.HasValue && _tenantId.HasValue)
+            _tokens = await TokenService.ListAsync(_userId.Value, _tenantId.Value);
+    }
+
+    private async Task GenerateToken()
+    {
+        if (!_userId.HasValue || !_tenantId.HasValue) return;
+        var (raw, _) = await TokenService.GenerateAsync(
+            _userId.Value, _tenantId.Value, _newTokenName, _newTokenScopes, _newTokenExpiry);
+        _newRawToken  = raw;
+        _newTokenName = "";
+        await LoadTokensAsync();
+    }
+
+    private async Task RevokeToken(Guid tokenId)
+    {
+        if (!_userId.HasValue || !_tenantId.HasValue) return;
+        await TokenService.RevokeAsync(tokenId, _userId.Value, _tenantId.Value);
+        _newRawToken = null;
+        await LoadTokensAsync();
+    }
+
+    private string BaseUrl() => Nav.BaseUri.TrimEnd('/');
+    private string McpUrl()           => BaseUrl() + "/api/mcp";
+    private string OpenApiUrl()       => BaseUrl() + "/api/mcp/openapi.json";
+    private string CopilotManifestUrl() => BaseUrl() + "/api/mcp/copilot-plugin.json";
+
+    private string McpConfigSnippet() => $$"""
+        {
+          "mcpServers": {
+            "mydesk": {
+              "url": "{{McpUrl()}}",
+              "headers": {
+                "Authorization": "Bearer YOUR_MDK_TOKEN"
+              }
+            }
+          }
+        }
+        """;
+}
