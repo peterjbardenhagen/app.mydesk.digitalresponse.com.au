@@ -1,0 +1,440 @@
+/* ============================================================
+   MyDesk Mobile Responsiveness Styles
+   ============================================================ */
+
+/* ── Mobile-first viewport ─────────────────────────────── */
+:root {
+    --mobile-nav-height: 64px;
+    --mobile-bottom-nav-height: 56px;
+    --mobile-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── Login Page - Mobile Optimized ──────────────────────── */
+@media (max-width: 767px) {
+    .login-page {
+        grid-template-columns: 1fr !important;
+        min-height: 100dvh !important;
+    }
+
+    .login-hero {
+        display: none !important;
+    }
+
+    .login-form-wrapper {
+        padding: 24px 16px !important;
+        justify-content: flex-start !important;
+        padding-top: 48px !important;
+    }
+
+    .login-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+
+    .login-logo-container {
+        margin-bottom: 32px !important;
+        text-align: center !important;
+    }
+
+    .login-logo-container img {
+        max-height: 40px !important;
+    }
+
+    .login-form-title {
+        font-size: 24px !important;
+        margin-bottom: 8px !important;
+    }
+
+    .login-form-subtitle {
+        font-size: 14px !important;
+        margin-bottom: 24px !important;
+    }
+
+    .login-input {
+        font-size: 16px !important; /* Prevent iOS zoom */
+        padding: 14px 16px !important;
+        min-height: 48px !important;
+    }
+
+    .login-submit-btn {
+        min-height: 48px !important;
+        font-size: 16px !important;
+        border-radius: 12px !important;
+    }
+}
+
+/* ── Dashboard & Main Content - Mobile ──────────────────── */
+@media (max-width: 767px) {
+    .page-container {
+        padding: 12px !important;
+    }
+
+    .page-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+        margin-bottom: 16px !important;
+    }
+
+    .page-title {
+        font-size: 20px !important;
+    }
+
+    .page-title-icon {
+        font-size: 24px !important;
+    }
+
+    /* Responsive stat cards grid */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+
+    .stat-card {
+        padding: 12px !important;
+    }
+
+    .stat-card-value {
+        font-size: 20px !important;
+    }
+
+    .stat-card-label {
+        font-size: 11px !important;
+    }
+
+    /* Full-width tables for mobile */
+    .table-wrapper {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        margin: 0 -12px !important;
+        padding: 0 12px !important;
+    }
+
+    .data-table {
+        min-width: 700px !important;
+        font-size: 13px !important;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 8px 10px !important;
+        white-space: nowrap !important;
+    }
+
+    /* MudBlazor responsive overrides */
+    .mud-grid {
+        margin: 0 !important;
+    }
+
+    .mud-grid > .mud-grid-item,
+    .mud-grid-item-xs-12 {
+        padding: 6px !important;
+    }
+
+    .mud-card {
+        margin-bottom: 12px !important;
+    }
+
+    .mud-card-content {
+        padding: 12px !important;
+    }
+
+    /* Mobile-friendly dialog */
+    .mobile-dialog > .mud-dialog {
+        margin: 0 !important;
+        border-radius: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 100% !important;
+    }
+
+    .mud-dialog-content {
+        padding: 12px !important;
+    }
+
+    /* Touch-friendly buttons */
+    .mud-button {
+        min-height: 44px !important;
+    }
+
+    .mud-button-root {
+        min-height: 44px !important;
+    }
+
+    /* Search bar */
+    .search-bar {
+        width: 100% !important;
+    }
+
+    .search-bar input {
+        font-size: 16px !important;
+    }
+
+    /* Action buttons row */
+    .action-row {
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    .action-row .mud-button {
+        width: 100% !important;
+    }
+
+    /* Mobile filters */
+    .filter-row {
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    .filter-row > * {
+        width: 100% !important;
+    }
+
+    /* Navigation improvements */
+    .nav-column {
+        display: none !important;
+    }
+
+    .mobile-nav-bar {
+        display: flex !important;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        background: white;
+        border-top: 1px solid #e5e7eb;
+        padding-bottom: var(--mobile-safe-bottom);
+    }
+}
+
+/* ── Tablet Optimizations ──────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .page-container {
+        padding: 20px !important;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+
+    .nav-column {
+        width: 220px !important;
+    }
+}
+
+/* ── Mobile Bottom Navigation ───────────────────────────── */
+.mobile-nav-bar {
+    display: none;
+}
+
+.mobile-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 4px;
+    gap: 2px;
+    color: #9ca3af;
+    text-decoration: none;
+    font-size: 10px;
+    font-weight: 600;
+    transition: color 0.2s;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 44px;
+}
+
+.mobile-nav-item.active {
+    color: var(--tl-accent, #a855f7);
+}
+
+.mobile-nav-item .nav-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-nav-item .nav-label {
+    line-height: 1;
+}
+
+/* ── Voice Input Button ─────────────────────────────────── */
+.voice-input-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: var(--tl-accent, #a855f7);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.voice-input-btn:active {
+    transform: translateY(-50%) scale(0.9);
+}
+
+.voice-input-btn.recording {
+    background: #ef4444;
+    animation: pulse-recording 1s infinite;
+}
+
+@keyframes pulse-recording {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    50% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+}
+
+/* ── Ask AI - Mobile Voice ──────────────────────────────── */
+@media (max-width: 767px) {
+    .ask-ai-container {
+        padding: 0 !important;
+        height: calc(100dvh - var(--mobile-bottom-nav-height)) !important;
+    }
+
+    .ask-ai-messages {
+        padding: 12px !important;
+        height: calc(100% - 120px) !important;
+    }
+
+    .ask-ai-input-wrapper {
+        padding: 8px 12px !important;
+        padding-bottom: calc(8px + var(--mobile-safe-bottom)) !important;
+    }
+
+    .ask-ai-input {
+        font-size: 16px !important;
+        border-radius: 24px !important;
+        padding: 12px 48px 12px 16px !important;
+    }
+
+    .ask-ai-send-btn {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 36px;
+        height: 36px;
+    }
+}
+
+/* ── Responsive Pages ───────────────────────────────────── */
+@media (max-width: 767px) {
+    /* Companies / Contacts */
+    .company-detail-header,
+    .contact-detail-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
+    }
+
+    .detail-actions {
+        width: 100% !important;
+        display: flex !important;
+        gap: 8px !important;
+    }
+
+    .detail-actions .mud-button {
+        flex: 1 !important;
+    }
+
+    /* Lists with cards */
+    .card-list-item {
+        padding: 12px !important;
+    }
+
+    .card-list-item .item-info {
+        flex-direction: column !important;
+        gap: 4px !important;
+    }
+
+    /* Form sections */
+    .form-section-title {
+        font-size: 16px !important;
+    }
+
+    .form-row {
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    .form-row > * {
+        width: 100% !important;
+    }
+
+    /* Settings page */
+    .settings-nav {
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        gap: 0 !important;
+        padding-bottom: 4px !important;
+    }
+
+    .settings-nav .mud-chip {
+        white-space: nowrap !important;
+    }
+
+    /* Profile page */
+    .profile-header {
+        flex-direction: column !important;
+        text-align: center !important;
+    }
+
+    .profile-avatar {
+        margin: 0 auto !important;
+    }
+}
+
+/* ── Desktop overrides for touch ────────────────────────── */
+@media (hover: none) and (pointer: coarse) {
+    /* Increase touch targets for all interactive elements */
+    .mud-button,
+    .mud-icon-button,
+    .mud-chip,
+    .mud-select,
+    .mud-menu {
+        min-height: 44px !important;
+    }
+
+    .mud-input {
+        font-size: 16px !important;
+    }
+
+    a, button, [role="button"] {
+        min-height: 44px;
+    }
+}
+
+/* ── iOS Safe Areas ─────────────────────────────────────── */
+@supports (padding-top: env(safe-area-inset-top)) {
+    .ios-safe-top {
+        padding-top: env(safe-area-inset-top);
+    }
+
+    .ios-safe-bottom {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+}
+
+/* ── Print styles for mobile ────────────────────────────── */
+@media print {
+    .mobile-nav-bar,
+    .voice-input-btn {
+        display: none !important;
+    }
+}

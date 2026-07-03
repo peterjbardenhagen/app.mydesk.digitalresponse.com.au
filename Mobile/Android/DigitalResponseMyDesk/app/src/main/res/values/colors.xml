@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_500">#A855F7</color>
+    <color name="purple_200">#D8B4FE</color>
+    <color name="purple_100">#F3E8FF</color>
+    <color name="teal_500">#14B8A6</color>
+    <color name="amber_500">#F59E0B</color>
+    <color name="background">#F8F9FA</color>
+    <color name="text_primary">#1A1A1A</color>
+    <color name="text_secondary">#6B7280</color>
+    <color name="progress_background">#E5E7EB</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+</resources>

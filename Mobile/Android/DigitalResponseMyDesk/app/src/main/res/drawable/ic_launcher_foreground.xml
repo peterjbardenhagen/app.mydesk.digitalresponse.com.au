@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Background circle -->
+    <path
+        android:fillColor="#A855F7"
+        android:pathData="M54,54m-40,0a40,40 0,1 1,80 0a40,40 0,1 1,-80 0" />
+    
+    <!-- "M" letter for MyDesk -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M36,72V36h8l10,18l10,-18h8v36h-8V48l-10,18l-10,-18v24z" />
+    
+    <!-- Decorative dot -->
+    <path
+        android:fillColor="#FACC15"
+        android:pathData="M72,72m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0" />
+</vector>

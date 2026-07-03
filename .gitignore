@@ -41,3 +41,8 @@ node_modules/
 
 # Test results
 test-results/
+
+# Publish artifacts
+artifacts/
+publish/
+*.zip
