@@ -1,18 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.MyDesk" parent="Theme.Material3.Light.NoActionBar">
-        <item name="colorPrimary">@color/purple_500</item>
+    <style name="Theme.MyDesk" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/brand_primary</item>
         <item name="colorPrimaryVariant">@color/purple_200</item>
         <item name="colorOnPrimary">@color/white</item>
-        <item name="colorSecondary">@color/teal_500</item>
+        <item name="colorSecondary">@color/brand_secondary</item>
         <item name="colorSecondaryVariant">@color/amber_500</item>
         <item name="colorOnSecondary">@color/white</item>
         <item name="android:colorBackground">@color/background</item>
         <item name="colorSurface">@color/white</item>
         <item name="colorOnSurface">@color/text_primary</item>
-        <item name="android:statusBarColor">@color/purple_500</item>
-        <item name="android:navigationBarColor">@color/purple_500</item>
+        <!-- Status/nav bar set dynamically in MainActivity based on current theme -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+    </style>
+
+    <style name="Theme.MyDesk.Dark" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/brand_primary</item>
+        <item name="colorPrimaryVariant">@color/purple_200</item>
+        <item name="colorOnPrimary">@color/black</item>
+        <item name="colorSecondary">@color/brand_secondary</item>
+        <item name="colorSecondaryVariant">@color/amber_500</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <item name="android:colorBackground">#0d0d1a</item>
+        <item name="colorSurface">#1a1a2e</item>
+        <item name="colorOnSurface">#f0f0f8</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
     </style>
 </resources>
