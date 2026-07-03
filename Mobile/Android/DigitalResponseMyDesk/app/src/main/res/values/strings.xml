@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">MyDesk</string>
-    <string name="app_full_name">Digital Response MyDesk</string>
-    <string name="app_url">https://app.dr.mydesk.digitalresponse.com.au</string>
-    <string name="voice_input_prompt">Speak your question for MyDesk AI</string>
-    <string name="exit_title">Exit MyDesk</string>
+    <string name="app_name">MyDeskAI</string>
+    <string name="app_full_name">MyDeskAI</string>
+    <string name="app_url">https://app.mydesk.digitalresponse.com.au</string>
+    <string name="voice_input_prompt">Ask Desky anything…</string>
+    <string name="exit_title">Exit MyDeskAI</string>
     <string name="exit_message">Are you sure you want to exit?</string>
     <string name="no_internet_title">No Internet Connection</string>
     <string name="no_internet_message">Please check your connection and try again.</string>
