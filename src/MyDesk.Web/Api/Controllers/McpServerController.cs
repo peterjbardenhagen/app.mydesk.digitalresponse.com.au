@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MyDesk.Shared.Services;
 using MyDesk.Web.AI;
 using MyDesk.Web.Api;
 using MyDesk.Web.Services;

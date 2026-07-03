@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using MyDesk.Shared.Data;
 using MyDesk.Shared.Models;
+using MyDesk.Shared.Services;
 
 namespace MyDesk.Web.Services;
 
