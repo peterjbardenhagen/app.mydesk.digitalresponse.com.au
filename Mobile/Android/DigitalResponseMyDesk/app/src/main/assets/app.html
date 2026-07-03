@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>MyDesk Chat</title>
+<style>
+/* ── Reset ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+button { border: none; outline: none; cursor: pointer; font-family: inherit; }
+input, textarea { border: none; outline: none; font-family: inherit; }
+
+/* ── CSS Variables ──────────────────────────────────────── */
+:root {
+  /* Dark theme (default) */
+  --bg:          #0d0d1a;
+  --bg-card:     #1a1a2e;
+  --bg-input:    #252538;
+  --bg-card2:    #20203a;
+  --border:      rgba(255,255,255,0.07);
+  --text-1:      #f0f0f8;
+  --text-2:      #a0a0c0;
+  --text-3:      #6b6b90;
+  --shadow:      0 4px 24px rgba(0,0,0,0.4);
+
+  /* Brand: Techlight (default) */
+  --brand-primary:   #00c8c8;
+  --brand-secondary: #cca05a;
+  --brand-dark:      #08121a;
+  --brand-gradient:  linear-gradient(135deg,#00c8c8 0%,#0097a7 100%);
+  --brand-rgb:       0,200,200;
+
+  /* Semantic */
+  --success:  #22c55e;
+  --warning:  #f97316;
+  --error:    #ef4444;
+  --info:     #3b82f6;
+
+  /* Layout */
+  --header-h:  60px;
+  --nav-h:     64px;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 8px;
+}
+
+/* Light theme overrides */
+[data-theme="light"] {
+  --bg:       #f4f4f8;
+  --bg-card:  #ffffff;
+  --bg-input: #ebebf5;
+  --bg-card2: #f0f0f8;
+  --border:   rgba(0,0,0,0.08);
+  --text-1:   #111126;
+  --text-2:   #44445a;
+  --text-3:   #888899;
+  --shadow:   0 4px 24px rgba(0,0,0,0.10);
+}
+
+/* Brand: Carter Capner */
+[data-brand="ccl"] {
+  --brand-primary:   #1C7BC4;
+  --brand-secondary: #FFED00;
+  --brand-dark:      #1a1a1a;
+  --brand-gradient:  linear-gradient(135deg,#1C7BC4 0%,#1456a0 100%);
+  --brand-rgb:       28,123,196;
+}
+
+/* Brand: Digital Response */
+[data-brand="dr"] {
+  --brand-primary:   #3d7a32;
+  --brand-secondary: #5cb85c;
+  --brand-dark:      #12261d;
+  --brand-gradient:  linear-gradient(135deg,#3d7a32 0%,#2a5a22 100%);
+  --brand-rgb:       61,122,50;
+}
+
+/* Brand: Techlight */
+[data-brand="techlight"] {
+  --brand-primary:   #00c8c8;
+  --brand-secondary: #cca05a;
+  --brand-dark:      #08121a;
+  --brand-gradient:  linear-gradient(135deg,#00c8c8 0%,#0097a7 100%);
+  --brand-rgb:       0,200,200;
+}
+
+/* ── App Shell ──────────────────────────────────────────── */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  height: 100dvh;
+  background: var(--bg);
+  color: var(--text-1);
+  overflow: hidden;
+  transition: background 0.3s, color 0.3s;
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  height: var(--header-h);
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+.app-logo {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: var(--brand-gradient);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 800; color: white;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+.app-logo::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: rgba(255,255,255,0.1);
+  border-radius: inherit;
+}
+.header-titles { flex: 1; min-width: 0; }
+.header-titles h1 { font-size: 15px; font-weight: 700; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.header-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+  color: var(--brand-primary); text-transform: uppercase;
+  margin-top: 1px;
+}
+.badge-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--brand-primary); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+.header-actions { display: flex; align-items: center; gap: 8px; }
+.icon-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--bg-input);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-2); font-size: 16px;
+  transition: background 0.2s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.icon-btn:active { transform: scale(0.92); background: var(--bg-card2); }
+.avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--brand-gradient);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: white;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+/* Notification badge */
+.notif-wrap { position: relative; }
+.notif-badge {
+  position: absolute; top: 0; right: 0;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--error); border: 2px solid var(--bg-card);
+}
+
+/* ── Screen Container ────────────────────────────────────── */
+.screens {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+.screen {
+  position: absolute; inset: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  opacity: 0; pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity 0.25s, transform 0.25s;
+  overscroll-behavior: contain;
+}
+.screen.active { opacity: 1; pointer-events: all; transform: none; }
+
+/* ── Home Screen ─────────────────────────────────────────── */
+#screen-home {
+  display: flex;
+  flex-direction: column;
+}
+.home-scroll {
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 14px 14px 0;
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+/* Revenue card */
+.revenue-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+.revenue-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--text-3); text-transform: uppercase; margin-bottom: 6px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.revenue-badge {
+  font-size: 11px; font-weight: 600; color: var(--success);
+  background: rgba(34,197,94,0.12); padding: 2px 7px; border-radius: 20px;
+}
+.revenue-amount { font-size: 32px; font-weight: 800; color: var(--text-1); line-height: 1.1; margin-bottom: 14px; }
+.chart-bars { display: flex; align-items: flex-end; gap: 5px; height: 48px; }
+.bar {
+  flex: 1; border-radius: 4px 4px 0 0;
+  background: rgba(var(--brand-rgb), 0.35);
+  transition: background 0.3s;
+}
+.bar.highlight { background: rgba(var(--brand-rgb), 0.9); }
+
+/* Stats row */
+.stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stat-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+.stat-label { font-size: 10px; font-weight: 700; letter-spacing: 0.07em; color: var(--text-3); text-transform: uppercase; margin-bottom: 6px; }
+.stat-value { font-size: 26px; font-weight: 800; color: var(--text-1); line-height: 1; margin-bottom: 4px; }
+.stat-sub { font-size: 11px; color: var(--text-3); }
+.stat-sub.warn { color: var(--warning); }
+
+/* Desky prediction card */
+.desky-card {
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  background: var(--brand-gradient);
+  box-shadow: 0 6px 28px rgba(var(--brand-rgb),0.25);
+  display: flex; align-items: flex-start; gap: 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.desky-card:active { transform: scale(0.98); }
+.desky-icon {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink: 0;
+}
+.desky-card-text h3 { font-size: 13px; font-weight: 700; color: white; margin-bottom: 4px; }
+.desky-card-text p { font-size: 12px; color: rgba(255,255,255,0.85); line-height: 1.5; }
+
+/* ── Chat Section (part of Home) ─────────────────────────── */
+.chat-section {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 50vh;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+.chat-messages {
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 10px;
+  overscroll-behavior: contain;
+}
+.msg { display: flex; gap: 8px; align-items: flex-start; }
+.msg.user { flex-direction: row-reverse; }
+.msg-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0;
+  margin-top: 2px;
+}
+.msg-avatar.agent { background: var(--brand-gradient); color: white; font-size: 14px; }
+.msg-avatar.user-av { background: var(--bg-input); color: var(--text-2); font-size: 10px; font-weight: 700; }
+.msg-body { max-width: 82%; }
+.msg-sender { font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); margin-bottom: 3px; }
+.msg-bubble {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px 14px 14px 14px;
+  padding: 10px 13px;
+  font-size: 13px; line-height: 1.55; color: var(--text-1);
+}
+.msg.user .msg-bubble {
+  background: var(--brand-gradient);
+  color: white; border: none;
+  border-radius: 14px 4px 14px 14px;
+}
+.msg.user .msg-body { align-items: flex-end; display: flex; flex-direction: column; }
+.msg.user .msg-sender { text-align: right; }
+
+/* Quick replies */
+.quick-replies { display: flex; gap: 8px; flex-wrap: wrap; padding: 4px 0 0; }
+.qr-btn {
+  padding: 7px 14px; border-radius: 20px;
+  border: 1.5px solid rgba(var(--brand-rgb),0.5);
+  background: transparent; color: var(--brand-primary);
+  font-size: 12px; font-weight: 600;
+  transition: background 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.qr-btn:active { background: rgba(var(--brand-rgb),0.15); transform: scale(0.96); }
+
+/* Typing indicator */
+.typing { display: flex; align-items: center; gap: 4px; padding: 8px 12px; }
+.typing-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); animation: typing 1.4s infinite; }
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typing { 0%,60%,100% { transform: none; opacity: 0.4; } 30% { transform: translateY(-5px); opacity: 1; } }
+
+/* Chat input */
+.chat-input-wrap {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px 10px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.chat-input {
+  flex: 1; background: var(--bg-input); color: var(--text-1);
+  border-radius: 24px; padding: 10px 16px;
+  font-size: 14px; resize: none; overflow: hidden;
+  min-height: 40px; max-height: 100px; line-height: 1.4;
+}
+.chat-input::placeholder { color: var(--text-3); }
+.send-btn {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: var(--brand-gradient);
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 18px; flex-shrink: 0;
+  box-shadow: 0 3px 12px rgba(var(--brand-rgb),0.35);
+  transition: transform 0.1s, box-shadow 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.send-btn:active { transform: scale(0.9); }
+.send-btn svg { width: 18px; height: 18px; fill: none; stroke: white; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Voice button */
+.voice-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--bg-input); color: var(--text-2);
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+  flex-shrink: 0; transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.voice-btn.listening { background: rgba(239,68,68,0.2); color: var(--error); animation: recording 1s infinite; }
+@keyframes recording { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); } 50% { box-shadow: 0 0 0 8px rgba(239,68,68,0); } }
+
+/* ── Bottom Nav ──────────────────────────────────────────── */
+.bottom-nav {
+  display: flex; align-items: center;
+  height: var(--nav-h);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 10;
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px;
+  height: 100%; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s;
+  color: var(--text-3);
+}
+.nav-item:active { transform: scale(0.9); }
+.nav-item.active { color: var(--brand-primary); }
+.nav-icon {
+  width: 40px; height: 32px; border-radius: 20px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; transition: background 0.2s;
+}
+.nav-item.active .nav-icon { background: rgba(var(--brand-rgb),0.15); }
+.nav-label { font-size: 10px; font-weight: 600; }
+.nav-item svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.nav-item.active svg { stroke: var(--brand-primary); }
+
+/* ── Files Screen ────────────────────────────────────────── */
+.screen-header {
+  padding: 16px 16px 8px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.screen-header h2 { font-size: 20px; font-weight: 800; color: var(--text-1); }
+.file-list { padding: 0 14px 20px; display: flex; flex-direction: column; gap: 8px; }
+.file-item {
+  background: var(--bg-card); border-radius: var(--radius-md);
+  padding: 13px 14px; display: flex; align-items: center; gap: 12px;
+  border: 1px solid var(--border);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s;
+}
+.file-item:active { transform: scale(0.98); }
+.file-icon { font-size: 26px; flex-shrink: 0; }
+.file-info { flex: 1; min-width: 0; }
+.file-name { font-size: 13px; font-weight: 600; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-meta { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.file-more { color: var(--text-3); font-size: 18px; padding: 4px; }
+
+/* ── Stats Screen ────────────────────────────────────────── */
+.stats-content { padding: 0 14px 20px; display: flex; flex-direction: column; gap: 14px; }
+.chart-card {
+  background: var(--bg-card); border-radius: var(--radius-lg);
+  padding: 18px; border: 1px solid var(--border); box-shadow: var(--shadow);
+}
+.chart-title { font-size: 13px; font-weight: 700; color: var(--text-1); margin-bottom: 14px; }
+.bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 80px; }
+.bc-bar {
+  flex: 1; border-radius: 4px 4px 0 0; position: relative;
+  transition: background 0.3s;
+}
+.bc-bar::after { content: attr(data-label); position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); font-size: 9px; color: var(--text-3); white-space: nowrap; }
+.stats-kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.kpi-card { background: var(--bg-card); border-radius: var(--radius-md); padding: 14px; border: 1px solid var(--border); }
+.kpi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-bottom: 6px; }
+.kpi-value { font-size: 22px; font-weight: 800; color: var(--text-1); }
+.kpi-trend { font-size: 11px; margin-top: 3px; }
+.kpi-trend.up { color: var(--success); }
+.kpi-trend.down { color: var(--error); }
+
+/* ── Config Screen ───────────────────────────────────────── */
+.config-content { padding: 0 14px 24px; display: flex; flex-direction: column; gap: 14px; }
+.config-section { background: var(--bg-card); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border); }
+.config-section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-3); padding: 14px 16px 6px; }
+.config-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border);
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.config-row:last-child { border-bottom: none; }
+.config-row:active { background: var(--bg-input); }
+.config-row-icon { font-size: 20px; width: 24px; text-align: center; }
+.config-row-label { flex: 1; font-size: 14px; color: var(--text-1); font-weight: 500; }
+.config-row-value { font-size: 13px; color: var(--text-3); }
+.config-row-arrow { color: var(--text-3); font-size: 14px; }
+
+/* Toggle switch */
+.toggle { position: relative; width: 46px; height: 26px; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute; inset: 0; border-radius: 13px;
+  background: var(--bg-input); transition: background 0.3s;
+  cursor: pointer;
+}
+.toggle input:checked + .toggle-track { background: var(--brand-primary); }
+.toggle-thumb {
+  position: absolute; top: 3px; left: 3px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: white; transition: transform 0.3s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  pointer-events: none;
+}
+.toggle input:checked ~ .toggle-thumb { transform: translateX(20px); }
+
+/* Brand palette picker */
+.brand-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 12px 16px 14px; }
+.brand-option {
+  border-radius: 12px; padding: 12px 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  border: 2px solid transparent;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.2s, transform 0.1s;
+}
+.brand-option:active { transform: scale(0.96); }
+.brand-option.selected { border-color: var(--brand-primary); }
+.brand-swatch { width: 36px; height: 36px; border-radius: 10px; }
+.brand-name { font-size: 10px; font-weight: 600; color: var(--text-2); text-align: center; }
+
+/* Desky profile card */
+.desky-profile {
+  background: var(--brand-gradient);
+  margin: 0 14px; border-radius: var(--radius-lg);
+  padding: 20px; display: flex; align-items: center; gap: 14px;
+}
+.desky-avatar-lg {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; flex-shrink: 0;
+}
+.desky-profile-text h3 { font-size: 18px; font-weight: 800; color: white; margin-bottom: 2px; }
+.desky-profile-text p { font-size: 12px; color: rgba(255,255,255,0.75); line-height: 1.4; }
+
+/* ── Splash Screen ───────────────────────────────────────── */
+#splash {
+  position: fixed; inset: 0; z-index: 1000;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 20px;
+  transition: opacity 0.5s, transform 0.5s;
+}
+#splash.fade-out { opacity: 0; transform: scale(1.05); pointer-events: none; }
+.splash-logo {
+  width: 80px; height: 80px; border-radius: 24px;
+  background: var(--brand-gradient);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px;
+  box-shadow: 0 12px 40px rgba(var(--brand-rgb),0.4);
+  animation: float 3s ease-in-out infinite;
+}
+@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.splash-title { font-size: 28px; font-weight: 800; color: var(--text-1); }
+.splash-sub { font-size: 14px; color: var(--text-3); }
+.splash-dots { display: flex; gap: 6px; }
+.splash-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand-primary); animation: typing 1.4s infinite; }
+.splash-dot:nth-child(2) { animation-delay: 0.2s; }
+.splash-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* ── Scrollbar (webkit) ──────────────────────────────────── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── Desky thinking card ─────────────────────────────────── */
+.desky-thinking { opacity: 0; max-height: 0; overflow: hidden; transition: opacity 0.3s, max-height 0.4s; }
+.desky-thinking.show { opacity: 1; max-height: 200px; }
+
+/* ── Utility ─────────────────────────────────────────────── */
+.divider { height: 1px; background: var(--border); margin: 2px 0; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+.tag-success { background: rgba(34,197,94,0.15); color: var(--success); }
+.tag-warning { background: rgba(249,115,22,0.15); color: var(--warning); }
+.tag-info { background: rgba(59,130,246,0.15); color: var(--info); }
+</style>
+</head>
+<body>
+
+<!-- Splash Screen -->
+<div id="splash">
+  <div class="splash-logo">✦</div>
+  <div style="text-align:center">
+    <div class="splash-title">MyDesk</div>
+    <div class="splash-sub">Your AI-powered business companion</div>
+  </div>
+  <div class="splash-dots">
+    <div class="splash-dot"></div>
+    <div class="splash-dot"></div>
+    <div class="splash-dot"></div>
+  </div>
+</div>
+
+<!-- Main App -->
+<div id="app" data-theme="dark" data-brand="techlight">
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="app-logo">MD</div>
+    <div class="header-titles">
+      <h1>MyDesk Chat</h1>
+      <div class="header-badge"><span class="badge-dot"></span>SuperAgent Active</div>
+    </div>
+    <div class="header-actions">
+      <div class="notif-wrap">
+        <button class="icon-btn" onclick="showNotifications()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </button>
+        <div class="notif-badge"></div>
+      </div>
+      <div class="avatar" id="userAvatar" onclick="navigate('config')">PB</div>
+    </div>
+  </header>
+
+  <!-- Screen Container -->
+  <div class="screens">
+
+    <!-- HOME SCREEN -->
+    <div class="screen active" id="screen-home">
+      <div class="home-scroll" id="homeScroll">
+
+        <!-- Revenue Card -->
+        <div class="revenue-card">
+          <div class="revenue-label">
+            Weekly Revenue
+            <span class="revenue-badge" id="revBadge">+12.4%</span>
+          </div>
+          <div class="revenue-amount" id="revAmount">$42,850.00</div>
+          <div class="chart-bars" id="revChart">
+            <div class="bar" style="height:45%"></div>
+            <div class="bar" style="height:55%"></div>
+            <div class="bar" style="height:38%"></div>
+            <div class="bar" style="height:72%"></div>
+            <div class="bar" style="height:60%"></div>
+            <div class="bar highlight" style="height:88%"></div>
+            <div class="bar" style="height:65%"></div>
+          </div>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="stats-row">
+          <div class="stat-card" onclick="navigate('stats')">
+            <div class="stat-label">Quotes</div>
+            <div class="stat-value">14</div>
+            <div class="stat-sub">8 Pending Approval</div>
+          </div>
+          <div class="stat-card" onclick="navigate('stats')">
+            <div class="stat-label">Invoices</div>
+            <div class="stat-value">$8.2k</div>
+            <div class="stat-sub warn">3 Overdue</div>
+          </div>
+        </div>
+
+        <!-- Desky Prediction Card -->
+        <div class="desky-card" onclick="deskyChatTap('prediction')">
+          <div class="desky-icon">✦</div>
+          <div class="desky-card-text">
+            <h3>Prediction from Desky</h3>
+            <p id="deskyPrediction">Upcoming cashflow dip predicted for next Thursday based on recurring subscription billings. Tap to discuss.</p>
+          </div>
+        </div>
+
+      </div><!-- /home-scroll -->
+
+      <!-- Inline Chat -->
+      <div class="chat-section">
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input-wrap">
+          <button class="voice-btn" id="voiceBtn" onclick="startVoice()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          </button>
+          <textarea class="chat-input" id="chatInput" placeholder="Ask MyDesk…" rows="1" oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
+          <button class="send-btn" onclick="sendMessage()">
+            <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div><!-- /screen-home -->
+
+    <!-- FILES SCREEN -->
+    <div class="screen" id="screen-files">
+      <div class="screen-header">
+        <h2>Files</h2>
+        <button class="icon-btn" style="font-size:18px;">＋</button>
+      </div>
+      <div style="padding: 0 14px 10px; display:flex; gap:8px;">
+        <span class="tag tag-info" style="cursor:pointer;padding:5px 12px;font-size:11px;">All</span>
+        <span class="tag" style="background:var(--bg-input);color:var(--text-2);cursor:pointer;padding:5px 12px;font-size:11px;">Quotes</span>
+        <span class="tag" style="background:var(--bg-input);color:var(--text-2);cursor:pointer;padding:5px 12px;font-size:11px;">Invoices</span>
+        <span class="tag" style="background:var(--bg-input);color:var(--text-2);cursor:pointer;padding:5px 12px;font-size:11px;">POs</span>
+      </div>
+      <div class="file-list" id="fileList"></div>
+    </div>
+
+    <!-- STATS SCREEN -->
+    <div class="screen" id="screen-stats">
+      <div class="screen-header"><h2>Statistics</h2></div>
+      <div class="stats-content">
+        <div class="chart-card">
+          <div class="chart-title">Monthly Revenue</div>
+          <div class="bar-chart" id="statsChart"></div>
+          <div style="height:20px;"></div>
+        </div>
+        <div class="stats-kpi-grid" id="kpiGrid"></div>
+        <div class="chart-card">
+          <div class="chart-title">Pipeline by Stage</div>
+          <div id="pipelineChart" style="display:flex;gap:4px;height:14px;border-radius:7px;overflow:hidden;margin-top:8px;"></div>
+          <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;" id="pipelineLegend"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONFIG SCREEN -->
+    <div class="screen" id="screen-config">
+      <div class="screen-header"><h2>Settings</h2></div>
+      <div class="config-content">
+
+        <!-- Desky Profile -->
+        <div class="desky-profile">
+          <div class="desky-avatar-lg">✦</div>
+          <div class="desky-profile-text">
+            <h3>Meet Desky</h3>
+            <p>Your Virtual MBA. Running 24/7 simulations to keep you ahead of every risk and opportunity.</p>
+          </div>
+        </div>
+
+        <!-- Appearance -->
+        <div class="config-section">
+          <div class="config-section-title">Appearance</div>
+          <div class="config-row">
+            <span class="config-row-icon">🌙</span>
+            <span class="config-row-label">Dark Mode</span>
+            <label class="toggle">
+              <input type="checkbox" id="darkToggle" onchange="toggleTheme(this.checked)" checked>
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Brand Palette -->
+        <div class="config-section">
+          <div class="config-section-title">Brand Palette</div>
+          <div class="brand-grid">
+            <div class="brand-option selected" data-brand="techlight" onclick="setBrand('techlight',this)">
+              <div class="brand-swatch" style="background:linear-gradient(135deg,#00c8c8,#0097a7);"></div>
+              <div class="brand-name">Techlight</div>
+            </div>
+            <div class="brand-option" data-brand="ccl" onclick="setBrand('ccl',this)">
+              <div class="brand-swatch" style="background:linear-gradient(135deg,#1C7BC4,#FFED00);"></div>
+              <div class="brand-name">Carter Capner</div>
+            </div>
+            <div class="brand-option" data-brand="dr" onclick="setBrand('dr',this)">
+              <div class="brand-swatch" style="background:linear-gradient(135deg,#3d7a32,#5cb85c);"></div>
+              <div class="brand-name">Digital Response</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Account -->
+        <div class="config-section">
+          <div class="config-section-title">Account</div>
+          <div class="config-row">
+            <span class="config-row-icon">👤</span>
+            <span class="config-row-label">Peter Bardenhagen</span>
+            <span class="config-row-value">Director</span>
+          </div>
+          <div class="config-row">
+            <span class="config-row-icon">🏢</span>
+            <span class="config-row-label">Workspace</span>
+            <span class="config-row-value" id="workspaceName">Techlight</span>
+          </div>
+          <div class="config-row">
+            <span class="config-row-icon">📧</span>
+            <span class="config-row-label">peter@bardenhagen.xyz</span>
+          </div>
+        </div>
+
+        <!-- Desky -->
+        <div class="config-section">
+          <div class="config-section-title">Desky SuperAgent</div>
+          <div class="config-row">
+            <span class="config-row-icon">🔔</span>
+            <span class="config-row-label">Proactive Alerts</span>
+            <label class="toggle">
+              <input type="checkbox" checked>
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+          </div>
+          <div class="config-row">
+            <span class="config-row-icon">📊</span>
+            <span class="config-row-label">Background Simulations</span>
+            <label class="toggle">
+              <input type="checkbox" checked>
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+          </div>
+          <div class="config-row">
+            <span class="config-row-icon">🎯</span>
+            <span class="config-row-label">OKR Monitoring</span>
+            <span class="config-row-value">Active</span>
+            <span class="config-row-arrow">›</span>
+          </div>
+        </div>
+
+        <!-- App -->
+        <div class="config-section">
+          <div class="config-section-title">App</div>
+          <div class="config-row">
+            <span class="config-row-icon">🌐</span>
+            <span class="config-row-label">Open in Browser</span>
+            <span class="config-row-arrow">›</span>
+          </div>
+          <div class="config-row">
+            <span class="config-row-icon">ℹ️</span>
+            <span class="config-row-label">Version</span>
+            <span class="config-row-value">2.0.0</span>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /screen-config -->
+
+  </div><!-- /screens -->
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <div class="nav-item active" id="nav-home" onclick="navigate('home')">
+      <div class="nav-icon">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </div>
+      <span class="nav-label">Home</span>
+    </div>
+    <div class="nav-item" id="nav-files" onclick="navigate('files')">
+      <div class="nav-icon">
+        <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <span class="nav-label">Files</span>
+    </div>
+    <div class="nav-item" id="nav-stats" onclick="navigate('stats')">
+      <div class="nav-icon">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      </div>
+      <span class="nav-label">Stats</span>
+    </div>
+    <div class="nav-item" id="nav-config" onclick="navigate('config')">
+      <div class="nav-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </div>
+      <span class="nav-label">Config</span>
+    </div>
+  </nav>
+
+</div><!-- /app -->
+
+<script>
+// ── App State ──────────────────────────────────────────────
+const state = {
+  currentScreen: 'home',
+  theme: 'dark',
+  brand: 'techlight',
+  chatHistory: [],
+  deskyTyping: false,
+};
+
+const brandData = {
+  techlight: { name: 'Techlight', workspace: 'Techlight', revenue: '$42,850.00', badge: '+12.4%', quotes: 14, invoices: '$8.2k', overdue: 3, pending: 8 },
+  ccl:       { name: 'Carter Capner', workspace: 'Carter Capner Law', revenue: '$128,400.00', badge: '+8.2%', quotes: 7, invoices: '$22.5k', overdue: 1, pending: 3 },
+  dr:        { name: 'Digital Response', workspace: 'Digital Response', revenue: '$61,200.00', badge: '+15.1%', quotes: 21, invoices: '$14.1k', overdue: 4, pending: 9 },
+};
+
+const deskyPredictions = {
+  techlight: 'Upcoming cashflow dip predicted for next Thursday based on recurring subscription billings. Tap to discuss.',
+  ccl:       'Three overdue matters flagged. Billing cycle analysis suggests $22.5k at risk if not followed up by Friday.',
+  dr:        'Lead generation spike detected — 4 new enquiries from the DR campaign. Recommend follow-up within 2 hrs.',
+};
+
+const deskyResponses = {
+  greet: [
+    "I've analysed the recent emails and files. You have a meeting with Digital Response at 2 PM. Should I prepare a brief of the last 3 quotes we sent them?",
+    "Good timing — I've just finished running this week's OKR simulations. Revenue is trending 12.4% ahead of target. Want me to find where the upside is coming from?",
+    "I've noticed 3 invoices are overdue by more than 7 days. Based on past patterns, one is unlikely to self-resolve. Want me to draft a follow-up email?",
+  ],
+  prediction: [
+    "The cashflow dip model runs daily using your invoice due dates and recurring costs. Thursday's risk is moderate — about $4,200 short of your operating buffer. Want me to pull the specific bills causing it?",
+  ],
+  brief: [
+    "Here's the brief for Digital Response:\n\n📄 **Quote #Q-2847** — Radix Timesheet Importer V1.2 — $12,400 (sent 14 Jun)\n📄 **Quote #Q-2851** — API Integration Module — $8,800 (sent 20 Jun)\n📄 **Quote #Q-2863** — Support Retainer FY27 — $24,000/yr (sent 1 Jul)\n\nTotal pipeline value: **$45,200**. Q-2847 and Q-2851 are past their quoted decision date. Should I flag them for follow-up?",
+  ],
+  quotes: [
+    "Showing 3 recent quotes sent to Digital Response. The Radix Timesheet quote is the oldest — 19 days since sent with no response. Based on their decision timeline on past projects, this is at the 'nudge' threshold. Want me to draft a check-in?",
+  ],
+  okr: [
+    "Current OKR status:\n\n🎯 Revenue: 87% of quarterly target — on track\n🎯 New Clients: 2 of 3 — one strong prospect in pipeline\n🎯 Client Retention: 94% — above target\n\nRisk: Q3 target requires $51k in new work. Desky projects 68% probability of hitting it based on current pipeline velocity.",
+  ],
+  default: [
+    "I'm on it. Let me cross-reference your recent data and run a quick simulation...\n\nThe short answer: yes, there's an opportunity here worth exploring. Want the full analysis or just the key numbers?",
+    "Good question. Based on your business data, I'd recommend moving on this within the next 48 hours. The window of maximum leverage closes by end of week.",
+    "I've already modelled this scenario. The risk-adjusted upside is positive — but execution timing matters. Should I outline the optimal approach?",
+  ],
+};
+
+// ── Mock Files ─────────────────────────────────────────────
+const mockFiles = [
+  { icon: '📄', name: 'Quote #Q-2863 — Support Retainer FY27.pdf', meta: 'Jul 1 · 284 KB', tag: 'quote' },
+  { icon: '💰', name: 'Invoice INV-1847 — Radix Module.pdf', meta: 'Jun 28 · 156 KB', tag: 'invoice' },
+  { icon: '📊', name: 'Q3 OKR Review — Techlight.xlsx', meta: 'Jun 25 · 92 KB', tag: 'other' },
+  { icon: '📄', name: 'Quote #Q-2851 — API Integration.pdf', meta: 'Jun 20 · 198 KB', tag: 'quote' },
+  { icon: '💰', name: 'Invoice INV-1832 — CCL Integration.pdf', meta: 'Jun 18 · 178 KB', tag: 'invoice' },
+  { icon: '📋', name: 'PO-0047 — Server Hardware.pdf', meta: 'Jun 15 · 120 KB', tag: 'po' },
+  { icon: '📄', name: 'Quote #Q-2847 — Radix Timesheet V1.2.pdf', meta: 'Jun 14 · 341 KB', tag: 'quote' },
+];
+
+// ── Initialise ─────────────────────────────────────────────
+function init() {
+  loadPrefs();
+  buildFiles();
+  buildStats();
+  addDeskyOpener();
+  setTimeout(() => {
+    document.getElementById('splash').classList.add('fade-out');
+    setTimeout(() => document.getElementById('splash').style.display = 'none', 500);
+  }, 1800);
+}
+
+function loadPrefs() {
+  try {
+    const t = localStorage.getItem('md_theme') || 'dark';
+    const b = localStorage.getItem('md_brand') || 'techlight';
+    applyTheme(t, false);
+    applyBrand(b, false);
+    document.getElementById('darkToggle').checked = (t === 'dark');
+    document.querySelectorAll('.brand-option').forEach(el => {
+      el.classList.toggle('selected', el.dataset.brand === b);
+    });
+  } catch(e) {}
+}
+
+// ── Navigation ─────────────────────────────────────────────
+function navigate(screen) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('screen-' + screen).classList.add('active');
+  const navEl = document.getElementById('nav-' + screen);
+  if (navEl) navEl.classList.add('active');
+  state.currentScreen = screen;
+}
+
+// ── Theme ──────────────────────────────────────────────────
+function toggleTheme(isDark) {
+  applyTheme(isDark ? 'dark' : 'light');
+}
+
+function applyTheme(theme, save = true) {
+  document.getElementById('app').setAttribute('data-theme', theme);
+  state.theme = theme;
+  if (save) try {
+    localStorage.setItem('md_theme', theme);
+    if (window.MyDeskAndroid) window.MyDeskAndroid.saveTheme(theme);
+  } catch(e) {}
+}
+
+// ── Brand ──────────────────────────────────────────────────
+function setBrand(brand, el) {
+  document.querySelectorAll('.brand-option').forEach(o => o.classList.remove('selected'));
+  if (el) el.classList.add('selected');
+  applyBrand(brand);
+}
+
+function applyBrand(brand, save = true) {
+  document.getElementById('app').setAttribute('data-brand', brand);
+  state.brand = brand;
+  const d = brandData[brand] || brandData.techlight;
+  document.getElementById('revAmount').textContent = d.revenue;
+  document.getElementById('revBadge').textContent = d.badge;
+  document.querySelector('.stat-card:nth-child(1) .stat-value').textContent = d.quotes;
+  document.querySelector('.stat-card:nth-child(1) .stat-sub').textContent = d.pending + ' Pending Approval';
+  document.querySelector('.stat-card:nth-child(2) .stat-value').textContent = d.invoices;
+  document.querySelector('.stat-card:nth-child(2) .stat-sub').textContent = d.overdue + ' Overdue';
+  document.getElementById('deskyPrediction').textContent = deskyPredictions[brand] || deskyPredictions.techlight;
+  if (document.getElementById('workspaceName')) document.getElementById('workspaceName').textContent = d.workspace;
+  if (save) try {
+    localStorage.setItem('md_brand', brand);
+    if (window.MyDeskAndroid) window.MyDeskAndroid.saveBrand(brand);
+  } catch(e) {}
+}
+
+// ── Files ──────────────────────────────────────────────────
+function buildFiles() {
+  const list = document.getElementById('fileList');
+  list.innerHTML = mockFiles.map(f => `
+    <div class="file-item">
+      <div class="file-icon">${f.icon}</div>
+      <div class="file-info">
+        <div class="file-name">${f.name}</div>
+        <div class="file-meta">${f.meta}</div>
+      </div>
+      <div class="file-more">›</div>
+    </div>
+  `).join('');
+}
+
+// ── Stats ──────────────────────────────────────────────────
+function buildStats() {
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul'];
+  const vals = [62,78,55,85,70,92,76];
+  const colors = ['0.3','0.3','0.3','0.3','0.3','0.9','0.5'];
+  const chart = document.getElementById('statsChart');
+  chart.innerHTML = months.map((m,i) => `
+    <div class="bc-bar" data-label="${m}" style="height:${vals[i]}%;background:rgba(var(--brand-rgb),${colors[i]})"></div>
+  `).join('');
+
+  const kpis = [
+    { label: 'Win Rate', value: '68%', trend: '↑ 4%', up: true },
+    { label: 'Avg Deal', value: '$18.4k', trend: '↑ $2.1k', up: true },
+    { label: 'Churn', value: '6%', trend: '↓ 1%', up: false },
+    { label: 'NPS', value: '74', trend: '↑ 3', up: true },
+  ];
+  document.getElementById('kpiGrid').innerHTML = kpis.map(k => `
+    <div class="kpi-card">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.value}</div>
+      <div class="kpi-trend ${k.up ? 'up' : 'down'}">${k.trend}</div>
+    </div>
+  `).join('');
+
+  const pipeline = [
+    { label: 'Lead', pct: 30, color: '#3b82f6' },
+    { label: 'Qualified', pct: 22, color: '#8b5cf6' },
+    { label: 'Proposal', pct: 18, color: 'var(--brand-primary)' },
+    { label: 'Negotiation', pct: 12, color: '#f59e0b' },
+    { label: 'Won', pct: 18, color: '#22c55e' },
+  ];
+  document.getElementById('pipelineChart').innerHTML = pipeline.map(p =>
+    `<div style="flex:${p.pct};background:${p.color};"></div>`
+  ).join('');
+  document.getElementById('pipelineLegend').innerHTML = pipeline.map(p =>
+    `<div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-2);">
+      <div style="width:8px;height:8px;border-radius:2px;background:${p.color};"></div>${p.label} ${p.pct}%
+    </div>`
+  ).join('');
+}
+
+// ── Chat ───────────────────────────────────────────────────
+function addDeskyOpener() {
+  const greet = deskyResponses.greet[Math.floor(Math.random() * deskyResponses.greet.length)];
+  appendMsg('desky', greet, [
+    { label: 'Yes, prepare brief', action: 'brief' },
+    { label: 'Show me the quotes', action: 'quotes' },
+  ]);
+}
+
+function appendMsg(from, text, qrs) {
+  const container = document.getElementById('chatMessages');
+  const isDesky = from === 'desky';
+  const div = document.createElement('div');
+  div.className = 'msg' + (isDesky ? '' : ' user');
+  const formattedText = text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+  div.innerHTML = `
+    <div class="msg-avatar ${isDesky ? 'agent' : 'user-av'}">${isDesky ? '✦' : 'PB'}</div>
+    <div class="msg-body">
+      <div class="msg-sender">${isDesky ? 'Desky' : 'You'}</div>
+      <div class="msg-bubble">${formattedText}</div>
+      ${qrs && qrs.length ? '<div class="quick-replies">' + qrs.map(q => `<button class="qr-btn" onclick="handleQR('${q.action}','${q.label}')">${q.label}</button>`).join('') + '</div>' : ''}
+    </div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function handleQR(action, label) {
+  document.querySelectorAll('.quick-replies').forEach(r => r.remove());
+  appendMsg('user', label);
+  showTypingThenReply(action);
+}
+
+function showTypingThenReply(action) {
+  const container = document.getElementById('chatMessages');
+  const typing = document.createElement('div');
+  typing.className = 'msg';
+  typing.id = 'typing-indicator';
+  typing.innerHTML = `
+    <div class="msg-avatar agent">✦</div>
+    <div class="msg-body">
+      <div class="msg-sender">Desky</div>
+      <div class="msg-bubble">
+        <div class="typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
+      </div>
+    </div>
+  `;
+  container.appendChild(typing);
+  container.scrollTop = container.scrollHeight;
+  const delay = 1200 + Math.random() * 600;
+  setTimeout(() => {
+    const t = document.getElementById('typing-indicator');
+    if (t) t.remove();
+    const responses = deskyResponses[action] || deskyResponses.default;
+    const reply = responses[Math.floor(Math.random() * responses.length)];
+    let qrs = [];
+    if (action === 'brief' || action === 'quotes') {
+      qrs = [{ label: 'Draft follow-up', action: 'default' }, { label: 'View in browser', action: 'browser' }];
+    } else if (action === 'prediction') {
+      qrs = [{ label: 'Show me the bills', action: 'default' }, { label: 'Check OKRs', action: 'okr' }];
+    }
+    appendMsg('desky', reply, qrs);
+  }, delay);
+}
+
+function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  input.style.height = '';
+  appendMsg('user', text);
+  showTypingThenReply(classifyIntent(text));
+}
+
+function classifyIntent(text) {
+  const t = text.toLowerCase();
+  if (t.includes('brief') || t.includes('meeting') || t.includes('quote')) return 'brief';
+  if (t.includes('invoice') || t.includes('overdue') || t.includes('payment')) return 'quotes';
+  if (t.includes('cashflow') || t.includes('cash') || t.includes('dip')) return 'prediction';
+  if (t.includes('okr') || t.includes('target') || t.includes('goal')) return 'okr';
+  return 'default';
+}
+
+function deskyChatTap(topic) {
+  navigate('home');
+  showTypingThenReply(topic);
+  setTimeout(() => {
+    const chat = document.getElementById('chatMessages');
+    if (chat) chat.scrollTop = chat.scrollHeight;
+  }, 100);
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+// ── Voice ──────────────────────────────────────────────────
+function startVoice() {
+  try {
+    if (window.MyDeskAndroid) { window.MyDeskAndroid.startVoiceRecognition(); return; }
+    if (window.SpeechRecognition || window.webkitSpeechRecognition) {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const r = new SR();
+      const btn = document.getElementById('voiceBtn');
+      btn.classList.add('listening');
+      r.onresult = e => {
+        document.getElementById('chatInput').value = e.results[0][0].transcript;
+        btn.classList.remove('listening');
+      };
+      r.onerror = r.onend = () => btn.classList.remove('listening');
+      r.start();
+    }
+  } catch(e) {}
+}
+
+// ── Notifications ──────────────────────────────────────────
+function showNotifications() {
+  const msgs = ['Desky: New cashflow alert ready', '3 invoices overdue — follow-up suggested', 'Quote Q-2847 — 19 days since sent'];
+  alert(msgs.join('\n\n'));
+}
+
+// ── Start ──────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
