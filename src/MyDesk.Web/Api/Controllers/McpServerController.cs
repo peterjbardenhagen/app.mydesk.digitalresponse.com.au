@@ -61,8 +61,6 @@ public sealed class McpServerController : ControllerBase
     // ── JSON-RPC 2.0 dispatcher ───────────────────────────────────────────────
 
     [HttpPost]
-    [AllowAnonymous] // PAT validation happens via the auth scheme; this allows the OPTIONS pre-flight
-    [Authorize(AuthenticationSchemes = PersonalAccessTokenAuthHandler.SchemeName)]
     public async Task<IActionResult> HandleAsync(CancellationToken ct)
     {
         McpRequest? rpc;
@@ -415,11 +413,13 @@ public sealed class McpServerController : ControllerBase
         {
             // Legal tools — only for legal module tenants
             if (t.Name.StartsWith("radix_") || t.Name.StartsWith("legal_"))
-                return settings?.EnableLegalModule == true;
+                return settings?.EnableLegalModules == true;
 
-            // Accounting tools — only when an accounting integration is connected
+            // Accounting tools — only when an accounting integration is enabled
             if (t.Name.StartsWith("myob_") || t.Name.StartsWith("xero_") || t.Name.StartsWith("qbo_"))
-                return settings?.IntegrationSettings?.AccountingProvider is not null;
+                return settings?.EnableMYOBIntegration == true
+                    || settings?.EnableXeroIntegration == true
+                    || settings?.EnableQuickBooksIntegration == true;
 
             return true; // all standard tools are always available
         }).ToList();
