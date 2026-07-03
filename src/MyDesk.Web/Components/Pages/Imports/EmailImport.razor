@@ -347,7 +347,7 @@
     private async Task StartScan()
     {
         _scanning = true;
-        await _stepper!.SetActiveIndex(1); // move to step 2
+        _stepper!.ActiveIndex = 1; // move to step 2
         await Task.Delay(1800); // simulate scan
         _scannedItems = GenerateMockScanResults();
         _scanning = false;
@@ -378,7 +378,7 @@
             })).ToList()
         };
 
-        await _stepper!.SetActiveIndex(2);
+        _stepper!.ActiveIndex = 2;
         Snackbar.Add($"{toImport.Count} items imported", Severity.Success);
     }
 
@@ -387,7 +387,7 @@
         _scannedItems.Clear();
         _importResult = null;
         _scanning = false;
-        await _stepper!.SetActiveIndex(0);
+        _stepper!.ActiveIndex = 0;
     }
 
     private void SelectAllItems()

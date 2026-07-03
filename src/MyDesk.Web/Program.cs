@@ -177,7 +177,7 @@ if (azureAdConfigured)
                 try
                 {
                     User? user;
-                    List<UserTenantInfo> memberships;
+                    List<TenantMembership> memberships;
 
                     // GetByEmailAsync and GetUserTenantsAsync use DatabaseService which needs
                     // SESSION_CONTEXT set. SystemBypass lets them run without a tenant claim.
