@@ -524,8 +524,11 @@ input, textarea { border: none; outline: none; font-family: inherit; }
 [data-brand="ccl"] .desky-card { color: #1a1a1a !important; }
 [data-brand="ccl"] .msg.user .msg-bubble { color: #1a1a1a; }
 [data-brand="ccl"] .desky-card-text h3,
-[data-brand="ccl"] .desky-card-text p,
-[data-brand="ccl"] .desky-avatar-lg { color: #1a1a1a; }
+[data-brand="ccl"] .desky-card-text p { color: #1a1a1a; }
+/* Settings screen Desky profile card */
+[data-brand="ccl"] .desky-profile-text h3,
+[data-brand="ccl"] .desky-profile-text p { color: #1a1a1a !important; }
+[data-brand="ccl"] .desky-avatar-lg { color: #1a1a1a; background: rgba(0,0,0,0.12); }
 [data-brand="ccl"] .qr-btn { border-color: rgba(26,26,26,0.3); color: #1a1a1a; }
 [data-brand="ccl"] .badge-dot { background: #1a1a1a; }
 [data-brand="ccl"] .header-badge { color: #c8aa00; }
@@ -620,8 +623,10 @@ input, textarea { border: none; outline: none; font-family: inherit; }
 [data-brand="ccl"] .login-btn { color: #1a1a1a; }
 .login-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: var(--radius-sm); padding: 12px 14px; color: var(--error); font-size: 13px; text-align: center; display: none; }
 .login-error.show { display: block; }
-.login-skip { font-size: 13px; color: var(--text-3); text-align: center; margin-top: 20px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.login-skip:active { color: var(--text-2); }
+.login-divider { display: flex; align-items: center; gap: 10px; color: var(--text-3); font-size: 12px; margin: 4px 0; }
+.login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.ms-login-btn { display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--bg-card); border: 1.5px solid var(--border); color: var(--text-1); padding: 14px; border-radius: var(--radius-md); font-size: 15px; font-weight: 600; width: 100%; -webkit-tap-highlight-color: transparent; transition: background 0.15s; }
+.ms-login-btn:active { background: var(--bg-input); }
 
 /* ── Global overlay (for menus) ──────────────────────────── */
 .overlay { position: fixed; inset: 0; z-index: 800; background: rgba(0,0,0,0.3); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
@@ -656,8 +661,12 @@ input, textarea { border: none; outline: none; font-family: inherit; }
     <input class="login-field" id="loginInput" type="text" placeholder="Username, code, or email" autocomplete="username" />
     <input class="login-field" id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" />
     <button class="login-btn" onclick="doLogin()">Sign in to MyDeskAI</button>
+    <div class="login-divider">or</div>
+    <button class="ms-login-btn" onclick="startMicrosoftLogin()">
+      <svg width="18" height="18" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+      Sign in with Microsoft
+    </button>
   </div>
-  <div class="login-skip" onclick="skipLogin()">Continue without signing in →</div>
 </div>
 
 <!-- Notification Drawer -->
@@ -1431,21 +1440,35 @@ function closeUserMenu() {
 }
 
 // ── Workspace Switcher ─────────────────────────────────────
+// Brand workspaces — always available for switching client platforms
+const brandWorkspaces = [
+  { id: 'techlight', name: 'Techlight',          brand: 'techlight', icon: '🔵' },
+  { id: 'ccl',       name: 'Carter Capner Law',  brand: 'ccl',       icon: '🟡' },
+  { id: 'dr',        name: 'Digital Response',   brand: 'dr',        icon: '🟢' },
+];
+
 function showWorkspaceSwitcher() {
   const sheet = document.getElementById('workspaceSheet');
   const overlay = document.getElementById('sheetOverlay');
   const list = document.getElementById('workspaceList');
   if (!sheet || !list) return;
 
-  const tenants = session.tenants.length
-    ? session.tenants
-    : [{ id: 0, name: 'MyDeskAI Workspace', slug: 'mydesk', isDefault: true }];
+  // Show tenant list from API if available, otherwise show the brand platforms
+  const items = session.tenants.length
+    ? session.tenants.map(t => ({
+        id: t.slug || t.id, name: t.name,
+        brand: t.slug || 'techlight', icon: '🏢',
+        isTenant: true, tenantObj: t
+      }))
+    : brandWorkspaces;
 
-  list.innerHTML = tenants.map(t => `
-    <div class="sheet-item ${session.activeTenant?.id === t.id ? 'active' : ''}"
-         onclick="switchWorkspace(${t.id})">
-      <span>${t.name}</span>
-      ${session.activeTenant?.id === t.id ? '<span style="color:var(--brand-primary)">✓</span>' : ''}
+  const activeId = session.activeTenant?.slug || session.activeTenant?.id || state.brand;
+
+  list.innerHTML = items.map(w => `
+    <div class="sheet-item" onclick="switchWorkspace('${w.id}', ${w.isTenant ? 'true' : 'false'})">
+      <span style="font-size:22px;flex-shrink:0;">${w.icon}</span>
+      <span style="flex:1;font-size:15px;font-weight:600;color:var(--text-1);">${w.name}</span>
+      ${(w.id === activeId || w.brand === activeId) ? '<span style="color:var(--brand-primary);font-size:18px;">✓</span>' : ''}
     </div>
   `).join('');
 
@@ -1458,15 +1481,65 @@ function closeWorkspaceSwitcher() {
   document.getElementById('sheetOverlay')?.classList.remove('open');
 }
 
-function switchWorkspace(id) {
-  const tenant = session.tenants.find(t => t.id === id);
-  if (tenant) {
-    session.activeTenant = tenant;
-    saveSession();
-    const wn = document.getElementById('workspaceName');
-    if (wn) wn.textContent = tenant.name;
+function switchWorkspace(id, isTenant) {
+  if (isTenant) {
+    const tenant = session.tenants.find(t => (t.slug || t.id) === id);
+    if (tenant) {
+      session.activeTenant = tenant;
+      saveSession();
+      const wn = document.getElementById('workspaceName');
+      if (wn) wn.textContent = tenant.name;
+      // Apply matching brand from slug
+      const match = brandWorkspaces.find(b => b.id === tenant.slug);
+      if (match) setBrand(match.brand, document.querySelector(`[data-brand="${match.brand}"]`));
+    }
+  } else {
+    const workspace = brandWorkspaces.find(b => b.id === id);
+    if (workspace) {
+      setBrand(workspace.brand, document.querySelector(`[data-brand="${workspace.brand}"]`));
+      const wn = document.getElementById('workspaceName');
+      if (wn) wn.textContent = workspace.name;
+      // Store as active tenant so it persists
+      session.activeTenant = { id: workspace.id, slug: workspace.id, name: workspace.name };
+      saveSession();
+    }
   }
   closeWorkspaceSwitcher();
+}
+
+// ── Microsoft SSO ──────────────────────────────────────────
+function startMicrosoftLogin() {
+  nativeCall('startMicrosoftLogin');
+}
+
+async function onMicrosoftAuthToken(token) {
+  const errEl = document.getElementById('loginError');
+  try {
+    const resp = await fetch(API_BASE + '/api/auth/mobile/token?t=' + encodeURIComponent(token));
+    const result = await resp.json();
+    if (result.success && result.data) {
+      const d = result.data;
+      session.user = d.user;
+      session.tenants = d.tenants || [];
+      session.activeTenant = d.tenants?.find(t => t.isDefault) || d.tenants?.[0] || null;
+      saveSession();
+      applySessionToUI();
+      document.getElementById('login-screen').classList.add('hidden');
+      if (!document.getElementById('chatMessages').children.length) addDeskyOpener();
+    } else {
+      errEl.textContent = 'Microsoft sign-in failed. Please try again.';
+      errEl.classList.add('show');
+    }
+  } catch(e) {
+    errEl.textContent = 'Could not complete sign-in. Check your connection.';
+    errEl.classList.add('show');
+  }
+}
+
+function onMicrosoftAuthError(error) {
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = 'Microsoft sign-in failed: ' + error.replace(/_/g,' ');
+  errEl.classList.add('show');
 }
 
 // ── Stats ──────────────────────────────────────────────────
