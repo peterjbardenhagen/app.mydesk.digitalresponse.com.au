@@ -1309,6 +1309,129 @@ app.MapPost("/api/auth/mobile/login", async (HttpContext ctx, UserService userSv
     }
 }).RequireRateLimiting("login");
 
+// ── Mobile Azure AD SSO ──────────────────────────────────────────────────────
+// Step 1: App opens system browser to this URL, which redirects to Microsoft.
+app.MapGet("/api/auth/mobile/azure-start", (HttpContext ctx, IMemoryCache cache) =>
+{
+    if (!azureAdConfigured)
+        return Results.Ok(new { error = "Microsoft SSO is not configured on this server" });
+
+    var state = Guid.NewGuid().ToString("N");
+    cache.Set("mobile_oauth_" + state, true, TimeSpan.FromMinutes(10));
+
+    var redirectUri = Uri.EscapeDataString($"{ctx.Request.Scheme}://{ctx.Request.Host}/api/auth/mobile/azure-callback");
+    var url = $"https://login.microsoftonline.com/{azureAdTenantId}/oauth2/v2.0/authorize" +
+              $"?client_id={Uri.EscapeDataString(azureAdClientId!)}" +
+              $"&response_type=code&redirect_uri={redirectUri}" +
+              $"&scope={Uri.EscapeDataString("openid profile email")}" +
+              $"&state={state}&response_mode=query&prompt=select_account";
+
+    return Results.Redirect(url);
+});
+
+// Step 2: Microsoft redirects here with ?code=...&state=...
+// Exchanges code for an ID token, looks up the user, stores a short-lived mobile
+// token in memory, then redirects to the mydesk:// deep link so the Android app
+// picks it up.
+app.MapGet("/api/auth/mobile/azure-callback", async (
+    HttpContext ctx, IMemoryCache cache, UserService userSvc, TenantService tenantSvc,
+    IHttpClientFactory httpFactory) =>
+{
+    var code  = ctx.Request.Query["code"].ToString();
+    var state = ctx.Request.Query["state"].ToString();
+    var error = ctx.Request.Query["error"].ToString();
+
+    if (!string.IsNullOrEmpty(error))
+        return Results.Redirect($"mydesk://auth?error={Uri.EscapeDataString(error)}");
+
+    if (string.IsNullOrEmpty(code))
+        return Results.Redirect("mydesk://auth?error=missing_code");
+
+    // Exchange code for tokens
+    var redirectUri = $"{ctx.Request.Scheme}://{ctx.Request.Host}/api/auth/mobile/azure-callback";
+    var form = new Dictionary<string, string>
+    {
+        ["client_id"]     = azureAdClientId!,
+        ["client_secret"] = azureAdClientSecret ?? "",
+        ["grant_type"]    = "authorization_code",
+        ["code"]          = code,
+        ["redirect_uri"]  = redirectUri,
+        ["scope"]         = "openid profile email",
+    };
+
+    var http = httpFactory.CreateClient();
+    using var tokenResp = await http.PostAsync(
+        $"https://login.microsoftonline.com/{azureAdTenantId}/oauth2/v2.0/token",
+        new FormUrlEncodedContent(form));
+    var tokenJson = await tokenResp.Content.ReadAsStringAsync();
+
+    if (!tokenResp.IsSuccessStatusCode)
+    {
+        Log.Warning("Mobile Azure token exchange failed: {Status} {Body}", tokenResp.StatusCode, tokenJson);
+        return Results.Redirect("mydesk://auth?error=token_exchange_failed");
+    }
+
+    // Decode the ID token payload (base64url → JSON)
+    string? email = null, oid = null, displayName = null;
+    try
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(tokenJson);
+        var idToken = doc.RootElement.GetProperty("id_token").GetString() ?? "";
+        var parts = idToken.Split('.');
+        if (parts.Length >= 2)
+        {
+            var pad = parts[1].Length % 4 == 0 ? "" : new string('=', 4 - parts[1].Length % 4);
+            var payload = Convert.FromBase64String(
+                parts[1].Replace('-', '+').Replace('_', '/') + pad);
+            using var payloadDoc = System.Text.Json.JsonDocument.Parse(payload);
+            var root = payloadDoc.RootElement;
+            email       = root.TryGetProperty("email",              out var e) ? e.GetString() : null;
+            email     ??= root.TryGetProperty("preferred_username",  out var u) ? u.GetString() : null;
+            oid         = root.TryGetProperty("oid",                out var o) ? o.GetString() : null;
+            displayName = root.TryGetProperty("name",               out var n) ? n.GetString() : null;
+        }
+    }
+    catch (Exception ex) { Log.Warning(ex, "Mobile Azure: failed to decode id_token"); }
+
+    if (string.IsNullOrWhiteSpace(email))
+        return Results.Redirect("mydesk://auth?error=no_email_in_token");
+
+    using (TenantImpersonation.SystemBypass())
+    {
+        var user = await userSvc.GetByEmailAsync(email);
+        if (user == null)
+        {
+            Log.Warning("Mobile Azure SSO: no user found for email {Email}", email);
+            return Results.Redirect($"mydesk://auth?error=user_not_found&email={Uri.EscapeDataString(email)}");
+        }
+
+        var memberships = await tenantSvc.GetUserTenantsAsync(user.UserId);
+        var initials = string.Concat(
+            user.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Take(2).Select(p => p[0].ToString().ToUpper()));
+
+        var mobileToken = Guid.NewGuid().ToString("N");
+        cache.Set("mobile_token_" + mobileToken, new
+        {
+            user = new { name = user.Name, code = user.Code, email = user.Email ?? email, role = user.Role.ToString(), initials },
+            tenants = memberships.Select(m => new { id = m.TenantId, name = m.TenantName, slug = m.TenantSlug, isDefault = m.IsDefault }).ToList()
+        }, TimeSpan.FromMinutes(5));
+
+        Log.Information("Mobile Azure SSO SUCCESS: {Code} ({Name})", user.Code, user.Name);
+        return Results.Redirect($"mydesk://auth?token={mobileToken}");
+    }
+});
+
+// Step 3: App calls this after receiving the deep link token to get user+tenant data.
+app.MapGet("/api/auth/mobile/token", (string t, IMemoryCache cache) =>
+{
+    if (string.IsNullOrWhiteSpace(t) || !cache.TryGetValue("mobile_token_" + t, out var data))
+        return Results.Ok(new { success = false, error = "Token not found or expired" });
+
+    cache.Remove("mobile_token_" + t); // single-use
+    return Results.Ok(new { success = true, data });
+}).RequireRateLimiting("login");
+
 // ── Personal Access Token API (used by AI Agents page) ──────────────────────
 // All three endpoints require a logged-in browser session (cookie auth).
 // They operate on tokens belonging only to the calling user + their active tenant.

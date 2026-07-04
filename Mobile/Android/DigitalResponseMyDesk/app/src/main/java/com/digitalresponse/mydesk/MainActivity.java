@@ -253,7 +253,7 @@ public class MainActivity extends AppCompatActivity {
                 "window.MyDeskAndroidBridge={" +
                 "  startVoiceRecognition:function(){window.MyDeskAndroid.startVoiceRecognition();}," +
                 "  getPlatform:function(){return 'android';}," +
-                "  getAppVersion:function(){return '2.0.0';}" +
+                "  getAppVersion:function(){return '" + BuildConfig.VERSION_NAME + "';}," +
                 "};" +
                 // Config screen "Open in Browser" row
                 "var openBtn=document.querySelector('[data-action=\"open-browser\"]');" +
@@ -385,7 +385,7 @@ public class MainActivity extends AppCompatActivity {
         public String getPlatform() { return "android"; }
 
         @JavascriptInterface
-        public String getAppVersion() { return "2.0.0"; }
+        public String getAppVersion() { return BuildConfig.VERSION_NAME; }
 
         @JavascriptInterface
         public boolean isOnline() { return isNetworkAvailable(); }
@@ -425,6 +425,44 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void showToast(String message) {
             runOnUiThread(() -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show());
+        }
+
+        @JavascriptInterface
+        public void startMicrosoftLogin() {
+            runOnUiThread(() -> {
+                Intent intent = new Intent(Intent.ACTION_VIEW,
+                    Uri.parse(WEB_APP_URL + "/api/auth/mobile/azure-start"));
+                startActivity(intent);
+            });
+        }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        handleDeepLink(intent);
+    }
+
+    private void handleDeepLink(Intent intent) {
+        if (intent == null) return;
+        Uri data = intent.getData();
+        if (data == null || !"mydesk".equals(data.getScheme())) return;
+
+        String token = data.getQueryParameter("token");
+        String error = data.getQueryParameter("error");
+
+        if (token != null && !token.isEmpty()) {
+            String safe = token.replace("'", "\\'");
+            String js = "if(typeof onMicrosoftAuthToken==='function') onMicrosoftAuthToken('" + safe + "');";
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                webView.post(() -> webView.evaluateJavascript(js, null));
+            }
+        } else {
+            String msg = (error != null ? error : "Authentication failed").replace("'", "\\'");
+            String js = "if(typeof onMicrosoftAuthError==='function') onMicrosoftAuthError('" + msg + "');";
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                webView.post(() -> webView.evaluateJavascript(js, null));
+            }
         }
     }
 }
