@@ -4,19 +4,10 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    
-    <!-- Background circle -->
-    <path
-        android:fillColor="#A855F7"
-        android:pathData="M54,54m-40,0a40,40 0,1 1,80 0a40,40 0,1 1,-80 0" />
-    
-    <!-- "M" letter for MyDesk -->
+
+    <!-- ✦ 4-pointed sparkle star — white on transparent (background provides teal) -->
+    <!-- Center: 54,54  |  Outer tips reach ±36  |  Inner waist ±9 at 45° -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M36,72V36h8l10,18l10,-18h8v36h-8V48l-10,18l-10,-18v24z" />
-    
-    <!-- Decorative dot -->
-    <path
-        android:fillColor="#FACC15"
-        android:pathData="M72,72m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0" />
+        android:pathData="M54,18 L61,47 L90,54 L61,61 L54,90 L47,61 L18,54 L47,47 Z" />
 </vector>

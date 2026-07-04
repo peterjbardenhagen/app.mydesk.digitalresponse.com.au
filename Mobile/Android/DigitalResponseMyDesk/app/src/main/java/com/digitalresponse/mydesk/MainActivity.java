@@ -263,8 +263,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupSwipeRefresh() {
-        swipeRefreshLayout.setOnRefreshListener(() -> webView.reload());
-        swipeRefreshLayout.setColorSchemeResources(R.color.brand_primary, R.color.brand_secondary);
+        // Disabled: the embedded app has its own scroll areas (chat, files) that
+        // conflict with pull-to-refresh — thumbs scrolling up triggers a reload.
+        swipeRefreshLayout.setEnabled(false);
     }
 
     private boolean isNetworkAvailable() {

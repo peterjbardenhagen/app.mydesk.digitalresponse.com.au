@@ -1247,6 +1247,68 @@ app.MapPost("/api/chat/desky", async (HttpContext ctx, MyDesk.Web.AI.AiProviderF
     }
 }).RequireRateLimiting("desky");
 
+// ── Mobile Login API ──────────────────────────────────────────────────────────
+// JSON endpoint for the Android app (loaded from file://, cannot use cookie flow).
+// Accepts login by code, name, or email. Returns user info + tenant list.
+// No cookie is set — the app stores session state in localStorage.
+app.MapPost("/api/auth/mobile/login", async (HttpContext ctx, UserService userSvc, TenantService tenantSvc) =>
+{
+    MobileLoginRequest? req;
+    try { req = await ctx.Request.ReadFromJsonAsync<MobileLoginRequest>(); }
+    catch { return Results.BadRequest(new { success = false, error = "Invalid JSON" }); }
+
+    if (req is null || string.IsNullOrWhiteSpace(req.Login) || string.IsNullOrWhiteSpace(req.Password))
+        return Results.BadRequest(new { success = false, error = "Login and password required" });
+
+    using (TenantImpersonation.SystemBypass())
+    {
+        // Try code/name first (VerifyLoginAsync handles both)
+        var user = await userSvc.VerifyLoginAsync(req.Login.Trim(), req.Password);
+
+        // If that fails and input looks like an email, try to resolve by email → code
+        if (user == null && req.Login.Contains('@'))
+        {
+            var byEmail = await userSvc.GetByEmailAsync(req.Login.Trim());
+            if (byEmail != null)
+                user = await userSvc.VerifyLoginAsync(byEmail.Code, req.Password);
+        }
+
+        if (user == null)
+        {
+            Log.Warning("Mobile login FAILED for {Login} from {RemoteIP}", req.Login, ctx.Connection.RemoteIpAddress);
+            return Results.Ok(new { success = false, error = "Invalid credentials" });
+        }
+
+        var memberships = await tenantSvc.GetUserTenantsAsync(user.UserId);
+        var initials = string.Concat(
+            user.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Take(2).Select(p => p[0].ToString().ToUpper()));
+
+        Log.Information("Mobile login SUCCESS: {Code} ({Name}) - {Count} tenants",
+            user.Code, user.Name, memberships.Count);
+
+        return Results.Ok(new
+        {
+            success = true,
+            user = new
+            {
+                name    = user.Name,
+                code    = user.Code,
+                email   = user.Email ?? "",
+                role    = user.Role.ToString(),
+                initials
+            },
+            tenants = memberships.Select(m => new
+            {
+                id        = m.TenantId,
+                name      = m.TenantName,
+                slug      = m.TenantSlug,
+                isDefault = m.IsDefault
+            }).ToList()
+        });
+    }
+}).RequireRateLimiting("login");
+
 // ── Personal Access Token API (used by AI Agents page) ──────────────────────
 // All three endpoints require a logged-in browser session (cookie auth).
 // They operate on tokens belonging only to the calling user + their active tenant.
@@ -1594,6 +1656,9 @@ finally
     Log.Information("Application shutting down");
     Log.CloseAndFlush();
 }
+
+/// <summary>Body model for POST /api/auth/mobile/login.</summary>
+public record MobileLoginRequest(string Login, string Password);
 
 /// <summary>Body model for POST /api/chat/desky.</summary>
 public record DeskyChatRequest(
