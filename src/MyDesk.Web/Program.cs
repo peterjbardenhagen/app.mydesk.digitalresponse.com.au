@@ -369,6 +369,7 @@ builder.Services.AddScoped<BankingService>();
     builder.Services.AddScoped<AIFunctionExecutor>();
     builder.Services.AddScoped<FinancialExtractionService>();
     builder.Services.AddScoped<WorkflowApprovalService>();
+    builder.Services.AddScoped<PhotoProcessingService>();
 
     // ── Security Services (Phase 1 Week 4) ──────────────────────────────────
     builder.Services.AddScoped<RateLimitingService>();
@@ -4667,6 +4668,368 @@ app.MapPost("/api/product-admin/onboarding/{sessionToken}/complete", async (stri
     }
 })
 .WithName("CompleteOnboarding")
+.WithOpenApi()
+.RequireAuthorization();
+
+// ── User Profile Photos (New Feature) ────────────────────────────────────────
+
+// GET /api/user/profile - Get current user's profile
+app.MapGet("/api/user/profile", async (HttpContext ctx, DatabaseService db) =>
+{
+    var userId = int.TryParse(ctx.User.FindFirst("UserId")?.Value, out var uid) ? uid : 0;
+    var tenantId = int.TryParse(ctx.User.FindFirst("tenant_id")?.Value, out var tid) ? tid : 0;
+
+    if (userId == 0 || tenantId == 0)
+        return Results.Unauthorized();
+
+    try
+    {
+        var result = await db.QueryAsync(
+            @"SELECT UserId, Name, Email, TenantId, CurrentPhotoId
+              FROM dbo.Users
+              WHERE UserId = @UserId AND TenantId = @TenantId",
+            new() { ["UserId"] = userId, ["TenantId"] = tenantId });
+
+        if (result.Rows.Count == 0)
+            return Results.NotFound();
+
+        var user = result.Rows[0];
+        var photoId = user["CurrentPhotoId"];
+        string? photoUrl = null;
+
+        if (photoId != DBNull.Value)
+        {
+            var photoResult = await db.QueryAsync(
+                @"SELECT StoragePath FROM dbo.UserPhotos WHERE PhotoId = @PhotoId AND Status = 'Active'",
+                new() { ["PhotoId"] = photoId });
+
+            if (photoResult.Rows.Count > 0)
+                photoUrl = (string)photoResult.Rows[0]["StoragePath"];
+        }
+
+        return Results.Ok(new
+        {
+            userId = (int)user["UserId"],
+            name = user["Name"],
+            email = user["Email"],
+            photoUrl = photoUrl,
+            hasPhoto = photoUrl != null
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.StatusCode(500, new { error = ex.Message });
+    }
+})
+.WithName("GetUserProfile")
+.WithOpenApi()
+.RequireAuthorization();
+
+// POST /api/user/profile/photo/upload - Upload and crop photo
+app.MapPost("/api/user/profile/photo/upload", async (HttpContext ctx, DatabaseService db, PhotoProcessingService photoService) =>
+{
+    var userId = int.TryParse(ctx.User.FindFirst("UserId")?.Value, out var uid) ? uid : 0;
+    var tenantId = int.TryParse(ctx.User.FindFirst("tenant_id")?.Value, out var tid) ? tid : 0;
+
+    if (userId == 0 || tenantId == 0)
+        return Results.Unauthorized();
+
+    try
+    {
+        var form = await ctx.Request.ReadFormAsync();
+        var file = form.Files.FirstOrDefault("photo");
+
+        if (file == null || file.Length == 0)
+            return Results.BadRequest(new { error = "No photo provided" });
+
+        using var stream = file.OpenReadStream();
+        var (isValid, error) = await photoService.ValidateImageAsync(stream, file.ContentType ?? "");
+
+        if (!isValid)
+            return Results.BadRequest(new { error });
+
+        // Reset stream position after validation
+        stream.Position = 0;
+
+        // Convert to square
+        var (squareImage, dimension, contentType) = await photoService.ConvertToSquareAsync(stream, file.ContentType ?? "image/jpeg");
+
+        // Save photo
+        var storagePath = await photoService.SaveImageAsync(squareImage, tenantId.ToString(), userId.ToString(), file.FileName);
+
+        // Store in database
+        var insertResult = await db.QueryAsync(
+            @"INSERT INTO dbo.UserPhotos (UserId, TenantId, OriginalFileName, OriginalContentType, OriginalSizeBytes, StoragePath, ProcessedWidth, ProcessedHeight, Status, CreatedBy)
+              OUTPUT INSERTED.PhotoId
+              VALUES (@UserId, @TenantId, @FileName, @ContentType, @Size, @StoragePath, @Width, @Height, 'Active', @UserId)",
+            new()
+            {
+                ["UserId"] = userId,
+                ["TenantId"] = tenantId,
+                ["FileName"] = file.FileName,
+                ["ContentType"] = contentType,
+                ["Size"] = file.Length,
+                ["StoragePath"] = storagePath,
+                ["Width"] = dimension,
+                ["Height"] = dimension
+            });
+
+        int photoId = (int)insertResult.Rows[0]["PhotoId"];
+
+        // Update user's current photo
+        await db.ExecuteNonQueryAsync(
+            @"UPDATE dbo.Users SET CurrentPhotoId = @PhotoId WHERE UserId = @UserId AND TenantId = @TenantId",
+            new() { ["PhotoId"] = photoId, ["UserId"] = userId, ["TenantId"] = tenantId });
+
+        // Log audit
+        await db.ExecuteNonQueryAsync(
+            @"INSERT INTO dbo.UserPhotoAudit (TenantId, UserId, PhotoId, Action, AuditedBy)
+              VALUES (@TenantId, @UserId, @PhotoId, 'Uploaded', @AuditedBy)",
+            new() { ["TenantId"] = tenantId, ["UserId"] = userId, ["PhotoId"] = photoId, ["AuditedBy"] = userId });
+
+        return Results.Ok(new
+        {
+            photoId,
+            photoUrl = storagePath,
+            dimension,
+            message = "Photo uploaded successfully"
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.StatusCode(500, new { error = ex.Message });
+    }
+})
+.WithName("UploadUserPhoto")
+.WithOpenApi()
+.RequireAuthorization()
+.DisableAntiforgery();
+
+// DELETE /api/user/profile/photo - Remove current photo
+app.MapDelete("/api/user/profile/photo", async (HttpContext ctx, DatabaseService db) =>
+{
+    var userId = int.TryParse(ctx.User.FindFirst("UserId")?.Value, out var uid) ? uid : 0;
+    var tenantId = int.TryParse(ctx.User.FindFirst("tenant_id")?.Value, out var tid) ? tid : 0;
+
+    if (userId == 0 || tenantId == 0)
+        return Results.Unauthorized();
+
+    try
+    {
+        // Get current photo
+        var photoResult = await db.QueryAsync(
+            @"SELECT CurrentPhotoId FROM dbo.Users WHERE UserId = @UserId AND TenantId = @TenantId",
+            new() { ["UserId"] = userId, ["TenantId"] = tenantId });
+
+        if (photoResult.Rows.Count == 0)
+            return Results.NotFound();
+
+        var currentPhotoId = photoResult.Rows[0]["CurrentPhotoId"];
+
+        if (currentPhotoId == DBNull.Value)
+            return Results.BadRequest(new { error = "No photo to delete" });
+
+        // Mark as deleted
+        await db.ExecuteNonQueryAsync(
+            @"UPDATE dbo.UserPhotos SET Status = 'Deleted' WHERE PhotoId = @PhotoId",
+            new() { ["PhotoId"] = currentPhotoId });
+
+        // Clear user's photo reference
+        await db.ExecuteNonQueryAsync(
+            @"UPDATE dbo.Users SET CurrentPhotoId = NULL WHERE UserId = @UserId AND TenantId = @TenantId",
+            new() { ["UserId"] = userId, ["TenantId"] = tenantId });
+
+        // Log audit
+        await db.ExecuteNonQueryAsync(
+            @"INSERT INTO dbo.UserPhotoAudit (TenantId, UserId, PhotoId, Action, AuditedBy)
+              VALUES (@TenantId, @UserId, @PhotoId, 'Deleted', @AuditedBy)",
+            new() { ["TenantId"] = tenantId, ["UserId"] = userId, ["PhotoId"] = currentPhotoId, ["AuditedBy"] = userId });
+
+        return Results.Ok(new { message = "Photo deleted successfully" });
+    }
+    catch (Exception ex)
+    {
+        return Results.StatusCode(500, new { error = ex.Message });
+    }
+})
+.WithName("DeleteUserPhoto")
+.WithOpenApi()
+.RequireAuthorization();
+
+// ── Expense Receipt Photos (New Feature) ──────────────────────────────────────
+
+// POST /api/expenses/{expenseId}/receipt/upload - Upload receipt photo
+app.MapPost("/api/expenses/{expenseId:int}/receipt/upload", async (int expenseId, HttpContext ctx, DatabaseService db, PhotoProcessingService photoService, MyDesk.Shared.Services.Extraction.DocumentExtractionService extractionService) =>
+{
+    var userId = int.TryParse(ctx.User.FindFirst("UserId")?.Value, out var uid) ? uid : 0;
+    var tenantId = int.TryParse(ctx.User.FindFirst("tenant_id")?.Value, out var tid) ? tid : 0;
+
+    if (userId == 0 || tenantId == 0)
+        return Results.Unauthorized();
+
+    try
+    {
+        // Verify expense belongs to user's tenant
+        var expenseResult = await db.QueryAsync(
+            @"SELECT TenantId FROM dbo.Expenses WHERE ExpenseId = @ExpenseId",
+            new() { ["ExpenseId"] = expenseId });
+
+        if (expenseResult.Rows.Count == 0 || (int)expenseResult.Rows[0]["TenantId"] != tenantId)
+            return Results.Forbid();
+
+        var form = await ctx.Request.ReadFormAsync();
+        var file = form.Files.FirstOrDefault("receipt");
+
+        if (file == null || file.Length == 0)
+            return Results.BadRequest(new { error = "No receipt file provided" });
+
+        using var stream = file.OpenReadStream();
+        var (isValid, error) = await photoService.ValidateImageAsync(stream, file.ContentType ?? "", maxSizeBytes: 10485760);
+
+        if (!isValid)
+            return Results.BadRequest(new { error });
+
+        // Reset stream position after validation
+        stream.Position = 0;
+
+        // Extract receipt data using AI
+        var extraction = await extractionService.ProcessAsync(stream, file.ContentType ?? "image/jpeg", file.FileName);
+
+        // Save receipt photo
+        stream.Position = 0;
+        var filePath = await photoService.SaveImageAsync(stream, tenantId.ToString(), $"receipts/{expenseId}", file.FileName);
+
+        // Store receipt in database
+        var insertResult = await db.QueryAsync(
+            @"INSERT INTO dbo.ExpenseReceipts (ExpenseId, TenantId, FileName, ContentType, FilePath, FileSizeBytes, ExtractionStrategy, ExtractionConfidence, ExtractionAuditPassed, ExtractedSupplierName, ExtractedDate, ExtractedAmount, ExtractedGst, ExtractedDescription, ExtractedRawText, Status, ExtractionStatus, RequiresManualReview, CreatedBy)
+              OUTPUT INSERTED.ReceiptId
+              VALUES (@ExpenseId, @TenantId, @FileName, @ContentType, @FilePath, @FileSize, @Strategy, @Confidence, @AuditPassed, @Supplier, @DocDate, @Amount, @Gst, @Description, @RawText, 'Pending', 'Completed', @RequiresReview, @UserId)",
+            new()
+            {
+                ["ExpenseId"] = expenseId,
+                ["TenantId"] = tenantId,
+                ["FileName"] = file.FileName,
+                ["ContentType"] = file.ContentType ?? "image/jpeg",
+                ["FilePath"] = filePath,
+                ["FileSize"] = file.Length,
+                ["Strategy"] = extraction.StrategyUsed,
+                ["Confidence"] = extraction.Confidence,
+                ["AuditPassed"] = extraction.AuditPassed,
+                ["Supplier"] = extraction.SupplierName ?? DBNull.Value,
+                ["DocDate"] = extraction.DocumentDate ?? DBNull.Value,
+                ["Amount"] = extraction.TotalAmount ?? 0,
+                ["Gst"] = extraction.GstAmount ?? 0,
+                ["Description"] = extraction.LineItems.Count > 0 ? string.Join(", ", extraction.LineItems.Select(x => x.Description)) : DBNull.Value,
+                ["RawText"] = extraction.RawText ?? DBNull.Value,
+                ["RequiresReview"] = extraction.Confidence < 0.80 ? 1 : 0,
+                ["UserId"] = userId
+            });
+
+        int receiptId = (int)insertResult.Rows[0]["ReceiptId"];
+
+        // Log audit
+        await db.ExecuteNonQueryAsync(
+            @"INSERT INTO dbo.ExpenseReceiptAudit (TenantId, ExpenseId, ReceiptId, Action, ConfidenceScore, ExtractionStrategy, ExtractedFields, AuditedBy)
+              VALUES (@TenantId, @ExpenseId, @ReceiptId, 'Uploaded', @Confidence, @Strategy, @Fields, @AuditedBy)",
+            new()
+            {
+                ["TenantId"] = tenantId,
+                ["ExpenseId"] = expenseId,
+                ["ReceiptId"] = receiptId,
+                ["Confidence"] = extraction.Confidence,
+                ["Strategy"] = extraction.StrategyUsed,
+                ["Fields"] = System.Text.Json.JsonSerializer.Serialize(new { extraction.SupplierName, extraction.DocumentDate, extraction.TotalAmount, extraction.GstAmount }),
+                ["AuditedBy"] = userId
+            });
+
+        return Results.Ok(new
+        {
+            receiptId,
+            filePath,
+            extraction = new
+            {
+                supplierName = extraction.SupplierName,
+                date = extraction.DocumentDate,
+                totalAmount = extraction.TotalAmount,
+                gstAmount = extraction.GstAmount,
+                confidence = Math.Round(extraction.Confidence * 100, 2),
+                auditPassed = extraction.AuditPassed,
+                strategy = extraction.StrategyUsed,
+                requiresManualReview = extraction.Confidence < 0.80
+            },
+            message = "Receipt uploaded and extracted successfully"
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.StatusCode(500, new { error = ex.Message });
+    }
+})
+.WithName("UploadExpenseReceipt")
+.WithOpenApi()
+.RequireAuthorization()
+.DisableAntiforgery();
+
+// GET /api/expenses/{expenseId}/receipt - Get receipt data
+app.MapGet("/api/expenses/{expenseId:int}/receipt", async (int expenseId, HttpContext ctx, DatabaseService db) =>
+{
+    var tenantId = int.TryParse(ctx.User.FindFirst("tenant_id")?.Value, out var tid) ? tid : 0;
+
+    if (tenantId == 0)
+        return Results.Unauthorized();
+
+    try
+    {
+        // Verify expense belongs to tenant
+        var expenseResult = await db.QueryAsync(
+            @"SELECT TenantId FROM dbo.Expenses WHERE ExpenseId = @ExpenseId",
+            new() { ["ExpenseId"] = expenseId });
+
+        if (expenseResult.Rows.Count == 0 || (int)expenseResult.Rows[0]["TenantId"] != tenantId)
+            return Results.Forbid();
+
+        var result = await db.QueryAsync(
+            @"SELECT ReceiptId, FileName, FilePath, ExtractionStrategy, ExtractionConfidence, ExtractedSupplierName, ExtractedDate, ExtractedAmount, ExtractedGst, CorrectedSupplierName, CorrectedDate, CorrectedAmount, Status, RequiresManualReview
+              FROM dbo.ExpenseReceipts
+              WHERE ExpenseId = @ExpenseId AND Status != 'Archived'
+              ORDER BY CreatedAt DESC",
+            new() { ["ExpenseId"] = expenseId });
+
+        if (result.Rows.Count == 0)
+            return Results.NotFound(new { error = "No receipt found for this expense" });
+
+        var receipts = result.Rows.Cast<System.Data.DataRow>().Select(row => new
+        {
+            receiptId = (int)row["ReceiptId"],
+            fileName = (string)row["FileName"],
+            filePath = (string)row["FilePath"],
+            extractionStrategy = row["ExtractionStrategy"]?.ToString(),
+            extractionConfidence = Convert.ToDouble(row["ExtractionConfidence"] ?? 0),
+            extracted = new
+            {
+                supplierName = row["ExtractedSupplierName"]?.ToString(),
+                date = row["ExtractedDate"],
+                amount = Convert.ToDecimal(row["ExtractedAmount"] ?? 0),
+                gst = Convert.ToDecimal(row["ExtractedGst"] ?? 0)
+            },
+            corrected = new
+            {
+                supplierName = row["CorrectedSupplierName"]?.ToString(),
+                date = row["CorrectedDate"],
+                amount = row["CorrectedAmount"] != DBNull.Value ? Convert.ToDecimal(row["CorrectedAmount"]) : null
+            },
+            status = (string)row["Status"],
+            requiresManualReview = (bool)row["RequiresManualReview"]
+        }).ToList();
+
+        return Results.Ok(new { receipts });
+    }
+    catch (Exception ex)
+    {
+        return Results.StatusCode(500, new { error = ex.Message });
+    }
+})
+.WithName("GetExpenseReceipt")
 .WithOpenApi()
 .RequireAuthorization();
 
