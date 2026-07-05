@@ -2744,7 +2744,7 @@ app.MapGet("/api/approval/workflows", async (HttpContext ctx, DatabaseService db
 }).RequireAuthorization();
 
 // ── Submit Expense for Approval ────────────────────────────────────────────
-app.MapPost("/api/expenses/{id}/submit-for-approval", async (int id, HttpContext ctx, DatabaseService db) =>
+app.MapPost("/api/expenses/{id}/submit-for-approval", async (int id, HttpContext ctx, DatabaseService db, NotificationService notificationSvc) =>
 {
     if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
     var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
@@ -2752,10 +2752,13 @@ app.MapPost("/api/expenses/{id}/submit-for-approval", async (int id, HttpContext
     if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
 
     var expenseDt = await db.QueryAsync(
-        "SELECT ExpenseId, Status FROM Expenses WHERE ExpenseId = @ExpenseId AND TenantId = @TenantId",
+        "SELECT ExpenseId, Status, Total, Description FROM Expenses WHERE ExpenseId = @ExpenseId AND TenantId = @TenantId",
         new() { ["ExpenseId"] = id, ["TenantId"] = Guid.Parse(tenantId) });
 
     if (expenseDt.Rows.Count == 0) return Results.NotFound(new { error = "Expense not found" });
+
+    decimal expenseAmount = (decimal?)expenseDt.Rows[0]["Total"] ?? 0;
+    string expenseDesc = expenseDt.Rows[0]["Description"]?.ToString() ?? "Expense";
 
     var workflowDt = await db.QueryAsync(
         "SELECT WorkflowId FROM ApprovalWorkflows WHERE TenantId = @TenantId AND ModuleType = 'Expense' AND IsDefault = 1",
@@ -2769,11 +2772,53 @@ app.MapPost("/api/expenses/{id}/submit-for-approval", async (int id, HttpContext
         "INSERT INTO ApprovalRequests (TenantId, WorkflowId, ModuleType, ModuleId, SubmittedById, SubmittedAt, [Status], CurrentLevel) VALUES (@TenantId, @WorkflowId, 'Expense', @ModuleId, @UserId, GETUTCDATE(), 'Pending', 1)",
         new() { ["TenantId"] = Guid.Parse(tenantId), ["WorkflowId"] = workflowId, ["ModuleId"] = id, ["UserId"] = userId });
 
+    // Get submitter name
+    var submitterDt = await db.QueryAsync(
+        "SELECT Name FROM Users WHERE UserId = @UserId",
+        new() { ["UserId"] = userId });
+    string submitterName = submitterDt.Rows.Count > 0 ? (string)submitterDt.Rows[0]["Name"] : "Employee";
+
+    // Send notification to approvers with approval permissions
+    int tenantIdInt = int.TryParse(tenantId, out int t) ? t : 0;
+    if (tenantIdInt > 0)
+    {
+        var approversDt = await db.QueryAsync(
+            @"SELECT DISTINCT UserId FROM dbo.ApprovalPermissions
+              WHERE TenantId = @TenantId AND ModuleType = 'Expense' AND IsActive = 1
+              AND ApprovalLevel = 1",
+            new() { ["TenantId"] = tenantIdInt });
+
+        var approverIds = new List<int>();
+        foreach (var row in approversDt.Rows)
+        {
+            if (row["UserId"] != DBNull.Value && int.TryParse(row["UserId"].ToString(), out int approverId))
+                approverIds.Add(approverId);
+        }
+
+        if (approverIds.Count > 0)
+        {
+            await notificationSvc.SendBulkNotificationAsync(
+                tenantIdInt,
+                approverIds,
+                "ExpenseSubmittedForApproval",
+                new Dictionary<string, object>
+                {
+                    { "SubmitterName", submitterName },
+                    { "CurrencySymbol", "$" },
+                    { "Amount", expenseAmount.ToString("F2") },
+                    { "Description", expenseDesc }
+                },
+                "Expense",
+                id,
+                userId);
+        }
+    }
+
     return Results.Ok(new { message = "Expense submitted for approval", requestId = id });
 }).RequireAuthorization();
 
 // ── Submit Timesheet for Approval ──────────────────────────────────────────
-app.MapPost("/api/timesheets/{id}/submit-for-approval", async (int id, HttpContext ctx, DatabaseService db) =>
+app.MapPost("/api/timesheets/{id}/submit-for-approval", async (int id, HttpContext ctx, DatabaseService db, NotificationService notificationSvc) =>
 {
     if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
     var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
@@ -2781,10 +2826,12 @@ app.MapPost("/api/timesheets/{id}/submit-for-approval", async (int id, HttpConte
     if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
 
     var timesheetDt = await db.QueryAsync(
-        "SELECT TimesheetId, [Status] FROM Timesheets WHERE TimesheetId = @TimesheetId AND TenantId = @TenantId",
+        "SELECT TimesheetId, [Status], TotalHours FROM Timesheets WHERE TimesheetId = @TimesheetId AND TenantId = @TenantId",
         new() { ["TimesheetId"] = id, ["TenantId"] = Guid.Parse(tenantId) });
 
     if (timesheetDt.Rows.Count == 0) return Results.NotFound(new { error = "Timesheet not found" });
+
+    decimal totalHours = (decimal?)timesheetDt.Rows[0]["TotalHours"] ?? 0;
 
     var workflowDt = await db.QueryAsync(
         "SELECT WorkflowId FROM ApprovalWorkflows WHERE TenantId = @TenantId AND ModuleType = 'Timesheet' AND IsDefault = 1",
@@ -2797,6 +2844,46 @@ app.MapPost("/api/timesheets/{id}/submit-for-approval", async (int id, HttpConte
     await db.ExecuteNonQueryAsync(
         "INSERT INTO ApprovalRequests (TenantId, WorkflowId, ModuleType, ModuleId, SubmittedById, SubmittedAt, [Status], CurrentLevel) VALUES (@TenantId, @WorkflowId, 'Timesheet', @ModuleId, @UserId, GETUTCDATE(), 'Pending', 1)",
         new() { ["TenantId"] = Guid.Parse(tenantId), ["WorkflowId"] = workflowId, ["ModuleId"] = id, ["UserId"] = userId });
+
+    // Get submitter name
+    var submitterDt = await db.QueryAsync(
+        "SELECT Name FROM Users WHERE UserId = @UserId",
+        new() { ["UserId"] = userId });
+    string submitterName = submitterDt.Rows.Count > 0 ? (string)submitterDt.Rows[0]["Name"] : "Employee";
+
+    // Send notification to approvers with approval permissions
+    int tenantIdInt = int.TryParse(tenantId, out int t) ? t : 0;
+    if (tenantIdInt > 0)
+    {
+        var approversDt = await db.QueryAsync(
+            @"SELECT DISTINCT UserId FROM dbo.ApprovalPermissions
+              WHERE TenantId = @TenantId AND ModuleType = 'Timesheet' AND IsActive = 1
+              AND ApprovalLevel = 1",
+            new() { ["TenantId"] = tenantIdInt });
+
+        var approverIds = new List<int>();
+        foreach (var row in approversDt.Rows)
+        {
+            if (row["UserId"] != DBNull.Value && int.TryParse(row["UserId"].ToString(), out int approverId))
+                approverIds.Add(approverId);
+        }
+
+        if (approverIds.Count > 0)
+        {
+            await notificationSvc.SendBulkNotificationAsync(
+                tenantIdInt,
+                approverIds,
+                "TimesheetSubmittedForApproval",
+                new Dictionary<string, object>
+                {
+                    { "SubmitterName", submitterName },
+                    { "Hours", totalHours.ToString("F1") }
+                },
+                "Timesheet",
+                id,
+                userId);
+        }
+    }
 
     return Results.Ok(new { message = "Timesheet submitted for approval", requestId = id });
 }).RequireAuthorization();
@@ -2837,7 +2924,7 @@ app.MapGet("/api/approval/pending", async (HttpContext ctx, DatabaseService db) 
 }).RequireAuthorization();
 
 // ── Approve Request ─────────────────────────────────────────────────────────
-app.MapPost("/api/approval/requests/{requestId}/approve", async (int requestId, HttpContext ctx, DatabaseService db) =>
+app.MapPost("/api/approval/requests/{requestId}/approve", async (int requestId, HttpContext ctx, DatabaseService db, NotificationService notificationSvc) =>
 {
     if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
     var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
@@ -2845,7 +2932,7 @@ app.MapPost("/api/approval/requests/{requestId}/approve", async (int requestId, 
     if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
 
     var requestDt = await db.QueryAsync(
-        "SELECT RequestId, [Status], CurrentLevel, WorkflowId FROM ApprovalRequests WHERE RequestId = @RequestId AND TenantId = @TenantId",
+        "SELECT RequestId, [Status], CurrentLevel, WorkflowId, SubmittedByUserId, Amount FROM ApprovalRequests WHERE RequestId = @RequestId AND TenantId = @TenantId",
         new() { ["RequestId"] = requestId, ["TenantId"] = Guid.Parse(tenantId) });
 
     if (requestDt.Rows.Count == 0) return Results.NotFound(new { error = "Request not found" });
@@ -2855,6 +2942,8 @@ app.MapPost("/api/approval/requests/{requestId}/approve", async (int requestId, 
 
     int currentLevel = (int)requestDt.Rows[0]["CurrentLevel"];
     int workflowId = (int)requestDt.Rows[0]["WorkflowId"];
+    int submittedByUserId = (int?)requestDt.Rows[0]["SubmittedByUserId"] ?? 0;
+    decimal amount = (decimal?)requestDt.Rows[0]["Amount"] ?? 0;
 
     var workflowDt = await db.QueryAsync(
         "SELECT ApprovalLevels FROM ApprovalWorkflows WHERE WorkflowId = @WorkflowId",
@@ -2874,7 +2963,7 @@ app.MapPost("/api/approval/requests/{requestId}/approve", async (int requestId, 
     if (expenseCheckDt.Rows.Count > 0)
     {
         string moduleType = expenseCheckDt.Rows[0]["ModuleType"]?.ToString() ?? "Expense";
-        decimal amount = (decimal)(expenseCheckDt.Rows[0]["Amount"] ?? 0);
+        decimal chkAmount = (decimal)(expenseCheckDt.Rows[0]["Amount"] ?? 0);
 
         var permDt = await db.QueryAsync(
             @"SELECT COUNT(*) as cnt FROM dbo.ApprovalPermissions
@@ -2895,7 +2984,7 @@ app.MapPost("/api/approval/requests/{requestId}/approve", async (int requestId, 
                 ["Level"] = currentLevel,
                 ["UserId"] = userId,
                 ["Role"] = userRole ?? "none",
-                ["Amount"] = amount
+                ["Amount"] = chkAmount
             });
 
         int permCount = (int)permDt.Rows[0]["cnt"];
@@ -2907,6 +2996,12 @@ app.MapPost("/api/approval/requests/{requestId}/approve", async (int requestId, 
         }
     }
 
+    // Get approver name for notification
+    var approverDt = await db.QueryAsync(
+        "SELECT Name FROM Users WHERE UserId = @UserId",
+        new() { ["UserId"] = userId });
+    string approverName = approverDt.Rows.Count > 0 ? (string)approverDt.Rows[0]["Name"] : "Manager";
+
     await db.ExecuteNonQueryAsync(
         "INSERT INTO ApprovalActions (RequestId, ApprovalLevel, ApprovedById, [Action], ActionAt) VALUES (@RequestId, @Level, @UserId, 'Approved', GETUTCDATE())",
         new() { ["RequestId"] = requestId, ["Level"] = currentLevel, ["UserId"] = userId });
@@ -2916,6 +3011,29 @@ app.MapPost("/api/approval/requests/{requestId}/approve", async (int requestId, 
         await db.ExecuteNonQueryAsync(
             "UPDATE ApprovalRequests SET [Status] = 'Approved', CompletedAt = GETUTCDATE() WHERE RequestId = @RequestId",
             new() { ["RequestId"] = requestId });
+
+        // Send notification to submitter
+        if (submittedByUserId > 0)
+        {
+            int tenantIdInt = int.TryParse(tenantId, out int t) ? t : 0;
+            if (tenantIdInt > 0)
+            {
+                await notificationSvc.SendNotificationAsync(
+                    tenantIdInt,
+                    submittedByUserId,
+                    "ApprovalApproved",
+                    new Dictionary<string, object>
+                    {
+                        { "ApproverName", approverName },
+                        { "CurrencySymbol", "$" },
+                        { "Amount", amount.ToString("F2") }
+                    },
+                    "ApprovalRequest",
+                    requestId,
+                    userId);
+            }
+        }
+
         return Results.Ok(new { message = "Request approved", finalApproval = true });
     }
     else
@@ -2928,7 +3046,7 @@ app.MapPost("/api/approval/requests/{requestId}/approve", async (int requestId, 
 }).RequireAuthorization();
 
 // ── Reject Request ──────────────────────────────────────────────────────────
-app.MapPost("/api/approval/requests/{requestId}/reject", async (int requestId, HttpContext ctx, DatabaseService db) =>
+app.MapPost("/api/approval/requests/{requestId}/reject", async (int requestId, HttpContext ctx, DatabaseService db, NotificationService notificationSvc) =>
 {
     if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
     var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
@@ -2936,18 +3054,27 @@ app.MapPost("/api/approval/requests/{requestId}/reject", async (int requestId, H
     if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
 
     var requestDt = await db.QueryAsync(
-        "SELECT RequestId, [Status] FROM ApprovalRequests WHERE RequestId = @RequestId AND TenantId = @TenantId",
+        "SELECT RequestId, [Status], SubmittedByUserId, Amount FROM ApprovalRequests WHERE RequestId = @RequestId AND TenantId = @TenantId",
         new() { ["RequestId"] = requestId, ["TenantId"] = Guid.Parse(tenantId) });
 
     if (requestDt.Rows.Count == 0) return Results.NotFound(new { error = "Request not found" });
     if (requestDt.Rows[0]["Status"].ToString() != "Pending")
         return Results.BadRequest(new { error = "Request is not pending" });
 
+    int submittedByUserId = (int?)requestDt.Rows[0]["SubmittedByUserId"] ?? 0;
+    decimal amount = (decimal?)requestDt.Rows[0]["Amount"] ?? 0;
+
     var currentDt = await db.QueryAsync(
         "SELECT CurrentLevel FROM ApprovalRequests WHERE RequestId = @RequestId",
         new() { ["RequestId"] = requestId });
 
     int currentLevel = (int)currentDt.Rows[0]["CurrentLevel"];
+
+    // Get approver name for notification
+    var approverDt = await db.QueryAsync(
+        "SELECT Name FROM Users WHERE UserId = @UserId",
+        new() { ["UserId"] = userId });
+    string approverName = approverDt.Rows.Count > 0 ? (string)approverDt.Rows[0]["Name"] : "Manager";
 
     await db.ExecuteNonQueryAsync(
         "INSERT INTO ApprovalActions (RequestId, ApprovalLevel, ApprovedById, [Action], ActionAt) VALUES (@RequestId, @Level, @UserId, 'Rejected', GETUTCDATE())",
@@ -2956,6 +3083,29 @@ app.MapPost("/api/approval/requests/{requestId}/reject", async (int requestId, H
     await db.ExecuteNonQueryAsync(
         "UPDATE ApprovalRequests SET [Status] = 'Rejected', CompletedAt = GETUTCDATE() WHERE RequestId = @RequestId",
         new() { ["RequestId"] = requestId });
+
+    // Send notification to submitter
+    if (submittedByUserId > 0)
+    {
+        int tenantIdInt = int.TryParse(tenantId, out int t) ? t : 0;
+        if (tenantIdInt > 0)
+        {
+            await notificationSvc.SendNotificationAsync(
+                tenantIdInt,
+                submittedByUserId,
+                "ApprovalRejected",
+                new Dictionary<string, object>
+                {
+                    { "ApproverName", approverName },
+                    { "CurrencySymbol", "$" },
+                    { "Amount", amount.ToString("F2") },
+                    { "RejectionReason", "Please contact your manager for details" }
+                },
+                "ApprovalRequest",
+                requestId,
+                userId);
+        }
+    }
 
     return Results.Ok(new { message = "Request rejected" });
 }).RequireAuthorization();
