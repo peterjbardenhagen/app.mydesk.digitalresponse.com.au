@@ -70,9 +70,6 @@ TaskScheduler.UnobservedTaskException += (_, e) =>
     e.SetObserved();
 };
 
-try
-{
-
 var builder = WebApplication.CreateBuilder(args);
 Microsoft.AspNetCore.Hosting.StaticWebAssets.StaticWebAssetsLoader.UseStaticWebAssets(builder.Environment, builder.Configuration);
 builder.Host.UseSerilog();
