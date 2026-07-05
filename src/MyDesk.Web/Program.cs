@@ -5613,17 +5613,22 @@ app.MapGet("/api/departments/{deptId:int}/budget", async (int deptId, int? year,
     var remaining = await budgetSvc.GetRemainingBudgetAsync(tenantId, deptId, year.Value);
     var alertPercent = await budgetSvc.GetBudgetAlertPercentageAsync(tenantId, deptId, year.Value);
 
+    bool allowOverspend = budget["AllowOverspend"] != DBNull.Value ? (bool)budget["AllowOverspend"] : false;
+    decimal allocatedAmount = budget["AllocatedAmount"] != DBNull.Value ? (decimal)budget["AllocatedAmount"] : 0;
+    decimal spentAmount = budget["SpentAmount"] != DBNull.Value ? (decimal)budget["SpentAmount"] : 0;
+    decimal encumberedAmount = budget["EncumberedAmount"] != DBNull.Value ? (decimal)budget["EncumberedAmount"] : 0;
+
     return Results.Ok(new
     {
         budgetId = (int)budget["BudgetId"],
         departmentId = (int)budget["DepartmentId"],
         fiscalYear = (int)budget["FiscalYear"],
-        allocatedAmount = (decimal)budget["AllocatedAmount"],
-        spentAmount = (decimal)budget["SpentAmount"],
-        encumberedAmount = (decimal)budget["EncumberedAmount"],
+        allocatedAmount,
+        spentAmount,
+        encumberedAmount,
         remainingAmount = remaining,
         usagePercent = alertPercent,
-        allowOverspend = (bool)budget["AllowOverspend"]
+        allowOverspend
     });
 })
 .WithName("GetDepartmentBudget")
