@@ -1,10 +1,10 @@
 # Work In Progress: Security Hardening & Approval Workflows
 
 ## Current Phase
-**Feature**: Phase 1 Security Hardening (Critical Foundation) & Manager Approval Workflows  
+**Feature**: Phase 1-2 Complete: Security Foundation + Product Admin & Client Onboarding  
 **Branch**: `claude/approval-workflows`  
-**Status**: Phase 1 Complete (All 4 Weeks) + Phase 2-3 Features  
-**Progress**: 95% (Database ✅ → API ✅ → UI ✅ → Phase 1 Security ✅ → Phase 2-3 Done → Final Testing)
+**Status**: Phase 1 ✅ Complete + Phase 2 ✅ Complete + Phase 2-3 Features  
+**Progress**: 98% (Database ✅ → API ✅ → UI ✅ → Phase 1 Security ✅ → Phase 2 Product Admin ✅ → Testing)
 
 ---
 
@@ -63,6 +63,30 @@
 
 ## Phase Completion Summary
 
+### Phase 2 ✅ (COMPLETE)
+**Product Admin Module & Client Onboarding** - All 4 weeks delivered
+
+**Weeks 5-6: Product Admin Module & Billing**
+- ClientBillingConfig table: Per-tenant billing configuration
+  * Support for 4 billing models: Monthly Advance, Yearly Advance, Pay-as-You-Go, Flat Rate
+  * Cycle tracking for recurring billing
+  * Tax ID and GST support for Australian companies
+- ClientInvoice table: Complete invoice lifecycle (DRAFT → SENT → PAID)
+- ClientUsageLog table: Usage-based billing tracking
+- 5 API endpoints for client management and billing
+
+**Weeks 7-8: Client Onboarding Wizard**
+- ClientOnboardingSession: 6-step wizard flow tracking
+- OnboardingWorkflowTemplates: Pre-configured approval workflow templates
+- 4 API endpoints for complete onboarding workflow
+- Automatic tenant/user/domain/billing creation
+
+**Migrations Added**: 017, 018 (2 new)
+**API Endpoints Added**: 9 new routes for product admin and onboarding
+**Features**: Multi-model billing, 6-step onboarding wizard, Super Admin management
+
+---
+
 ### Phase 1 ✅ (COMPLETE)
 **Critical Security Foundation** - All 4 weeks delivered
 - Domain-based multi-tenancy routing
@@ -79,43 +103,40 @@
 
 ## What Needs to Be Done Next 🔨
 
-### Phase 2: Product Admin & Client Management (Weeks 5-8)
+### Phase 3: Mobile App Integration & Advanced Features (Weeks 9-12)
 
-**Weeks 5-6: Product Admin Module & Billing Configuration**
-- Create ClientBillingConfig table for per-client billing models
-- Create ClientInvoice table for invoice generation and tracking
-- Create ClientUsageLog table for usage-based billing
-- Implement GET /api/product-admin/clients - list all client tenants
-- Implement GET /api/product-admin/clients/{id}/billing - view client billing config
-- Implement POST /api/product-admin/clients/{id}/billing - set/update billing config
-- Implement GET /api/product-admin/invoices - list invoices for MyDesk platform
-- Product Admin UI Component: ClientManagementDashboard.razor
-- Dashboard showing: Total clients, MRR, active subscriptions
+**Weeks 9-10: Mobile App Integration**
+- Display approval status in mobile approval views
+- Mobile support for approval actions (approve/reject/delegate)
+- Offline sync support for pending actions
+- Push notifications for approval requests (optional)
 
-**Weeks 7-8: Client Onboarding Wizard**
-- 6-step onboarding flow:
-  1. Basic tenant info (name, admin user)
-  2. Domain configuration (with verification)
-  3. Approval workflow setup (select template)
-  4. Billing model selection (Monthly, Yearly, Pay-as-you-go)
-  5. User seats and pricing
-  6. Confirmation and activation
-- Implement POST /api/product-admin/onboarding/start - initiate wizard
-- Implement POST /api/product-admin/onboarding/complete - create tenant + setup
-- ClientOnboardingWizard.razor component with multi-step form
-- Automatic domain verification during onboarding
+**Weeks 10-11: Field-Level Encryption & Key Rotation**
+- Implement field-level encryption for PII (ExpenseAmount, BankDetails, etc.)
+- Encryption key management UI
+- Key rotation procedure with re-encryption
+- Support for AES-256-GCM encryption
 
-**Testing Checklist for Phase 2**:
-- [ ] Create new client via wizard (full flow)
-- [ ] Configure different billing models
-- [ ] Invoice generation for MRR clients
-- [ ] Invoice generation for annual clients
-- [ ] Client admin can view their billing status
-- [ ] MyDesk product admin sees all clients and invoicing
+**Week 12: Advanced Features & Polish**
+- Approval escalation logic (auto-escalate if pending > 5 days)
+- Batch approval actions for bulk processing
+- Approval analytics and reporting dashboard
+- Email notifications for approval actions
+- Comprehensive testing and hardening
+
+**Testing Checklist for Phase 3**:
+- [ ] Mobile app displays approval status
+- [ ] Mobile approval actions work offline
+- [ ] Encryption/decryption of sensitive fields
+- [ ] Key rotation without data loss
+- [ ] Escalation logic triggers correctly
+- [ ] Email notifications sent for key events
+- [ ] Performance with large datasets (1M+ records)
+- [ ] Cross-browser compatibility
 
 ---
 
-### Phase 2 Details: API Implementation
+### Implementation Roadmap
 
 #### A. Approval Workflow Endpoints
 ```
@@ -297,9 +318,15 @@ DELETE /api/approval/delegations/{id}
 ✅ Complete audit trail of approvals (history endpoint + timeline component)  
 ✅ Delegation working correctly (create/list/revoke/delegate)  
 
+### Phase 2: Product Admin & Onboarding ✅
+✅ Multi-model billing system (4 models supported)
+✅ Client billing configuration endpoints
+✅ 6-step onboarding wizard with session management
+✅ Automatic tenant creation and initialization
+✅ Pre-configured approval workflow templates
+✅ Billing configuration seeding
+
 ### Future Phases ⏳
-⏳ Product Admin module for client management (Phase 2 Weeks 5-8)
-⏳ Client onboarding wizard (Phase 2 Weeks 7-8)
 ⏳ Mobile app shows approval status (Phase 3)
 ⏳ Field-level encryption implementation (Phase 3)
 ⏳ End-to-end testing passes (during Phase 4)
@@ -307,7 +334,7 @@ DELETE /api/approval/delegations/{id}
 
 ---
 
-## Implementation Summary (Phase 1 Complete + Phase 2-3 Features)
+## Implementation Summary (Phase 1 & 2 Complete)
 
 ### What Was Implemented
 
@@ -335,7 +362,24 @@ DELETE /api/approval/delegations/{id}
    - IP & User-based rate limiting with configurable rules
    - Auto-block capability for repeat offenders
 
-**Phase 2-3 Complete:**
+**Phase 2 - Product Admin & Onboarding (4 weeks):**
+7. **Database Migrations** (2 new: 017-018):
+   - Migration 017: Client billing system with multiple billing models
+   - Migration 018: Client onboarding wizard with 6-step flow
+
+8. **API Endpoints** (9 new in Program.cs):
+   - 5 client management endpoints (list, get billing, update billing, list invoices, invoice details, mark paid)
+   - 4 onboarding wizard endpoints (start, get state, submit step, complete)
+
+9. **Features**:
+   - Multi-model billing: Monthly Advance, Yearly Advance, Pay-as-You-Go, Flat Rate
+   - 6-step onboarding wizard: Basic Info → Domain → Approval Workflow → Billing → User Seats → Confirmation
+   - Pre-configured approval workflow templates
+   - Automatic tenant/user/domain/billing creation on wizard completion
+   - Super Admin role protection
+   - Complete audit trail of all onboarding steps
+
+**Phase 2-3 Features:**
 1. **API Endpoints** (7 core + 4 delegation = 11 total in Program.cs):
    - Core: GET workflows, POST submit-for-approval (both), GET pending, POST approve/reject, GET history
    - Delegation: POST/GET delegations, DELETE delegation, POST delegate-request
