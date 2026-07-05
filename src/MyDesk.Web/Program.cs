@@ -916,32 +916,86 @@ app.MapPost("/api/auth/login", async (HttpContext ctx, AuthService auth, LoginTo
 }).RequireRateLimiting("login");
 
 // Forgot password endpoint
-app.MapPost("/api/auth/forgot-password", async (HttpContext ctx, EmailService emailSvc) =>
+app.MapPost("/api/auth/forgot-password", async (HttpContext ctx, UserService userSvc, EmailService emailSvc) =>
 {
-    var form = await ctx.Request.ReadFormAsync();
-    var email = form["email"].ToString();
+    string? emailOrCode;
+    try
+    {
+        var form = await ctx.Request.ReadFormAsync();
+        emailOrCode = form["email"].ToString();
+    }
+    catch
+    {
+        try
+        {
+            var body = await ctx.Request.ReadAsJsonAsync<dynamic>();
+            emailOrCode = body?.email ?? body?.code;
+        }
+        catch { return Results.BadRequest(new { error = "Invalid request" }); }
+    }
 
-    Log.Information("Password reset requested for {Email} from {RemoteIP}",
-        email, ctx.Connection.RemoteIpAddress);
+    if (string.IsNullOrWhiteSpace(emailOrCode)) return Results.BadRequest(new { error = "Email or username required" });
+
+    Log.Information("Password reset requested for {EmailOrCode} from {RemoteIP}", emailOrCode, ctx.Connection.RemoteIpAddress);
 
     try
     {
-        // Generate a reset token and send email
+        var user = await userSvc.GetUserByEmailOrCodeAsync(emailOrCode);
+        if (user == null)
+            return Results.Ok(new { success = true, message = "If account exists, reset email sent" });
+
         var resetToken = Guid.NewGuid().ToString("N");
+        var tokenHash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(resetToken));
+        var tokenHashStr = Convert.ToHexString(tokenHash);
+
+        await userSvc.CreatePasswordResetTokenAsync(user.UserId, tokenHashStr, DateTime.UtcNow.AddHours(1));
+
         var resetLink = $"{ctx.Request.Scheme}://{ctx.Request.Host}/reset-password?token={resetToken}";
-        
-        // Send password reset email
-        await emailSvc.SendPasswordResetEmailAsync(email, resetLink);
-        
-        Log.Information("Password reset email sent to {Email}", email);
-        return Results.Redirect("/forgot-password?success=1");
+        await emailSvc.SendPasswordResetEmailAsync(user.Email ?? user.Code, resetLink);
+
+        Log.Information("Password reset email sent to {Email}", user.Email ?? user.Code);
+        return Results.Ok(new { success = true, message = "Reset email sent" });
     }
     catch (Exception ex)
     {
-        Log.Error(ex, "Failed to send password reset email to {Email}", email);
-        return Results.Redirect("/forgot-password?error=1");
+        Log.Error(ex, "Failed to send password reset email to {EmailOrCode}", emailOrCode);
+        return Results.Ok(new { success = true, message = "If account exists, reset email sent" });
     }
 }).RequireRateLimiting("forgotPassword");
+
+app.MapPost("/api/auth/reset-password", async (HttpContext ctx, UserService userSvc) =>
+{
+    ResetPasswordRequest? req;
+    try { req = await ctx.Request.ReadFromJsonAsync<ResetPasswordRequest>(); }
+    catch { return Results.BadRequest(new { error = "Invalid request" }); }
+
+    if (req == null || string.IsNullOrWhiteSpace(req.Token) || string.IsNullOrWhiteSpace(req.NewPassword))
+        return Results.BadRequest(new { error = "Token and password required" });
+
+    try
+    {
+        var tokenHash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(req.Token));
+        var tokenHashStr = Convert.ToHexString(tokenHash);
+
+        var result = await userSvc.ResetPasswordAsync(tokenHashStr, req.NewPassword);
+        if (!result)
+            return Results.BadRequest(new { error = "Invalid or expired token" });
+
+        Log.Information("Password reset successful");
+        return Results.Ok(new { success = true, message = "Password reset successful" });
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Password reset failed");
+        return Results.BadRequest(new { error = "Password reset failed" });
+    }
+}).RequireRateLimiting("resetPassword");
+
+public class ResetPasswordRequest
+{
+    public string Token { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
+}
 
 // ── PDF Download endpoints (authenticated — uses existing session cookie) ──────
 app.MapGet("/api/pdf/quote/{id:int}", async (int id, PdfService pdfSvc) =>
