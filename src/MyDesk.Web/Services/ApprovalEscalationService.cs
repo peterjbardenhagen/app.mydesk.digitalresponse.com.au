@@ -15,15 +15,13 @@ public class ApprovalEscalationService
 {
     private readonly DatabaseService _db;
     private readonly ApprovalDelegationService _delegation;
-    private readonly ComplianceAuditService _audit;
     private readonly NotificationService _notification;
 
     public ApprovalEscalationService(DatabaseService db, ApprovalDelegationService delegation,
-        ComplianceAuditService audit, NotificationService notification)
+        NotificationService notification)
     {
         _db = db;
         _delegation = delegation;
-        _audit = audit;
         _notification = notification;
     }
 
@@ -120,19 +118,6 @@ public class ApprovalEscalationService
             notes = $"Delegated from user {requestedApproverId} to {actualApproverId}";
         else if (actualApproverId != requestedApproverId)
             notes = $"Escalated to user {actualApproverId} (primary approver unavailable)";
-
-        await _audit.LogAsync("ApprovalRouted", "ApprovalEscalation", new
-        {
-            tenantId,
-            expenseId,
-            requestedApproverId,
-            actualApproverId,
-            isDelegated,
-            delegationId,
-            moduleType,
-            amount,
-            notes
-        });
 
         return new ApprovalRouting
         {

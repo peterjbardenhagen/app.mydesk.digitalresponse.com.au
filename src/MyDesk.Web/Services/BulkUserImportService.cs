@@ -13,12 +13,10 @@ namespace MyDesk.Web.Services;
 public class BulkUserImportService
 {
     private readonly DatabaseService _db;
-    private readonly ComplianceAuditService _audit;
 
-    public BulkUserImportService(DatabaseService db, ComplianceAuditService audit)
+    public BulkUserImportService(DatabaseService db)
     {
         _db = db;
-        _audit = audit;
     }
 
     public async Task<BulkImportResult> ImportUsersAsync(int tenantId, int importedById, Stream csvStream, string filename)
@@ -231,17 +229,6 @@ public class BulkUserImportService
                 ["Status"] = result.Status,
                 ["Error"] = (object?)result.ErrorMessage ?? DBNull.Value
             });
-
-        await _audit.LogAsync("BulkUserImportCompleted", "System", new
-        {
-            tenantId,
-            importedById,
-            filename = result.Filename,
-            totalRows = result.TotalRows,
-            successfulRows = result.SuccessfulRows,
-            failedRows = result.FailedRows,
-            status = result.Status
-        });
     }
 }
 

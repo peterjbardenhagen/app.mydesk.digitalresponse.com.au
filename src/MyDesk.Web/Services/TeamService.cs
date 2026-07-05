@@ -10,12 +10,10 @@ namespace MyDesk.Web.Services;
 public class TeamService
 {
     private readonly DatabaseService _db;
-    private readonly ComplianceAuditService _audit;
 
-    public TeamService(DatabaseService db, ComplianceAuditService audit)
+    public TeamService(DatabaseService db)
     {
         _db = db;
-        _audit = audit;
     }
 
     public async Task<DataTable> GetTeamsAsync(int tenantId, int? departmentId = null)
@@ -75,16 +73,6 @@ public class TeamService
 
         int teamId = (int)dtId.Rows[0]["Id"];
 
-        await _audit.LogAsync("TeamCreated", "System", new
-        {
-            tenantId,
-            teamId,
-            teamName = name,
-            departmentId,
-            teamLeadUserId,
-            isApprovalTeam
-        });
-
         return teamId;
     }
 
@@ -111,15 +99,6 @@ public class TeamService
                 ["TenantId"] = tenantId,
                 ["TeamId"] = teamId
             });
-
-        await _audit.LogAsync("TeamUpdated", "System", new
-        {
-            tenantId,
-            teamId,
-            name,
-            teamLeadUserId,
-            isApprovalTeam
-        });
     }
 
     public async Task AddTeamMemberAsync(int tenantId, int teamId, int userId, string role = "Member")
@@ -144,14 +123,6 @@ public class TeamService
                 ["UserId"] = userId,
                 ["Role"] = role
             });
-
-        await _audit.LogAsync("TeamMemberAdded", "System", new
-        {
-            tenantId,
-            teamId,
-            userId,
-            role
-        });
     }
 
     public async Task RemoveTeamMemberAsync(int tenantId, int teamId, int userId)
@@ -165,13 +136,6 @@ public class TeamService
                 ["TeamId"] = teamId,
                 ["UserId"] = userId
             });
-
-        await _audit.LogAsync("TeamMemberRemoved", "System", new
-        {
-            tenantId,
-            teamId,
-            userId
-        });
     }
 
     public async Task<DataTable> GetTeamMembersAsync(int tenantId, int teamId)

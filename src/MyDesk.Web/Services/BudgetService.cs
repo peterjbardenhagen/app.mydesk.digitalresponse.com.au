@@ -9,12 +9,10 @@ namespace MyDesk.Web.Services;
 public class BudgetService
 {
     private readonly DatabaseService _db;
-    private readonly ComplianceAuditService _audit;
 
-    public BudgetService(DatabaseService db, ComplianceAuditService audit)
+    public BudgetService(DatabaseService db)
     {
         _db = db;
-        _audit = audit;
     }
 
     public async Task<DataRow?> GetBudgetAsync(int tenantId, int departmentId, int fiscalYear)
@@ -61,15 +59,6 @@ public class BudgetService
 
         int budgetId = (int)dtId.Rows[0]["Id"];
 
-        await _audit.LogAsync("BudgetCreated", "System", new
-        {
-            tenantId,
-            departmentId,
-            fiscalYear,
-            allocatedAmount,
-            allowOverspend
-        });
-
         return budgetId;
     }
 
@@ -101,15 +90,6 @@ public class BudgetService
                 ["DepartmentId"] = departmentId,
                 ["FiscalYear"] = fiscalYear
             });
-
-        await _audit.LogAsync("BudgetExpenseAdded", "System", new
-        {
-            tenantId,
-            departmentId,
-            fiscalYear,
-            amount,
-            category
-        });
     }
 
     public async Task EncumberAmountAsync(int tenantId, int departmentId, int fiscalYear, decimal amount)

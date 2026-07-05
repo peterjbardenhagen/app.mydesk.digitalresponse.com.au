@@ -10,12 +10,10 @@ namespace MyDesk.Web.Services;
 public class ApprovalDelegationService
 {
     private readonly DatabaseService _db;
-    private readonly ComplianceAuditService _audit;
 
-    public ApprovalDelegationService(DatabaseService db, ComplianceAuditService audit)
+    public ApprovalDelegationService(DatabaseService db)
     {
         _db = db;
-        _audit = audit;
     }
 
     public async Task<int> CreateDelegationAsync(int tenantId, int fromUserId, int toUserId,
@@ -56,18 +54,6 @@ public class ApprovalDelegationService
             new() { ["TenantId"] = tenantId });
 
         int delegationId = (int)dtId.Rows[0]["Id"];
-
-        await _audit.LogAsync("DelegationCreated", "System", new
-        {
-            tenantId,
-            delegationId,
-            fromUserId,
-            toUserId,
-            teamId,
-            moduleType,
-            startDate,
-            endDate
-        });
 
         return delegationId;
     }
@@ -181,12 +167,6 @@ public class ApprovalDelegationService
                 ["TenantId"] = tenantId,
                 ["DelegationId"] = delegationId
             });
-
-        await _audit.LogAsync("DelegationDeactivated", "System", new
-        {
-            tenantId,
-            delegationId
-        });
     }
 
     public async Task<List<int>> ResolveApprovalChainAsync(int tenantId, int userId, string? moduleType = null)

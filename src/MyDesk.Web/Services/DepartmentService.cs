@@ -10,12 +10,10 @@ namespace MyDesk.Web.Services;
 public class DepartmentService
 {
     private readonly DatabaseService _db;
-    private readonly ComplianceAuditService _audit;
 
-    public DepartmentService(DatabaseService db, ComplianceAuditService audit)
+    public DepartmentService(DatabaseService db)
     {
         _db = db;
-        _audit = audit;
     }
 
     public async Task<DataTable> GetDepartmentsAsync(int tenantId)
@@ -66,15 +64,6 @@ public class DepartmentService
 
         int deptId = (int)dtId.Rows[0]["Id"];
 
-        await _audit.LogAsync("DepartmentCreated", "System", new
-        {
-            tenantId,
-            departmentId = deptId,
-            departmentName = name,
-            parentId = parentDepartmentId,
-            managerId = managerUserId
-        });
-
         return deptId;
     }
 
@@ -101,15 +90,6 @@ public class DepartmentService
                 ["TenantId"] = tenantId,
                 ["DepartmentId"] = departmentId
             });
-
-        await _audit.LogAsync("DepartmentUpdated", "System", new
-        {
-            tenantId,
-            departmentId,
-            name,
-            managerUserId,
-            status
-        });
     }
 
     public async Task<List<int>> GetChildDepartmentsAsync(int tenantId, int parentDepartmentId)
