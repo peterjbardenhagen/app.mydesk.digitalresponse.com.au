@@ -991,12 +991,6 @@ app.MapPost("/api/auth/reset-password", async (HttpContext ctx, UserService user
     }
 }).RequireRateLimiting("resetPassword");
 
-public class ResetPasswordRequest
-{
-    public string Token { get; set; } = string.Empty;
-    public string NewPassword { get; set; } = string.Empty;
-}
-
 // ── PDF Download endpoints (authenticated — uses existing session cookie) ──────
 app.MapGet("/api/pdf/quote/{id:int}", async (int id, PdfService pdfSvc) =>
 {
@@ -2114,6 +2108,13 @@ app.MapGet("/quotes/{id:int}/action/{action}", async (int id, string action, Quo
 });
 
 app.Run();
+
+/// <summary>Body model for POST /api/auth/reset-password.</summary>
+public class ResetPasswordRequest
+{
+    public string Token { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
+}
 
 /// <summary>Body model for POST /api/auth/mobile/login.</summary>
 public record MobileLoginRequest(string Login, string Password);
