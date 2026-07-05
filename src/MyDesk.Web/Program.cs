@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using System.Data;
 using Microsoft.Extensions.Caching.Memory;
 using Serilog;
 using Serilog.Events;
