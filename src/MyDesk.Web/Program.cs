@@ -2219,7 +2219,7 @@ app.MapGet("/api/mobile/cashflow", async (HttpContext ctx, DatabaseService db) =
             date = ((DateTime)row["ForecastDate"]).ToString("yyyy-MM-dd"),
             projectedIncoming = row["ProjectedIncoming"] != DBNull.Value ? (decimal)row["ProjectedIncoming"] : 0,
             projectedOutgoing = row["ProjectedOutgoing"] != DBNull.Value ? (decimal)row["ProjectedOutgoing"] : 0,
-            cashPosition = row["CashPosition"] != DBNull.Value ? (decimal)row["CashPosition"] : null
+            cashPosition = row["CashPosition"] != DBNull.Value ? (decimal?)row["CashPosition"] : null
         });
     }
     return Results.Ok(new { forecast, weeks = forecast.Count });
