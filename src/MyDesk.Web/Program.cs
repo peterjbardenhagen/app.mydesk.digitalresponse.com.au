@@ -3313,7 +3313,7 @@ app.MapGet("/api/tenant/resolve-domain", async (string emailDomain, DatabaseServ
     });
 })
 .WithName("ResolveDomain")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .AllowAnonymous();  // Allow before authentication for login flow
 
 // GET /api/tenant/verify-domain-status - Check verification status
@@ -3344,7 +3344,7 @@ app.MapGet("/api/tenant/verify-domain-status", async (string domain, DatabaseSer
     });
 })
 .WithName("VerifyDomainStatus")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .AllowAnonymous();
 
 // POST /api/tenant/add-domain - Admin: Add new domain for their tenant (requires auth)
@@ -3409,7 +3409,7 @@ app.MapPost("/api/tenant/add-domain", async (HttpContext ctx, AddDomainRequest b
     }
 })
 .WithName("AddDomain")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // POST /api/tenant/verify-domain - Verify domain ownership via DNS TXT record
@@ -3475,7 +3475,7 @@ app.MapPost("/api/tenant/verify-domain", async (HttpContext ctx, VerifyDomainReq
     }
 })
 .WithName("VerifyDomain")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .AllowAnonymous();  // Allow domain verification without auth for initial setup
 
 // GET /api/tenant/domains - Admin: List all domains for current tenant
@@ -3505,7 +3505,7 @@ app.MapGet("/api/tenant/domains", async (HttpContext ctx, DatabaseService db) =>
     return Results.Ok(new { domains, count = domains.Count });
 })
 .WithName("ListDomains")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // DELETE /api/tenant/domains/{id} - Admin: Remove domain from tenant
@@ -3547,7 +3547,7 @@ app.MapDelete("/api/tenant/domains/{id:int}", async (int id, HttpContext ctx, Da
     }
 })
 .WithName("RemoveDomain")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // ── Approval Permissions Management (Phase 1 Week 2) ──────────────────────────────────────
@@ -3620,7 +3620,7 @@ app.MapPost("/api/approval/permissions", async (HttpContext ctx, CreateApprovalP
     }
 })
 .WithName("CreateApprovalPermission")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // GET /api/approval/permissions - Admin: List permissions for tenant
@@ -3666,7 +3666,7 @@ app.MapGet("/api/approval/permissions", async (HttpContext ctx, DatabaseService 
     return Results.Ok(new { permissions, count = permissions.Count });
 })
 .WithName("ListApprovalPermissions")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // PUT /api/approval/permissions/{id} - Admin: Update permission
@@ -3743,7 +3743,7 @@ app.MapPut("/api/approval/permissions/{id:int}", async (int id, HttpContext ctx,
     }
 })
 .WithName("UpdateApprovalPermission")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // DELETE /api/approval/permissions/{id} - Admin: Revoke permission
@@ -3791,7 +3791,7 @@ app.MapDelete("/api/approval/permissions/{id:int}", async (int id, HttpContext c
     }
 })
 .WithName("RevokeApprovalPermission")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // POST /api/approval/check-permission - Check if current user has approval authority
@@ -3848,7 +3848,7 @@ app.MapPost("/api/approval/check-permission", async (HttpContext ctx, CheckAppro
     });
 })
 .WithName("CheckApprovalPermission")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // ── Compliance Audit Logging (Phase 1 Week 3) ────────────────────────────────────────
@@ -3907,7 +3907,7 @@ app.MapGet("/api/compliance/audit-log", async (HttpContext ctx, DatabaseService 
     });
 })
 .WithName("GetAuditLog")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // GET /api/compliance/audit-log/entity/{entityType}/{entityId} - View audit history for specific entity
@@ -3951,7 +3951,7 @@ app.MapGet("/api/compliance/audit-log/entity/{entityType}/{entityId:int}", async
     return Results.Ok(new { entity = $"{entityType}#{entityId}", history });
 })
 .WithName("GetEntityAuditHistory")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // GET /api/compliance/security-events - View security events (admin only)
@@ -4003,7 +4003,7 @@ app.MapGet("/api/compliance/security-events", async (HttpContext ctx, DatabaseSe
     return Results.Ok(new { events, count = events.Count });
 })
 .WithName("GetSecurityEvents")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // POST /api/compliance/security-events - Admin: Record security event
@@ -4047,7 +4047,7 @@ app.MapPost("/api/compliance/security-events", async (HttpContext ctx, RecordSec
     }
 })
 .WithName("RecordSecurityEvent")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // PUT /api/compliance/security-events/{id} - Admin: Investigate security event
@@ -4089,7 +4089,7 @@ app.MapPut("/api/compliance/security-events/{id:int}", async (int id, HttpContex
     }
 })
 .WithName("InvestigateSecurityEvent")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // ── Rate Limiting Management (Phase 1 Week 4) ────────────────────────────────────────
@@ -4144,7 +4144,7 @@ app.MapGet("/api/security/rate-limiting/violations", async (HttpContext ctx, Dat
     });
 })
 .WithName("GetRateLimitViolations")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // PUT /api/security/rate-limiting/violations/{id}/unblock - Admin: Unblock IP/User
@@ -4178,7 +4178,7 @@ app.MapPut("/api/security/rate-limiting/violations/{id:int}/unblock", async (int
     }
 })
 .WithName("UnblockRateLimitViolation")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // ── Product Admin Module (Phase 2 Weeks 5-6) ────────────────────────────────────────
@@ -4244,7 +4244,7 @@ app.MapGet("/api/product-admin/clients", async (HttpContext ctx, DatabaseService
     });
 })
 .WithName("ListClients")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // GET /api/product-admin/clients/{tenantId}/billing - View client billing configuration
@@ -4275,7 +4275,7 @@ app.MapGet("/api/product-admin/clients/{tenantId:int}/billing", async (int tenan
     });
 })
 .WithName("GetClientBillingConfig")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // POST /api/product-admin/clients/{tenantId}/billing - Update client billing configuration
@@ -4374,7 +4374,7 @@ app.MapPost("/api/product-admin/clients/{tenantId:int}/billing", async (int tena
     }
 })
 .WithName("UpdateBillingConfig")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // GET /api/product-admin/invoices - List all invoices (with optional filtering)
@@ -4441,7 +4441,7 @@ app.MapGet("/api/product-admin/invoices", async (HttpContext ctx, DatabaseServic
     });
 })
 .WithName("ListInvoices")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // GET /api/product-admin/invoices/{invoiceId} - Get invoice details
@@ -4484,7 +4484,7 @@ app.MapGet("/api/product-admin/invoices/{invoiceId:int}", async (int invoiceId, 
     });
 })
 .WithName("GetInvoiceDetails")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // PUT /api/product-admin/invoices/{invoiceId}/mark-paid - Mark invoice as paid
@@ -4519,7 +4519,7 @@ app.MapPut("/api/product-admin/invoices/{invoiceId:int}/mark-paid", async (int i
     }
 })
 .WithName("MarkInvoicePaid")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // ── Client Onboarding Wizard (Phase 2 Weeks 7-8) ────────────────────────────────────────
@@ -4567,7 +4567,7 @@ app.MapPost("/api/product-admin/onboarding/start", async (HttpContext ctx, Start
     }
 })
 .WithName("StartOnboarding")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // GET /api/product-admin/onboarding/{sessionToken} - Get wizard session state
@@ -4602,7 +4602,7 @@ app.MapGet("/api/product-admin/onboarding/{sessionToken}", async (string session
     });
 })
 .WithName("GetOnboardingSession")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // POST /api/product-admin/onboarding/{sessionToken}/steps/{step} - Submit step data
@@ -4695,7 +4695,7 @@ app.MapPost("/api/product-admin/onboarding/{sessionToken}/steps/{step:int}",
     }
 })
 .WithName("SubmitOnboardingStep")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // POST /api/product-admin/onboarding/{sessionToken}/complete - Complete wizard and create tenant
@@ -4814,7 +4814,7 @@ app.MapPost("/api/product-admin/onboarding/{sessionToken}/complete", async (stri
     }
 })
 .WithName("CompleteOnboarding")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // ── User Profile Photos (New Feature) ────────────────────────────────────────
@@ -4868,7 +4868,7 @@ app.MapGet("/api/user/profile", async (HttpContext ctx, DatabaseService db) =>
     }
 })
 .WithName("GetUserProfile")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // POST /api/user/profile/photo/upload - Upload and crop photo
@@ -4949,7 +4949,7 @@ app.MapPost("/api/user/profile/photo/upload", async (HttpContext ctx, DatabaseSe
     }
 })
 .WithName("UploadUserPhoto")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization()
 .DisableAntiforgery();
 */
@@ -5002,7 +5002,7 @@ app.MapDelete("/api/user/profile/photo", async (HttpContext ctx, DatabaseService
     }
 })
 .WithName("DeleteUserPhoto")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // ── Expense Receipt Photos (New Feature) ──────────────────────────────────────
@@ -5117,7 +5117,7 @@ app.MapPost("/api/expenses/{expenseId:int}/receipt/upload", async (int expenseId
     }
 })
 .WithName("UploadExpenseReceipt")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization()
 .DisableAntiforgery();
 */
@@ -5182,7 +5182,7 @@ app.MapGet("/api/expenses/{expenseId:int}/receipt", async (int expenseId, HttpCo
     }
 })
 .WithName("GetExpenseReceipt")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // ── Notifications System (Phase 3) ────────────────────────────────────────────
@@ -5236,7 +5236,7 @@ app.MapGet("/api/notifications", async (HttpContext ctx, DatabaseService db) =>
     }
 })
 .WithName("GetNotifications")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // POST /api/notifications/{notificationId}/read - Mark as read
@@ -5269,7 +5269,7 @@ app.MapPost("/api/notifications/{notificationId:int}/read", async (int notificat
     }
 })
 .WithName("MarkNotificationAsRead")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // POST /api/notifications/read-all - Mark all as read
@@ -5300,7 +5300,7 @@ app.MapPost("/api/notifications/read-all", async (HttpContext ctx, DatabaseServi
     }
 })
 .WithName("MarkAllNotificationsAsRead")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // GET /api/notifications/preferences - Get notification preferences
@@ -5345,7 +5345,7 @@ app.MapGet("/api/notifications/preferences", async (HttpContext ctx, DatabaseSer
     }
 })
 .WithName("GetNotificationPreferences")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // PUT /api/notifications/preferences - Update preferences
@@ -5395,7 +5395,7 @@ app.MapPut("/api/notifications/preferences", async (HttpContext ctx, UpdateNotif
     }
 })
 .WithName("UpdateNotificationPreferences")
-.WithOpenApi()
+// .WithOpenApi()  // DISABLED - method not available
 .RequireAuthorization();
 
 // Phase 4 API endpoints and DTOs temporarily disabled for debugging CI
