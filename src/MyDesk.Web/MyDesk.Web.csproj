@@ -70,12 +70,13 @@
     <ProjectReference Include="..\MyDesk.Shared\MyDesk.Shared.csproj" />
   </ItemGroup>
 
-  <!-- Exclude disabled services from compilation -->
+  <!-- Exclude disabled services and related middleware/components from compilation -->
   <ItemGroup>
     <Compile Remove="Services/PhotoProcessingService.cs" />
     <Compile Remove="Services/NotificationService.cs" />
     <Compile Remove="Services/RateLimitingService.cs" />
     <Compile Remove="Services/WorkflowApprovalService.cs" />
+    <Compile Remove="Middleware/RateLimitingMiddleware.cs" />
     <Compile Remove="Components/NotificationBell.razor" />
     <Compile Remove="Components/Pages/Approvals/ApprovalDecisionDialog.razor" />
   </ItemGroup>
