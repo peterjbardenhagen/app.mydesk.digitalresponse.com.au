@@ -25,33 +25,35 @@ using Microsoft.Extensions.Caching.Memory;
 using Serilog;
 using Serilog.Events;
 
+namespace MyDesk.Web;
+
 // =============================================================================
 // REQUEST/RESPONSE CLASSES (Declared before top-level statements so endpoints
 // can use them in lambda signatures)
 // =============================================================================
 
-public class ResetPasswordRequest
+class ResetPasswordRequest
 {
     public string Token { get; set; } = string.Empty;
     public string NewPassword { get; set; } = string.Empty;
 }
 
-public record MobileLoginRequest(string Login, string Password);
+record MobileLoginRequest(string Login, string Password);
 
-public record DeskyChatRequest(
+record DeskyChatRequest(
     string Message,
     string? Brand = null,
     List<DeskyChatMessage>? History = null);
 
-public record DeskyChatMessage(string Role, string Content);
+record DeskyChatMessage(string Role, string Content);
 
-public record EmailRequest(
+record EmailRequest(
     string To,
     string? Subject    = null,
     string? Message    = null,
     bool    AttachPdf  = true);
 
-public record PatCreateRequest(
+record PatCreateRequest(
     string  Name,
     string? Scopes     = null,
     int?    ExpiryDays = null);
