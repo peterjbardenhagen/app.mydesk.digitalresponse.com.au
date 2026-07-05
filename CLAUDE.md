@@ -254,6 +254,121 @@ Then create PR via GitHub UI:
 
 ---
 
+## Agent Development Guidelines (2026-Standard)
+
+### Agentic Architecture Principles
+
+MyDesk uses Orchestrator-Worker agentic patterns. Follow these guidelines when developing agents:
+
+**1. Stateless Worker Design**
+```csharp
+// ✅ GOOD: Worker is stateless, receives complete payload
+public class ApprovalWorkflowWorker
+{
+    public async Task<ApprovalResult> ProcessAsync(ApprovalRequest request, UserContext context)
+    {
+        // All state passed in request
+        // No instance variables retained between calls
+        // Can scale horizontally
+    }
+}
+
+// ❌ BAD: Worker retains state between invocations
+public class ApprovalWorkflowWorker
+{
+    private ApprovalRequest _currentRequest; // DON'T DO THIS
+    
+    public async Task<ApprovalResult> ProcessAsync(ApprovalRequest request)
+    {
+        _currentRequest = request; // Shared state causes bugs
+    }
+}
+```
+
+**2. Structured Hand-Offs Between Workers**
+```csharp
+// Define clear JSON schema for hand-offs
+public class NotificationHandoff
+{
+    public int[] ApproverIds { get; set; }
+    public string EventType { get; set; }
+    public Expense Expense { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+// Worker receiving hand-off validates schema
+public async Task SendAsync(NotificationHandoff payload, UserContext context)
+{
+    if (payload?.ApproverIds?.Length == 0)
+        throw new ArgumentException("ApproverIds required");
+    
+    // Process with confidence
+}
+```
+
+**3. PII Filtering Before Agent Processing**
+```csharp
+// Always filter before sending to agents
+var filteredDescription = _piiService.FilterPii(expense.Description);
+var filteredBody = _piiService.FilterPii(emailBody);
+
+// Then pass to agent
+await _notificationWorker.SendAsync(new { Description = filteredDescription }, context);
+```
+
+**4. Auth Middleware for All Agent Calls**
+```csharp
+// Never call agent API directly without auth validation
+// Always route through backend middleware
+
+// ✅ GOOD: Backend validates tenant_id, then calls agent
+[Authorize]
+[HttpPost("expenses/{id}/submit")]
+public async Task<IActionResult> SubmitAsync(int id)
+{
+    var tenantId = User.FindFirst("tenant_id")?.Value;
+    var result = await _orchestrator.RouteAsync("expense_submitted", context, payload);
+    return Ok(result);
+}
+
+// ❌ BAD: Client calls agent API directly
+// var result = await _claudeApiClient.InvokeAsync(payload); // NO!
+```
+
+**5. Memory Management for Long Conversations**
+```csharp
+// Use Archivist agent to compress when exceeding token threshold
+if (conversationLength > TokenThreshold)
+{
+    var summary = await _archiverAgent.SummarizeAsync(conversationHistory);
+    conversationHistory = new { summary, recentMessages = Last5(conversationHistory) };
+}
+```
+
+**6. Logging Every Agent Invocation**
+```csharp
+// Log to ComplianceAuditLog for audit trail
+await _auditService.LogAsync("AgentInvoked", "System", new
+{
+    agent = "ApprovalWorkflowWorker",
+    intent = "approval_requested",
+    tenantId,
+    userId,
+    timestamp = DateTime.UtcNow
+});
+```
+
+### Agentic Patterns Reference
+
+| Pattern | When to Use | Example |
+|---------|-------------|---------|
+| **Router** | Classify intent into worker type | Determine "approval" vs. "notification" vs. "integration" |
+| **Planner-Executor** | Multi-step workflow | Approval chain: validate → route → escalate → notify |
+| **Critic/Verifier** | High-stakes validation | Check PII filtering, verify approver permissions, validate output |
+| **Summarizer** | Prevent token explosion | Compress audit logs after 10k tokens |
+
+---
+
 ## Coding Standards
 
 ### C# Code Style

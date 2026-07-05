@@ -1,6 +1,6 @@
 # MyDesk Implementation Agents
 
-**Version:** 1.0  
+**Version:** 2.0  
 **Last Updated:** July 2026  
 **Target Audience:** AI agents, developers, implementation teams
 
@@ -8,14 +8,211 @@
 
 ## Overview
 
-This document describes the specialized implementation agents responsible for building and maintaining MyDesk. Each agent is designed to focus on specific areas of the application while maintaining consistency with the enterprise architecture, solution architecture, product requirements, and product strategy.
+This document describes the specialized implementation agents responsible for building and maintaining MyDesk using 2026-standard Orchestrator-Worker agentic patterns. MyDesk uses a distributed agent architecture to manage complexity, avoid monolithic single-agent bottlenecks, and maintain security, memory efficiency, and audit compliance across multi-tenant approval workflows and integrations.
+
+**Key Architectural Pattern:** Orchestrator-Worker (Manager delegates to stateless task agents via structured hand-offs)
 
 **See also:**
 - **Enterprise Architecture:** `ENTERPRISE-ARCHITECTURE.md` - System principles, deployment architecture, security model, compliance framework
-- **Solution Architecture:** `SOLUTION-ARCHITECTURE.md` - Technical design, API patterns, database schema, development workflow
+- **Solution Architecture:** `SOLUTION-ARCHITECTURE.md` - Technical design, API patterns, database schema, development workflow, agentic patterns
 - **Product Requirements:** `PRODUCT-REQUIREMENTS.md` - Feature specifications, acceptance criteria, data requirements
 - **Product Strategy:** `PRODUCT-STRATEGY.md` - Market positioning, go-to-market, roadmap, financial projections
-- **Development Guide:** `CLAUDE.md` - Local setup, build instructions, development best practices
+- **Development Guide:** `CLAUDE.md` - Local setup, build instructions, development best practices, agent development guidelines
+
+---
+
+## Agentic Architecture Overview
+
+### The Orchestrator-Worker Pattern
+
+MyDesk implements a **distributed agentic architecture** to handle complex workflows safely and efficiently:
+
+```
+User Request (Expense Submitted)
+        ↓
+┌─────────────────────────────────────────┐
+│  Orchestrator Agent (Manager)           │
+│  - Receives intent: "ApprovalRequested" │
+│  - Routes to correct worker agent       │
+│  - Maintains conversation memory        │
+│  - Verifies worker output               │
+└─────────────────────────────────────────┘
+        ↓
+┌──────────────────┬──────────────────┬──────────────────┐
+│ Approval Worker  │ Notification     │ Integration      │
+│ - Validate       │ Worker           │ Worker (Future)  │
+│   thresholds     │ - Draft emails   │ - Outlook sync   │
+│ - Route to       │ - Queue SMS      │ - OneDrive scan  │
+│   approvers      │ - Render HTML    │ - Xero mapping   │
+│ - Check perms    │ - Track delivery │ - MYOB export    │
+└──────────────────┴──────────────────┴──────────────────┘
+```
+
+### Key Agentic Patterns Used in MyDesk
+
+| Pattern | Implementation | Use Case |
+|---------|----------------|----------|
+| **Router** | Logic-based (not LLM) intent classifier | Determine which worker handles request (approval? notification? integration?) |
+| **Planner-Executor** | Approval workflow as multi-step sequence | Multi-approver chains with escalation |
+| **Critic/Verifier** | Security and compliance gates | Validate PII before sending notifications, verify approver permissions |
+| **Summarizer** | Background "Archivist" agent | Compress audit logs, cache frequently accessed data |
+
+---
+
+## Agent Architecture & Responsibilities
+
+---
+
+---
+
+## Security & Memory Management for Agents
+
+### PII Filtering (Day 5 Implementation)
+
+Before any agent processes user data, apply PII sanitization:
+
+```csharp
+public class PiiFilterService
+{
+    // Regex patterns for PII detection
+    private static readonly Regex EmailRegex = new(@"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}");
+    private static readonly Regex PhoneRegex = new(@"\b(\+61|0)[0-9\s\-\.]{7,}\b");
+    private static readonly Regex ABNRegex = new(@"\b[0-9]{11}\b");
+    
+    public string FilterPii(string text, string context = "general")
+    {
+        // Strip PII before sending to LLM agents
+        text = EmailRegex.Replace(text, "[EMAIL_REDACTED]");
+        text = PhoneRegex.Replace(text, "[PHONE_REDACTED]");
+        text = ABNRegex.Replace(text, "[ABN_REDACTED]");
+        
+        // Log PII removal to audit trail (for compliance)
+        _auditService.LogAsync("PiiFiltered", context, text);
+        
+        return text;
+    }
+}
+```
+
+**Applied to:**
+- Expense descriptions before sending to Approval Worker
+- Email bodies before sending to Notification Worker
+- File contents before sending to Integration Worker (OneDrive)
+
+### Auth Middleware (Day 5 Implementation)
+
+All agent calls routed through backend auth:
+
+```csharp
+app.Use(async (context, next) =>
+{
+    // Verify tenant_id claim
+    var tenantId = context.User.FindFirst("tenant_id")?.Value;
+    if (string.IsNullOrEmpty(tenantId))
+    {
+        context.Response.StatusCode = 401;
+        await context.Response.WriteAsync("Unauthorized: Missing tenant_id");
+        return;
+    }
+    
+    // All agent invocations logged to ComplianceAuditLog
+    var agentRequest = new { agent = context.Request.Path, tenantId, timestamp = DateTime.UtcNow };
+    await _auditService.LogAsync("AgentInvoked", "System", agentRequest);
+    
+    await next();
+});
+```
+
+**Never:** Have client call LLM API directly with raw keys
+**Always:** Route through backend to enable token logging and PII filtering
+
+### Memory Management (Day 4 Implementation)
+
+Implement "Summarizer Agent" to prevent token explosion:
+
+```csharp
+public class ArchiverAgent
+{
+    private const int TokenThreshold = 10000;
+    
+    public async Task<string> SummarizeConversationAsync(string conversationHistory)
+    {
+        if (CountTokens(conversationHistory) < TokenThreshold)
+            return conversationHistory; // No compression needed yet
+        
+        // Invoke "Archivist" worker to summarize
+        var summary = await _summarizerWorker.SummarizeAsync(conversationHistory);
+        
+        // Store summary + recent messages (last 5) in context
+        var compressedState = new
+        {
+            summary = summary,
+            recentMessages = conversationHistory.Split('\n').TakeLast(5),
+            originalLength = conversationHistory.Length,
+            compressedAt = DateTime.UtcNow
+        };
+        
+        // Cache in Redis for fast retrieval
+        await _cache.SetAsync($"agent_state:{approvalId}", compressedState, TimeSpan.FromHours(24));
+        
+        return JsonSerializer.Serialize(compressedState);
+    }
+}
+```
+
+---
+
+## Orchestrator Agent (System Router)
+
+**Agentic Role:** Manager/Orchestrator—receives all user intents, routes to appropriate workers, verifies worker output before returning to client.
+
+**Responsibility:** Intent classification and routing, memory management, security validation.
+
+**Implementation:** Logic-based router (not LLM-based) to minimize latency and cost.
+
+```csharp
+public class OrchestratorAgent
+{
+    public async Task<ApiResponse> RouteAsync(string intent, UserContext user, object payload)
+    {
+        // Step 1: Classify intent (Router pattern)
+        var classification = ClassifyIntent(intent);
+        
+        // Step 2: Validate security (Critic pattern)
+        ValidateUserPermissions(user, classification);
+        
+        // Step 3: Route to appropriate worker (stateless hand-off)
+        var workerResult = classification.Type switch
+        {
+            "approval_requested" => await _approvalWorker.ProcessAsync(payload, user),
+            "notification_trigger" => await _notificationWorker.ProcessAsync(payload, user),
+            "integration_sync" => await _integrationWorker.ProcessAsync(payload, user),
+            _ => throw new InvalidOperationException($"Unknown intent: {intent}")
+        };
+        
+        // Step 4: Verify output (Critic pattern)
+        VerifyWorkerOutput(workerResult, classification);
+        
+        // Step 5: Return to client
+        return new ApiResponse { Success = true, Data = workerResult };
+    }
+    
+    private void ValidateUserPermissions(UserContext user, ClassificationResult classification)
+    {
+        // Ensure user has permission for this action
+        // E.g., can user submit expense? Can user approve?
+        if (!user.Roles.Contains(classification.RequiredRole))
+            throw new UnauthorizedAccessException($"User lacks {classification.RequiredRole} role");
+    }
+}
+```
+
+**Intent Types Handled:**
+- `approval_requested` → Approval Workflow Worker
+- `notification_trigger` → Notification Service Worker
+- `integration_sync` → Integration Worker (future)
+- `user_profile_update` → Photo Processing Worker
+- `expense_submitted` → Expense Management + Approval Workflow Workers (chain)
 
 ---
 
@@ -83,23 +280,30 @@ This document describes the specialized implementation agents responsible for bu
 
 ---
 
-### 3. Approval Workflow Agent
+### 3. Approval Workflow Agent (Worker)
+
+**Agentic Role:** Worker agent—stateless, handles approval chain logic, invoked by Orchestrator.
 
 **Responsibility:** Implement approval request creation, approval actions, escalation, delegation, and audit tracking.
 
 **Reference Documents:**
-- SOLUTION-ARCHITECTURE.md § Event-Driven Workflows
+- SOLUTION-ARCHITECTURE.md § Event-Driven Workflows, Agentic Patterns
 - ENTERPRISE-ARCHITECTURE.md § Segregation of Duties, Multi-Level Approvals
 - PRODUCT-REQUIREMENTS.md § Phase 2 & 4 (Approvals, Hierarchies)
 
+**Agentic Patterns Used:**
+- **Planner-Executor:** Multi-step workflow (validate → route → escalate → notify)
+- **Critic/Verifier:** Validate approver permissions before executing
+- **Router:** Determine approval chain based on amount, category, department
+
 **Key Tasks:**
 - Create ApprovalRequest for each eligible approver
-- Validate approver authority (threshold, department, category)
+- Validate approver authority (threshold, department, category) via permission gate
 - Approval action (approve/reject) with optional comment
 - Check if all approvals complete
-- Escalation if pending > 3 days (Phase 4)
-- Delegation to deputy for out-of-office (Phase 4)
-- Notification trigger after approval decision
+- Escalation if pending > 3 days (Phase 4) via Planner-Executor
+- Delegation to deputy for out-of-office (Phase 4) with audit trail
+- Trigger Notification Worker after approval decision (structured hand-off)
 
 **Code Locations:**
 - Controllers: `src/MyDesk.Web/Controllers/ApprovalController.cs`
@@ -115,22 +319,30 @@ This document describes the specialized implementation agents responsible for bu
 
 ---
 
-### 4. Notification Service Agent
+### 4. Notification Service Agent (Worker)
+
+**Agentic Role:** Worker agent—stateless, receives notification hand-off from Approval Workflow Worker, invokes independently.
 
 **Responsibility:** Implement multi-channel notification delivery (Email, SMS, In-App), preference management, template substitution, and delivery queue management.
 
 **Reference Documents:**
-- SOLUTION-ARCHITECTURE.md § Notification Queue Pattern
+- SOLUTION-ARCHITECTURE.md § Notification Queue Pattern, Agentic Patterns
 - PRODUCT-REQUIREMENTS.md § Phase 3 & Preferences
 - ENTERPRISE-ARCHITECTURE.md § Notifications & Communication
 
+**Agentic Patterns Used:**
+- **Critic/Verifier:** Validate PII filtering before sending emails (regex + local model)
+- **Executor:** Queue delivery and handle async retries with exponential backoff
+- **Router:** Determine delivery channels based on user preferences and event type
+
 **Key Tasks:**
-- Send email notifications via SendGrid
+- PII filter (email bodies, expense descriptions) before sending
+- Send email notifications via SendGrid with template substitution
 - Send in-app notifications with unread counting
 - Template substitution ({{ApproverName}}, {{Amount}}, etc.)
 - Respect user preferences (opt-out, quiet hours, digest frequency)
-- Queue management with retry logic
-- Delivery status tracking and failure handling
+- Queue management with retry logic (1s, 2s, 4s, 8s, 16s exponential backoff)
+- Delivery status tracking and failure handling (log to NotificationLog)
 
 **Code Locations:**
 - Services: `src/MyDesk.Web/Services/NotificationService.cs`
@@ -501,20 +713,156 @@ This document describes the specialized implementation agents responsible for bu
 
 ---
 
-## Agent Collaboration Matrix
+## Agent Collaboration Matrix (Orchestrator-Worker Pattern)
 
-| Agent | Depends On | Feeds Into | Sync Frequency |
-|-------|-----------|-----------|-----------------|
-| Auth Agent | Database Agent | All Services | Weekly |
-| Expense Agent | Auth, Approval, Notification | Dashboard | Weekly |
-| Approval Agent | Auth, Database | Notification, Expense | Weekly |
-| Notification Agent | All Services | None (broadcast) | Daily |
-| Photo Agent | Expense Agent | Blob Storage | On-demand |
-| Components Agent | All Services | Deployment | Weekly |
-| Dashboard Agent | Expense, Approval | None | Weekly |
-| Database Agent | Requirements | All Agents | As-needed |
-| DevOps Agent | All Agents | Infrastructure | Weekly |
-| QA Agent | All Services | Deployment | Weekly |
+**Data Flow:**
+```
+Orchestrator (Router + Intent Classifier)
+├── Auth Agent (validate user permissions)
+├── Approval Workflow Worker (handle approval chain)
+│   └── Notification Service Worker (send notifications)
+├── Photo Processing Worker (process images)
+├── Integration Worker (future: Outlook, OneDrive, Xero)
+└── Dashboard Agent (aggregate and display)
+```
+
+| Role | Agent | Orchestrator | Workers It Invokes | Async/Blocking |
+|------|-------|--------------|-------------------|-----------------|
+| Orchestrator | System Router | Yes | Auth, Approval, Notification, Photo, Integration | Non-blocking (routes & verifies) |
+| Worker | Approval Workflow | No | Structured hand-off to Notification | Non-blocking (uses background jobs) |
+| Worker | Notification Service | No | SendGrid, database | Async (queue-based) |
+| Worker | Photo Processing | No | Blob storage | Non-blocking (background job) |
+| Worker | Integration (Future) | No | External APIs (Outlook, OneDrive) | Async (with retry logic) |
+| Support | Dashboard Agent | No | Database queries | Async (aggregation) |
+
+---
+
+## UI/UX Patterns: Async Agent Operations (2026 Standard)
+
+### The "Thinking..." State Pattern
+
+When an agent is processing (approval routing, notification queuing, etc.), **never block the UI**. Show async state:
+
+**Blazor Component Example:**
+```razor
+@page "/expenses/{expenseId}/submit"
+@using MyDesk.Web.Services
+@inject OrchestratorAgent Orchestrator
+
+<MudCard>
+    <h3>Submit Expense</h3>
+    
+    @if (isSubmitting)
+    {
+        <MudProgressLinear Indeterminate="true" />
+        <p>Routing to approvers... <i class="fas fa-spinner fa-spin"></i></p>
+    }
+    else if (submissionComplete)
+    {
+        <MudAlert Severity="Success">
+            Submitted to {{ApprovalChain}} for review
+        </MudAlert>
+    }
+    else
+    {
+        <MudButton OnClick="SubmitAsync" Variant="Variant.Filled">Submit</MudButton>
+    }
+</MudCard>
+
+@code {
+    private bool isSubmitting = false;
+    private bool submissionComplete = false;
+    
+    private async Task SubmitAsync()
+    {
+        isSubmitting = true;
+        
+        // Invoke orchestrator WITHOUT awaiting synchronously
+        // Use background task so UI remains responsive
+        var task = Orchestrator.RouteAsync("expense_submitted", userContext, expensePayload);
+        
+        try
+        {
+            await task; // Wait for result, but don't block rendering
+            submissionComplete = true;
+        }
+        catch (Exception ex)
+        {
+            MudSnackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}
+```
+
+**Android/Compose Example:**
+```kotlin
+@Composable
+fun ExpenseSubmitScreen(orchestrator: OrchestratorAgent) {
+    var isSubmitting by remember { mutableStateOf(false) }
+    var submissionMessage by remember { mutableStateOf("") }
+    
+    Column {
+        if (isSubmitting) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            Text("Routing to approvers...", style = MaterialTheme.typography.bodyMedium)
+        } else {
+            Button(
+                onClick = {
+                    isSubmitting = true
+                    // Launch coroutine so UI thread remains free
+                    viewModelScope.launch {
+                        try {
+                            val result = orchestrator.routeAsync("expense_submitted", userContext, payload)
+                            submissionMessage = "Submitted to approvers for review"
+                        } catch (ex: Exception) {
+                            submissionMessage = "Error: ${ex.message}"
+                        } finally {
+                            isSubmitting = false
+                        }
+                    }
+                }
+            ) {
+                Text("Submit Expense")
+            }
+        }
+        
+        if (submissionMessage.isNotEmpty()) {
+            Text(submissionMessage, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+```
+
+### Real-Time Updates via SignalR (Future)
+
+For multi-step agent operations (e.g., multi-approver chains), push status updates to UI:
+
+```csharp
+public class ApprovalHub : Hub
+{
+    public async Task SubscribeToApprovalAsync(int approvalId)
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, $"approval_{approvalId}");
+    }
+}
+
+// In ApprovalWorkflowWorker:
+await _hubContext.Clients.Group($"approval_{approvalId}")
+    .SendAsync("ApprovalRouted", new {
+        approvalId,
+        approverId = approver.UserId,
+        approverName = approver.Name,
+        dueDate = DateTime.UtcNow.AddDays(3)
+    });
+```
+
+---
+
+## Agent Collaboration Matrix
 
 ---
 
@@ -575,5 +923,6 @@ All agents should ensure code changes meet these criteria:
 
 | Version | Date | Author | Notes |
 |---------|------|--------|-------|
+| 2.0 | 2026-07-05 | Claude | Integrated Orchestrator-Worker agentic patterns, PII filtering, auth middleware, memory management, async UI patterns, Router/Planner-Executor/Critic patterns |
 | 1.0 | 2026-07-05 | Claude | Initial agent definitions and collaboration matrix |
 
