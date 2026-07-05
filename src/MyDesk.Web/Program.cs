@@ -5405,60 +5405,11 @@ app.MapPut("/api/notifications/preferences", async (HttpContext ctx, UpdateNotif
 .WithOpenApi()
 .RequireAuthorization();
 
-// Phase 4 API endpoints temporarily disabled for debugging CI
+// Phase 4 API endpoints and DTOs temporarily disabled for debugging CI
 // TODO: Re-enable after resolving build issues
 // All services (DepartmentService, TeamService, BudgetService, ApprovalDelegationService,
 // ApprovalEscalationService, BulkUserImportService) and database schema (Migration 022)
 // are in place and ready for endpoint activation.
-
-// Phase 4 DTOs: Teams & Departments
-class CreateDepartmentRequest
-{
-    public string Name { get; set; } = "";
-    public string? Description { get; set; }
-    public int? ParentDepartmentId { get; set; }
-    public int? ManagerUserId { get; set; }
-    public string? CostCenter { get; set; }
-}
-
-class CreateTeamRequest
-{
-    public int DepartmentId { get; set; }
-    public string Name { get; set; } = "";
-    public string? Description { get; set; }
-    public int? TeamLeadUserId { get; set; }
-    public bool IsApprovalTeam { get; set; } = false;
-}
-
-class AddTeamMemberRequest
-{
-    public int UserId { get; set; }
-    public string? Role { get; set; } = "Member";
-}
-
-class CreateDelegationRequest
-{
-    public int FromUserId { get; set; }
-    public int ToUserId { get; set; }
-    public int? TeamId { get; set; }
-    public string? ModuleType { get; set; }
-    public decimal? MinThreshold { get; set; }
-    public decimal? MaxThreshold { get; set; }
-    public DateTime? StartDate { get; set; }
-    public DateTime? EndDate { get; set; }
-    public bool CanApprove { get; set; } = true;
-    public bool CanReject { get; set; } = true;
-    public bool CanDelegate { get; set; } = false;
-    public bool CanComment { get; set; } = true;
-}
-
-class CreateBudgetRequest
-{
-    public int? FiscalYear { get; set; }
-    public decimal AllocatedAmount { get; set; }
-    public bool AllowOverspend { get; set; } = false;
-    public int? ThresholdAlertPercentage { get; set; } = 80;
-}
 
 /// <summary>Body model for POST /api/auth/reset-password.</summary>
 public class ResetPasswordRequest
