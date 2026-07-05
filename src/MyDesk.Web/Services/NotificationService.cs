@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
-using MyDesk.Web.Services;
+using MyDesk.Shared.Services;
 
 namespace MyDesk.Web.Services;
 
