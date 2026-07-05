@@ -61,6 +61,8 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.0" />
     <!-- Teams / Bot Framework (M365 Agent + Tab) -->
     <PackageReference Include="Microsoft.Bot.Builder.Integration.AspNet.Core" Version="4.22.3" />
+    <!-- Image Processing (Photo and receipt processing) -->
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.2.0" />
   </ItemGroup>
 
   <ItemGroup>
