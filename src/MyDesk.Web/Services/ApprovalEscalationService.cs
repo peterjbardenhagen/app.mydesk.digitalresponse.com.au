@@ -143,46 +143,6 @@ public class ApprovalEscalationService
         };
     }
 
-    /// <summary>
-    /// Check if approver is available (no current approvals pending)
-    /// </summary>
-    public async Task<bool> IsApproverAvailableAsync(int tenantId, int userId)
-    {
-        var dt = await _db.QueryAsync(
-            @"SELECT COUNT(*) as PendingCount FROM ApprovalRequests
-              WHERE TenantId = @TenantId AND CurrentApprover = @UserId AND [Status] = 'Pending'",
-            new() { ["TenantId"] = tenantId, ["UserId"] = userId });
-
-        int pending = (int)dt.Rows[0]["PendingCount"];
-        return pending == 0;
-    }
-
-    /// <summary>
-    /// Get all pending approvals for a user (including delegations)
-    /// </summary>
-    public async Task<DataTable> GetPendingApprovalsAsync(int tenantId, int userId, bool includeDelegated = true)
-    {
-        var query = @"SELECT ar.ApprovalRequestId, ar.TenantId, ar.ModuleType, ar.ModuleId,
-                            ar.SubmittedById, ar.SubmittedAt, ar.[Status], ar.CurrentApprover,
-                            ar.CurrentLevel, u.[Name] as SubmitterName
-                     FROM ApprovalRequests ar
-                     LEFT JOIN Users u ON ar.SubmittedById = u.UserId
-                     WHERE ar.TenantId = @TenantId AND ar.[Status] = 'Pending'
-                     AND (ar.CurrentApprover = @UserId";
-
-        if (includeDelegated)
-        {
-            query += @" OR ar.CurrentApprover IN (
-                SELECT FromUserId FROM ApprovalDelegation
-                WHERE TenantId = @TenantId AND ToUserId = @UserId AND IsActive = 1
-                AND StartDate <= CAST(GETUTCDATE() AS DATE)
-                AND (EndDate IS NULL OR EndDate >= CAST(GETUTCDATE() AS DATE)))";
-        }
-
-        query += ") ORDER BY ar.SubmittedAt DESC";
-
-        return await _db.QueryAsync(query, new() { ["TenantId"] = tenantId, ["UserId"] = userId });
-    }
 
     /// <summary>
     /// Notify delegated approver when approval is routed to them
