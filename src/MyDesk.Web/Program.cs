@@ -5418,7 +5418,7 @@ app.MapGet("/api/departments", async (HttpContext ctx, DepartmentService deptSvc
 
     var dt = await deptSvc.GetDepartmentsAsync(tenantId);
     var depts = new List<object>();
-    foreach (System.Data.DataRow row in dt.Rows)
+    foreach (DataRow row in dt.Rows)
     {
         depts.Add(new
         {
@@ -5466,7 +5466,7 @@ app.MapGet("/api/teams", async (HttpContext ctx, int? departmentId, TeamService 
 
     var dt = await teamSvc.GetTeamsAsync(tenantId, departmentId);
     var teams = new List<object>();
-    foreach (System.Data.DataRow row in dt.Rows)
+    foreach (DataRow row in dt.Rows)
     {
         teams.Add(new
         {
@@ -5513,7 +5513,7 @@ app.MapGet("/api/teams/{teamId:int}/members", async (int teamId, HttpContext ctx
 
     var dt = await teamSvc.GetTeamMembersAsync(tenantId, teamId);
     var members = new List<object>();
-    foreach (System.Data.DataRow row in dt.Rows)
+    foreach (DataRow row in dt.Rows)
     {
         members.Add(new
         {
