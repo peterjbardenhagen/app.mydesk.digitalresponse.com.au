@@ -121,6 +121,68 @@ public class WorkflowApprovalService
         }
     }
 
+    public async Task<DelegationResponse> CreateDelegationAsync(int delegateUserId, DateTime startDate, DateTime endDate, string? moduleType = null)
+    {
+        try
+        {
+            var response = await _http.PostAsJsonAsync("/api/approval/delegations", new { delegateUserId, startDate, endDate, moduleType });
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<DelegationResponse>(json) ?? new DelegationResponse();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating delegation");
+            throw;
+        }
+    }
+
+    public async Task<List<DelegationDto>> GetDelegationsAsync()
+    {
+        try
+        {
+            var response = await _http.GetFromJsonAsync<DelegationsResponse>("/api/approval/delegations");
+            return response?.Delegations ?? new();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching delegations");
+            throw;
+        }
+    }
+
+    public async Task<ApprovalActionResponse> RevokeDelegationAsync(int delegationId)
+    {
+        try
+        {
+            var response = await _http.DeleteAsync($"/api/approval/delegations/{delegationId}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<ApprovalActionResponse>(json) ?? new ApprovalActionResponse();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error revoking delegation {Id}", delegationId);
+            throw;
+        }
+    }
+
+    public async Task<ApprovalActionResponse> DelegateApprovalAsync(int requestId, int delegateUserId)
+    {
+        try
+        {
+            var response = await _http.PostAsJsonAsync($"/api/approval/requests/{requestId}/delegate", new { delegateUserId });
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<ApprovalActionResponse>(json) ?? new ApprovalActionResponse();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error delegating approval request {Id}", requestId);
+            throw;
+        }
+    }
+
     // DTOs
     public class WorkflowsResponse
     {
@@ -181,5 +243,26 @@ public class WorkflowApprovalService
         public string? Comments { get; set; }
         public string ApprovedBy { get; set; } = "";
         public string ActionAt { get; set; } = "";
+    }
+
+    public class DelegationsResponse
+    {
+        public List<DelegationDto> Delegations { get; set; } = new();
+    }
+
+    public class DelegationDto
+    {
+        public int DelegationId { get; set; }
+        public int DelegateUserId { get; set; }
+        public string StartDate { get; set; } = "";
+        public string EndDate { get; set; } = "";
+        public string? ModuleType { get; set; }
+        public bool IsActive { get; set; }
+    }
+
+    public class DelegationResponse
+    {
+        public string Message { get; set; } = "";
+        public int DelegationId { get; set; }
     }
 }

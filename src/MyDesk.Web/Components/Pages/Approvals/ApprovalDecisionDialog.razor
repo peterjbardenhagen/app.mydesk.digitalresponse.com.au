@@ -44,6 +44,13 @@
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="DelegateAsync" Variant="Variant.Outlined" Color="Color.Warning" Disabled="@_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Delegate
+        </MudButton>
         @if (IsApproval)
         {
             <MudButton OnClick="ApproveAsync" Variant="Variant.Filled" Color="Color.Success"
@@ -116,6 +123,26 @@
         catch (Exception ex)
         {
             Snackbar.Add($"Rejection failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task DelegateAsync()
+    {
+        _saving = true;
+        try
+        {
+            // For now, delegate to user 0 as a placeholder - in production this would be a dropdown
+            await ApprovalSvc.DelegateApprovalAsync(RequestId, 1);
+            Snackbar.Add($"Request delegated to another approver", Severity.Success);
+            MudDialog.Close();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Delegation failed: {ex.Message}", Severity.Error);
         }
         finally
         {

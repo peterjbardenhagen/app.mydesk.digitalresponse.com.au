@@ -2911,6 +2911,144 @@ app.MapGet("/api/approval/requests/{requestId}/history", async (int requestId, H
     return Results.Ok(new { actions, timeline = actions.Count });
 }).RequireAuthorization();
 
+// ─────────────────────────────────────────────────────────────────────────────
+// APPROVAL DELEGATIONS API
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Create Delegation ───────────────────────────────────────────────────────
+app.MapPost("/api/approval/delegations", async (HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = int.TryParse(ctx.User.FindFirst("user_id")?.Value ?? "", out var uid) ? uid : 0;
+    if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
+
+    var body = await ctx.Request.ReadFromJsonAsync<DelegationRequest>();
+    if (body?.DelegateUserId == 0 || body?.StartDate == null || body?.EndDate == null)
+        return Results.BadRequest(new { error = "delegateUserId, startDate, and endDate are required" });
+
+    if (body.EndDate < body.StartDate)
+        return Results.BadRequest(new { error = "endDate must be after startDate" });
+
+    await db.ExecuteNonQueryAsync(
+        @"INSERT INTO ApprovalDelegations (TenantId, ApproverUserId, DelegateUserId, StartDate, EndDate, ModuleType, IsActive)
+          VALUES (@TenantId, @ApproverUserId, @DelegateUserId, @StartDate, @EndDate, @ModuleType, 1)",
+        new()
+        {
+            ["TenantId"] = Guid.Parse(tenantId),
+            ["ApproverUserId"] = userId,
+            ["DelegateUserId"] = body.DelegateUserId,
+            ["StartDate"] = body.StartDate,
+            ["EndDate"] = body.EndDate,
+            ["ModuleType"] = body.ModuleType ?? (object)DBNull.Value
+        });
+
+    return Results.Ok(new { message = "Delegation created successfully", delegationId = userId });
+}).RequireAuthorization();
+
+// ── Get Active Delegations ──────────────────────────────────────────────────
+app.MapGet("/api/approval/delegations", async (HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = int.TryParse(ctx.User.FindFirst("user_id")?.Value ?? "", out var uid) ? uid : 0;
+    if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
+
+    var dt = await db.QueryAsync(
+        @"SELECT DelegationId, ApproverUserId, DelegateUserId, StartDate, EndDate, ModuleType, IsActive
+          FROM ApprovalDelegations
+          WHERE TenantId = @TenantId AND ApproverUserId = @ApproverUserId AND IsActive = 1
+          AND EndDate >= CAST(GETUTCDATE() AS DATE)
+          ORDER BY StartDate DESC",
+        new() { ["TenantId"] = Guid.Parse(tenantId), ["ApproverUserId"] = userId });
+
+    var delegations = new List<object>();
+    foreach (DataRow row in dt.Rows)
+    {
+        delegations.Add(new
+        {
+            delegationId = (int)row["DelegationId"],
+            delegateUserId = (int)row["DelegateUserId"],
+            startDate = ((DateTime)row["StartDate"]).ToString("yyyy-MM-dd"),
+            endDate = ((DateTime)row["EndDate"]).ToString("yyyy-MM-dd"),
+            moduleType = row["ModuleType"] != DBNull.Value ? (string)row["ModuleType"] : null,
+            isActive = (bool)row["IsActive"]
+        });
+    }
+    return Results.Ok(new { delegations, totalCount = delegations.Count });
+}).RequireAuthorization();
+
+// ── Revoke Delegation ───────────────────────────────────────────────────────
+app.MapDelete("/api/approval/delegations/{delegationId:int}", async (int delegationId, HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = int.TryParse(ctx.User.FindFirst("user_id")?.Value ?? "", out var uid) ? uid : 0;
+    if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
+
+    var dt = await db.QueryAsync(
+        @"SELECT DelegationId, ApproverUserId FROM ApprovalDelegations
+          WHERE DelegationId = @DelegationId AND TenantId = @TenantId",
+        new() { ["DelegationId"] = delegationId, ["TenantId"] = Guid.Parse(tenantId) });
+
+    if (dt.Rows.Count == 0) return Results.NotFound(new { error = "Delegation not found" });
+    if ((int)dt.Rows[0]["ApproverUserId"] != userId)
+        return Results.Forbid();
+
+    await db.ExecuteNonQueryAsync(
+        "UPDATE ApprovalDelegations SET IsActive = 0 WHERE DelegationId = @DelegationId",
+        new() { ["DelegationId"] = delegationId });
+
+    return Results.Ok(new { message = "Delegation revoked" });
+}).RequireAuthorization();
+
+// ── Delegate Approval Request ───────────────────────────────────────────────
+app.MapPost("/api/approval/requests/{requestId}/delegate", async (int requestId, HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = int.TryParse(ctx.User.FindFirst("user_id")?.Value ?? "", out var uid) ? uid : 0;
+    if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
+
+    var body = await ctx.Request.ReadFromJsonAsync<DelegateApprovalRequest>();
+    if (body?.DelegateUserId == 0) return Results.BadRequest(new { error = "delegateUserId is required" });
+
+    var requestDt = await db.QueryAsync(
+        "SELECT RequestId, [Status] FROM ApprovalRequests WHERE RequestId = @RequestId AND TenantId = @TenantId",
+        new() { ["RequestId"] = requestId, ["TenantId"] = Guid.Parse(tenantId) });
+
+    if (requestDt.Rows.Count == 0) return Results.NotFound(new { error = "Request not found" });
+    if (requestDt.Rows[0]["Status"].ToString() != "Pending")
+        return Results.BadRequest(new { error = "Only pending requests can be delegated" });
+
+    var currentDt = await db.QueryAsync(
+        "SELECT CurrentLevel FROM ApprovalRequests WHERE RequestId = @RequestId",
+        new() { ["RequestId"] = requestId });
+
+    int currentLevel = (int)currentDt.Rows[0]["CurrentLevel"];
+
+    await db.ExecuteNonQueryAsync(
+        @"INSERT INTO ApprovalActions (RequestId, ApprovalLevel, ApprovedById, [Action], DelegatedToUserId, ActionAt)
+          VALUES (@RequestId, @Level, @UserId, 'Delegated', @DelegateUserId, GETUTCDATE())",
+        new() { ["RequestId"] = requestId, ["Level"] = currentLevel, ["UserId"] = userId, ["DelegateUserId"] = body.DelegateUserId });
+
+    return Results.Ok(new { message = "Request delegated successfully", delegatedTo = body.DelegateUserId });
+}).RequireAuthorization();
+
+// ── Helper DTOs ─────────────────────────────────────────────────────────────
+class DelegationRequest
+{
+    public int DelegateUserId { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public string? ModuleType { get; set; }
+}
+
+class DelegateApprovalRequest
+{
+    public int DelegateUserId { get; set; }
+}
+
 app.Run();
 
 /// <summary>Body model for POST /api/auth/reset-password.</summary>

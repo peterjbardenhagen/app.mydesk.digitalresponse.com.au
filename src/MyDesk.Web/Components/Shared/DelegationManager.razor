@@ -1,0 +1,126 @@
+@using MyDesk.Shared.Services
+@using MudBlazor
+@inject WorkflowApprovalService ApprovalSvc
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudPaper Class="pa-4" Elevation="0">
+    <div class="d-flex align-center justify-space-between mb-4">
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Rounded.PersonOutline" Class="mr-2" />
+            Approval Delegations
+        </MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Rounded.Add" OnClick="OpenCreateDialog">
+            Create Delegation
+        </MudButton>
+    </div>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_delegations.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Color="Color.Default">
+            No active delegations. Create one to delegate your approval authority temporarily.
+        </MudText>
+    }
+    else
+    {
+        <MudTable Items="@_delegations" Dense="true" Hover="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>Delegate</MudTh>
+                <MudTh>Start Date</MudTh>
+                <MudTh>End Date</MudTh>
+                <MudTh>Module</MudTh>
+                <MudTh Style="text-align:right">Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.DelegateUserId</MudTd>
+                <MudTd>@context.StartDate</MudTd>
+                <MudTd>@context.EndDate</MudTd>
+                <MudTd>
+                    @if (string.IsNullOrEmpty(context.ModuleType))
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">All</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text">@context.ModuleType</MudChip>
+                    }
+                </MudTd>
+                <MudTd Style="text-align:right">
+                    <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => RevokeDelegationAsync(context.DelegationId))" Title="Revoke" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudPaper>
+
+@code {
+    private List<WorkflowApprovalService.DelegationDto> _delegations = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDelegations();
+    }
+
+    private async Task LoadDelegations()
+    {
+        _loading = true;
+        try
+        {
+            _delegations = await ApprovalSvc.GetDelegationsAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load delegations: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var dialog = await DialogService.ShowAsync<CreateDelegationDialog>("Create Delegation");
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            await LoadDelegations();
+        }
+    }
+
+    private async Task RevokeDelegationAsync(int delegationId)
+    {
+        var parameters = new DialogParameters
+        {
+            { nameof(MudMessageBox.Title), "Revoke Delegation" },
+            { nameof(MudMessageBox.Message), "Are you sure you want to revoke this delegation?" },
+            { nameof(MudMessageBox.YesText), "Revoke" },
+            { nameof(MudMessageBox.CancelText), "Cancel" }
+        };
+
+        var dialog = await DialogService.ShowAsync<MudMessageBox>(parameters: parameters);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            try
+            {
+                await ApprovalSvc.RevokeDelegationAsync(delegationId);
+                Snackbar.Add("Delegation revoked successfully", Severity.Success);
+                await LoadDelegations();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Revocation failed: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+}
