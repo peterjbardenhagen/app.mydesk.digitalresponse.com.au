@@ -895,16 +895,48 @@ app.MapGet("/auth/signin", async (HttpContext ctx, LoginTokenStore tokenStore, U
 });
 
 // Legacy POST endpoint (kept for compatibility)
-app.MapPost("/api/auth/login", async (HttpContext ctx, AuthService auth, LoginTokenStore tokenStore) =>
+app.MapPost("/api/auth/login", async (HttpContext ctx, AuthService auth, LoginTokenStore tokenStore, DatabaseService db) =>
 {
     var form = await ctx.Request.ReadFormAsync();
     var login = form["login"].ToString();
     var password = form["password"].ToString();
     var rememberMe = form["rememberMe"].ToString() == "on";
 
+    // Domain-based tenant resolution (Phase 1 Week 1)
+    // If login is an email, extract domain and resolve to tenant
+    int? resolvedTenantId = null;
+    if (login.Contains("@"))
+    {
+        string emailDomain = login.Substring(login.IndexOf("@") + 1).ToLower();
+        var domainResult = await db.QueryAsync(
+            @"SELECT TenantId FROM dbo.TenantDomains
+              WHERE Domain = @Domain AND IsActive = 1 AND IsVerified = 1",
+            new() { ["Domain"] = emailDomain });
+
+        if (domainResult.Rows.Count > 0)
+        {
+            resolvedTenantId = (int)domainResult.Rows[0]["TenantId"];
+            Log.Information("Domain-based tenant resolution: {Email} -> TenantId={TenantId}", login, resolvedTenantId);
+        }
+    }
+
     var user = await auth.ValidateLoginAsync(login, password);
     if (user != null)
     {
+        // If domain was resolved, verify user belongs to that tenant
+        if (resolvedTenantId.HasValue)
+        {
+            var userTenants = await db.QueryAsync(
+                "SELECT TenantId FROM dbo.UserTenants WHERE UserId = @UserId AND TenantId = @TenantId",
+                new() { ["UserId"] = user.UserId, ["TenantId"] = resolvedTenantId.Value });
+
+            if (userTenants.Rows.Count == 0)
+            {
+                Log.Warning("Login FAILED (tenant mismatch): {Login} - user not member of resolved tenant", login);
+                return Results.Redirect("/login?error=1&reason=tenant_mismatch");
+            }
+        }
+
         Log.Information("Login SUCCESS (POST): {Login} -> UserId={UserId} Code={Code} Name={Name}",
             login, user.UserId, user.Code, user.Name);
         var token = tokenStore.CreateToken(user.UserId, user.Code, rememberMe);
@@ -3049,6 +3081,277 @@ class DelegateApprovalRequest
     public int DelegateUserId { get; set; }
 }
 
+// ── Domain-Based Tenant Routing (Phase 1 Week 1) ──────────────────────────────────────
+// Critical for domain-based multi-tenancy and Australian Privacy Act compliance
+
+// GET /api/tenant/resolve-domain - Resolve email domain to tenant
+app.MapGet("/api/tenant/resolve-domain", async (string emailDomain, DatabaseService db) =>
+{
+    if (string.IsNullOrWhiteSpace(emailDomain))
+        return Results.BadRequest(new { error = "Email domain is required" });
+
+    // Remove @ symbol if present
+    emailDomain = emailDomain.TrimStart('@').ToLower();
+
+    var result = await db.QueryAsync(
+        @"SELECT TenantId, Domain, IsVerified, IsActive
+          FROM dbo.TenantDomains
+          WHERE Domain = @Domain AND IsActive = 1 AND IsVerified = 1",
+        new() { ["Domain"] = emailDomain });
+
+    if (result.Rows.Count == 0)
+        return Results.NotFound(new { error = $"No verified tenant found for domain '{emailDomain}'" });
+
+    int tenantId = (int)result.Rows[0]["TenantId"];
+    string domain = (string)result.Rows[0]["Domain"];
+    bool isVerified = (bool)result.Rows[0]["IsVerified"];
+
+    return Results.Ok(new
+    {
+        tenantId,
+        domain,
+        isVerified,
+        message = "Domain resolved successfully"
+    });
+})
+.WithName("ResolveDomain")
+.WithOpenApi()
+.AllowAnonymous();  // Allow before authentication for login flow
+
+// GET /api/tenant/verify-domain-status - Check verification status
+app.MapGet("/api/tenant/verify-domain-status", async (string domain, DatabaseService db) =>
+{
+    domain = domain.TrimStart('@').ToLower();
+
+    var result = await db.QueryAsync(
+        @"SELECT TenantId, IsVerified, VerificationToken, VerificationTokenExpiry
+          FROM dbo.TenantDomains
+          WHERE Domain = @Domain AND IsActive = 1",
+        new() { ["Domain"] = domain });
+
+    if (result.Rows.Count == 0)
+        return Results.NotFound(new { error = "Domain not found" });
+
+    bool isVerified = (bool)result.Rows[0]["IsVerified"];
+    string verificationToken = result.Rows[0]["VerificationToken"]?.ToString() ?? "";
+    object verificationExpiry = result.Rows[0]["VerificationTokenExpiry"] ?? null;
+
+    return Results.Ok(new
+    {
+        domain,
+        isVerified,
+        verificationToken = isVerified ? null : verificationToken,
+        verificationTokenExpiry = isVerified ? null : verificationExpiry,
+        status = isVerified ? "verified" : "pending_verification"
+    });
+})
+.WithName("VerifyDomainStatus")
+.WithOpenApi()
+.AllowAnonymous();
+
+// POST /api/tenant/add-domain - Admin: Add new domain for their tenant (requires auth)
+app.MapPost("/api/tenant/add-domain", async (HttpContext ctx, AddDomainRequest body, DatabaseService db) =>
+{
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+    if (!int.TryParse(tenantId, out int parsedTenantId) || !int.TryParse(userId, out int parsedUserId))
+        return Results.Unauthorized();
+
+    if (string.IsNullOrWhiteSpace(body.Domain))
+        return Results.BadRequest(new { error = "Domain is required" });
+
+    string normalizedDomain = body.Domain.TrimStart('@').ToLower();
+
+    // Verify user is admin in their tenant
+    var adminCheck = await db.QueryAsync(
+        "SELECT IsAdmin FROM dbo.Users WHERE UserId = @UserId AND TenantId = @TenantId",
+        new() { ["UserId"] = parsedUserId, ["TenantId"] = parsedTenantId });
+
+    if (adminCheck.Rows.Count == 0 || !(bool)adminCheck.Rows[0]["IsAdmin"])
+        return Results.Forbid();
+
+    // Check domain not already in use by another tenant
+    var existingDomain = await db.QueryAsync(
+        "SELECT TenantId FROM dbo.TenantDomains WHERE Domain = @Domain AND IsActive = 1",
+        new() { ["Domain"] = normalizedDomain });
+
+    if (existingDomain.Rows.Count > 0)
+        return Results.BadRequest(new { error = "Domain already in use by another tenant" });
+
+    // Generate verification token (random 32-char string)
+    string verificationToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(24));
+    var verificationExpiry = DateTime.UtcNow.AddDays(7);  // Token valid for 7 days
+
+    try
+    {
+        await db.ExecuteNonQueryAsync(
+            @"INSERT INTO dbo.TenantDomains (TenantId, Domain, IsVerified, VerificationToken, VerificationTokenExpiry, CreatedBy, IsActive)
+              VALUES (@TenantId, @Domain, 0, @Token, @Expiry, @UserId, 1)",
+            new()
+            {
+                ["TenantId"] = parsedTenantId,
+                ["Domain"] = normalizedDomain,
+                ["Token"] = verificationToken,
+                ["Expiry"] = verificationExpiry,
+                ["UserId"] = parsedUserId
+            });
+
+        return Results.Created($"/api/tenant/verify-domain-status?domain={normalizedDomain}", new
+        {
+            domain = normalizedDomain,
+            verificationToken,
+            verificationTokenExpiry = verificationExpiry,
+            message = "Domain added. Please verify ownership using the token."
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Failed to add domain: {ex.Message}" });
+    }
+})
+.WithName("AddDomain")
+.WithOpenApi()
+.RequireAuthorization();
+
+// POST /api/tenant/verify-domain - Verify domain ownership via DNS TXT record
+app.MapPost("/api/tenant/verify-domain", async (HttpContext ctx, VerifyDomainRequest body, DatabaseService db) =>
+{
+    if (string.IsNullOrWhiteSpace(body.Domain) || string.IsNullOrWhiteSpace(body.VerificationToken))
+        return Results.BadRequest(new { error = "Domain and verification token required" });
+
+    string normalizedDomain = body.Domain.TrimStart('@').ToLower();
+
+    var result = await db.QueryAsync(
+        @"SELECT Id, TenantId, VerificationToken, VerificationTokenExpiry, IsVerified
+          FROM dbo.TenantDomains
+          WHERE Domain = @Domain AND IsActive = 1",
+        new() { ["Domain"] = normalizedDomain });
+
+    if (result.Rows.Count == 0)
+        return Results.NotFound(new { error = "Domain not found" });
+
+    int domainId = (int)result.Rows[0]["Id"];
+    string storedToken = result.Rows[0]["VerificationToken"]?.ToString() ?? "";
+    object expiry = result.Rows[0]["VerificationTokenExpiry"];
+    bool isVerified = (bool)result.Rows[0]["IsVerified"];
+
+    if (isVerified)
+        return Results.BadRequest(new { error = "Domain already verified" });
+
+    // Check token expiry
+    if (expiry == null || DateTime.UtcNow > (DateTime)expiry)
+        return Results.BadRequest(new { error = "Verification token has expired" });
+
+    // Verify token matches
+    if (storedToken != body.VerificationToken)
+        return Results.BadRequest(new { error = "Invalid verification token" });
+
+    try
+    {
+        await db.ExecuteNonQueryAsync(
+            @"UPDATE dbo.TenantDomains
+              SET IsVerified = 1, VerifiedAt = GETUTCDATE(), VerificationToken = NULL, VerificationTokenExpiry = NULL
+              WHERE Id = @Id",
+            new() { ["Id"] = domainId });
+
+        // Log verification in audit trail
+        int userId = int.TryParse(ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var uid) ? uid : 0;
+        string ipAddress = ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        await db.ExecuteNonQueryAsync(
+            @"INSERT INTO dbo.DomainVerifications (TenantDomainId, VerificationType, VerificationMethod, IsSuccessful, AttemptedBy, IpAddress)
+              VALUES (@DomainId, 'DNS', 'Token Verification', 1, @UserId, @IpAddress)",
+            new() { ["DomainId"] = domainId, ["UserId"] = userId, ["IpAddress"] = ipAddress });
+
+        return Results.Ok(new
+        {
+            domain = normalizedDomain,
+            isVerified = true,
+            message = "Domain verified successfully"
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Verification failed: {ex.Message}" });
+    }
+})
+.WithName("VerifyDomain")
+.WithOpenApi()
+.AllowAnonymous();  // Allow domain verification without auth for initial setup
+
+// GET /api/tenant/domains - Admin: List all domains for current tenant
+app.MapGet("/api/tenant/domains", async (HttpContext ctx, DatabaseService db) =>
+{
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+
+    if (!int.TryParse(tenantId, out int parsedTenantId))
+        return Results.Unauthorized();
+
+    var result = await db.QueryAsync(
+        @"SELECT Id, Domain, IsVerified, IsActive, CreatedAt, VerifiedAt
+          FROM dbo.TenantDomains
+          WHERE TenantId = @TenantId AND IsActive = 1
+          ORDER BY CreatedAt DESC",
+        new() { ["TenantId"] = parsedTenantId });
+
+    var domains = result.Rows.Cast<DataRow>().Select(row => new
+    {
+        id = (int)row["Id"],
+        domain = (string)row["Domain"],
+        isVerified = (bool)row["IsVerified"],
+        createdAt = row["CreatedAt"],
+        verifiedAt = row["VerifiedAt"]
+    }).ToList();
+
+    return Results.Ok(new { domains, count = domains.Count });
+})
+.WithName("ListDomains")
+.WithOpenApi()
+.RequireAuthorization();
+
+// DELETE /api/tenant/domains/{id} - Admin: Remove domain from tenant
+app.MapDelete("/api/tenant/domains/{id:int}", async (int id, HttpContext ctx, DatabaseService db) =>
+{
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+    if (!int.TryParse(tenantId, out int parsedTenantId) || !int.TryParse(userId, out int parsedUserId))
+        return Results.Unauthorized();
+
+    // Verify admin
+    var adminCheck = await db.QueryAsync(
+        "SELECT IsAdmin FROM dbo.Users WHERE UserId = @UserId AND TenantId = @TenantId",
+        new() { ["UserId"] = parsedUserId, ["TenantId"] = parsedTenantId });
+
+    if (adminCheck.Rows.Count == 0 || !(bool)adminCheck.Rows[0]["IsAdmin"])
+        return Results.Forbid();
+
+    // Verify domain belongs to tenant
+    var domainCheck = await db.QueryAsync(
+        "SELECT TenantId FROM dbo.TenantDomains WHERE Id = @Id AND TenantId = @TenantId",
+        new() { ["Id"] = id, ["TenantId"] = parsedTenantId });
+
+    if (domainCheck.Rows.Count == 0)
+        return Results.NotFound();
+
+    try
+    {
+        await db.ExecuteNonQueryAsync(
+            "UPDATE dbo.TenantDomains SET IsActive = 0, UpdatedAt = GETUTCDATE(), UpdatedBy = @UserId WHERE Id = @Id",
+            new() { ["Id"] = id, ["UserId"] = parsedUserId });
+
+        return Results.Ok(new { message = "Domain removed successfully" });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Failed to remove domain: {ex.Message}" });
+    }
+})
+.WithName("RemoveDomain")
+.WithOpenApi()
+.RequireAuthorization();
+
 app.Run();
 
 /// <summary>Body model for POST /api/auth/reset-password.</summary>
@@ -3081,3 +3384,15 @@ public record PatCreateRequest(
     string  Name,
     string? Scopes     = null,
     int?    ExpiryDays = null);
+
+// Domain-based routing DTOs
+class AddDomainRequest
+{
+    public string Domain { get; set; } = "";
+}
+
+class VerifyDomainRequest
+{
+    public string Domain { get; set; } = "";
+    public string VerificationToken { get; set; } = "";
+}
