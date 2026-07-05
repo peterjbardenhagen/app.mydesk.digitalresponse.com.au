@@ -26,10 +26,10 @@
             }
             else
             {
-                <MudList>
+                <MudList<NotificationDto>>
                     @foreach (var notif in _notifications)
                     {
-                        <MudListItem OnClick="@(() => OnNotificationClickAsync(notif))" Class="@(notif.IsRead ? "" : "notification-unread")">
+                        <MudListItem<NotificationDto> OnClick="@(() => OnNotificationClickAsync(notif))" Class="@(notif.IsRead ? "" : "notification-unread")">
                             <MudStack Row="true" Spacing="2">
                                 @if (!string.IsNullOrEmpty(notif.Icon))
                                 {
