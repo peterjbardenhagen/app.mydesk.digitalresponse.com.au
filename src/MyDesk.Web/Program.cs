@@ -5397,7 +5397,6 @@ app.MapPut("/api/notifications/preferences", async (HttpContext ctx, UpdateNotif
 .WithName("UpdateNotificationPreferences")
 .WithOpenApi()
 .RequireAuthorization();
-*/
 
 // Phase 4 API endpoints and DTOs temporarily disabled for debugging CI
 // TODO: Re-enable after resolving build issues
