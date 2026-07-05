@@ -82,6 +82,41 @@ This document describes the technical decisions, system components, data flow, A
 
 ## Core Design Patterns
 
+### 0. **Orchestrator-Worker Agentic Architecture (2026-Standard)**
+
+MyDesk uses distributed agentic patterns to manage complex workflows safely and efficiently:
+
+```
+User Request
+    ↓
+┌─────────────────────────────────────────┐
+│  Orchestrator Agent (Manager)           │
+│  - Intent classification (Router)       │
+│  - Security validation (Critic)         │
+│  - Worker invocation & verification     │
+└─────────────────────────────────────────┘
+    ↓
+┌──────────────┬──────────────┬───────────┐
+│  Auth Agent  │ Approval     │Notification
+│              │ Worker       │Worker
+└──────────────┴──────────────┴───────────┘
+```
+
+**Key Agentic Patterns:**
+- **Router:** Logic-based intent classifier (not LLM-based for cost/latency)
+- **Planner-Executor:** Multi-step approval workflows (validate → route → escalate)
+- **Critic/Verifier:** Security gates (PII filtering, permission validation)
+- **Summarizer:** Memory compression via "Archivist" agent (prevents token explosion)
+
+**Benefits:**
+- Avoid monolithic "god agent" bottleneck
+- Stateless workers enable horizontal scaling
+- Memory-efficient (compress long conversations)
+- Audit trail per agent invocation
+- Security-first (PII filtering, auth middleware)
+
+---
+
 ### 1. **Domain-Driven Design (DDD)**
 
 The application organizes code around business domains:
@@ -615,6 +650,200 @@ public class RateLimitingMiddleware
         await _db.LogAttemptAsync(userId, ipAddress, path);
         await next(context);
     }
+}
+```
+
+---
+
+## Agentic Implementation Patterns
+
+### Orchestrator Agent: Intent Routing
+
+The Orchestrator receives all user intents and routes to appropriate workers:
+
+```csharp
+public class OrchestratorAgent
+{
+    public async Task<ApiResponse> RouteAsync(string intent, UserContext user, object payload)
+    {
+        // 1. Router Pattern: Classify intent
+        var classification = ClassifyIntent(intent);
+        
+        // 2. Critic Pattern: Validate permissions
+        ValidateUserPermissions(user, classification);
+        
+        // 3. Route to appropriate worker
+        var workerResult = classification.Type switch
+        {
+            "expense_submitted" => await _expenseWorker.CreateAsync(payload, user),
+            "approval_requested" => await _approvalWorker.ProcessAsync(payload, user),
+            "notification_trigger" => await _notificationWorker.SendAsync(payload, user),
+            _ => throw new InvalidOperationException($"Unknown intent: {intent}")
+        };
+        
+        // 4. Critic Pattern: Verify worker output
+        VerifyWorkerOutput(workerResult, classification);
+        
+        return new ApiResponse { Success = true, Data = workerResult };
+    }
+}
+```
+
+### Worker Agent: Stateless Execution
+
+Workers are stateless, focused, and invoke via structured hand-offs:
+
+```csharp
+public class ApprovalWorkflowWorker
+{
+    // Input: Structured hand-off from Orchestrator
+    public async Task<ApprovalResult> ProcessAsync(ApprovalRequest request, UserContext context)
+    {
+        // Planner-Executor Pattern:
+        
+        // Step 1: Plan approval chain
+        var approvers = await PlanApprovalChainAsync(request, context);
+        
+        // Step 2: Validate each approver's authority
+        foreach (var approver in approvers)
+        {
+            ValidateApproverPermissions(approver, request);
+        }
+        
+        // Step 3: Create approval requests
+        var approvalIds = await CreateApprovalRequestsAsync(approvers, request);
+        
+        // Step 4: Hand off to Notification Worker (structured JSON)
+        var notificationPayload = new NotificationHandoff
+        {
+            ApproverIds = approvalIds,
+            EventType = "ApprovalRequested",
+            Expense = request.Expense
+        };
+        
+        await _notificationWorker.SendAsync(notificationPayload, context);
+        
+        // Step 5: Log to immutable audit trail
+        await _auditService.LogAsync("ApprovalChainCreated", context, new { approvalIds });
+        
+        return new ApprovalResult { ApprovalIds = approvalIds };
+    }
+}
+```
+
+### Memory Management: Summarization Agent
+
+Prevent token explosion in long conversations:
+
+```csharp
+public class ArchiverAgent
+{
+    private const int TokenThreshold = 10000;
+    
+    public async Task<string> CompressStateAsync(string conversationHistory, string stateId)
+    {
+        if (CountTokens(conversationHistory) < TokenThreshold)
+            return conversationHistory; // No compression needed
+        
+        // Summarize full history
+        var summary = await _summarizerWorker.SummarizeAsync(conversationHistory);
+        
+        // Keep only recent messages (last 5) + summary
+        var compressedState = new
+        {
+            summary,
+            recentMessages = conversationHistory.Split('\n').TakeLast(5),
+            compressedAt = DateTime.UtcNow
+        };
+        
+        // Cache in Redis
+        await _cache.SetAsync($"agent_state:{stateId}", compressedState, 
+            TimeSpan.FromHours(24));
+        
+        return JsonSerializer.Serialize(compressedState);
+    }
+}
+```
+
+### Security: PII Filtering & Auth Middleware
+
+Before agents process user data:
+
+```csharp
+public class PiiFilterService
+{
+    public string FilterPii(string text)
+    {
+        // Strip PII before sending to agents
+        text = Regex.Replace(text, @"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", "[EMAIL]");
+        text = Regex.Replace(text, @"\b(\+61|0)[0-9\s\-\.]{7,}\b", "[PHONE]");
+        text = Regex.Replace(text, @"\b[0-9]{11}\b", "[ABN]");
+        
+        _auditService.LogAsync("PiiFiltered", "Notification", text);
+        return text;
+    }
+}
+
+// Auth Middleware: All agent invocations logged
+app.Use(async (context, next) =>
+{
+    var tenantId = context.User.FindFirst("tenant_id")?.Value;
+    if (string.IsNullOrEmpty(tenantId))
+    {
+        context.Response.StatusCode = 401;
+        return;
+    }
+    
+    // Log agent invocation to ComplianceAuditLog
+    await _auditService.LogAsync("AgentInvoked", "System", new
+    {
+        path = context.Request.Path,
+        tenantId,
+        userId = context.User.FindFirst("user_id")?.Value,
+        timestamp = DateTime.UtcNow
+    });
+    
+    await next();
+});
+```
+
+### UI/UX: Non-Blocking Agent Operations
+
+When agents process (approval routing, notification queuing), show async state:
+
+**Blazor:**
+```razor
+@if (isSubmitting)
+{
+    <MudProgressLinear Indeterminate="true" />
+    <p>Routing to approvers... <i class="spinner"></i></p>
+}
+
+@code {
+    private async Task SubmitAsync()
+    {
+        isSubmitting = true;
+        try
+        {
+            // Async invocation without blocking UI thread
+            await Orchestrator.RouteAsync("expense_submitted", context, payload);
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}
+```
+
+**Android/Compose:**
+```kotlin
+Button(onClick = {
+    viewModelScope.launch {
+        orchestrator.routeAsync("expense_submitted", context, payload)
+    }
+}) {
+    Text("Submit")
 }
 ```
 
