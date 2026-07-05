@@ -2114,7 +2114,6 @@ app.MapGet("/quotes/{id:int}/action/{action}", async (int id, string action, Quo
 });
 
 app.Run();
-
 }
 catch (Exception ex)
 {
