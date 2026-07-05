@@ -708,6 +708,11 @@ const state = {
   quotes: [],
   pos: [],
   files: [],
+  pagination: {
+    invoices: { offset: 0, hasMore: true, loading: false },
+    quotes: { offset: 0, hasMore: true, loading: false },
+    pos: { offset: 0, hasMore: true, loading: false },
+  }
 };
 
 const session = {
@@ -989,7 +994,21 @@ function switchWorkspace(tenantId, tenantName, tenantSlug) {
 }
 
 // ── Data Loading ───────────────────────────────────────────
-async function apiCall(endpoint, method = 'GET', body = null) {
+async function apiCall(endpoint, method = 'GET', body = null, useCache = true) {
+  // Try cache for GET requests
+  if (method === 'GET' && useCache) {
+    try {
+      const cached = localStorage.getItem('api_cache_' + endpoint);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        const age = Date.now() - timestamp;
+        if (age < 3600000) { // Cache valid for 1 hour
+          return data;
+        }
+      }
+    } catch(e) {}
+  }
+
   const opts = {
     method,
     headers: {
@@ -1005,8 +1024,27 @@ async function apiCall(endpoint, method = 'GET', body = null) {
       doLogout();
       return null;
     }
-    return await resp.json();
+    const data = await resp.json();
+
+    // Cache successful GET responses
+    if (method === 'GET' && resp.ok) {
+      try {
+        localStorage.setItem('api_cache_' + endpoint, JSON.stringify({ data, timestamp: Date.now() }));
+      } catch(e) {}
+    }
+
+    return data;
   } catch(err) {
+    // Return cached data if network fails (offline support)
+    if (method === 'GET' && useCache) {
+      try {
+        const cached = localStorage.getItem('api_cache_' + endpoint);
+        if (cached) {
+          const { data } = JSON.parse(cached);
+          return data;
+        }
+      } catch(e) {}
+    }
     console.error(err);
     return null;
   }
@@ -1019,11 +1057,17 @@ async function loadData() {
   const modResp = await apiCall('/api/mobile/modules');
   state.modules = (modResp?.modules || []);
 
+  // Reset pagination
+  state.pagination.invoices = { offset: 0, hasMore: true, loading: false };
+  state.pagination.quotes = { offset: 0, hasMore: true, loading: false };
+  state.pagination.pos = { offset: 0, hasMore: true, loading: false };
+
   // Load invoices (if available)
   if (state.modules.includes('invoices')) {
-    const invs = await apiCall('/api/mobile/invoices?limit=50');
+    const invs = await apiCall('/api/mobile/invoices?limit=50&offset=0');
     if (invs) {
       state.invoices = Array.isArray(invs) ? invs : [];
+      state.pagination.invoices.hasMore = invs.length >= 50;
       buildInvoicesList();
     }
   } else {
@@ -1033,9 +1077,10 @@ async function loadData() {
 
   // Load quotes (if available)
   if (state.modules.includes('quotes')) {
-    const qts = await apiCall('/api/mobile/quotes');
+    const qts = await apiCall('/api/mobile/quotes?limit=50&offset=0');
     if (qts) {
       state.quotes = Array.isArray(qts) ? qts : [];
+      state.pagination.quotes.hasMore = qts.length >= 50;
       buildQuotesList();
     }
   } else {
@@ -1045,9 +1090,10 @@ async function loadData() {
 
   // Load POs (if available)
   if (state.modules.includes('pos')) {
-    const pos = await apiCall('/api/mobile/purchase-orders');
+    const pos = await apiCall('/api/mobile/purchase-orders?limit=50&offset=0');
     if (pos) {
       state.pos = Array.isArray(pos) ? pos : [];
+      state.pagination.pos.hasMore = pos.length >= 50;
       buildPOsList();
     }
   } else {
@@ -1099,7 +1145,7 @@ function buildInvoicesList() {
     return;
   }
 
-  list.innerHTML = state.invoices.map(i => `
+  let html = state.invoices.map(i => `
     <div class="module-item" onclick="showInvoiceDetail(${i.id})">
       <div class="module-item-info">
         <div class="module-item-title">${i.number}</div>
@@ -1114,6 +1160,24 @@ function buildInvoicesList() {
       </div>
     </div>
   `).join('');
+
+  if (state.pagination.invoices.hasMore) {
+    html += `<div style="padding:16px;text-align:center;"><button style="padding:10px 20px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-1);border-radius:8px;cursor:pointer;" onclick="loadMoreInvoices()">Load more invoices</button></div>`;
+  }
+  list.innerHTML = html;
+}
+
+async function loadMoreInvoices() {
+  if (state.pagination.invoices.loading) return;
+  state.pagination.invoices.loading = true;
+  state.pagination.invoices.offset += 50;
+  const invs = await apiCall(`/api/mobile/invoices?limit=50&offset=${state.pagination.invoices.offset}`);
+  state.pagination.invoices.loading = false;
+  if (invs && Array.isArray(invs) && invs.length > 0) {
+    state.invoices.push(...invs);
+    state.pagination.invoices.hasMore = invs.length >= 50;
+    buildInvoicesList();
+  }
 }
 
 async function showInvoiceDetail(id) {
@@ -1188,7 +1252,7 @@ function buildQuotesList() {
     return;
   }
 
-  list.innerHTML = state.quotes.map(q => `
+  let html = state.quotes.map(q => `
     <div class="module-item" onclick="showQuoteDetail(${q.id})">
       <div class="module-item-info">
         <div class="module-item-title">${q.reference}</div>
@@ -1203,6 +1267,24 @@ function buildQuotesList() {
       </div>
     </div>
   `).join('');
+
+  if (state.pagination.quotes.hasMore) {
+    html += `<div style="padding:16px;text-align:center;"><button style="padding:10px 20px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-1);border-radius:8px;cursor:pointer;" onclick="loadMoreQuotes()">Load more quotes</button></div>`;
+  }
+  list.innerHTML = html;
+}
+
+async function loadMoreQuotes() {
+  if (state.pagination.quotes.loading) return;
+  state.pagination.quotes.loading = true;
+  state.pagination.quotes.offset += 50;
+  const qts = await apiCall(`/api/mobile/quotes?limit=50&offset=${state.pagination.quotes.offset}`);
+  state.pagination.quotes.loading = false;
+  if (qts && Array.isArray(qts) && qts.length > 0) {
+    state.quotes.push(...qts);
+    state.pagination.quotes.hasMore = qts.length >= 50;
+    buildQuotesList();
+  }
 }
 
 async function showQuoteDetail(id) {
@@ -1271,7 +1353,7 @@ function buildPOsList() {
     return;
   }
 
-  list.innerHTML = state.pos.map(p => `
+  let html = state.pos.map(p => `
     <div class="module-item" onclick="showPODetail(${p.id})">
       <div class="module-item-info">
         <div class="module-item-title">PO #${p.id}</div>
@@ -1286,6 +1368,24 @@ function buildPOsList() {
       </div>
     </div>
   `).join('');
+
+  if (state.pagination.pos.hasMore) {
+    html += `<div style="padding:16px;text-align:center;"><button style="padding:10px 20px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-1);border-radius:8px;cursor:pointer;" onclick="loadMorePOs()">Load more POs</button></div>`;
+  }
+  list.innerHTML = html;
+}
+
+async function loadMorePOs() {
+  if (state.pagination.pos.loading) return;
+  state.pagination.pos.loading = true;
+  state.pagination.pos.offset += 50;
+  const pos = await apiCall(`/api/mobile/purchase-orders?limit=50&offset=${state.pagination.pos.offset}`);
+  state.pagination.pos.loading = false;
+  if (pos && Array.isArray(pos) && pos.length > 0) {
+    state.pos.push(...pos);
+    state.pagination.pos.hasMore = pos.length >= 50;
+    buildPOsList();
+  }
 }
 
 async function showPODetail(id) {

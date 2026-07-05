@@ -1473,12 +1473,13 @@ app.MapGet("/api/mobile/invoices", async (HttpContext ctx, InvoiceService invoic
     var q       = ctx.Request.Query;
     var statusId = int.TryParse(q["status"],  out var s) ? s : 0;
     var customer = q["customer"].ToString();
+    var offset   = int.TryParse(q["offset"],  out var o) ? Math.Max(0, o) : 0;
     var limit    = int.TryParse(q["limit"],    out var l) ? Math.Min(l, 200) : 100;
     var list = await invoiceSvc.GetInvoicesAsync(
         statusId: statusId,
         customer: string.IsNullOrEmpty(customer) ? null : customer,
-        limit: limit);
-    return Results.Ok(list.Select(i => new {
+        limit: limit + offset);
+    return Results.Ok(list.Skip(offset).Take(limit).Select(i => new {
         id       = i.InvoiceId,
         number   = i.InvoiceNum,
         date     = i.InvoiceDate.ToString("yyyy-MM-dd"),
@@ -1527,13 +1528,15 @@ app.MapGet("/api/mobile/quotes", async (HttpContext ctx, QuoteService quoteSvc) 
     var q        = ctx.Request.Query;
     var statusId = int.TryParse(q["status"], out var s) ? s : 0;
     var keyword  = q["keyword"].ToString();
+    var offset   = int.TryParse(q["offset"], out var o) ? Math.Max(0, o) : 0;
+    var limit    = int.TryParse(q["limit"], out var l) ? Math.Min(l, 200) : 100;
     var list = await quoteSvc.GetQuotesAsync(
         dateFrom: null, dateTo: null,
         customerName: null,
         contactId: null,
         statusId: statusId,
         keyword: string.IsNullOrEmpty(keyword) ? null : keyword);
-    return Results.Ok(list.Select(qt => new {
+    return Results.Ok(list.Skip(offset).Take(limit).Select(qt => new {
         id       = qt.Qid,
         reference = qt.Reference,
         number   = qt.QuoteNumber,
@@ -1584,10 +1587,12 @@ app.MapGet("/api/mobile/purchase-orders", async (HttpContext ctx, PurchaseOrderS
     var q        = ctx.Request.Query;
     var statusId = int.TryParse(q["status"], out var s) ? s : 0;
     var supplier = q["supplier"].ToString();
+    var offset   = int.TryParse(q["offset"], out var o) ? Math.Max(0, o) : 0;
+    var limit    = int.TryParse(q["limit"], out var l) ? Math.Min(l, 200) : 100;
     var list = await poSvc.GetPurchaseOrdersAsync(
         statusId: statusId,
         supplier: string.IsNullOrEmpty(supplier) ? null : supplier);
-    return Results.Ok(list.Select(po => new {
+    return Results.Ok(list.Skip(offset).Take(limit).Select(po => new {
         id       = po.POid,
         date     = po.PODate.ToString("yyyy-MM-dd"),
         required = po.DateRequired.ToString("yyyy-MM-dd"),
