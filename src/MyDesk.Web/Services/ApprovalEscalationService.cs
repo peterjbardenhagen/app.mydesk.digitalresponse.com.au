@@ -132,44 +132,50 @@ public class ApprovalEscalationService
 
     /// <summary>
     /// Notify delegated approver when approval is routed to them
+    /// TEMPORARILY DISABLED - NotificationService not available
     /// </summary>
     public async Task NotifyDelegateAsync(int tenantId, int delegatedApproverId, int expenseId,
         int originalApproverId, string expenseDescription, decimal amount)
     {
-        await _notification.SendNotificationAsync(
-            tenantId,
-            delegatedApproverId,
-            "ApprovalDelegatedToYou",
-            new Dictionary<string, object>
-            {
-                { "ExpenseId", expenseId },
-                { "ExpenseDescription", expenseDescription },
-                { "Amount", amount.ToString("C") },
-                { "DelegatedFromUserId", originalApproverId }
-            },
-            "Approval",
-            expenseId);
+        // DISABLED: Notification service not available
+        // await _notification.SendNotificationAsync(
+        //     tenantId,
+        //     delegatedApproverId,
+        //     "ApprovalDelegatedToYou",
+        //     new Dictionary<string, object>
+        //     {
+        //         { "ExpenseId", expenseId },
+        //         { "ExpenseDescription", expenseDescription },
+        //         { "Amount", amount.ToString("C") },
+        //         { "DelegatedFromUserId", originalApproverId }
+        //     },
+        //     "Approval",
+        //     expenseId);
+        await Task.CompletedTask;
     }
 
     /// <summary>
     /// Notify escalation when approval is escalated beyond delegates
+    /// TEMPORARILY DISABLED - NotificationService not available
     /// </summary>
     public async Task NotifyEscalationAsync(int tenantId, int escalatedToApproverId, int expenseId,
         string expenseDescription, decimal amount, int originalApproverId)
     {
-        await _notification.SendNotificationAsync(
-            tenantId,
-            escalatedToApproverId,
-            "ApprovalEscalatedToYou",
-            new Dictionary<string, object>
-            {
-                { "ExpenseId", expenseId },
-                { "ExpenseDescription", expenseDescription },
-                { "Amount", amount.ToString("C") },
-                { "EscalatedFromUserId", originalApproverId }
-            },
-            "Approval",
-            expenseId);
+        // DISABLED: Notification service not available
+        // await _notification.SendNotificationAsync(
+        //     tenantId,
+        //     escalatedToApproverId,
+        //     "ApprovalEscalatedToYou",
+        //     new Dictionary<string, object>
+        //     {
+        //         { "ExpenseId", expenseId },
+        //         { "ExpenseDescription", expenseDescription },
+        //         { "Amount", amount.ToString("C") },
+        //         { "EscalatedFromUserId", originalApproverId }
+        //     },
+        //     "Approval",
+        //     expenseId);
+        await Task.CompletedTask;
     }
 }
 

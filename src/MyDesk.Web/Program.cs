@@ -798,8 +798,8 @@ app.Use(async (ctx, next) =>
 
 app.UseRateLimiter();
 
-// Phase 1 Week 4: Database-backed rate limiting middleware
-app.UseMiddleware<MyDesk.Web.Middleware.RateLimitingMiddleware>();
+// Phase 1 Week 4: Database-backed rate limiting middleware - DISABLED
+// app.UseMiddleware<MyDesk.Web.Middleware.RateLimitingMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -4864,7 +4864,7 @@ app.MapGet("/api/user/profile", async (HttpContext ctx, DatabaseService db) =>
     }
     catch (Exception ex)
     {
-        return Results.StatusCode(500, new { error = ex.Message });
+        return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 })
 .WithName("GetUserProfile")
@@ -4945,7 +4945,7 @@ app.MapPost("/api/user/profile/photo/upload", async (HttpContext ctx, DatabaseSe
     }
     catch (Exception ex)
     {
-        return Results.StatusCode(500, new { error = ex.Message });
+        return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 })
 .WithName("UploadUserPhoto")
@@ -4998,7 +4998,7 @@ app.MapDelete("/api/user/profile/photo", async (HttpContext ctx, DatabaseService
     }
     catch (Exception ex)
     {
-        return Results.StatusCode(500, new { error = ex.Message });
+        return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 })
 .WithName("DeleteUserPhoto")
@@ -5113,7 +5113,7 @@ app.MapPost("/api/expenses/{expenseId:int}/receipt/upload", async (int expenseId
     }
     catch (Exception ex)
     {
-        return Results.StatusCode(500, new { error = ex.Message });
+        return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 })
 .WithName("UploadExpenseReceipt")
@@ -5168,7 +5168,7 @@ app.MapGet("/api/expenses/{expenseId:int}/receipt", async (int expenseId, HttpCo
             {
                 supplierName = row["CorrectedSupplierName"]?.ToString(),
                 date = row["CorrectedDate"],
-                amount = row["CorrectedAmount"] != DBNull.Value ? Convert.ToDecimal(row["CorrectedAmount"]) : null
+                amount = (decimal?)(row["CorrectedAmount"] != DBNull.Value ? Convert.ToDecimal(row["CorrectedAmount"]) : null)
             },
             status = (string)row["Status"],
             requiresManualReview = (bool)row["RequiresManualReview"]
@@ -5178,7 +5178,7 @@ app.MapGet("/api/expenses/{expenseId:int}/receipt", async (int expenseId, HttpCo
     }
     catch (Exception ex)
     {
-        return Results.StatusCode(500, new { error = ex.Message });
+        return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 })
 .WithName("GetExpenseReceipt")
@@ -5232,7 +5232,7 @@ app.MapGet("/api/notifications", async (HttpContext ctx, DatabaseService db) =>
     }
     catch (Exception ex)
     {
-        return Results.StatusCode(500, new { error = ex.Message });
+        return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 })
 .WithName("GetNotifications")
@@ -5265,7 +5265,7 @@ app.MapPost("/api/notifications/{notificationId:int}/read", async (int notificat
     }
     catch (Exception ex)
     {
-        return Results.StatusCode(500, new { error = ex.Message });
+        return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 })
 .WithName("MarkNotificationAsRead")
@@ -5296,7 +5296,7 @@ app.MapPost("/api/notifications/read-all", async (HttpContext ctx, DatabaseServi
     }
     catch (Exception ex)
     {
-        return Results.StatusCode(500, new { error = ex.Message });
+        return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 })
 .WithName("MarkAllNotificationsAsRead")
@@ -5341,7 +5341,7 @@ app.MapGet("/api/notifications/preferences", async (HttpContext ctx, DatabaseSer
     }
     catch (Exception ex)
     {
-        return Results.StatusCode(500, new { error = ex.Message });
+        return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 })
 .WithName("GetNotificationPreferences")
@@ -5391,7 +5391,7 @@ app.MapPut("/api/notifications/preferences", async (HttpContext ctx, UpdateNotif
     }
     catch (Exception ex)
     {
-        return Results.StatusCode(500, new { error = ex.Message });
+        return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 })
 .WithName("UpdateNotificationPreferences")
