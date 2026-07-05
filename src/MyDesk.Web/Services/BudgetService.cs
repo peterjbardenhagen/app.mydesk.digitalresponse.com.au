@@ -133,10 +133,10 @@ public class BudgetService
         if (budget == null)
             return true;  // No budget defined, allow
 
-        decimal allocated = (decimal)budget["AllocatedAmount"];
-        decimal spent = (decimal)budget["SpentAmount"];
-        decimal encumbered = (decimal)budget["EncumberedAmount"];
-        bool allowOverspend = (bool)budget["AllowOverspend"];
+        decimal allocated = budget["AllocatedAmount"] != DBNull.Value ? (decimal)budget["AllocatedAmount"] : 0;
+        decimal spent = budget["SpentAmount"] != DBNull.Value ? (decimal)budget["SpentAmount"] : 0;
+        decimal encumbered = budget["EncumberedAmount"] != DBNull.Value ? (decimal)budget["EncumberedAmount"] : 0;
+        bool allowOverspend = budget["AllowOverspend"] != DBNull.Value ? (bool)budget["AllowOverspend"] : false;
 
         decimal remaining = allocated - spent - encumbered;
 
@@ -152,9 +152,9 @@ public class BudgetService
         if (budget == null)
             return decimal.MaxValue;
 
-        decimal allocated = (decimal)budget["AllocatedAmount"];
-        decimal spent = (decimal)budget["SpentAmount"];
-        decimal encumbered = (decimal)budget["EncumberedAmount"];
+        decimal allocated = budget["AllocatedAmount"] != DBNull.Value ? (decimal)budget["AllocatedAmount"] : 0;
+        decimal spent = budget["SpentAmount"] != DBNull.Value ? (decimal)budget["SpentAmount"] : 0;
+        decimal encumbered = budget["EncumberedAmount"] != DBNull.Value ? (decimal)budget["EncumberedAmount"] : 0;
 
         return allocated - spent - encumbered;
     }
@@ -165,9 +165,10 @@ public class BudgetService
         if (budget == null)
             return 100;
 
-        decimal allocated = (decimal)budget["AllocatedAmount"];
-        decimal spent = (decimal)budget["SpentAmount"];
+        decimal allocated = budget["AllocatedAmount"] != DBNull.Value ? (decimal)budget["AllocatedAmount"] : 1;
+        decimal spent = budget["SpentAmount"] != DBNull.Value ? (decimal)budget["SpentAmount"] : 0;
 
+        if (allocated == 0) return 0;
         return (int)((spent / allocated) * 100);
     }
 

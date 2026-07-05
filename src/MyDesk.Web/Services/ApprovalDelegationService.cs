@@ -131,7 +131,8 @@ public class ApprovalDelegationService
         if (delegation == null)
             return false;
 
-        if (!(bool)delegation["CanApprove"])
+        bool canApprove = delegation["CanApprove"] != DBNull.Value ? (bool)delegation["CanApprove"] : false;
+        if (!canApprove)
             return false;
 
         if (amount.HasValue)
