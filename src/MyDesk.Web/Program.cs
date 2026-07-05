@@ -385,6 +385,14 @@ builder.Services.AddScoped<BankingService>();
     builder.Services.AddScoped<ApprovalService>();
     builder.Services.AddScoped<SalesReportsService>();
 
+    // ── Phase 4: Teams & Departments (2026) ────────────────────────────────
+    builder.Services.AddScoped<DepartmentService>();
+    builder.Services.AddScoped<TeamService>();
+    builder.Services.AddScoped<BudgetService>();
+    builder.Services.AddScoped<ApprovalDelegationService>();
+    builder.Services.AddScoped<ApprovalEscalationService>();
+    builder.Services.AddScoped<BulkUserImportService>();
+
 builder.Services.AddHttpClient();
 
 // ── Hangfire (background + recurring jobs) ─────────────────────────────────
@@ -5396,6 +5404,299 @@ app.MapPut("/api/notifications/preferences", async (HttpContext ctx, UpdateNotif
 .WithName("UpdateNotificationPreferences")
 .WithOpenApi()
 .RequireAuthorization();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PHASE 4: TEAMS & DEPARTMENTS API
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── GET /api/departments ──────────────────────────────────────────────────
+app.MapGet("/api/departments", async (HttpContext ctx, DepartmentService deptSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = int.TryParse(ctx.User.FindFirst("tenant_id")?.Value, out var tid) ? tid : 0;
+    if (tenantId == 0) return Results.BadRequest(new { error = "No tenant context" });
+
+    var dt = await deptSvc.GetDepartmentsAsync(tenantId);
+    var depts = new List<object>();
+    foreach (System.Data.DataRow row in dt.Rows)
+    {
+        depts.Add(new
+        {
+            id = (int)row["DepartmentId"],
+            name = (string)row["Name"],
+            description = row["Description"] != DBNull.Value ? (string)row["Description"] : null,
+            parentDepartmentId = row["ParentDepartmentId"] != DBNull.Value ? (int)row["ParentDepartmentId"] : null,
+            managerUserId = row["ManagerUserId"] != DBNull.Value ? (int)row["ManagerUserId"] : null,
+            status = (string)row["Status"],
+            costCenter = row["CostCenter"] != DBNull.Value ? (string)row["CostCenter"] : null,
+            createdAt = ((DateTime)row["CreatedAt"]).ToString("yyyy-MM-dd")
+        });
+    }
+    return Results.Ok(new { departments = depts, totalCount = depts.Count });
+})
+.WithName("ListDepartments")
+.WithOpenApi()
+.RequireAuthorization();
+
+// ── POST /api/departments ─────────────────────────────────────────────────
+app.MapPost("/api/departments", async (HttpContext ctx, CreateDepartmentRequest body, DepartmentService deptSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = int.TryParse(ctx.User.FindFirst("tenant_id")?.Value, out var tid) ? tid : 0;
+    if (tenantId == 0) return Results.BadRequest(new { error = "No tenant context" });
+
+    if (string.IsNullOrWhiteSpace(body.Name))
+        return Results.BadRequest(new { error = "Department name required" });
+
+    var deptId = await deptSvc.CreateDepartmentAsync(tenantId, body.Name, body.Description,
+        body.ParentDepartmentId, body.ManagerUserId, body.CostCenter);
+
+    return Results.Created($"/api/departments/{deptId}", new { departmentId = deptId });
+})
+.WithName("CreateDepartment")
+.WithOpenApi()
+.RequireAuthorization();
+
+// ── GET /api/teams ───────────────────────────────────────────────────────
+app.MapGet("/api/teams", async (HttpContext ctx, int? departmentId, TeamService teamSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = int.TryParse(ctx.User.FindFirst("tenant_id")?.Value, out var tid) ? tid : 0;
+    if (tenantId == 0) return Results.BadRequest(new { error = "No tenant context" });
+
+    var dt = await teamSvc.GetTeamsAsync(tenantId, departmentId);
+    var teams = new List<object>();
+    foreach (System.Data.DataRow row in dt.Rows)
+    {
+        teams.Add(new
+        {
+            id = (int)row["TeamId"],
+            departmentId = (int)row["DepartmentId"],
+            name = (string)row["Name"],
+            description = row["Description"] != DBNull.Value ? (string)row["Description"] : null,
+            teamLeadUserId = row["TeamLeadUserId"] != DBNull.Value ? (int)row["TeamLeadUserId"] : null,
+            isApprovalTeam = (bool)row["IsApprovalTeam"],
+            status = (string)row["Status"]
+        });
+    }
+    return Results.Ok(new { teams, totalCount = teams.Count });
+})
+.WithName("ListTeams")
+.WithOpenApi()
+.RequireAuthorization();
+
+// ── POST /api/teams ──────────────────────────────────────────────────────
+app.MapPost("/api/teams", async (HttpContext ctx, CreateTeamRequest body, TeamService teamSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = int.TryParse(ctx.User.FindFirst("tenant_id")?.Value, out var tid) ? tid : 0;
+    if (tenantId == 0) return Results.BadRequest(new { error = "No tenant context" });
+
+    if (string.IsNullOrWhiteSpace(body.Name))
+        return Results.BadRequest(new { error = "Team name required" });
+
+    var teamId = await teamSvc.CreateTeamAsync(tenantId, body.DepartmentId, body.Name,
+        body.Description, body.TeamLeadUserId, body.IsApprovalTeam);
+
+    return Results.Created($"/api/teams/{teamId}", new { teamId });
+})
+.WithName("CreateTeam")
+.WithOpenApi()
+.RequireAuthorization();
+
+// ── GET /api/teams/{teamId}/members ──────────────────────────────────────
+app.MapGet("/api/teams/{teamId:int}/members", async (int teamId, HttpContext ctx, TeamService teamSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = int.TryParse(ctx.User.FindFirst("tenant_id")?.Value, out var tid) ? tid : 0;
+    if (tenantId == 0) return Results.BadRequest(new { error = "No tenant context" });
+
+    var dt = await teamSvc.GetTeamMembersAsync(tenantId, teamId);
+    var members = new List<object>();
+    foreach (System.Data.DataRow row in dt.Rows)
+    {
+        members.Add(new
+        {
+            teamMemberId = (int)row["TeamMemberId"],
+            userId = (int)row["UserId"],
+            name = (string)row["Name"],
+            email = (string)row["Email"],
+            role = (string)row["Role"],
+            joinedAt = ((DateTime)row["JoinedAt"]).ToString("yyyy-MM-dd")
+        });
+    }
+    return Results.Ok(new { members, totalCount = members.Count });
+})
+.WithName("GetTeamMembers")
+.WithOpenApi()
+.RequireAuthorization();
+
+// ── POST /api/teams/{teamId}/members ─────────────────────────────────────
+app.MapPost("/api/teams/{teamId:int}/members", async (int teamId, HttpContext ctx, AddTeamMemberRequest body, TeamService teamSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = int.TryParse(ctx.User.FindFirst("tenant_id")?.Value, out var tid) ? tid : 0;
+    if (tenantId == 0) return Results.BadRequest(new { error = "No tenant context" });
+
+    await teamSvc.AddTeamMemberAsync(tenantId, teamId, body.UserId, body.Role ?? "Member");
+    return Results.Ok(new { message = "Member added to team" });
+})
+.WithName("AddTeamMember")
+.WithOpenApi()
+.RequireAuthorization();
+
+// ── DELETE /api/teams/{teamId}/members/{userId} ──────────────────────────
+app.MapDelete("/api/teams/{teamId:int}/members/{userId:int}", async (int teamId, int userId, HttpContext ctx, TeamService teamSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = int.TryParse(ctx.User.FindFirst("tenant_id")?.Value, out var tid) ? tid : 0;
+    if (tenantId == 0) return Results.BadRequest(new { error = "No tenant context" });
+
+    await teamSvc.RemoveTeamMemberAsync(tenantId, teamId, userId);
+    return Results.Ok(new { message = "Member removed from team" });
+})
+.WithName("RemoveTeamMember")
+.WithOpenApi()
+.RequireAuthorization();
+
+// ── POST /api/approval-delegation ────────────────────────────────────────
+app.MapPost("/api/approval-delegation", async (HttpContext ctx, CreateDelegationRequest body, ApprovalDelegationService delgSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = int.TryParse(ctx.User.FindFirst("tenant_id")?.Value, out var tid) ? tid : 0;
+    if (tenantId == 0) return Results.BadRequest(new { error = "No tenant context" });
+
+    var delgId = await delgSvc.CreateDelegationAsync(tenantId, body.FromUserId, body.ToUserId,
+        body.TeamId, body.ModuleType, body.MinThreshold, body.MaxThreshold,
+        body.StartDate, body.EndDate, body.CanApprove, body.CanReject, body.CanDelegate, body.CanComment);
+
+    return Results.Created($"/api/approval-delegation/{delgId}", new { delegationId = delgId });
+})
+.WithName("CreateDelegation")
+.WithOpenApi()
+.RequireAuthorization();
+
+// ── POST /api/bulk-import/users ──────────────────────────────────────────
+app.MapPost("/api/bulk-import/users", async (HttpContext ctx, IFormFile file, BulkUserImportService bulkSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = int.TryParse(ctx.User.FindFirst("tenant_id")?.Value, out var tid) ? tid : 0;
+    var userId = int.TryParse(ctx.User.FindFirst("user_id")?.Value, out var uid) ? uid : 0;
+    if (tenantId == 0 || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
+
+    if (file == null || file.Length == 0)
+        return Results.BadRequest(new { error = "CSV file required" });
+
+    using (var stream = file.OpenReadStream())
+    {
+        var result = await bulkSvc.ImportUsersAsync(tenantId, userId, stream, file.FileName);
+        return Results.Ok(result);
+    }
+})
+.WithName("BulkImportUsers")
+.WithOpenApi()
+.RequireAuthorization();
+
+// ── GET /api/departments/{deptId}/budget ─────────────────────────────────
+app.MapGet("/api/departments/{deptId:int}/budget", async (int deptId, int? year, HttpContext ctx, BudgetService budgetSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = int.TryParse(ctx.User.FindFirst("tenant_id")?.Value, out var tid) ? tid : 0;
+    if (tenantId == 0) return Results.BadRequest(new { error = "No tenant context" });
+
+    year ??= DateTime.UtcNow.Year;
+
+    var budget = await budgetSvc.GetBudgetAsync(tenantId, deptId, year.Value);
+    if (budget == null)
+        return Results.NotFound(new { error = "Budget not found" });
+
+    var remaining = await budgetSvc.GetRemainingBudgetAsync(tenantId, deptId, year.Value);
+    var alertPercent = await budgetSvc.GetBudgetAlertPercentageAsync(tenantId, deptId, year.Value);
+
+    return Results.Ok(new
+    {
+        budgetId = (int)budget["BudgetId"],
+        departmentId = (int)budget["DepartmentId"],
+        fiscalYear = (int)budget["FiscalYear"],
+        allocatedAmount = (decimal)budget["AllocatedAmount"],
+        spentAmount = (decimal)budget["SpentAmount"],
+        encumberedAmount = (decimal)budget["EncumberedAmount"],
+        remainingAmount = remaining,
+        usagePercent = alertPercent,
+        allowOverspend = (bool)budget["AllowOverspend"]
+    });
+})
+.WithName("GetDepartmentBudget")
+.WithOpenApi()
+.RequireAuthorization();
+
+// ── POST /api/departments/{deptId}/budget ────────────────────────────────
+app.MapPost("/api/departments/{deptId:int}/budget", async (int deptId, HttpContext ctx, CreateBudgetRequest body, BudgetService budgetSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = int.TryParse(ctx.User.FindFirst("tenant_id")?.Value, out var tid) ? tid : 0;
+    if (tenantId == 0) return Results.BadRequest(new { error = "No tenant context" });
+
+    if (body.AllocatedAmount <= 0)
+        return Results.BadRequest(new { error = "Budget amount must be positive" });
+
+    var budgetId = await budgetSvc.CreateBudgetAsync(tenantId, deptId, body.FiscalYear ?? DateTime.UtcNow.Year,
+        body.AllocatedAmount, body.AllowOverspend, body.ThresholdAlertPercentage ?? 80);
+
+    return Results.Created($"/api/departments/{deptId}/budget", new { budgetId });
+})
+.WithName("CreateBudget")
+.WithOpenApi()
+.RequireAuthorization();
+
+// Phase 4 DTOs: Teams & Departments
+class CreateDepartmentRequest
+{
+    public string Name { get; set; } = "";
+    public string? Description { get; set; }
+    public int? ParentDepartmentId { get; set; }
+    public int? ManagerUserId { get; set; }
+    public string? CostCenter { get; set; }
+}
+
+class CreateTeamRequest
+{
+    public int DepartmentId { get; set; }
+    public string Name { get; set; } = "";
+    public string? Description { get; set; }
+    public int? TeamLeadUserId { get; set; }
+    public bool IsApprovalTeam { get; set; } = false;
+}
+
+class AddTeamMemberRequest
+{
+    public int UserId { get; set; }
+    public string? Role { get; set; } = "Member";
+}
+
+class CreateDelegationRequest
+{
+    public int FromUserId { get; set; }
+    public int ToUserId { get; set; }
+    public int? TeamId { get; set; }
+    public string? ModuleType { get; set; }
+    public decimal? MinThreshold { get; set; }
+    public decimal? MaxThreshold { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public bool CanApprove { get; set; } = true;
+    public bool CanReject { get; set; } = true;
+    public bool CanDelegate { get; set; } = false;
+    public bool CanComment { get; set; } = true;
+}
+
+class CreateBudgetRequest
+{
+    public int? FiscalYear { get; set; }
+    public decimal AllocatedAmount { get; set; }
+    public bool AllowOverspend { get; set; } = false;
+    public int? ThresholdAlertPercentage { get; set; } = 80;
+}
 
 /// <summary>Body model for POST /api/auth/reset-password.</summary>
 public class ResetPasswordRequest
