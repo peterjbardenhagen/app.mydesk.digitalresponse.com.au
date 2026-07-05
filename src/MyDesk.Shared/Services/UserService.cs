@@ -364,7 +364,7 @@ public class UserService
             new() { ["UserId"] = userId, ["Token"] = tokenHash, ["ExpiresAt"] = expiresAt });
     }
 
-    public async Task<bool> ResetPasswordAsync(string tokenHash, string newPassword)
+    public async Task<bool> ResetPasswordByTokenAsync(string tokenHash, string newPassword)
     {
         var dt = await _db.QueryAsync(
             "SELECT UserId FROM PasswordResetTokens WHERE Token = @Token AND ExpiresAt > GETUTCDATE() AND IsUsed = 0",

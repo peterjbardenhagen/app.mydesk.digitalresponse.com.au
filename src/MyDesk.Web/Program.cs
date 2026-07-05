@@ -977,7 +977,7 @@ app.MapPost("/api/auth/reset-password", async (HttpContext ctx, UserService user
         var tokenHash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(req.Token));
         var tokenHashStr = Convert.ToHexString(tokenHash);
 
-        var result = await userSvc.ResetPasswordAsync(tokenHashStr, req.NewPassword);
+        var result = await userSvc.ResetPasswordByTokenAsync(tokenHashStr, req.NewPassword);
         if (!result)
             return Results.BadRequest(new { error = "Invalid or expired token" });
 
