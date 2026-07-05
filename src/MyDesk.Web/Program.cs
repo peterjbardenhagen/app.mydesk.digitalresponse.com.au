@@ -369,7 +369,7 @@ builder.Services.AddScoped<BankingService>();
     builder.Services.AddScoped<AIFunctionExecutor>();
     builder.Services.AddScoped<FinancialExtractionService>();
     builder.Services.AddScoped<WorkflowApprovalService>();
-    builder.Services.AddScoped<PhotoProcessingService>();
+    // builder.Services.AddScoped<PhotoProcessingService>();
     builder.Services.AddScoped<NotificationService>();
 
     // ── Security Services (Phase 1 Week 4) ──────────────────────────────────
@@ -4872,6 +4872,8 @@ app.MapGet("/api/user/profile", async (HttpContext ctx, DatabaseService db) =>
 .RequireAuthorization();
 
 // POST /api/user/profile/photo/upload - Upload and crop photo
+// TEMPORARILY DISABLED - Diagnostic: PhotoProcessingService issue
+/* DISABLED
 app.MapPost("/api/user/profile/photo/upload", async (HttpContext ctx, DatabaseService db, PhotoProcessingService photoService) =>
 {
     var userId = int.TryParse(ctx.User.FindFirst("UserId")?.Value, out var uid) ? uid : 0;
@@ -4950,6 +4952,7 @@ app.MapPost("/api/user/profile/photo/upload", async (HttpContext ctx, DatabaseSe
 .WithOpenApi()
 .RequireAuthorization()
 .DisableAntiforgery();
+*/
 
 // DELETE /api/user/profile/photo - Remove current photo
 app.MapDelete("/api/user/profile/photo", async (HttpContext ctx, DatabaseService db) =>
@@ -5005,6 +5008,8 @@ app.MapDelete("/api/user/profile/photo", async (HttpContext ctx, DatabaseService
 // ── Expense Receipt Photos (New Feature) ──────────────────────────────────────
 
 // POST /api/expenses/{expenseId}/receipt/upload - Upload receipt photo
+// TEMPORARILY DISABLED - Diagnostic: PhotoProcessingService issue
+/* DISABLED
 app.MapPost("/api/expenses/{expenseId:int}/receipt/upload", async (int expenseId, HttpContext ctx, DatabaseService db, PhotoProcessingService photoService, MyDesk.Shared.Services.Extraction.DocumentExtractionService extractionService) =>
 {
     var userId = int.TryParse(ctx.User.FindFirst("UserId")?.Value, out var uid) ? uid : 0;
@@ -5115,6 +5120,7 @@ app.MapPost("/api/expenses/{expenseId:int}/receipt/upload", async (int expenseId
 .WithOpenApi()
 .RequireAuthorization()
 .DisableAntiforgery();
+*/
 
 // GET /api/expenses/{expenseId}/receipt - Get receipt data
 app.MapGet("/api/expenses/{expenseId:int}/receipt", async (int expenseId, HttpContext ctx, DatabaseService db) =>
