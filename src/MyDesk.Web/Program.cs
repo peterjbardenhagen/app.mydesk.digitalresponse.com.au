@@ -4375,6 +4375,301 @@ app.MapPut("/api/product-admin/invoices/{invoiceId:int}/mark-paid", async (int i
 .WithOpenApi()
 .RequireAuthorization();
 
+// ── Client Onboarding Wizard (Phase 2 Weeks 7-8) ────────────────────────────────────────
+// 6-step wizard for creating and configuring new client tenants
+
+// POST /api/product-admin/onboarding/start - Initiate wizard session
+app.MapPost("/api/product-admin/onboarding/start", async (HttpContext ctx, StartOnboardingRequest body, DatabaseService db) =>
+{
+    if (!await IsMyDeskSuperAdminAsync(ctx, db))
+        return Results.Forbid();
+
+    var userId = int.TryParse(ctx.User.FindFirst("UserId")?.Value, out var uid) ? uid : 0;
+
+    // Validate email format
+    if (string.IsNullOrWhiteSpace(body.AdminEmail) || !body.AdminEmail.Contains("@"))
+        return Results.BadRequest(new { error = "Invalid admin email" });
+
+    try
+    {
+        // Generate unique session token
+        string sessionToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(24));
+
+        await db.ExecuteNonQueryAsync(
+            @"INSERT INTO dbo.ClientOnboardingSession
+              (SessionToken, AdminUserId, CurrentStep, AdminName, AdminEmail, Status, StartedAt)
+              VALUES (@Token, @UserId, 1, @AdminName, @AdminEmail, 'IN_PROGRESS', GETUTCDATE())",
+            new()
+            {
+                ["Token"] = sessionToken,
+                ["UserId"] = userId,
+                ["AdminName"] = body.AdminName,
+                ["AdminEmail"] = body.AdminEmail
+            });
+
+        return Results.Created($"/api/product-admin/onboarding/{sessionToken}", new
+        {
+            sessionToken,
+            currentStep = 1,
+            message = "Onboarding session created"
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Failed to start onboarding: {ex.Message}" });
+    }
+})
+.WithName("StartOnboarding")
+.WithOpenApi()
+.RequireAuthorization();
+
+// GET /api/product-admin/onboarding/{sessionToken} - Get wizard session state
+app.MapGet("/api/product-admin/onboarding/{sessionToken}", async (string sessionToken, HttpContext ctx, DatabaseService db) =>
+{
+    if (!await IsMyDeskSuperAdminAsync(ctx, db))
+        return Results.Forbid();
+
+    var result = await db.QueryAsync(
+        @"SELECT CurrentStep, TenantName, TenantCode, Domain, ApprovalWorkflowTemplate,
+                 BillingModel, InitialUserSeats, AdminName, AdminEmail, Status
+          FROM dbo.ClientOnboardingSession
+          WHERE SessionToken = @Token AND Status IN ('IN_PROGRESS', 'COMPLETED')",
+        new() { ["Token"] = sessionToken });
+
+    if (result.Rows.Count == 0)
+        return Results.NotFound();
+
+    var session = result.Rows[0];
+    return Results.Ok(new
+    {
+        currentStep = (int)session["CurrentStep"],
+        tenantName = session["TenantName"]?.ToString(),
+        tenantCode = session["TenantCode"]?.ToString(),
+        domain = session["Domain"]?.ToString(),
+        approvalWorkflow = session["ApprovalWorkflowTemplate"]?.ToString(),
+        billingModel = session["BillingModel"]?.ToString(),
+        userSeats = session["InitialUserSeats"],
+        adminName = (string)session["AdminName"],
+        adminEmail = (string)session["AdminEmail"],
+        status = (string)session["Status"]
+    });
+})
+.WithName("GetOnboardingSession")
+.WithOpenApi()
+.RequireAuthorization();
+
+// POST /api/product-admin/onboarding/{sessionToken}/steps/{step} - Submit step data
+app.MapPost("/api/product-admin/onboarding/{sessionToken}/steps/{step:int}",
+    async (string sessionToken, int step, HttpContext ctx, OnboardingStepRequest body, DatabaseService db) =>
+{
+    if (!await IsMyDeskSuperAdminAsync(ctx, db))
+        return Results.Forbid();
+
+    if (step < 1 || step > 6)
+        return Results.BadRequest(new { error = "Invalid step number (1-6)" });
+
+    try
+    {
+        // Get current session
+        var sessionResult = await db.QueryAsync(
+            "SELECT Id, CurrentStep FROM dbo.ClientOnboardingSession WHERE SessionToken = @Token AND Status = 'IN_PROGRESS'",
+            new() { ["Token"] = sessionToken });
+
+        if (sessionResult.Rows.Count == 0)
+            return Results.NotFound();
+
+        int sessionId = (int)sessionResult.Rows[0]["Id"];
+        int currentStep = (int)sessionResult.Rows[0]["CurrentStep"];
+
+        // Validate step sequence
+        if (step != currentStep)
+            return Results.BadRequest(new { error = $"Expected step {currentStep}, got step {step}" });
+
+        // Step-specific validation and data update
+        string updateQuery = "";
+        var @params = new Dictionary<string, object?> { ["SessionId"] = sessionId, ["Token"] = sessionToken };
+
+        switch (step)
+        {
+            case 1:  // Basic info
+                if (string.IsNullOrWhiteSpace(body.TenantName) || string.IsNullOrWhiteSpace(body.TenantCode))
+                    return Results.BadRequest(new { error = "Tenant name and code required" });
+                updateQuery = "UPDATE dbo.ClientOnboardingSession SET TenantName = @TenantName, TenantCode = @TenantCode, CurrentStep = 2 WHERE Id = @SessionId";
+                @params["TenantName"] = body.TenantName;
+                @params["TenantCode"] = body.TenantCode;
+                break;
+
+            case 2:  // Domain
+                if (string.IsNullOrWhiteSpace(body.Domain))
+                    return Results.BadRequest(new { error = "Domain required" });
+                updateQuery = "UPDATE dbo.ClientOnboardingSession SET Domain = @Domain, CurrentStep = 3 WHERE Id = @SessionId";
+                @params["Domain"] = body.Domain.ToLower();
+                break;
+
+            case 3:  // Approval workflow
+                if (string.IsNullOrWhiteSpace(body.ApprovalWorkflow))
+                    return Results.BadRequest(new { error = "Approval workflow template required" });
+                updateQuery = "UPDATE dbo.ClientOnboardingSession SET ApprovalWorkflowTemplate = @Template, CurrentStep = 4 WHERE Id = @SessionId";
+                @params["Template"] = body.ApprovalWorkflow;
+                break;
+
+            case 4:  // Billing
+                if (string.IsNullOrWhiteSpace(body.BillingModel))
+                    return Results.BadRequest(new { error = "Billing model required" });
+                updateQuery = "UPDATE dbo.ClientOnboardingSession SET BillingModel = @Model, BillingContactEmail = @Email, CurrentStep = 5 WHERE Id = @SessionId";
+                @params["Model"] = body.BillingModel;
+                @params["Email"] = body.BillingContactEmail ?? (object)DBNull.Value;
+                break;
+
+            case 5:  // User seats
+                if (body.UserSeats <= 0)
+                    return Results.BadRequest(new { error = "User seats must be greater than 0" });
+                updateQuery = "UPDATE dbo.ClientOnboardingSession SET InitialUserSeats = @Seats, CurrentStep = 6 WHERE Id = @SessionId";
+                @params["Seats"] = body.UserSeats;
+                break;
+
+            case 6:  // Confirmation (just update step)
+                updateQuery = "UPDATE dbo.ClientOnboardingSession SET IsConfirmed = 1, ConfirmedAt = GETUTCDATE() WHERE Id = @SessionId";
+                break;
+        }
+
+        await db.ExecuteNonQueryAsync(updateQuery, @params);
+
+        return Results.Ok(new
+        {
+            stepCompleted = step,
+            nextStep = step < 6 ? step + 1 : null,
+            message = step == 6 ? "Wizard confirmation complete. Ready to create tenant." : $"Step {step} completed"
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Failed to save step: {ex.Message}" });
+    }
+})
+.WithName("SubmitOnboardingStep")
+.WithOpenApi()
+.RequireAuthorization();
+
+// POST /api/product-admin/onboarding/{sessionToken}/complete - Complete wizard and create tenant
+app.MapPost("/api/product-admin/onboarding/{sessionToken}/complete", async (string sessionToken, HttpContext ctx, DatabaseService db) =>
+{
+    if (!await IsMyDeskSuperAdminAsync(ctx, db))
+        return Results.Forbid();
+
+    var userId = int.TryParse(ctx.User.FindFirst("UserId")?.Value, out var uid) ? uid : 0;
+
+    try
+    {
+        // Get completed session
+        var sessionResult = await db.QueryAsync(
+            @"SELECT Id, TenantName, TenantCode, Domain, ApprovalWorkflowTemplate, BillingModel,
+                     InitialUserSeats, BillingContactEmail, AdminName, AdminEmail, AdminPassword, IsConfirmed
+              FROM dbo.ClientOnboardingSession
+              WHERE SessionToken = @Token AND Status = 'IN_PROGRESS' AND IsConfirmed = 1 AND CurrentStep = 6",
+            new() { ["Token"] = sessionToken });
+
+        if (sessionResult.Rows.Count == 0)
+            return Results.BadRequest(new { error = "Session not found or not ready for completion" });
+
+        var session = sessionResult.Rows[0];
+        int sessionId = (int)session["Id"];
+
+        // Create new tenant
+        string tenantCode = ((string)session["TenantCode"]).ToUpper();
+        string tenantName = (string)session["TenantName"];
+
+        var createTenantResult = await db.QueryAsync(
+            @"INSERT INTO dbo.Tenants (Name, Code, IsActive, CreatedAt, CreatedBy, UpdatedAt)
+              OUTPUT INSERTED.TenantId
+              VALUES (@Name, @Code, 1, GETUTCDATE(), @UserId, GETUTCDATE())",
+            new() { ["Name"] = tenantName, ["Code"] = tenantCode, ["UserId"] = userId });
+
+        int newTenantId = (int)createTenantResult.Rows[0]["TenantId"];
+
+        // Create admin user for the tenant
+        string adminName = (string)session["AdminName"];
+        string adminEmail = (string)session["AdminEmail"];
+
+        // Default password (should be changed on first login in production)
+        string initialPassword = "TempPassword123!";
+
+        await db.ExecuteNonQueryAsync(
+            @"INSERT INTO dbo.Users (TenantId, Name, Email, PasswordHash, IsAdmin, IsActive, CreatedAt)
+              VALUES (@TenantId, @Name, @Email, @Password, 1, 1, GETUTCDATE())",
+            new()
+            {
+                ["TenantId"] = newTenantId,
+                ["Name"] = adminName,
+                ["Email"] = adminEmail,
+                ["Password"] = initialPassword  // In production, hash this
+            });
+
+        // Create domain mapping
+        string domain = ((string)session["Domain"]).ToLower();
+        await db.ExecuteNonQueryAsync(
+            @"INSERT INTO dbo.TenantDomains (TenantId, Domain, IsVerified, CreatedBy, IsActive)
+              VALUES (@TenantId, @Domain, 1, @UserId, 1)",
+            new() { ["TenantId"] = newTenantId, ["Domain"] = domain, ["UserId"] = userId });
+
+        // Create billing configuration
+        string billingModel = (string)session["BillingModel"];
+        await db.ExecuteNonQueryAsync(
+            @"INSERT INTO dbo.ClientBillingConfig (TenantId, BillingModel, BillingContactEmail, Status, CreatedBy)
+              VALUES (@TenantId, @Model, @Email, 'ACTIVE', @UserId)",
+            new()
+            {
+                ["TenantId"] = newTenantId,
+                ["Model"] = billingModel,
+                ["Email"] = session["BillingContactEmail"] ?? (object)DBNull.Value,
+                ["UserId"] = userId
+            });
+
+        // Mark session as completed
+        await db.ExecuteNonQueryAsync(
+            "UPDATE dbo.ClientOnboardingSession SET TenantId = @TenantId, Status = 'COMPLETED', CompletedAt = GETUTCDATE() WHERE Id = @Id",
+            new() { ["Id"] = sessionId, ["TenantId"] = newTenantId });
+
+        // Store wizard completion snapshot
+        var wizardDataJson = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            tenantName,
+            tenantCode,
+            domain,
+            billingModel,
+            userSeats = session["InitialUserSeats"]
+        });
+
+        await db.ExecuteNonQueryAsync(
+            @"INSERT INTO dbo.ClientOnboardingTemplate (SessionId, TenantId, WizardData, OnboardingCompletedBy)
+              VALUES (@SessionId, @TenantId, @Data, @UserId)",
+            new()
+            {
+                ["SessionId"] = sessionId,
+                ["TenantId"] = newTenantId,
+                ["Data"] = wizardDataJson,
+                ["UserId"] = userId
+            });
+
+        return Results.Created($"/api/product-admin/clients/{newTenantId}", new
+        {
+            tenantId = newTenantId,
+            tenantName,
+            tenantCode,
+            adminEmail,
+            tempPassword = initialPassword,
+            message = "Client tenant created successfully. Admin should change password on first login."
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Failed to complete onboarding: {ex.Message}" });
+    }
+})
+.WithName("CompleteOnboarding")
+.WithOpenApi()
+.RequireAuthorization();
+
 app.Run();
 
 /// <summary>Body model for POST /api/auth/reset-password.</summary>
@@ -4482,4 +4777,22 @@ class MarkInvoicePaidRequest
     public decimal Amount { get; set; }
     public string? PaymentMethod { get; set; }
     public string? PaymentReference { get; set; }
+}
+
+// Onboarding wizard DTOs
+class StartOnboardingRequest
+{
+    public string AdminName { get; set; } = "";
+    public string AdminEmail { get; set; } = "";
+}
+
+class OnboardingStepRequest
+{
+    public string? TenantName { get; set; }
+    public string? TenantCode { get; set; }
+    public string? Domain { get; set; }
+    public string? ApprovalWorkflow { get; set; }
+    public string? BillingModel { get; set; }
+    public string? BillingContactEmail { get; set; }
+    public int UserSeats { get; set; }
 }
