@@ -3697,6 +3697,247 @@ app.MapPost("/api/approval/check-permission", async (HttpContext ctx, CheckAppro
 .WithOpenApi()
 .RequireAuthorization();
 
+// ── Compliance Audit Logging (Phase 1 Week 3) ────────────────────────────────────────
+// Append-only immutable audit trail for regulatory compliance
+
+// GET /api/compliance/audit-log - View audit log (admin only)
+app.MapGet("/api/compliance/audit-log", async (HttpContext ctx, DatabaseService db, int page = 1, int pageSize = 50) =>
+{
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = ctx.User.FindFirst("UserId")?.Value;
+
+    if (!int.TryParse(tenantId, out int parsedTenantId) || !int.TryParse(userId, out int parsedUserId))
+        return Results.Unauthorized();
+
+    // Verify admin
+    var adminCheck = await db.QueryAsync(
+        "SELECT IsAdmin FROM dbo.Users WHERE UserId = @UserId AND TenantId = @TenantId",
+        new() { ["UserId"] = parsedUserId, ["TenantId"] = parsedTenantId });
+
+    if (adminCheck.Rows.Count == 0 || !(bool)adminCheck.Rows[0]["IsAdmin"])
+        return Results.Forbid();
+
+    int skip = (page - 1) * pageSize;
+
+    var result = await db.QueryAsync(
+        @"SELECT Id, EntityType, EntityId, Action, UserId, Status, Reason, IpAddress, AuditedAt
+          FROM dbo.ComplianceAuditLog
+          WHERE TenantId = @TenantId
+          ORDER BY AuditedAt DESC
+          OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY",
+        new() { ["TenantId"] = parsedTenantId, ["Skip"] = skip, ["Take"] = pageSize });
+
+    var totalResult = await db.QueryAsync(
+        "SELECT COUNT(*) as total FROM dbo.ComplianceAuditLog WHERE TenantId = @TenantId",
+        new() { ["TenantId"] = parsedTenantId });
+
+    int total = (int)totalResult.Rows[0]["total"];
+
+    var logs = result.Rows.Cast<DataRow>().Select(row => new
+    {
+        id = (long)row["Id"],
+        entityType = (string)row["EntityType"],
+        entityId = (int)row["EntityId"],
+        action = (string)row["Action"],
+        userId = row["UserId"] != DBNull.Value ? (int?)row["UserId"] : null,
+        status = (string)row["Status"],
+        reason = row["Reason"]?.ToString(),
+        ipAddress = row["IpAddress"]?.ToString(),
+        auditedAt = row["AuditedAt"]
+    }).ToList();
+
+    return Results.Ok(new
+    {
+        logs,
+        pagination = new { page, pageSize, total, totalPages = (total + pageSize - 1) / pageSize }
+    });
+})
+.WithName("GetAuditLog")
+.WithOpenApi()
+.RequireAuthorization();
+
+// GET /api/compliance/audit-log/entity/{entityType}/{entityId} - View audit history for specific entity
+app.MapGet("/api/compliance/audit-log/entity/{entityType}/{entityId:int}", async (string entityType, int entityId, HttpContext ctx, DatabaseService db) =>
+{
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = ctx.User.FindFirst("UserId")?.Value;
+
+    if (!int.TryParse(tenantId, out int parsedTenantId) || !int.TryParse(userId, out int parsedUserId))
+        return Results.Unauthorized();
+
+    // Verify user can access this entity (basic tenant isolation)
+    var adminCheck = await db.QueryAsync(
+        "SELECT IsAdmin FROM dbo.Users WHERE UserId = @UserId AND TenantId = @TenantId",
+        new() { ["UserId"] = parsedUserId, ["TenantId"] = parsedTenantId });
+
+    if (adminCheck.Rows.Count == 0 || !(bool)adminCheck.Rows[0]["IsAdmin"])
+        return Results.Forbid();
+
+    var result = await db.QueryAsync(
+        @"SELECT Id, Action, UserId, OldValues, NewValues, ChangedFields, Reason, IpAddress, Status, AuditedAt
+          FROM dbo.ComplianceAuditLog
+          WHERE TenantId = @TenantId AND EntityType = @EntityType AND EntityId = @EntityId
+          ORDER BY AuditedAt DESC",
+        new() { ["TenantId"] = parsedTenantId, ["EntityType"] = entityType, ["EntityId"] = entityId });
+
+    var history = result.Rows.Cast<DataRow>().Select(row => new
+    {
+        id = (long)row["Id"],
+        action = (string)row["Action"],
+        userId = row["UserId"] != DBNull.Value ? (int?)row["UserId"] : null,
+        oldValues = row["OldValues"]?.ToString(),
+        newValues = row["NewValues"]?.ToString(),
+        changedFields = row["ChangedFields"]?.ToString(),
+        reason = row["Reason"]?.ToString(),
+        ipAddress = row["IpAddress"]?.ToString(),
+        status = (string)row["Status"],
+        auditedAt = row["AuditedAt"]
+    }).ToList();
+
+    return Results.Ok(new { entity = $"{entityType}#{entityId}", history });
+})
+.WithName("GetEntityAuditHistory")
+.WithOpenApi()
+.RequireAuthorization();
+
+// GET /api/compliance/security-events - View security events (admin only)
+app.MapGet("/api/compliance/security-events", async (HttpContext ctx, DatabaseService db, string? severity = null) =>
+{
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = ctx.User.FindFirst("UserId")?.Value;
+
+    if (!int.TryParse(tenantId, out int parsedTenantId) || !int.TryParse(userId, out int parsedUserId))
+        return Results.Unauthorized();
+
+    // Verify admin
+    var adminCheck = await db.QueryAsync(
+        "SELECT IsAdmin FROM dbo.Users WHERE UserId = @UserId AND TenantId = @TenantId",
+        new() { ["UserId"] = parsedUserId, ["TenantId"] = parsedTenantId });
+
+    if (adminCheck.Rows.Count == 0 || !(bool)adminCheck.Rows[0]["IsAdmin"])
+        return Results.Forbid();
+
+    string query = @"SELECT Id, EventType, Severity, UserId, Description, AffectedRecords, IpAddress, OccurredAt, IsResolved
+                   FROM dbo.SecurityAuditEvents
+                   WHERE TenantId = @TenantId";
+
+    var @params = new Dictionary<string, object?> { ["TenantId"] = parsedTenantId };
+
+    if (!string.IsNullOrWhiteSpace(severity))
+    {
+        query += " AND Severity = @Severity";
+        @params["Severity"] = severity;
+    }
+
+    query += " ORDER BY OccurredAt DESC";
+
+    var result = await db.QueryAsync(query, @params);
+
+    var events = result.Rows.Cast<DataRow>().Select(row => new
+    {
+        id = (int)row["Id"],
+        eventType = (string)row["EventType"],
+        severity = (string)row["Severity"],
+        userId = row["UserId"] != DBNull.Value ? (int?)row["UserId"] : null,
+        description = (string)row["Description"],
+        affectedRecords = (int?)row["AffectedRecords"],
+        ipAddress = row["IpAddress"]?.ToString(),
+        occurredAt = row["OccurredAt"],
+        isResolved = (bool)row["IsResolved"]
+    }).ToList();
+
+    return Results.Ok(new { events, count = events.Count });
+})
+.WithName("GetSecurityEvents")
+.WithOpenApi()
+.RequireAuthorization();
+
+// POST /api/compliance/security-events - Admin: Record security event
+app.MapPost("/api/compliance/security-events", async (HttpContext ctx, RecordSecurityEventRequest body, DatabaseService db) =>
+{
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = ctx.User.FindFirst("UserId")?.Value;
+
+    if (!int.TryParse(tenantId, out int parsedTenantId) || !int.TryParse(userId, out int parsedUserId))
+        return Results.Unauthorized();
+
+    // Verify admin
+    var adminCheck = await db.QueryAsync(
+        "SELECT IsAdmin FROM dbo.Users WHERE UserId = @UserId AND TenantId = @TenantId",
+        new() { ["UserId"] = parsedUserId, ["TenantId"] = parsedTenantId });
+
+    if (adminCheck.Rows.Count == 0 || !(bool)adminCheck.Rows[0]["IsAdmin"])
+        return Results.Forbid();
+
+    try
+    {
+        await db.ExecuteNonQueryAsync(
+            @"INSERT INTO dbo.SecurityAuditEvents (TenantId, EventType, Severity, UserId, Description, AffectedRecords, IpAddress, IsResolved)
+              VALUES (@TenantId, @EventType, @Severity, @UserId, @Description, @AffectedRecords, @IpAddress, 0)",
+            new()
+            {
+                ["TenantId"] = parsedTenantId,
+                ["EventType"] = body.EventType,
+                ["Severity"] = body.Severity,
+                ["UserId"] = body.UserId.HasValue ? (object)body.UserId : DBNull.Value,
+                ["Description"] = body.Description,
+                ["AffectedRecords"] = body.AffectedRecords.HasValue ? (object)body.AffectedRecords : DBNull.Value,
+                ["IpAddress"] = body.IpAddress ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown"
+            });
+
+        return Results.Created("/api/compliance/security-events", new { message = "Security event recorded" });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Failed to record event: {ex.Message}" });
+    }
+})
+.WithName("RecordSecurityEvent")
+.WithOpenApi()
+.RequireAuthorization();
+
+// PUT /api/compliance/security-events/{id} - Admin: Investigate security event
+app.MapPut("/api/compliance/security-events/{id:int}", async (int id, HttpContext ctx, InvestigateSecurityEventRequest body, DatabaseService db) =>
+{
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = ctx.User.FindFirst("UserId")?.Value;
+
+    if (!int.TryParse(tenantId, out int parsedTenantId) || !int.TryParse(userId, out int parsedUserId))
+        return Results.Unauthorized();
+
+    // Verify admin
+    var adminCheck = await db.QueryAsync(
+        "SELECT IsAdmin FROM dbo.Users WHERE UserId = @UserId AND TenantId = @TenantId",
+        new() { ["UserId"] = parsedUserId, ["TenantId"] = parsedTenantId });
+
+    if (adminCheck.Rows.Count == 0 || !(bool)adminCheck.Rows[0]["IsAdmin"])
+        return Results.Forbid();
+
+    try
+    {
+        await db.ExecuteNonQueryAsync(
+            @"UPDATE dbo.SecurityAuditEvents
+              SET InvestigatedAt = GETUTCDATE(), InvestigationNotes = @Notes, IsResolved = @IsResolved
+              WHERE Id = @Id AND TenantId = @TenantId",
+            new()
+            {
+                ["Id"] = id,
+                ["TenantId"] = parsedTenantId,
+                ["Notes"] = body.Notes,
+                ["IsResolved"] = body.IsResolved
+            });
+
+        return Results.Ok(new { message = "Security event investigation updated" });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Failed to update event: {ex.Message}" });
+    }
+})
+.WithName("InvestigateSecurityEvent")
+.WithOpenApi()
+.RequireAuthorization();
+
 app.Run();
 
 /// <summary>Body model for POST /api/auth/reset-password.</summary>
@@ -3769,4 +4010,21 @@ class CheckApprovalPermissionRequest
     public string ModuleType { get; set; } = "Expense";
     public int ApprovalLevel { get; set; } = 1;
     public decimal? Amount { get; set; }
+}
+
+// Compliance audit logging DTOs
+class RecordSecurityEventRequest
+{
+    public string EventType { get; set; } = "";
+    public string Severity { get; set; } = "WARNING";
+    public int? UserId { get; set; }
+    public string Description { get; set; } = "";
+    public int? AffectedRecords { get; set; }
+    public string? IpAddress { get; set; }
+}
+
+class InvestigateSecurityEventRequest
+{
+    public string Notes { get; set; } = "";
+    public bool IsResolved { get; set; } = false;
 }
