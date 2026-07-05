@@ -1,0 +1,95 @@
+@using MyDesk.Shared.Services
+@using MudBlazor
+@inject WorkflowApprovalService ApprovalSvc
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Rounded.SendToMobile" Color="Color.Primary" Class="mr-2" />
+            Submit for Approval
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudText Typo="Typo.body2" Class="mb-3">
+                    Submit this @ModuleType for approval. It will be routed to the appropriate approvers based on your organization's workflow rules.
+                </MudText>
+            </MudItem>
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle2">@ModuleType Details</MudText>
+                <MudText Typo="Typo.body2" Class="mt-2">
+                    <strong>ID:</strong> @ModuleId
+                </MudText>
+            </MudItem>
+            <MudItem xs="12">
+                <MudDivider Class="my-3" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_comments"
+                              Label="Comments (Optional)"
+                              Placeholder="Add any relevant notes for the approvers..."
+                              Variant="Variant.Outlined"
+                              Lines="3"
+                              FullWidth="true" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mt-3">
+                    Once submitted, you'll be able to track the approval status in your dashboard.
+                </MudAlert>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="SubmitAsync" Variant="Variant.Filled" Color="Color.Primary" Disabled="@_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Submit
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public string ModuleType { get; set; } = "";
+    [Parameter] public int ModuleId { get; set; }
+
+    private string _comments = "";
+    private bool _saving = false;
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async Task SubmitAsync()
+    {
+        _saving = true;
+        try
+        {
+            if (ModuleType == "Expense")
+            {
+                await ApprovalSvc.SubmitExpenseForApprovalAsync(ModuleId);
+            }
+            else if (ModuleType == "Timesheet")
+            {
+                await ApprovalSvc.SubmitTimesheetForApprovalAsync(ModuleId);
+            }
+
+            Snackbar.Add($"{ModuleType} submitted for approval", Severity.Success);
+            MudDialog.Close(true);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Submission failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

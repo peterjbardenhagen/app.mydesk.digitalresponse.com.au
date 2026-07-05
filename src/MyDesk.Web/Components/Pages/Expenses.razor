@@ -6,9 +6,13 @@
 @using MudBlazor
 @inject ExpenseService ExpenseService
 @inject UserService UserService
+@inject CompanyService CompanyService
+@inject DocumentExtractionService ExtractionService
+@inject WorkflowApprovalService ApprovalSvc
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthState
+@inject IDialogService DialogService
 
 <PageTitle>Expense Claims - MyDesk</PageTitle>
 
@@ -80,44 +84,50 @@
     }
     else
     {
-        <MudDataGrid T="ExpenseClaim" Items="_filteredClaims" Dense="true" Hover="true" Bordered="false"
-                     Striped="true" Class="tl-data-grid" RowClick="@(e => Nav.NavigateTo($"/expenses/claim/{e.Item.ClaimId}"))">
-            <ToolBarContent>
-                <MudText Typo="Typo.h6">@(_currentStatusFilter == null ? "All Claims" : _currentStatusFilter + " Claims")</MudText>
-                <MudSpacer />
-                @if (_isManagerOrAccounts)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text">Showing all team claims</MudChip>
-                }
-            </ToolBarContent>
-            <Columns>
-                <PropertyColumn Property="x => x.ClaimRef" Title="Claim Ref" />
-                <PropertyColumn Property="x => x.ClaimPeriod" Title="Period" />
-                <PropertyColumn Property="x => x.TotalAmount" Title="Total" Format="C" />
-                <TemplateColumn Title="Status">
-                    <CellTemplate>
-                        <MudChip T="string" Size="Size.Small" Color="@StatusColour(context.Item.Status)" Variant="Variant.Text">
-                            @context.Item.Status
-                        </MudChip>
-                    </CellTemplate>
-                </TemplateColumn>
-                <PropertyColumn Property="x => x.SubmittedBy" Title="Submitted By" />
-                <PropertyColumn Property="x => x.ApproverName" Title="Approver" />
-                <TemplateColumn Title="Date">
-                    <CellTemplate>
-                        <MudText Typo="Typo.body2">@context.Item.CreatedAt.ToString("dd MMM yyyy")</MudText>
-                    </CellTemplate>
-                </TemplateColumn>
-                <TemplateColumn Title="" Sortable="false" CellStyle="width:60px;">
-                    <CellTemplate>
-                        <MudIconButton Icon="@Icons.Material.Rounded.ChevronRight" Size="Size.Small"
-                                       Href="@($"/expenses/claim/{context.Item.ClaimId}")" />
-                    </CellTemplate>
-                </TemplateColumn>
-            </Columns>
-            <PagerContent>
-                <MudDataGridPager T="ExpenseClaim" />
-            </PagerContent>
+        <MudDataGrid T="Expense" Items="_expenses" Dense="true" Hover="true" Bordered="false" Striped="true"
+                     Filterable="true" QuickFilter="@QuickFilter" Class="tl-data-grid">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">Expense Records</MudText>
+            <MudSpacer />
+            <MudTextField @bind-Value="_searchString" Placeholder="Search description, supplier, category..."
+                          Adornment="Adornment.Start" Immediate="true"
+                          AdornmentIcon="@Icons.Material.Rounded.Search" IconSize="Size.Medium" Class="mt-0" />
+        </ToolBarContent>
+        <Columns>
+            <PropertyColumn Property="x => x.Date" Title="Date" Format="dd MMM yyyy" />
+            <PropertyColumn Property="x => x.SupplierName" Title="Supplier" />
+            <PropertyColumn Property="x => x.Description" Title="Description" />
+            <PropertyColumn Property="x => x.Category" Title="Category" />
+            <PropertyColumn Property="x => x.Total" Title="Total" Format="C" />
+            <TemplateColumn Title="Status" CellStyle="width:120px;">
+                <CellTemplate>
+                    <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Item.Status)" Variant="Variant.Text">
+                        @context.Item.Status
+                    </MudChip>
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Receipt" CellStyle="width:80px;">
+                <CellTemplate>
+                    @if (!string.IsNullOrEmpty(context.Item.FilePath))
+                    {
+                        <MudIconButton Icon="@Icons.Material.Rounded.PictureAsPdf" Color="Color.Error" Size="Size.Small"
+                                       Href="@(context.Item.FilePath)" Target="_blank" />
+                    }
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn CellStyle="width:150px;" Sortable="false">
+                <CellTemplate>
+                    <div class="d-flex gap-1">
+                        <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" OnClick="@(() => OnEditExpense(context.Item))" Title="Edit" />
+                        <MudIconButton Icon="@Icons.Material.Rounded.Send" Size="Size.Small" Color="Color.Info" OnClick="@(() => OnSubmitForApprovalAsync(context.Item))" Title="Submit for Approval" />
+                        <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => OnDeleteExpense(context.Item))" Title="Delete" />
+                    </div>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <PagerContent>
+            <MudDataGridPager T="Expense" />
+        </PagerContent>
         </MudDataGrid>
     }
 </MudPaper>
@@ -186,7 +196,7 @@
         }
     }
 
-    private Color StatusColour(string status) => status switch
+    private Color GetStatusColor(string status) => status switch
     {
         "Approved"  => Color.Success,
         "Submitted" => Color.Warning,
@@ -195,4 +205,24 @@
         "Draft"     => Color.Default,
         _           => Color.Default
     };
+
+    private async Task OnSubmitForApprovalAsync(Expense expense)
+    {
+        var parameters = new DialogParameters<Shared.SubmitForApprovalDialog>
+        {
+            { x => x.ModuleType, "Expense" },
+            { x => x.ModuleId, expense.ExpenseId }
+        };
+
+        var dialog = await DialogService.ShowAsync<Shared.SubmitForApprovalDialog>(
+            "Submit Expense for Approval",
+            parameters,
+            new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            await LoadClaimsAsync();
+        }
+    }
 }

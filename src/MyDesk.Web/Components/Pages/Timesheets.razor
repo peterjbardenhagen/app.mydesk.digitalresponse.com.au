@@ -5,8 +5,10 @@
 @inject UserService UserSvc
 @inject CompanyService CompanySvc
 @inject ProjectService ProjectSvc
+@inject WorkflowApprovalService ApprovalSvc
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 @inject IJSRuntime JS
 @using System.Security.Claims
 @using System.Timers
@@ -121,14 +123,14 @@ else if (_timesheets.Any())
                         </MudChip>
                     </CellTemplate>
                 </PropertyColumn>
-                <TemplateColumn Title="Actions" CellStyle="width:120px;">
+                <TemplateColumn Title="Actions" CellStyle="width:150px;">
                     <CellTemplate>
                         <MudIconButton Icon="@Icons.Material.Rounded.Visibility" Size="Size.Small" Color="Color.Primary"
-                                    OnClick="@(() => ViewTimesheet(context.Item.TimesheetId))" />
+                                    OnClick="@(() => ViewTimesheet(context.Item.TimesheetId))" Title="View" />
                         @if (context.Item.Status == "Draft")
                         {
-                            <MudIconButton Icon="@Icons.Material.Rounded.Send" Size="Size.Small" Color="Color.Info"
-                                        OnClick="@(() => SubmitTimesheet(context.Item.TimesheetId))" />
+                            <MudIconButton Icon="@Icons.Material.Rounded.SendToMobile" Size="Size.Small" Color="Color.Warning"
+                                        OnClick="@(() => SubmitForApprovalAsync(context.Item.TimesheetId))" Title="Submit for Approval" />
                         }
                     </CellTemplate>
                 </TemplateColumn>
@@ -371,10 +373,30 @@ else
         var allUsers = await UserSvc.GetAllAsync(includeInactive: false);
         var manager = allUsers.FirstOrDefault(u => u.IsManager || u.Role == RoleType.Director);
         var approverName = manager?.Name ?? "Manager";
-        
+
         await TimesheetSvc.SubmitTimesheetAsync(timesheetId, approverName);
         await LoadTimesheets();
         Snackbar.Add($"Timesheet submitted for approval to {approverName}", Severity.Success);
+    }
+
+    private async Task SubmitForApprovalAsync(int timesheetId)
+    {
+        var parameters = new DialogParameters<Shared.SubmitForApprovalDialog>
+        {
+            { x => x.ModuleType, "Timesheet" },
+            { x => x.ModuleId, timesheetId }
+        };
+
+        var dialog = await DialogService.ShowAsync<Shared.SubmitForApprovalDialog>(
+            "Submit Timesheet for Approval",
+            parameters,
+            new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, BackdropClick = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            await LoadTimesheets();
+        }
     }
 
     public void Dispose()
