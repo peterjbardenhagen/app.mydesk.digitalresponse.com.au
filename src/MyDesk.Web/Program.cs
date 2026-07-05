@@ -1823,6 +1823,467 @@ app.MapPost("/api/mobile/expenses", async (HttpContext ctx, DatabaseService db) 
     return Results.Ok(new { reference, status = "Draft" });
 }).RequireAuthorization();
 
+// ── Mobile Timesheets ────────────────────────────────────────────────────────
+app.MapGet("/api/mobile/timesheets", async (HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    if (string.IsNullOrWhiteSpace(tenantId)) return Results.BadRequest(new { error = "No tenant context" });
+
+    var dt = await db.QueryAsync(
+        "SELECT TOP 50 TimesheetId, Reference, [Status], TotalHours, WeekStartDate FROM Timesheets WHERE TenantId = @TenantId ORDER BY WeekStartDate DESC",
+        new() { ["TenantId"] = Guid.Parse(tenantId) });
+
+    var timesheets = new List<object>();
+    foreach (DataRow row in dt.Rows)
+    {
+        timesheets.Add(new
+        {
+            id = (int)row["TimesheetId"],
+            reference = row["Reference"]?.ToString(),
+            status = row["Status"]?.ToString(),
+            totalHours = (decimal)row["TotalHours"],
+            weekStartDate = ((DateTime)row["WeekStartDate"]).ToString("yyyy-MM-dd")
+        });
+    }
+    return Results.Ok(timesheets);
+}).RequireAuthorization();
+
+app.MapGet("/api/mobile/timesheets/{id:int}", async (int id, HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    if (string.IsNullOrWhiteSpace(tenantId)) return Results.BadRequest(new { error = "No tenant context" });
+
+    var dt = await db.QueryAsync(
+        "SELECT TimesheetId, Reference, [Status], TotalHours, WeekStartDate, SubmittedDate, ApprovedDate, Notes FROM Timesheets WHERE TimesheetId = @Id AND TenantId = @TenantId",
+        new() { ["Id"] = id, ["TenantId"] = Guid.Parse(tenantId) });
+
+    if (dt.Rows.Count == 0) return Results.NotFound();
+
+    var row = dt.Rows[0];
+    var entries = await db.QueryAsync(
+        "SELECT EntryId, [Date], ProjectName, [Description], Hours FROM TimesheetEntries WHERE TimesheetId = @TimesheetId ORDER BY [Date]",
+        new() { ["TimesheetId"] = id });
+
+    var lineItems = new List<object>();
+    foreach (DataRow entry in entries.Rows)
+    {
+        lineItems.Add(new
+        {
+            id = (int)entry["EntryId"],
+            date = ((DateTime)entry["Date"]).ToString("yyyy-MM-dd"),
+            projectName = entry["ProjectName"]?.ToString(),
+            description = entry["Description"]?.ToString(),
+            hours = (decimal)entry["Hours"]
+        });
+    }
+
+    return Results.Ok(new
+    {
+        id = (int)row["TimesheetId"],
+        reference = row["Reference"]?.ToString(),
+        status = row["Status"]?.ToString(),
+        totalHours = (decimal)row["TotalHours"],
+        weekStartDate = ((DateTime)row["WeekStartDate"]).ToString("yyyy-MM-dd"),
+        submittedDate = row["SubmittedDate"] != DBNull.Value ? ((DateTime)row["SubmittedDate"]).ToString("yyyy-MM-dd") : null,
+        approvedDate = row["ApprovedDate"] != DBNull.Value ? ((DateTime)row["ApprovedDate"]).ToString("yyyy-MM-dd") : null,
+        notes = row["Notes"]?.ToString(),
+        entries = lineItems
+    });
+}).RequireAuthorization();
+
+app.MapPost("/api/mobile/timesheets", async (HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = ctx.User.FindFirst("sub")?.Value;
+    if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(userId))
+        return Results.BadRequest(new { error = "Missing context" });
+
+    dynamic? req;
+    try { req = await ctx.Request.ReadFromJsonAsync<dynamic>(); }
+    catch { return Results.BadRequest(new { error = "Invalid JSON" }); }
+
+    if (req is null) return Results.BadRequest(new { error = "Request body required" });
+
+    var reference = $"TS-{DateTime.UtcNow:yyyyMMdd-HHmmss}";
+    var weekStartDate = req.weekStartDate ?? DateTime.UtcNow.ToString("yyyy-MM-dd");
+
+    await db.ExecuteNonQueryAsync(
+        "INSERT INTO Timesheets (Reference, EmployeeId, TenantId, WeekStartDate, [Status], TotalHours) VALUES (@Ref, @EmpId, @TenantId, @WeekStart, 'Draft', 0)",
+        new() { ["Ref"] = reference, ["EmpId"] = int.Parse(userId), ["TenantId"] = Guid.Parse(tenantId), ["WeekStart"] = weekStartDate });
+
+    return Results.Ok(new { reference, status = "Draft" });
+}).RequireAuthorization();
+
+// ── Mobile Tasks ─────────────────────────────────────────────────────────────
+app.MapGet("/api/mobile/tasks", async (HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    if (string.IsNullOrWhiteSpace(tenantId)) return Results.BadRequest(new { error = "No tenant context" });
+
+    var dt = await db.QueryAsync(
+        "SELECT TOP 50 TaskId, Reference, Title, [Status], Priority, DueDate FROM Tasks WHERE TenantId = @TenantId ORDER BY DueDate DESC",
+        new() { ["TenantId"] = Guid.Parse(tenantId) });
+
+    var tasks = new List<object>();
+    foreach (DataRow row in dt.Rows)
+    {
+        tasks.Add(new
+        {
+            id = (int)row["TaskId"],
+            reference = row["Reference"]?.ToString(),
+            title = row["Title"]?.ToString(),
+            status = row["Status"]?.ToString(),
+            priority = row["Priority"]?.ToString(),
+            dueDate = row["DueDate"] != DBNull.Value ? ((DateTime)row["DueDate"]).ToString("yyyy-MM-dd") : null
+        });
+    }
+    return Results.Ok(tasks);
+}).RequireAuthorization();
+
+app.MapGet("/api/mobile/tasks/{id:int}", async (int id, HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    if (string.IsNullOrWhiteSpace(tenantId)) return Results.BadRequest(new { error = "No tenant context" });
+
+    var dt = await db.QueryAsync(
+        "SELECT TaskId, Reference, Title, [Description], [Status], Priority, DueDate, ProjectName, CreatedAt, CompletedAt FROM Tasks WHERE TaskId = @Id AND TenantId = @TenantId",
+        new() { ["Id"] = id, ["TenantId"] = Guid.Parse(tenantId) });
+
+    if (dt.Rows.Count == 0) return Results.NotFound();
+
+    var row = dt.Rows[0];
+    var comments = await db.QueryAsync(
+        "SELECT CommentId, CommentText, CreatedAt FROM TaskComments WHERE TaskId = @TaskId ORDER BY CreatedAt DESC",
+        new() { ["TaskId"] = id });
+
+    var commentsList = new List<object>();
+    foreach (DataRow comment in comments.Rows)
+    {
+        commentsList.Add(new
+        {
+            id = (int)comment["CommentId"],
+            text = comment["CommentText"]?.ToString(),
+            createdAt = ((DateTime)comment["CreatedAt"]).ToString("yyyy-MM-dd HH:mm")
+        });
+    }
+
+    return Results.Ok(new
+    {
+        id = (int)row["TaskId"],
+        reference = row["Reference"]?.ToString(),
+        title = row["Title"]?.ToString(),
+        description = row["Description"]?.ToString(),
+        status = row["Status"]?.ToString(),
+        priority = row["Priority"]?.ToString(),
+        dueDate = row["DueDate"] != DBNull.Value ? ((DateTime)row["DueDate"]).ToString("yyyy-MM-dd") : null,
+        projectName = row["ProjectName"]?.ToString(),
+        createdAt = ((DateTime)row["CreatedAt"]).ToString("yyyy-MM-dd"),
+        completedAt = row["CompletedAt"] != DBNull.Value ? ((DateTime)row["CompletedAt"]).ToString("yyyy-MM-dd") : null,
+        comments = commentsList
+    });
+}).RequireAuthorization();
+
+app.MapPost("/api/mobile/tasks", async (HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = ctx.User.FindFirst("sub")?.Value;
+    if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(userId))
+        return Results.BadRequest(new { error = "Missing context" });
+
+    dynamic? req;
+    try { req = await ctx.Request.ReadFromJsonAsync<dynamic>(); }
+    catch { return Results.BadRequest(new { error = "Invalid JSON" }); }
+
+    if (req is null) return Results.BadRequest(new { error = "Request body required" });
+
+    var reference = $"TSK-{DateTime.UtcNow:yyyyMMdd-HHmmss}";
+    var title = req.title ?? "New Task";
+    var description = req.description ?? "";
+
+    await db.ExecuteNonQueryAsync(
+        "INSERT INTO Tasks (Reference, Title, [Description], TenantId, CreatedById, [Status], Priority) VALUES (@Ref, @Title, @Desc, @TenantId, @CreatedById, 'ToDo', 'Normal')",
+        new() { ["Ref"] = reference, ["Title"] = title, ["Desc"] = description, ["TenantId"] = Guid.Parse(tenantId), ["CreatedById"] = int.Parse(userId) });
+
+    return Results.Ok(new { reference, status = "ToDo" });
+}).RequireAuthorization();
+
+app.MapPut("/api/mobile/tasks/{id:int}/status", async (int id, HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    if (string.IsNullOrWhiteSpace(tenantId)) return Results.BadRequest(new { error = "No tenant context" });
+
+    dynamic? req;
+    try { req = await ctx.Request.ReadFromJsonAsync<dynamic>(); }
+    catch { return Results.BadRequest(new { error = "Invalid JSON" }); }
+
+    if (req is null || string.IsNullOrWhiteSpace(req.status))
+        return Results.BadRequest(new { error = "status required" });
+
+    var status = req.status;
+    var completedAt = status == "Done" ? DateTime.UtcNow : (DateTime?)null;
+
+    await db.ExecuteNonQueryAsync(
+        "UPDATE Tasks SET [Status] = @Status, CompletedAt = @CompletedAt, UpdatedAt = GETUTCDATE() WHERE TaskId = @Id AND TenantId = @TenantId",
+        new() { ["Status"] = status, ["CompletedAt"] = (object?)completedAt ?? DBNull.Value, ["Id"] = id, ["TenantId"] = Guid.Parse(tenantId) });
+
+    return Results.Ok(new { status });
+}).RequireAuthorization();
+
+// ── Mobile Despatch ──────────────────────────────────────────────────────────
+app.MapGet("/api/mobile/despatch", async (HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    if (string.IsNullOrWhiteSpace(tenantId)) return Results.BadRequest(new { error = "No tenant context" });
+
+    var dt = await db.QueryAsync(
+        "SELECT TOP 50 DespatchId, Reference, [Status], DeliveryDate, RecipientName FROM Despatch WHERE TenantId = @TenantId ORDER BY DeliveryDate DESC",
+        new() { ["TenantId"] = Guid.Parse(tenantId) });
+
+    var despatch = new List<object>();
+    foreach (DataRow row in dt.Rows)
+    {
+        despatch.Add(new
+        {
+            id = (int)row["DespatchId"],
+            reference = row["Reference"]?.ToString(),
+            status = row["Status"]?.ToString(),
+            deliveryDate = ((DateTime)row["DeliveryDate"]).ToString("yyyy-MM-dd"),
+            recipientName = row["RecipientName"]?.ToString()
+        });
+    }
+    return Results.Ok(despatch);
+}).RequireAuthorization();
+
+app.MapGet("/api/mobile/despatch/{id:int}", async (int id, HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    if (string.IsNullOrWhiteSpace(tenantId)) return Results.BadRequest(new { error = "No tenant context" });
+
+    var dt = await db.QueryAsync(
+        "SELECT DespatchId, Reference, [Status], DeliveryDate, RecipientName, RecipientAddress, RecipientPhone, DeliveredDate, Notes FROM Despatch WHERE DespatchId = @Id AND TenantId = @TenantId",
+        new() { ["Id"] = id, ["TenantId"] = Guid.Parse(tenantId) });
+
+    if (dt.Rows.Count == 0) return Results.NotFound();
+
+    var row = dt.Rows[0];
+    var items = await db.QueryAsync(
+        "SELECT ItemId, Description, Quantity, Unit FROM DespatchItems WHERE DespatchId = @DespatchId ORDER BY LineNumber",
+        new() { ["DespatchId"] = id });
+
+    var lineItems = new List<object>();
+    foreach (DataRow item in items.Rows)
+    {
+        lineItems.Add(new
+        {
+            id = (int)item["ItemId"],
+            description = item["Description"]?.ToString(),
+            quantity = (int)item["Quantity"],
+            unit = item["Unit"]?.ToString()
+        });
+    }
+
+    return Results.Ok(new
+    {
+        id = (int)row["DespatchId"],
+        reference = row["Reference"]?.ToString(),
+        status = row["Status"]?.ToString(),
+        deliveryDate = ((DateTime)row["DeliveryDate"]).ToString("yyyy-MM-dd"),
+        recipientName = row["RecipientName"]?.ToString(),
+        recipientAddress = row["RecipientAddress"]?.ToString(),
+        recipientPhone = row["RecipientPhone"]?.ToString(),
+        deliveredDate = row["DeliveredDate"] != DBNull.Value ? ((DateTime)row["DeliveredDate"]).ToString("yyyy-MM-dd") : null,
+        notes = row["Notes"]?.ToString(),
+        items = lineItems
+    });
+}).RequireAuthorization();
+
+app.MapPost("/api/mobile/despatch", async (HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    if (string.IsNullOrWhiteSpace(tenantId)) return Results.BadRequest(new { error = "No tenant context" });
+
+    dynamic? req;
+    try { req = await ctx.Request.ReadFromJsonAsync<dynamic>(); }
+    catch { return Results.BadRequest(new { error = "Invalid JSON" }); }
+
+    if (req is null) return Results.BadRequest(new { error = "Request body required" });
+
+    var reference = $"DSP-{DateTime.UtcNow:yyyyMMdd-HHmmss}";
+    var deliveryDate = req.deliveryDate ?? DateTime.UtcNow.ToString("yyyy-MM-dd");
+    var recipientName = req.recipientName ?? "";
+
+    await db.ExecuteNonQueryAsync(
+        "INSERT INTO Despatch (Reference, TenantId, DeliveryDate, [Status], RecipientName) VALUES (@Ref, @TenantId, @DeliveryDate, 'Pending', @RecipientName)",
+        new() { ["Ref"] = reference, ["TenantId"] = Guid.Parse(tenantId), ["DeliveryDate"] = deliveryDate, ["RecipientName"] = recipientName });
+
+    return Results.Ok(new { reference, status = "Pending" });
+}).RequireAuthorization();
+
+app.MapPut("/api/mobile/despatch/{id:int}/deliver", async (int id, HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = ctx.User.FindFirst("sub")?.Value;
+    if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(userId))
+        return Results.BadRequest(new { error = "Missing context" });
+
+    await db.ExecuteNonQueryAsync(
+        "UPDATE Despatch SET [Status] = 'Delivered', DeliveredDate = GETUTCDATE(), DeliveredBy = @UserId, UpdatedAt = GETUTCDATE() WHERE DespatchId = @Id AND TenantId = @TenantId",
+        new() { ["UserId"] = int.Parse(userId), ["Id"] = id, ["TenantId"] = Guid.Parse(tenantId) });
+
+    return Results.Ok(new { status = "Delivered" });
+}).RequireAuthorization();
+
+// ── Mobile Contacts ──────────────────────────────────────────────────────────
+app.MapGet("/api/mobile/contacts", async (HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    if (string.IsNullOrWhiteSpace(tenantId)) return Results.BadRequest(new { error = "No tenant context" });
+
+    var dt = await db.QueryAsync(
+        "SELECT TOP 50 ContactId, Reference, FirstName, LastName, Email, Phone, [Role] FROM Contacts WHERE TenantId = @TenantId ORDER BY LastName, FirstName",
+        new() { ["TenantId"] = Guid.Parse(tenantId) });
+
+    var contacts = new List<object>();
+    foreach (DataRow row in dt.Rows)
+    {
+        contacts.Add(new
+        {
+            id = (int)row["ContactId"],
+            reference = row["Reference"]?.ToString(),
+            firstName = row["FirstName"]?.ToString(),
+            lastName = row["LastName"]?.ToString(),
+            email = row["Email"]?.ToString(),
+            phone = row["Phone"]?.ToString(),
+            role = row["Role"]?.ToString()
+        });
+    }
+    return Results.Ok(contacts);
+}).RequireAuthorization();
+
+app.MapGet("/api/mobile/contacts/{id:int}", async (int id, HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    if (string.IsNullOrWhiteSpace(tenantId)) return Results.BadRequest(new { error = "No tenant context" });
+
+    var dt = await db.QueryAsync(
+        "SELECT ContactId, Reference, FirstName, LastName, Email, Phone, Mobile, [Address], [Role] FROM Contacts WHERE ContactId = @Id AND TenantId = @TenantId",
+        new() { ["Id"] = id, ["TenantId"] = Guid.Parse(tenantId) });
+
+    if (dt.Rows.Count == 0) return Results.NotFound();
+
+    var row = dt.Rows[0];
+    return Results.Ok(new
+    {
+        id = (int)row["ContactId"],
+        reference = row["Reference"]?.ToString(),
+        firstName = row["FirstName"]?.ToString(),
+        lastName = row["LastName"]?.ToString(),
+        email = row["Email"]?.ToString(),
+        phone = row["Phone"]?.ToString(),
+        mobile = row["Mobile"]?.ToString(),
+        address = row["Address"]?.ToString(),
+        role = row["Role"]?.ToString()
+    });
+}).RequireAuthorization();
+
+// ── Mobile Cash Flow ─────────────────────────────────────────────────────────
+app.MapGet("/api/mobile/cashflow", async (HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    if (string.IsNullOrWhiteSpace(tenantId)) return Results.BadRequest(new { error = "No tenant context" });
+
+    var dt = await db.QueryAsync(
+        "SELECT TOP 12 ForecastDate, ProjectedIncoming, ProjectedOutgoing, CashPosition FROM CashFlowForecasts WHERE TenantId = @TenantId ORDER BY ForecastDate ASC",
+        new() { ["TenantId"] = Guid.Parse(tenantId) });
+
+    var forecast = new List<object>();
+    foreach (DataRow row in dt.Rows)
+    {
+        forecast.Add(new
+        {
+            date = ((DateTime)row["ForecastDate"]).ToString("yyyy-MM-dd"),
+            projectedIncoming = row["ProjectedIncoming"] != DBNull.Value ? (decimal)row["ProjectedIncoming"] : 0,
+            projectedOutgoing = row["ProjectedOutgoing"] != DBNull.Value ? (decimal)row["ProjectedOutgoing"] : 0,
+            cashPosition = row["CashPosition"] != DBNull.Value ? (decimal)row["CashPosition"] : null
+        });
+    }
+    return Results.Ok(new { forecast, weeks = forecast.Count });
+}).RequireAuthorization();
+
+// ── Mobile Goals (KPIs) ──────────────────────────────────────────────────────
+app.MapGet("/api/mobile/goals", async (HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    if (string.IsNullOrWhiteSpace(tenantId)) return Results.BadRequest(new { error = "No tenant context" });
+
+    var dt = await db.QueryAsync(
+        "SELECT GoalId, Reference, Title, TargetValue, CurrentValue, UnitOfMeasure, [Period], [Status] FROM BusinessGoals WHERE TenantId = @TenantId AND [Status] = 'Active' ORDER BY [Period]",
+        new() { ["TenantId"] = Guid.Parse(tenantId) });
+
+    var goals = new List<object>();
+    foreach (DataRow row in dt.Rows)
+    {
+        var target = row["TargetValue"] != DBNull.Value ? (decimal)row["TargetValue"] : 0;
+        var current = row["CurrentValue"] != DBNull.Value ? (decimal)row["CurrentValue"] : 0;
+        var percentage = target > 0 ? (int)((current / target) * 100) : 0;
+
+        goals.Add(new
+        {
+            id = (int)row["GoalId"],
+            reference = row["Reference"]?.ToString(),
+            title = row["Title"]?.ToString(),
+            targetValue = target,
+            currentValue = current,
+            unitOfMeasure = row["UnitOfMeasure"]?.ToString(),
+            period = row["Period"]?.ToString(),
+            progressPercentage = percentage
+        });
+    }
+    return Results.Ok(new { goals, count = goals.Count });
+}).RequireAuthorization();
+
+// ── Mobile Projects ──────────────────────────────────────────────────────────
+app.MapGet("/api/mobile/projects", async (HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    if (string.IsNullOrWhiteSpace(tenantId)) return Results.BadRequest(new { error = "No tenant context" });
+
+    var dt = await db.QueryAsync(
+        "SELECT TOP 50 ProjectId, ProjectCode, ProjectName, [Status], [Percent], Health FROM Projects WHERE TenantId = @TenantId ORDER BY ProjectName",
+        new() { ["TenantId"] = Guid.Parse(tenantId) });
+
+    var projects = new List<object>();
+    foreach (DataRow row in dt.Rows)
+    {
+        projects.Add(new
+        {
+            id = (int)row["ProjectId"],
+            code = row["ProjectCode"]?.ToString(),
+            name = row["ProjectName"]?.ToString(),
+            status = row["Status"]?.ToString(),
+            progressPercentage = (int)row["Percent"],
+            health = row["Health"]?.ToString()
+        });
+    }
+    return Results.Ok(projects);
+}).RequireAuthorization();
+
 // ── Mobile AI Chat (Desky with real tools) ───────────────────────────────────
 // Accepts PAT bearer auth; uses AskAiAgentService for full tool access.
 app.MapPost("/api/chat/mobile", async (HttpContext ctx, MyDesk.Web.AI.AskAiAgentService agentSvc) =>
