@@ -15,10 +15,10 @@ public class ApprovalEscalationService
 {
     private readonly DatabaseService _db;
     private readonly ApprovalDelegationService _delegation;
-    private readonly NotificationService _notification;
+    private readonly NotificationService? _notification;
 
     public ApprovalEscalationService(DatabaseService db, ApprovalDelegationService delegation,
-        NotificationService notification)
+        NotificationService? notification = null)
     {
         _db = db;
         _delegation = delegation;
