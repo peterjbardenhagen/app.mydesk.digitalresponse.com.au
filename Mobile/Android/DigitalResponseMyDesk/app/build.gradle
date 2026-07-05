@@ -16,10 +16,37 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    buildFeatures {
+        buildConfig true
+    }
+
+    signingConfigs {
+        release {
+            def ksPath = System.getenv("KEYSTORE_PATH") ?: ""
+            if (ksPath) {
+                storeFile file(ksPath)
+                storePassword System.getenv("KEYSTORE_PASSWORD") ?: ""
+                keyAlias System.getenv("KEY_ALIAS") ?: "mydesk-release"
+                keyPassword System.getenv("KEY_PASSWORD") ?: ""
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            // Debug builds also hit production so sideloaded APKs work without a running dev server
+            buildConfigField "String", "API_BASE_URL", '"https://app.mydesk.digitalresponse.com.au"'
+            buildConfigField "String", "WEB_APP_URL",  '"https://app.mydesk.digitalresponse.com.au"'
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+        }
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            buildConfigField "String", "API_BASE_URL", '"https://app.mydesk.digitalresponse.com.au"'
+            buildConfigField "String", "WEB_APP_URL",  '"https://app.mydesk.digitalresponse.com.au"'
+            def ksPath = System.getenv("KEYSTORE_PATH") ?: ""
+            signingConfig ksPath ? signingConfigs.release : signingConfigs.debug
         }
     }
     

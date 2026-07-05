@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Caching.Memory;
 using Serilog;
 using Serilog.Events;
 
@@ -105,6 +106,16 @@ builder.Services.AddRateLimiter(options =>
             {
                 PermitLimit = 5,
                 Window = TimeSpan.FromMinutes(10),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+    options.AddPolicy("desky", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 QueueLimit = 0
             }));
@@ -246,6 +257,8 @@ if (azureAdConfigured)
 
 authBuilder.AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, MyDesk.Web.Api.ApiKeyAuthenticationHandler>(
     MyDesk.Web.Api.ApiKeyAuthenticationHandler.SchemeName, _ => { });
+authBuilder.AddScheme<MyDesk.Web.Api.PatAuthOptions, MyDesk.Web.Api.PersonalAccessTokenAuthHandler>(
+    MyDesk.Web.Api.PersonalAccessTokenAuthHandler.SchemeName, _ => { });
 builder.Services.AddAuthorization(options =>
 {
     options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder(
@@ -426,6 +439,7 @@ builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.IDocumentExtraction
 builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.DocumentExtractionService>();
 builder.Services.AddScoped<SupplierQuoteParseService>();
 builder.Services.AddScoped<McpIntegrationService>();
+builder.Services.AddScoped<PersonalAccessTokenService>();
 
 // Proposal #272: AI Enhancement services
 builder.Services.AddScoped<ReconciliationService>();
@@ -1189,7 +1203,7 @@ app.MapPost("/api/telegram/webhook", async (HttpRequest request, TelegramBotServ
     }
 });
 
-// ── Telegram Bot Management endpoints (Admin endpoints ──────────────────────────────────────────
+// ── Telegram Bot Management endpoints ──────────────────────────────────────────
 app.MapGet("/api/admin/telegram/bots", [Authorize(Roles = "Admin,Director")] async (TelegramBotService tg) =>
 {
     var environments = tg.GetConfiguredEnvironments().Select(env => new
@@ -1231,7 +1245,324 @@ app.MapPost("/api/admin/telegram/broadcast/{environment}", [Authorize(Roles = "A
     return Results.Ok(new { success = true, environment });
 });
 
-// ── Log Viewer API endpoints ─────────────────────────────────────────────────
+// ── Desky Mobile Chat API ─────────────────────────────────────────────────────
+// Anonymous endpoint — no tenant context; uses platform AI config.
+// The Android app loads from file:// so cookies don't cross origins; this
+// endpoint provides general Desky AI chat without DB tool access.
+// Tool access (pipeline, quotes, etc.) requires authentication and is a phase-2 concern.
+app.MapPost("/api/chat/desky", async (HttpContext ctx, MyDesk.Web.AI.AiProviderFactory providerFactory) =>
+{
+    DeskyChatRequest? req;
+    try { req = await ctx.Request.ReadFromJsonAsync<DeskyChatRequest>(); }
+    catch { return Results.BadRequest(new { error = "Invalid JSON" }); }
+
+    if (req is null || string.IsNullOrWhiteSpace(req.Message))
+        return Results.BadRequest(new { error = "message required" });
+
+    var provider = providerFactory.Resolve();
+    if (!provider.IsConfigured)
+    {
+        return Results.Ok(new
+        {
+            reply = "Desky isn't connected to an AI provider yet. Ask your administrator to configure one in Settings → AI Provider."
+        });
+    }
+
+    var brandLabel = (req.Brand ?? "techlight").ToLowerInvariant() switch
+    {
+        "ccl" or "cartercapner" => "Carter Capner Law",
+        "dr"  or "digitalresponse" => "Digital Response",
+        _ => "Techlight"
+    };
+
+    const string deskyPersona = """
+        You are Desky — the AI at the heart of MyDesk, a business management platform.
+
+        Your character:
+        • You are a Virtual MBA in the user's pocket. Concise, sharp, commercially focused.
+        • You know more about this business than anyone in the room. You see around corners.
+        • Risk-averse but ruthless about never leaving money on the table.
+        • You run 24/7 background simulations to ensure OKRs stay on track. When you surface
+          an insight, the numbers already told you to.
+        • Australian English. Warm but direct. No fluff. No bullet-point walls.
+
+        Scope:
+        • Help with business strategy, pipeline, quotes, invoicing, cash flow, OKRs, client
+          relationships, and operational decisions.
+        • You currently lack live database access (the user hasn't signed in). Be transparent:
+          tell the user what you *would* look up if you had access, and give your best-estimate
+          answer using general business intelligence. Never fabricate specific figures without
+          flagging them as estimates ("I'd estimate…", "For a business like this, typically…").
+        • Replies: under 100 words unless the user explicitly asks for detail. Plain text only —
+          no markdown headers or excessive bullets.
+        """;
+
+    var systemPrompt = $"You are advising the team at **{brandLabel}**.\n\n{deskyPersona}";
+
+    var messages = new List<object>
+    {
+        new Dictionary<string, object?> { ["role"] = "system", ["content"] = systemPrompt }
+    };
+
+    if (req.History is { Count: > 0 })
+    {
+        foreach (var h in req.History.TakeLast(20))
+        {
+            if (string.IsNullOrWhiteSpace(h.Role) || string.IsNullOrWhiteSpace(h.Content)) continue;
+            var role = h.Role.ToLowerInvariant() is "assistant" or "user" ? h.Role.ToLowerInvariant() : "user";
+            messages.Add(new Dictionary<string, object?> { ["role"] = role, ["content"] = h.Content });
+        }
+    }
+
+    messages.Add(new Dictionary<string, object?> { ["role"] = "user", ["content"] = req.Message });
+
+    try
+    {
+        var resp = await provider.ChatWithToolsAsync(messages, null, 500, 0.75, ctx.RequestAborted);
+        return Results.Ok(new { reply = resp.Text });
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "Desky chat endpoint error");
+        return Results.Ok(new { reply = "I hit a snag checking my notes. Try again in a moment." });
+    }
+}).RequireRateLimiting("desky");
+
+// ── Mobile Login API ──────────────────────────────────────────────────────────
+// JSON endpoint for the Android app (loaded from file://, cannot use cookie flow).
+// Accepts login by code, name, or email. Returns user info + tenant list.
+// No cookie is set — the app stores session state in localStorage.
+app.MapPost("/api/auth/mobile/login", async (HttpContext ctx, UserService userSvc, TenantService tenantSvc) =>
+{
+    MobileLoginRequest? req;
+    try { req = await ctx.Request.ReadFromJsonAsync<MobileLoginRequest>(); }
+    catch { return Results.BadRequest(new { success = false, error = "Invalid JSON" }); }
+
+    if (req is null || string.IsNullOrWhiteSpace(req.Login) || string.IsNullOrWhiteSpace(req.Password))
+        return Results.BadRequest(new { success = false, error = "Login and password required" });
+
+    using (TenantImpersonation.SystemBypass())
+    {
+        // Try code/name first (VerifyLoginAsync handles both)
+        var user = await userSvc.VerifyLoginAsync(req.Login.Trim(), req.Password);
+
+        // If that fails and input looks like an email, try to resolve by email → code
+        if (user == null && req.Login.Contains('@'))
+        {
+            var byEmail = await userSvc.GetByEmailAsync(req.Login.Trim());
+            if (byEmail != null)
+                user = await userSvc.VerifyLoginAsync(byEmail.Code, req.Password);
+        }
+
+        if (user == null)
+        {
+            Log.Warning("Mobile login FAILED for {Login} from {RemoteIP}", req.Login, ctx.Connection.RemoteIpAddress);
+            return Results.Ok(new { success = false, error = "Invalid credentials" });
+        }
+
+        var memberships = await tenantSvc.GetUserTenantsAsync(user.UserId);
+        var initials = string.Concat(
+            user.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Take(2).Select(p => p[0].ToString().ToUpper()));
+
+        Log.Information("Mobile login SUCCESS: {Code} ({Name}) - {Count} tenants",
+            user.Code, user.Name, memberships.Count);
+
+        return Results.Ok(new
+        {
+            success = true,
+            user = new
+            {
+                name    = user.Name,
+                code    = user.Code,
+                email   = user.Email ?? "",
+                role    = user.Role.ToString(),
+                initials
+            },
+            tenants = memberships.Select(m => new
+            {
+                id        = m.TenantId,
+                name      = m.TenantName,
+                slug      = m.TenantSlug,
+                isDefault = m.IsDefault
+            }).ToList()
+        });
+    }
+}).RequireRateLimiting("login");
+
+// ── Mobile Azure AD SSO ──────────────────────────────────────────────────────
+// Step 1: App opens system browser to this URL, which redirects to Microsoft.
+app.MapGet("/api/auth/mobile/azure-start", (HttpContext ctx, IMemoryCache cache) =>
+{
+    if (!azureAdConfigured)
+        return Results.Ok(new { error = "Microsoft SSO is not configured on this server" });
+
+    var state = Guid.NewGuid().ToString("N");
+    cache.Set("mobile_oauth_" + state, true, TimeSpan.FromMinutes(10));
+
+    var redirectUri = Uri.EscapeDataString($"{ctx.Request.Scheme}://{ctx.Request.Host}/api/auth/mobile/azure-callback");
+    var url = $"https://login.microsoftonline.com/{azureAdTenantId}/oauth2/v2.0/authorize" +
+              $"?client_id={Uri.EscapeDataString(azureAdClientId!)}" +
+              $"&response_type=code&redirect_uri={redirectUri}" +
+              $"&scope={Uri.EscapeDataString("openid profile email")}" +
+              $"&state={state}&response_mode=query&prompt=select_account";
+
+    return Results.Redirect(url);
+});
+
+// Step 2: Microsoft redirects here with ?code=...&state=...
+// Exchanges code for an ID token, looks up the user, stores a short-lived mobile
+// token in memory, then redirects to the mydesk:// deep link so the Android app
+// picks it up.
+app.MapGet("/api/auth/mobile/azure-callback", async (
+    HttpContext ctx, IMemoryCache cache, UserService userSvc, TenantService tenantSvc,
+    IHttpClientFactory httpFactory) =>
+{
+    var code  = ctx.Request.Query["code"].ToString();
+    var state = ctx.Request.Query["state"].ToString();
+    var error = ctx.Request.Query["error"].ToString();
+
+    if (!string.IsNullOrEmpty(error))
+        return Results.Redirect($"mydesk://auth?error={Uri.EscapeDataString(error)}");
+
+    if (string.IsNullOrEmpty(code))
+        return Results.Redirect("mydesk://auth?error=missing_code");
+
+    // Exchange code for tokens
+    var redirectUri = $"{ctx.Request.Scheme}://{ctx.Request.Host}/api/auth/mobile/azure-callback";
+    var form = new Dictionary<string, string>
+    {
+        ["client_id"]     = azureAdClientId!,
+        ["client_secret"] = azureAdClientSecret ?? "",
+        ["grant_type"]    = "authorization_code",
+        ["code"]          = code,
+        ["redirect_uri"]  = redirectUri,
+        ["scope"]         = "openid profile email",
+    };
+
+    var http = httpFactory.CreateClient();
+    using var tokenResp = await http.PostAsync(
+        $"https://login.microsoftonline.com/{azureAdTenantId}/oauth2/v2.0/token",
+        new FormUrlEncodedContent(form));
+    var tokenJson = await tokenResp.Content.ReadAsStringAsync();
+
+    if (!tokenResp.IsSuccessStatusCode)
+    {
+        Log.Warning("Mobile Azure token exchange failed: {Status} {Body}", tokenResp.StatusCode, tokenJson);
+        return Results.Redirect("mydesk://auth?error=token_exchange_failed");
+    }
+
+    // Decode the ID token payload (base64url → JSON)
+    string? email = null, oid = null, displayName = null;
+    try
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(tokenJson);
+        var idToken = doc.RootElement.GetProperty("id_token").GetString() ?? "";
+        var parts = idToken.Split('.');
+        if (parts.Length >= 2)
+        {
+            var pad = parts[1].Length % 4 == 0 ? "" : new string('=', 4 - parts[1].Length % 4);
+            var payload = Convert.FromBase64String(
+                parts[1].Replace('-', '+').Replace('_', '/') + pad);
+            using var payloadDoc = System.Text.Json.JsonDocument.Parse(payload);
+            var root = payloadDoc.RootElement;
+            email       = root.TryGetProperty("email",              out var e) ? e.GetString() : null;
+            email     ??= root.TryGetProperty("preferred_username",  out var u) ? u.GetString() : null;
+            oid         = root.TryGetProperty("oid",                out var o) ? o.GetString() : null;
+            displayName = root.TryGetProperty("name",               out var n) ? n.GetString() : null;
+        }
+    }
+    catch (Exception ex) { Log.Warning(ex, "Mobile Azure: failed to decode id_token"); }
+
+    if (string.IsNullOrWhiteSpace(email))
+        return Results.Redirect("mydesk://auth?error=no_email_in_token");
+
+    using (TenantImpersonation.SystemBypass())
+    {
+        var user = await userSvc.GetByEmailAsync(email);
+        if (user == null)
+        {
+            Log.Warning("Mobile Azure SSO: no user found for email {Email}", email);
+            return Results.Redirect($"mydesk://auth?error=user_not_found&email={Uri.EscapeDataString(email)}");
+        }
+
+        var memberships = await tenantSvc.GetUserTenantsAsync(user.UserId);
+        var initials = string.Concat(
+            user.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Take(2).Select(p => p[0].ToString().ToUpper()));
+
+        var mobileToken = Guid.NewGuid().ToString("N");
+        cache.Set("mobile_token_" + mobileToken, new
+        {
+            user = new { name = user.Name, code = user.Code, email = user.Email ?? email, role = user.Role.ToString(), initials },
+            tenants = memberships.Select(m => new { id = m.TenantId, name = m.TenantName, slug = m.TenantSlug, isDefault = m.IsDefault }).ToList()
+        }, TimeSpan.FromMinutes(5));
+
+        Log.Information("Mobile Azure SSO SUCCESS: {Code} ({Name})", user.Code, user.Name);
+        return Results.Redirect($"mydesk://auth?token={mobileToken}");
+    }
+});
+
+// Step 3: App calls this after receiving the deep link token to get user+tenant data.
+app.MapGet("/api/auth/mobile/token", (string t, IMemoryCache cache) =>
+{
+    if (string.IsNullOrWhiteSpace(t) || !cache.TryGetValue("mobile_token_" + t, out var data))
+        return Results.Ok(new { success = false, error = "Token not found or expired" });
+
+    cache.Remove("mobile_token_" + t); // single-use
+    return Results.Ok(new { success = true, data });
+}).RequireRateLimiting("login");
+
+// ── Personal Access Token API (used by AI Agents page) ──────────────────────
+// All three endpoints require a logged-in browser session (cookie auth).
+// They operate on tokens belonging only to the calling user + their active tenant.
+
+app.MapGet("/api/tokens", async (HttpContext ctx, PersonalAccessTokenService patSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var userIdClaim = ctx.User.FindFirstValue("UserId");
+    var tenantIdClaim = ctx.User.FindFirstValue("tenant_id");
+    if (!int.TryParse(userIdClaim, out var userId) || !Guid.TryParse(tenantIdClaim, out var tenantId))
+        return Results.Unauthorized();
+    var tokens = await patSvc.ListAsync(userId, tenantId);
+    return Results.Ok(tokens);
+}).RequireAuthorization();
+
+app.MapPost("/api/tokens", async (HttpContext ctx, PersonalAccessTokenService patSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var userIdClaim = ctx.User.FindFirstValue("UserId");
+    var tenantIdClaim = ctx.User.FindFirstValue("tenant_id");
+    if (!int.TryParse(userIdClaim, out var userId) || !Guid.TryParse(tenantIdClaim, out var tenantId))
+        return Results.Unauthorized();
+
+    PatCreateRequest? req;
+    try { req = await ctx.Request.ReadFromJsonAsync<PatCreateRequest>(); }
+    catch { return Results.BadRequest(new { error = "Invalid JSON" }); }
+
+    if (req is null || string.IsNullOrWhiteSpace(req.Name))
+        return Results.BadRequest(new { error = "name required" });
+
+    DateTime? expiresAt = req.ExpiryDays.HasValue && req.ExpiryDays > 0
+        ? DateTime.UtcNow.AddDays(req.ExpiryDays.Value)
+        : null;
+
+    var (rawToken, record) = await patSvc.GenerateAsync(userId, tenantId, req.Name, req.Scopes ?? "chat tools", expiresAt);
+    return Results.Ok(new { rawToken, record.TokenId, record.TokenName, record.CreatedAt, record.ExpiresAt });
+}).RequireAuthorization();
+
+app.MapDelete("/api/tokens/{tokenId:guid}", async (Guid tokenId, HttpContext ctx, PersonalAccessTokenService patSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var userIdClaim = ctx.User.FindFirstValue("UserId");
+    var tenantIdClaim = ctx.User.FindFirstValue("tenant_id");
+    if (!int.TryParse(userIdClaim, out var userId) || !Guid.TryParse(tenantIdClaim, out var tenantId))
+        return Results.Unauthorized();
+    var ok = await patSvc.RevokeAsync(tokenId, userId, tenantId);
+    return ok ? Results.Ok() : Results.NotFound();
+}).RequireAuthorization();
+
+// ── Log Viewer API endpoints
 app.MapGet("/api/logs", (HttpContext ctx) =>
 {
     if (!ctx.User.IsInRole("Admin") && !ctx.User.IsInRole("Director"))
@@ -1530,9 +1861,26 @@ finally
     Log.CloseAndFlush();
 }
 
+/// <summary>Body model for POST /api/auth/mobile/login.</summary>
+public record MobileLoginRequest(string Login, string Password);
+
+/// <summary>Body model for POST /api/chat/desky.</summary>
+public record DeskyChatRequest(
+    string Message,
+    string? Brand = null,
+    List<DeskyChatMessage>? History = null);
+
+public record DeskyChatMessage(string Role, string Content);
+
 /// <summary>Body model for POST /api/email/* endpoints.</summary>
 public record EmailRequest(
     string To,
     string? Subject    = null,
     string? Message    = null,
     bool    AttachPdf  = true);
+
+/// <summary>Body model for POST /api/tokens.</summary>
+public record PatCreateRequest(
+    string  Name,
+    string? Scopes     = null,
+    int?    ExpiryDays = null);
