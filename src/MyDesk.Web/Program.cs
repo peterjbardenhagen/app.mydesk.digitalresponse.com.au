@@ -1713,11 +1713,114 @@ app.MapGet("/api/mobile/modules", (HttpContext ctx, ICurrentTenantAccessor tenan
         // Techlight and Digital Response: all modules
         var id when id == Guid.Parse("11111111-1111-1111-1111-111111111111") ||
                    id == Guid.Parse("22222222-2222-2222-2222-222222222222")
-            => new[] { "invoices", "quotes", "pos", "files", "chat" },
-        // Demo and others: files + chat only
+            => new[] { "invoices", "quotes", "pos", "files", "chat", "expenses", "timesheets", "tasks", "despatch", "contacts" },
+        // Demo Lighting: all Phase 1 & 2 modules
+        var id when id == Guid.Parse("55555555-5555-5555-5555-555555555555")
+            => new[] { "invoices", "quotes", "pos", "files", "chat", "expenses", "timesheets", "tasks", "despatch", "contacts", "cashflow", "goals", "projects" },
+        // Carter Capner Law: law-specific modules
+        var id when id == Guid.Parse("44444444-4444-4444-4444-444444444444")
+            => new[] { "files", "chat", "tasks", "timesheets", "contacts" },
+        // Default: files + chat only
         _ => new[] { "files", "chat" }
     };
     return Results.Ok(new { modules });
+}).RequireAuthorization();
+
+// ── Mobile Expenses ──────────────────────────────────────────────────────────
+app.MapGet("/api/mobile/expenses", async (HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    if (string.IsNullOrWhiteSpace(tenantId)) return Results.BadRequest(new { error = "No tenant context" });
+
+    var dt = await db.QueryAsync(
+        "SELECT ExpenseId, Reference, Description, [Status], TotalAmount, [Date] FROM Expenses WHERE TenantId = @TenantId ORDER BY [Date] DESC",
+        new() { ["TenantId"] = Guid.Parse(tenantId) });
+
+    var expenses = new List<object>();
+    foreach (DataRow row in dt.Rows)
+    {
+        expenses.Add(new
+        {
+            id = (int)row["ExpenseId"],
+            reference = row["Reference"]?.ToString(),
+            description = row["Description"]?.ToString(),
+            status = row["Status"]?.ToString(),
+            totalAmount = (decimal)row["TotalAmount"],
+            date = ((DateTime)row["Date"]).ToString("yyyy-MM-dd")
+        });
+    }
+    return Results.Ok(expenses);
+}).RequireAuthorization();
+
+app.MapGet("/api/mobile/expenses/{id:int}", async (int id, HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    if (string.IsNullOrWhiteSpace(tenantId)) return Results.BadRequest(new { error = "No tenant context" });
+
+    var dt = await db.QueryAsync(
+        "SELECT ExpenseId, Reference, Description, [Status], TotalAmount, [Date], SubmittedDate, ApprovedDate, Notes FROM Expenses WHERE ExpenseId = @Id AND TenantId = @TenantId",
+        new() { ["Id"] = id, ["TenantId"] = Guid.Parse(tenantId) });
+
+    if (dt.Rows.Count == 0) return Results.NotFound();
+
+    var row = dt.Rows[0];
+    var items = await db.QueryAsync(
+        "SELECT ExpenseItemId, Category, Description, Amount, [Date] FROM ExpenseItems WHERE ExpenseId = @ExpenseId",
+        new() { ["ExpenseId"] = id });
+
+    var lineItems = new List<object>();
+    foreach (DataRow item in items.Rows)
+    {
+        lineItems.Add(new
+        {
+            id = (int)item["ExpenseItemId"],
+            category = item["Category"]?.ToString(),
+            description = item["Description"]?.ToString(),
+            amount = (decimal)item["Amount"],
+            date = ((DateTime)item["Date"]).ToString("yyyy-MM-dd")
+        });
+    }
+
+    return Results.Ok(new
+    {
+        id = (int)row["ExpenseId"],
+        reference = row["Reference"]?.ToString(),
+        description = row["Description"]?.ToString(),
+        status = row["Status"]?.ToString(),
+        totalAmount = (decimal)row["TotalAmount"],
+        date = ((DateTime)row["Date"]).ToString("yyyy-MM-dd"),
+        submittedDate = row["SubmittedDate"] != DBNull.Value ? ((DateTime)row["SubmittedDate"]).ToString("yyyy-MM-dd") : null,
+        approvedDate = row["ApprovedDate"] != DBNull.Value ? ((DateTime)row["ApprovedDate"]).ToString("yyyy-MM-dd") : null,
+        notes = row["Notes"]?.ToString(),
+        items = lineItems
+    });
+}).RequireAuthorization();
+
+app.MapPost("/api/mobile/expenses", async (HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = ctx.User.FindFirst("sub")?.Value;
+    if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(userId))
+        return Results.BadRequest(new { error = "Missing context" });
+
+    dynamic? req;
+    try { req = await ctx.Request.ReadFromJsonAsync<dynamic>(); }
+    catch { return Results.BadRequest(new { error = "Invalid JSON" }); }
+
+    if (req is null) return Results.BadRequest(new { error = "Request body required" });
+
+    var reference = $"EXP-{DateTime.UtcNow:yyyyMMdd-HHmmss}";
+    var description = req.description ?? "";
+    var items = req.items ?? new List<dynamic>();
+
+    await db.ExecuteNonQueryAsync(
+        "INSERT INTO Expenses (Reference, EmployeeId, TenantId, Description, [Status], TotalAmount, [Date]) VALUES (@Ref, @EmpId, @TenantId, @Desc, 'Draft', 0, @Date)",
+        new() { ["Ref"] = reference, ["EmpId"] = int.Parse(userId), ["TenantId"] = Guid.Parse(tenantId), ["Desc"] = description, ["Date"] = DateTime.UtcNow });
+
+    return Results.Ok(new { reference, status = "Draft" });
 }).RequireAuthorization();
 
 // ── Mobile AI Chat (Desky with real tools) ───────────────────────────────────
