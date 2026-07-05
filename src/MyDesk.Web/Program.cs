@@ -25,6 +25,152 @@ using Microsoft.Extensions.Caching.Memory;
 using Serilog;
 using Serilog.Events;
 
+// =============================================================================
+// REQUEST/RESPONSE CLASSES (Declared before top-level statements so endpoints
+// can use them in lambda signatures)
+// =============================================================================
+
+public class ResetPasswordRequest
+{
+    public string Token { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
+}
+
+public record MobileLoginRequest(string Login, string Password);
+
+public record DeskyChatRequest(
+    string Message,
+    string? Brand = null,
+    List<DeskyChatMessage>? History = null);
+
+public record DeskyChatMessage(string Role, string Content);
+
+public record EmailRequest(
+    string To,
+    string? Subject    = null,
+    string? Message    = null,
+    bool    AttachPdf  = true);
+
+public record PatCreateRequest(
+    string  Name,
+    string? Scopes     = null,
+    int?    ExpiryDays = null);
+
+class AddDomainRequest
+{
+    public string Domain { get; set; } = "";
+}
+
+class VerifyDomainRequest
+{
+    public string Domain { get; set; } = "";
+    public string VerificationToken { get; set; } = "";
+}
+
+class CreateApprovalPermissionRequest
+{
+    public string? RoleId { get; set; }
+    public int UserId { get; set; }
+    public string ModuleType { get; set; } = "Expense";
+    public int ApprovalLevel { get; set; } = 1;
+    public decimal? MinThreshold { get; set; }
+    public decimal? MaxThreshold { get; set; }
+    public bool? CanDelegate { get; set; }
+    public bool? CanReject { get; set; }
+    public bool? CanComment { get; set; }
+}
+
+class UpdateApprovalPermissionRequest
+{
+    public decimal? MinThreshold { get; set; }
+    public decimal? MaxThreshold { get; set; }
+    public bool? CanDelegate { get; set; }
+    public bool? CanReject { get; set; }
+}
+
+class CheckApprovalPermissionRequest
+{
+    public string ModuleType { get; set; } = "Expense";
+    public int ApprovalLevel { get; set; } = 1;
+    public decimal? Amount { get; set; }
+}
+
+class RecordSecurityEventRequest
+{
+    public string EventType { get; set; } = "";
+    public string Severity { get; set; } = "WARNING";
+    public int? UserId { get; set; }
+    public string Description { get; set; } = "";
+    public int? AffectedRecords { get; set; }
+    public string? IpAddress { get; set; }
+}
+
+class InvestigateSecurityEventRequest
+{
+    public string Notes { get; set; } = "";
+    public bool IsResolved { get; set; } = false;
+}
+
+class UpdateBillingConfigRequest
+{
+    public string BillingModel { get; set; } = "MONTHLY_ADVANCE";
+    public string? BillingContactEmail { get; set; }
+    public string? Currency { get; set; }
+    public decimal? TaxPercentage { get; set; }
+    public int? CycleStartDay { get; set; }
+    public int? CycleStartMonth { get; set; }
+}
+
+class MarkInvoicePaidRequest
+{
+    public decimal Amount { get; set; }
+    public string? PaymentMethod { get; set; }
+    public string? PaymentReference { get; set; }
+}
+
+class StartOnboardingRequest
+{
+    public string AdminName { get; set; } = "";
+    public string AdminEmail { get; set; } = "";
+}
+
+class OnboardingStepRequest
+{
+    public string? TenantName { get; set; }
+    public string? TenantCode { get; set; }
+    public string? Domain { get; set; }
+    public string? ApprovalWorkflow { get; set; }
+    public string? BillingModel { get; set; }
+    public string? BillingContactEmail { get; set; }
+    public int UserSeats { get; set; }
+}
+
+class UpdateNotificationPreferencesRequest
+{
+    public bool EnableEmailNotifications { get; set; } = true;
+    public bool EmailOnApprovalRequired { get; set; } = true;
+    public string EmailDigestFrequency { get; set; } = "Immediate";
+    public bool EnableSmsNotifications { get; set; } = false;
+    public string? PhoneNumber { get; set; }
+    public bool EnableInAppNotifications { get; set; } = true;
+    public bool QuietHoursEnabled { get; set; } = false;
+    public TimeSpan? QuietHoursStart { get; set; }
+    public TimeSpan? QuietHoursEnd { get; set; }
+}
+
+class DelegationRequest
+{
+    public int DelegateUserId { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public string? ModuleType { get; set; }
+}
+
+class DelegateApprovalRequest
+{
+    public int DelegateUserId { get; set; }
+}
+
 // ---------------------------------------------------------------------------
 // Logging (Serilog) - writes to /Logs/app-YYYYMMDD.log and /Logs/errors-YYYYMMDD.log
 // ---------------------------------------------------------------------------
@@ -5396,157 +5542,5 @@ app.MapPut("/api/notifications/preferences", async (HttpContext ctx, UpdateNotif
 // All services (DepartmentService, TeamService, BudgetService, ApprovalDelegationService,
 // ApprovalEscalationService, BulkUserImportService) and database schema (Migration 022)
 // are in place and ready for endpoint activation.
-
-/// <summary>Body model for POST /api/auth/reset-password.</summary>
-public class ResetPasswordRequest
-{
-    public string Token { get; set; } = string.Empty;
-    public string NewPassword { get; set; } = string.Empty;
-}
-
-/// <summary>Body model for POST /api/auth/mobile/login.</summary>
-public record MobileLoginRequest(string Login, string Password);
-
-/// <summary>Body model for POST /api/chat/desky.</summary>
-public record DeskyChatRequest(
-    string Message,
-    string? Brand = null,
-    List<DeskyChatMessage>? History = null);
-
-public record DeskyChatMessage(string Role, string Content);
-
-/// <summary>Body model for POST /api/email/* endpoints.</summary>
-public record EmailRequest(
-    string To,
-    string? Subject    = null,
-    string? Message    = null,
-    bool    AttachPdf  = true);
-
-/// <summary>Body model for POST /api/tokens.</summary>
-public record PatCreateRequest(
-    string  Name,
-    string? Scopes     = null,
-    int?    ExpiryDays = null);
-
-// Domain-based routing DTOs
-class AddDomainRequest
-{
-    public string Domain { get; set; } = "";
-}
-
-class VerifyDomainRequest
-{
-    public string Domain { get; set; } = "";
-    public string VerificationToken { get; set; } = "";
-}
-
-// Approval permissions DTOs
-class CreateApprovalPermissionRequest
-{
-    public string? RoleId { get; set; }
-    public int UserId { get; set; }
-    public string ModuleType { get; set; } = "Expense";
-    public int ApprovalLevel { get; set; } = 1;
-    public decimal? MinThreshold { get; set; }
-    public decimal? MaxThreshold { get; set; }
-    public bool? CanDelegate { get; set; }
-    public bool? CanReject { get; set; }
-    public bool? CanComment { get; set; }
-}
-
-class UpdateApprovalPermissionRequest
-{
-    public decimal? MinThreshold { get; set; }
-    public decimal? MaxThreshold { get; set; }
-    public bool? CanDelegate { get; set; }
-    public bool? CanReject { get; set; }
-}
-
-class CheckApprovalPermissionRequest
-{
-    public string ModuleType { get; set; } = "Expense";
-    public int ApprovalLevel { get; set; } = 1;
-    public decimal? Amount { get; set; }
-}
-
-// Compliance audit logging DTOs
-class RecordSecurityEventRequest
-{
-    public string EventType { get; set; } = "";
-    public string Severity { get; set; } = "WARNING";
-    public int? UserId { get; set; }
-    public string Description { get; set; } = "";
-    public int? AffectedRecords { get; set; }
-    public string? IpAddress { get; set; }
-}
-
-class InvestigateSecurityEventRequest
-{
-    public string Notes { get; set; } = "";
-    public bool IsResolved { get; set; } = false;
-}
-
-// Product Admin DTOs
-class UpdateBillingConfigRequest
-{
-    public string BillingModel { get; set; } = "MONTHLY_ADVANCE";
-    public string? BillingContactEmail { get; set; }
-    public string? Currency { get; set; }
-    public decimal? TaxPercentage { get; set; }
-    public int? CycleStartDay { get; set; }
-    public int? CycleStartMonth { get; set; }
-}
-
-class MarkInvoicePaidRequest
-{
-    public decimal Amount { get; set; }
-    public string? PaymentMethod { get; set; }
-    public string? PaymentReference { get; set; }
-}
-
-// Onboarding wizard DTOs
-class StartOnboardingRequest
-{
-    public string AdminName { get; set; } = "";
-    public string AdminEmail { get; set; } = "";
-}
-
-class OnboardingStepRequest
-{
-    public string? TenantName { get; set; }
-    public string? TenantCode { get; set; }
-    public string? Domain { get; set; }
-    public string? ApprovalWorkflow { get; set; }
-    public string? BillingModel { get; set; }
-    public string? BillingContactEmail { get; set; }
-    public int UserSeats { get; set; }
-}
-
-class UpdateNotificationPreferencesRequest
-{
-    public bool EnableEmailNotifications { get; set; } = true;
-    public bool EmailOnApprovalRequired { get; set; } = true;
-    public string EmailDigestFrequency { get; set; } = "Immediate";
-    public bool EnableSmsNotifications { get; set; } = false;
-    public string? PhoneNumber { get; set; }
-    public bool EnableInAppNotifications { get; set; } = true;
-    public bool QuietHoursEnabled { get; set; } = false;
-    public TimeSpan? QuietHoursStart { get; set; }
-    public TimeSpan? QuietHoursEnd { get; set; }
-}
-
-// Helper DTOs (moved from line 3281 to resolve top-level statement ordering)
-class DelegationRequest
-{
-    public int DelegateUserId { get; set; }
-    public DateTime? StartDate { get; set; }
-    public DateTime? EndDate { get; set; }
-    public string? ModuleType { get; set; }
-}
-
-class DelegateApprovalRequest
-{
-    public int DelegateUserId { get; set; }
-}
 
 app.Run();
