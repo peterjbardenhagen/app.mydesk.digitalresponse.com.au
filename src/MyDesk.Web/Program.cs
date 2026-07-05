@@ -370,6 +370,9 @@ builder.Services.AddScoped<BankingService>();
     builder.Services.AddScoped<FinancialExtractionService>();
     builder.Services.AddScoped<WorkflowApprovalService>();
 
+    // ── Security Services (Phase 1 Week 4) ──────────────────────────────────
+    builder.Services.AddScoped<RateLimitingService>();
+
     // ── Ports from legacy MyDesk (in-memory services) ──────────────────────
     builder.Services.AddScoped<RfqService>();
     builder.Services.AddScoped<SalesProjectService>();
@@ -784,6 +787,10 @@ app.Use(async (ctx, next) =>
 });
 
 app.UseRateLimiter();
+
+// Phase 1 Week 4: Database-backed rate limiting middleware
+app.UseMiddleware<MyDesk.Web.Middleware.RateLimitingMiddleware>();
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
@@ -3935,6 +3942,95 @@ app.MapPut("/api/compliance/security-events/{id:int}", async (int id, HttpContex
     }
 })
 .WithName("InvestigateSecurityEvent")
+.WithOpenApi()
+.RequireAuthorization();
+
+// ── Rate Limiting Management (Phase 1 Week 4) ────────────────────────────────────────
+
+// GET /api/security/rate-limiting/violations - Admin: View rate limit violations
+app.MapGet("/api/security/rate-limiting/violations", async (HttpContext ctx, DatabaseService db, int page = 1, int pageSize = 50) =>
+{
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = ctx.User.FindFirst("UserId")?.Value;
+
+    if (!int.TryParse(tenantId, out int parsedTenantId) || !int.TryParse(userId, out int parsedUserId))
+        return Results.Unauthorized();
+
+    // Verify admin
+    var adminCheck = await db.QueryAsync(
+        "SELECT IsAdmin FROM dbo.Users WHERE UserId = @UserId AND TenantId = @TenantId",
+        new() { ["UserId"] = parsedUserId, ["TenantId"] = parsedTenantId });
+
+    if (adminCheck.Rows.Count == 0 || !(bool)adminCheck.Rows[0]["IsAdmin"])
+        return Results.Forbid();
+
+    int skip = (page - 1) * pageSize;
+
+    var result = await db.QueryAsync(
+        @"SELECT Id, Identifier, IdentifierType, EndpointPattern, SuspicionLevel, IsAutoBlocked, BlockedUntil, ViolationAt
+          FROM dbo.RateLimitingViolations
+          ORDER BY ViolationAt DESC
+          OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY",
+        new() { ["Skip"] = skip, ["Take"] = pageSize });
+
+    var totalResult = await db.QueryAsync(
+        "SELECT COUNT(*) as total FROM dbo.RateLimitingViolations");
+
+    int total = (int)totalResult.Rows[0]["total"];
+
+    var violations = result.Rows.Cast<DataRow>().Select(row => new
+    {
+        id = (int)row["Id"],
+        identifier = (string)row["Identifier"],
+        identifierType = (string)row["IdentifierType"],
+        endpointPattern = row["EndpointPattern"]?.ToString(),
+        suspicionLevel = (string)row["SuspicionLevel"],
+        isAutoBlocked = (bool)row["IsAutoBlocked"],
+        blockedUntil = row["BlockedUntil"],
+        violationAt = row["ViolationAt"]
+    }).ToList();
+
+    return Results.Ok(new
+    {
+        violations,
+        pagination = new { page, pageSize, total, totalPages = (total + pageSize - 1) / pageSize }
+    });
+})
+.WithName("GetRateLimitViolations")
+.WithOpenApi()
+.RequireAuthorization();
+
+// PUT /api/security/rate-limiting/violations/{id}/unblock - Admin: Unblock IP/User
+app.MapPut("/api/security/rate-limiting/violations/{id:int}/unblock", async (int id, HttpContext ctx, DatabaseService db) =>
+{
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = ctx.User.FindFirst("UserId")?.Value;
+
+    if (!int.TryParse(tenantId, out int parsedTenantId) || !int.TryParse(userId, out int parsedUserId))
+        return Results.Unauthorized();
+
+    // Verify admin
+    var adminCheck = await db.QueryAsync(
+        "SELECT IsAdmin FROM dbo.Users WHERE UserId = @UserId AND TenantId = @TenantId",
+        new() { ["UserId"] = parsedUserId, ["TenantId"] = parsedTenantId });
+
+    if (adminCheck.Rows.Count == 0 || !(bool)adminCheck.Rows[0]["IsAdmin"])
+        return Results.Forbid();
+
+    try
+    {
+        await db.ExecuteNonQueryAsync(
+            "UPDATE dbo.RateLimitingViolations SET IsAutoBlocked = 0, BlockedUntil = NULL WHERE Id = @Id",
+            new() { ["Id"] = id });
+
+        return Results.Ok(new { message = "Rate limit block removed" });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Failed to unblock: {ex.Message}" });
+    }
+})
+.WithName("UnblockRateLimitViolation")
 .WithOpenApi()
 .RequireAuthorization();
 
