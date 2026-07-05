@@ -2,52 +2,52 @@
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.27/MicrosoftTeams.schema.json",
   "manifestVersion": "1.27",
   "version": "1.0.0",
-  "id": "29d4f27d-09c5-4aa4-8221-a5ac98b98615",
+  "id": "f8e3c2a1-7b4d-4e9a-9c8d-2f1e6b5a4d3c",
   "developer": {
     "name": "Digital Response",
-    "websiteUrl": "https://mydesk.digitalresponse.com.au",
-    "privacyUrl": "https://mydesk.digitalresponse.com.au/privacy.html",
-    "termsOfUseUrl": "https://mydesk.digitalresponse.com.au/terms.html"
+    "websiteUrl": "https://dev.digitalresponse.com.au",
+    "privacyUrl": "https://dev.digitalresponse.com.au/privacy.html",
+    "termsOfUseUrl": "https://dev.digitalresponse.com.au/terms.html"
   },
   "icons": {
     "color": "color.png",
     "outline": "outline.png"
   },
   "name": {
-    "short": "MyDesk",
-    "full": "MyDesk — AI Business Operating System"
+    "short": "MyDesk Dev",
+    "full": "MyDesk Dev — AI Business Operating System (Development)"
   },
   "description": {
-    "short": "AI-powered business hub for your organisation.",
-    "full": "MyDesk is an AI-powered Business Operating System. Access your CRM, timesheets, invoices, approvals, and Ask AI — all from within Microsoft Teams."
+    "short": "AI-powered business hub for your organisation (Development).",
+    "full": "MyDesk Dev is the development environment of the AI-powered Business Operating System. Access your CRM, timesheets, invoices, approvals, and Ask AI — all from within Microsoft Teams."
   },
   "accentColor": "#1e40af",
   "staticTabs": [
     {
       "entityId": "dashboard",
       "name": "Dashboard",
-      "contentUrl": "https://svr1.digitalresponse.com.au/teams/tab?page=dashboard",
-      "websiteUrl": "https://svr1.digitalresponse.com.au/",
+      "contentUrl": "https://dev.digitalresponse.com.au/teams/tab?page=dashboard",
+      "websiteUrl": "https://dev.digitalresponse.com.au/",
       "scopes": ["personal"]
     },
     {
       "entityId": "timesheets",
       "name": "Timesheets",
-      "contentUrl": "https://svr1.digitalresponse.com.au/teams/tab?page=timesheets",
-      "websiteUrl": "https://svr1.digitalresponse.com.au/timesheets",
+      "contentUrl": "https://dev.digitalresponse.com.au/teams/tab?page=timesheets",
+      "websiteUrl": "https://dev.digitalresponse.com.au/timesheets",
       "scopes": ["personal"]
     },
     {
       "entityId": "askai",
       "name": "Ask AI",
-      "contentUrl": "https://svr1.digitalresponse.com.au/teams/tab?page=askai",
-      "websiteUrl": "https://svr1.digitalresponse.com.au/ask-ai",
+      "contentUrl": "https://dev.digitalresponse.com.au/teams/tab?page=askai",
+      "websiteUrl": "https://dev.digitalresponse.com.au/ask-ai",
       "scopes": ["personal"]
     }
   ],
   "configurableTabs": [
     {
-      "configurationUrl": "https://svr1.digitalresponse.com.au/teams/tab/configure",
+      "configurationUrl": "https://dev.digitalresponse.com.au/teams/tab/configure",
       "canUpdateConfiguration": true,
       "scopes": ["team", "groupChat"],
       "context": ["channelTab", "meetingChatTab"]
@@ -80,9 +80,17 @@
       ]
     }
   ],
+  "copilotAgents": {
+    "declarativeAgents": [
+      {
+        "id": "myDeskAgent",
+        "file": "declarativeAgent-dev.json"
+      }
+    ]
+  },
   "permissions": ["identity", "messageTeamMembers"],
   "validDomains": [
-    "svr1.digitalresponse.com.au",
-    "mydesk.digitalresponse.com.au"
+    "dev.digitalresponse.com.au",
+    "svr1.digitalresponse.com.au"
   ]
 }
