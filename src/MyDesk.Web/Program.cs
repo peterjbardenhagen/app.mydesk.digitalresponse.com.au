@@ -925,7 +925,7 @@ app.MapPost("/api/auth/forgot-password", async (HttpContext ctx, UserService use
     {
         try
         {
-            var body = await ctx.Request.ReadAsJsonAsync<dynamic>();
+            var body = await ctx.Request.ReadFromJsonAsync<dynamic>();
             emailOrCode = body?.email ?? body?.code;
         }
         catch { return Results.BadRequest(new { error = "Invalid request" }); }
