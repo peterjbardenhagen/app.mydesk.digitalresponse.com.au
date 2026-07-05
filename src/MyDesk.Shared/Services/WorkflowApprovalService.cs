@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
 namespace MyDesk.Shared.Services;
@@ -34,7 +35,8 @@ public class WorkflowApprovalService
         {
             var response = await _http.PostAsJsonAsync($"/api/expenses/{expenseId}/submit-for-approval", new { });
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadAsAsync<ApprovalSubmitResponse>();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<ApprovalSubmitResponse>(json) ?? new ApprovalSubmitResponse();
         }
         catch (Exception ex)
         {
@@ -49,7 +51,8 @@ public class WorkflowApprovalService
         {
             var response = await _http.PostAsJsonAsync($"/api/timesheets/{timesheetId}/submit-for-approval", new { });
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadAsAsync<ApprovalSubmitResponse>();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<ApprovalSubmitResponse>(json) ?? new ApprovalSubmitResponse();
         }
         catch (Exception ex)
         {
@@ -78,7 +81,8 @@ public class WorkflowApprovalService
         {
             var response = await _http.PostAsJsonAsync($"/api/approval/requests/{requestId}/approve", new { comments });
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadAsAsync<ApprovalActionResponse>();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<ApprovalActionResponse>(json) ?? new ApprovalActionResponse();
         }
         catch (Exception ex)
         {
@@ -93,7 +97,8 @@ public class WorkflowApprovalService
         {
             var response = await _http.PostAsJsonAsync($"/api/approval/requests/{requestId}/reject", new { reason });
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadAsAsync<ApprovalActionResponse>();
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<ApprovalActionResponse>(json) ?? new ApprovalActionResponse();
         }
         catch (Exception ex)
         {
