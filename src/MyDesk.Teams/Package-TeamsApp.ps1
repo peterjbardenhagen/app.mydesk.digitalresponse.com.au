@@ -42,7 +42,7 @@ def make_zip(name, files):
     z = zipfile.ZipFile(path)
     z.testzip()
     manifest = json.loads(z.read('manifest.json'))
-    print(f'  [OK] {name} → {manifest["name"]["short"]} v{manifest["version"]}')
+    print(f'  [OK] {name} -> {manifest["name"]["short"]} v{manifest["version"]}')
     z.close()
 
 # Prod Copilot
