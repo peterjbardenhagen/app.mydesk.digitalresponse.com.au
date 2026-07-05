@@ -3278,20 +3278,6 @@ app.MapPost("/api/approval/requests/{requestId}/delegate", async (int requestId,
     return Results.Ok(new { message = "Request delegated successfully", delegatedTo = body.DelegateUserId });
 }).RequireAuthorization();
 
-// ── Helper DTOs ─────────────────────────────────────────────────────────────
-class DelegationRequest
-{
-    public int DelegateUserId { get; set; }
-    public DateTime? StartDate { get; set; }
-    public DateTime? EndDate { get; set; }
-    public string? ModuleType { get; set; }
-}
-
-class DelegateApprovalRequest
-{
-    public int DelegateUserId { get; set; }
-}
-
 // ── Domain-Based Tenant Routing (Phase 1 Week 1) ──────────────────────────────────────
 // Critical for domain-based multi-tenancy and Australian Privacy Act compliance
 
@@ -5547,6 +5533,20 @@ class UpdateNotificationPreferencesRequest
     public bool QuietHoursEnabled { get; set; } = false;
     public TimeSpan? QuietHoursStart { get; set; }
     public TimeSpan? QuietHoursEnd { get; set; }
+}
+
+// Helper DTOs (moved from line 3281 to resolve top-level statement ordering)
+class DelegationRequest
+{
+    public int DelegateUserId { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public string? ModuleType { get; set; }
+}
+
+class DelegateApprovalRequest
+{
+    public int DelegateUserId { get; set; }
 }
 
 app.Run();
