@@ -2854,6 +2854,50 @@ app.MapPost("/api/approval/requests/{requestId}/approve", async (int requestId, 
     int totalLevels = (int)workflowDt.Rows[0]["ApprovalLevels"];
     bool isFinal = currentLevel >= totalLevels;
 
+    // Phase 1 Week 2: Check approval permissions before allowing approval
+    var userRole = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
+    var expenseCheckDt = await db.QueryAsync(
+        @"SELECT ModuleType, (CASE WHEN ModuleType = 'Expense' THEN Amount ELSE 0 END) AS Amount
+          FROM ApprovalRequests
+          WHERE RequestId = @RequestId",
+        new() { ["RequestId"] = requestId });
+
+    if (expenseCheckDt.Rows.Count > 0)
+    {
+        string moduleType = expenseCheckDt.Rows[0]["ModuleType"]?.ToString() ?? "Expense";
+        decimal amount = (decimal)(expenseCheckDt.Rows[0]["Amount"] ?? 0);
+
+        var permDt = await db.QueryAsync(
+            @"SELECT COUNT(*) as cnt FROM dbo.ApprovalPermissions
+              WHERE TenantId = @TenantId
+                AND ModuleType = @ModuleType
+                AND ApprovalLevel = @Level
+                AND IsActive = 1
+                AND (
+                  (UserId = @UserId AND CanReject = 1)
+                  OR (RoleId = @Role AND CanReject = 1)
+                )
+                AND (MinThreshold IS NULL OR MinThreshold <= @Amount)
+                AND (MaxThreshold IS NULL OR MaxThreshold >= @Amount)",
+            new()
+            {
+                ["TenantId"] = Guid.Parse(tenantId),
+                ["ModuleType"] = moduleType,
+                ["Level"] = currentLevel,
+                ["UserId"] = userId,
+                ["Role"] = userRole ?? "none",
+                ["Amount"] = amount
+            });
+
+        int permCount = (int)permDt.Rows[0]["cnt"];
+        if (permCount == 0)
+        {
+            Log.Warning("Approval permission denied for UserId={UserId} on RequestId={RequestId} Level={Level}",
+                userId, requestId, currentLevel);
+            return Results.Forbid();
+        }
+    }
+
     await db.ExecuteNonQueryAsync(
         "INSERT INTO ApprovalActions (RequestId, ApprovalLevel, ApprovedById, [Action], ActionAt) VALUES (@RequestId, @Level, @UserId, 'Approved', GETUTCDATE())",
         new() { ["RequestId"] = requestId, ["Level"] = currentLevel, ["UserId"] = userId });
@@ -3352,6 +3396,307 @@ app.MapDelete("/api/tenant/domains/{id:int}", async (int id, HttpContext ctx, Da
 .WithOpenApi()
 .RequireAuthorization();
 
+// ── Approval Permissions Management (Phase 1 Week 2) ──────────────────────────────────────
+// Fine-grained approval authority with threshold-based routing
+
+// POST /api/approval/permissions - Admin: Create new approval permission
+app.MapPost("/api/approval/permissions", async (HttpContext ctx, CreateApprovalPermissionRequest body, DatabaseService db) =>
+{
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+    if (!int.TryParse(tenantId, out int parsedTenantId) || !int.TryParse(userId, out int parsedUserId))
+        return Results.Unauthorized();
+
+    // Verify admin
+    var adminCheck = await db.QueryAsync(
+        "SELECT IsAdmin FROM dbo.Users WHERE UserId = @UserId AND TenantId = @TenantId",
+        new() { ["UserId"] = parsedUserId, ["TenantId"] = parsedTenantId });
+
+    if (adminCheck.Rows.Count == 0 || !(bool)adminCheck.Rows[0]["IsAdmin"])
+        return Results.Forbid();
+
+    // Validate either RoleId or UserId is provided (not both)
+    if (string.IsNullOrWhiteSpace(body.RoleId) && body.UserId <= 0)
+        return Results.BadRequest(new { error = "Either RoleId or UserId must be specified" });
+
+    if (!string.IsNullOrWhiteSpace(body.RoleId) && body.UserId > 0)
+        return Results.BadRequest(new { error = "Only one of RoleId or UserId can be specified" });
+
+    // If UserId specified, verify user belongs to tenant
+    if (body.UserId > 0)
+    {
+        var userCheck = await db.QueryAsync(
+            "SELECT TenantId FROM dbo.Users WHERE UserId = @UserId AND TenantId = @TenantId",
+            new() { ["UserId"] = body.UserId, ["TenantId"] = parsedTenantId });
+
+        if (userCheck.Rows.Count == 0)
+            return Results.BadRequest(new { error = "User not found in tenant" });
+    }
+
+    // Validate threshold logic
+    if (body.MinThreshold.HasValue && body.MaxThreshold.HasValue && body.MinThreshold > body.MaxThreshold)
+        return Results.BadRequest(new { error = "MinThreshold cannot be greater than MaxThreshold" });
+
+    try
+    {
+        await db.ExecuteNonQueryAsync(
+            @"INSERT INTO dbo.ApprovalPermissions (TenantId, RoleId, UserId, ModuleType, ApprovalLevel, MinThreshold, MaxThreshold, CanDelegate, CanReject, CanComment, CreatedBy, IsActive)
+              VALUES (@TenantId, @RoleId, @UserId, @ModuleType, @Level, @MinThreshold, @MaxThreshold, @CanDelegate, @CanReject, @CanComment, @CreatedBy, 1)",
+            new()
+            {
+                ["TenantId"] = parsedTenantId,
+                ["RoleId"] = (object?)body.RoleId ?? DBNull.Value,
+                ["UserId"] = body.UserId > 0 ? body.UserId : DBNull.Value,
+                ["ModuleType"] = body.ModuleType,
+                ["Level"] = body.ApprovalLevel,
+                ["MinThreshold"] = body.MinThreshold.HasValue ? (object)body.MinThreshold : DBNull.Value,
+                ["MaxThreshold"] = body.MaxThreshold.HasValue ? (object)body.MaxThreshold : DBNull.Value,
+                ["CanDelegate"] = body.CanDelegate ?? true,
+                ["CanReject"] = body.CanReject ?? true,
+                ["CanComment"] = body.CanComment ?? true,
+                ["CreatedBy"] = parsedUserId
+            });
+
+        return Results.Created("/api/approval/permissions", new { message = "Permission created successfully" });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Failed to create permission: {ex.Message}" });
+    }
+})
+.WithName("CreateApprovalPermission")
+.WithOpenApi()
+.RequireAuthorization();
+
+// GET /api/approval/permissions - Admin: List permissions for tenant
+app.MapGet("/api/approval/permissions", async (HttpContext ctx, DatabaseService db, string? moduleType = null) =>
+{
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+
+    if (!int.TryParse(tenantId, out int parsedTenantId))
+        return Results.Unauthorized();
+
+    var query = @"SELECT Id, RoleId, UserId, ModuleType, ApprovalLevel, MinThreshold, MaxThreshold,
+                        CanDelegate, CanReject, CanComment, IsActive, CreatedAt
+                 FROM dbo.ApprovalPermissions
+                 WHERE TenantId = @TenantId AND IsActive = 1";
+
+    var param = new Dictionary<string, object?> { ["TenantId"] = parsedTenantId };
+
+    if (!string.IsNullOrWhiteSpace(moduleType))
+    {
+        query += " AND ModuleType = @ModuleType";
+        param["ModuleType"] = moduleType;
+    }
+
+    query += " ORDER BY ApprovalLevel, ModuleType";
+
+    var result = await db.QueryAsync(query, param);
+
+    var permissions = result.Rows.Cast<DataRow>().Select(row => new
+    {
+        id = (int)row["Id"],
+        roleId = row["RoleId"]?.ToString(),
+        userId = row["UserId"] != DBNull.Value ? (int?)row["UserId"] : null,
+        moduleType = (string)row["ModuleType"],
+        approvalLevel = (int)row["ApprovalLevel"],
+        minThreshold = row["MinThreshold"] != DBNull.Value ? (decimal?)row["MinThreshold"] : null,
+        maxThreshold = row["MaxThreshold"] != DBNull.Value ? (decimal?)row["MaxThreshold"] : null,
+        canDelegate = (bool)row["CanDelegate"],
+        canReject = (bool)row["CanReject"],
+        canComment = (bool)row["CanComment"],
+        createdAt = row["CreatedAt"]
+    }).ToList();
+
+    return Results.Ok(new { permissions, count = permissions.Count });
+})
+.WithName("ListApprovalPermissions")
+.WithOpenApi()
+.RequireAuthorization();
+
+// PUT /api/approval/permissions/{id} - Admin: Update permission
+app.MapPut("/api/approval/permissions/{id:int}", async (int id, HttpContext ctx, UpdateApprovalPermissionRequest body, DatabaseService db) =>
+{
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+    if (!int.TryParse(tenantId, out int parsedTenantId) || !int.TryParse(userId, out int parsedUserId))
+        return Results.Unauthorized();
+
+    // Verify admin
+    var adminCheck = await db.QueryAsync(
+        "SELECT IsAdmin FROM dbo.Users WHERE UserId = @UserId AND TenantId = @TenantId",
+        new() { ["UserId"] = parsedUserId, ["TenantId"] = parsedTenantId });
+
+    if (adminCheck.Rows.Count == 0 || !(bool)adminCheck.Rows[0]["IsAdmin"])
+        return Results.Forbid();
+
+    // Verify permission exists and belongs to tenant
+    var permCheck = await db.QueryAsync(
+        "SELECT Id FROM dbo.ApprovalPermissions WHERE Id = @Id AND TenantId = @TenantId",
+        new() { ["Id"] = id, ["TenantId"] = parsedTenantId });
+
+    if (permCheck.Rows.Count == 0)
+        return Results.NotFound();
+
+    // Validate thresholds if provided
+    if (body.MinThreshold.HasValue && body.MaxThreshold.HasValue && body.MinThreshold > body.MaxThreshold)
+        return Results.BadRequest(new { error = "MinThreshold cannot be greater than MaxThreshold" });
+
+    try
+    {
+        var updates = new List<string>();
+        var @params = new Dictionary<string, object?> { ["Id"] = id };
+
+        if (body.MinThreshold.HasValue)
+        {
+            updates.Add("MinThreshold = @MinThreshold");
+            @params["MinThreshold"] = body.MinThreshold;
+        }
+        if (body.MaxThreshold.HasValue)
+        {
+            updates.Add("MaxThreshold = @MaxThreshold");
+            @params["MaxThreshold"] = body.MaxThreshold;
+        }
+        if (body.CanDelegate.HasValue)
+        {
+            updates.Add("CanDelegate = @CanDelegate");
+            @params["CanDelegate"] = body.CanDelegate;
+        }
+        if (body.CanReject.HasValue)
+        {
+            updates.Add("CanReject = @CanReject");
+            @params["CanReject"] = body.CanReject;
+        }
+
+        if (updates.Count == 0)
+            return Results.BadRequest(new { error = "No fields to update" });
+
+        updates.Add("UpdatedAt = GETUTCDATE()");
+        updates.Add("UpdatedBy = @UpdatedBy");
+        @params["UpdatedBy"] = parsedUserId;
+
+        string query = "UPDATE dbo.ApprovalPermissions SET " + string.Join(", ", updates) + " WHERE Id = @Id";
+
+        await db.ExecuteNonQueryAsync(query, @params);
+
+        return Results.Ok(new { message = "Permission updated successfully" });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Failed to update permission: {ex.Message}" });
+    }
+})
+.WithName("UpdateApprovalPermission")
+.WithOpenApi()
+.RequireAuthorization();
+
+// DELETE /api/approval/permissions/{id} - Admin: Revoke permission
+app.MapDelete("/api/approval/permissions/{id:int}", async (int id, HttpContext ctx, DatabaseService db) =>
+{
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+    if (!int.TryParse(tenantId, out int parsedTenantId) || !int.TryParse(userId, out int parsedUserId))
+        return Results.Unauthorized();
+
+    // Verify admin
+    var adminCheck = await db.QueryAsync(
+        "SELECT IsAdmin FROM dbo.Users WHERE UserId = @UserId AND TenantId = @TenantId",
+        new() { ["UserId"] = parsedUserId, ["TenantId"] = parsedTenantId });
+
+    if (adminCheck.Rows.Count == 0 || !(bool)adminCheck.Rows[0]["IsAdmin"])
+        return Results.Forbid();
+
+    // Verify permission exists
+    var permCheck = await db.QueryAsync(
+        "SELECT Id FROM dbo.ApprovalPermissions WHERE Id = @Id AND TenantId = @TenantId",
+        new() { ["Id"] = id, ["TenantId"] = parsedTenantId });
+
+    if (permCheck.Rows.Count == 0)
+        return Results.NotFound();
+
+    try
+    {
+        await db.ExecuteNonQueryAsync(
+            "UPDATE dbo.ApprovalPermissions SET IsActive = 0, UpdatedAt = GETUTCDATE(), UpdatedBy = @UserId WHERE Id = @Id",
+            new() { ["Id"] = id, ["UserId"] = parsedUserId });
+
+        // Log to audit trail
+        await db.ExecuteNonQueryAsync(
+            @"INSERT INTO dbo.ApprovalPermissionAudit (TenantId, PermissionId, ChangeType, ChangedAt, ChangedBy, IsActive)
+              VALUES (@TenantId, @PermId, 'REVOKE', GETUTCDATE(), @UserId, 1)",
+            new() { ["TenantId"] = parsedTenantId, ["PermId"] = id, ["UserId"] = parsedUserId });
+
+        return Results.Ok(new { message = "Permission revoked successfully" });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Failed to revoke permission: {ex.Message}" });
+    }
+})
+.WithName("RevokeApprovalPermission")
+.WithOpenApi()
+.RequireAuthorization();
+
+// POST /api/approval/check-permission - Check if current user has approval authority
+app.MapPost("/api/approval/check-permission", async (HttpContext ctx, CheckApprovalPermissionRequest body, DatabaseService db) =>
+{
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = ctx.User.FindFirst("UserId")?.Value;
+    var userRole = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
+
+    if (!int.TryParse(tenantId, out int parsedTenantId) || !int.TryParse(userId, out int parsedUserId))
+        return Results.Unauthorized();
+
+    // Check for matching permission (first by user, then by role)
+    var permResult = await db.QueryAsync(
+        @"SELECT ap.Id, ap.MinThreshold, ap.MaxThreshold, ap.CanDelegate, ap.CanReject, ap.CanComment, ap.ApprovalLevel
+          FROM dbo.ApprovalPermissions ap
+          WHERE ap.TenantId = @TenantId
+            AND ap.ModuleType = @ModuleType
+            AND ap.ApprovalLevel = @Level
+            AND ap.IsActive = 1
+            AND (
+              (ap.UserId = @UserId)
+              OR (ap.RoleId = @Role)
+            )
+            AND (ap.MinThreshold IS NULL OR ap.MinThreshold <= @Amount)
+            AND (ap.MaxThreshold IS NULL OR ap.MaxThreshold >= @Amount)",
+        new()
+        {
+            ["TenantId"] = parsedTenantId,
+            ["ModuleType"] = body.ModuleType,
+            ["Level"] = body.ApprovalLevel,
+            ["UserId"] = parsedUserId,
+            ["Role"] = userRole ?? "",
+            ["Amount"] = body.Amount ?? 0
+        });
+
+    if (permResult.Rows.Count == 0)
+        return Results.Ok(new
+        {
+            hasPermission = false,
+            message = "User does not have approval authority for this request"
+        });
+
+    var perm = permResult.Rows[0];
+    return Results.Ok(new
+    {
+        hasPermission = true,
+        permissionId = (int)perm["Id"],
+        approvalLevel = (int)perm["ApprovalLevel"],
+        canDelegate = (bool)perm["CanDelegate"],
+        canReject = (bool)perm["CanReject"],
+        canComment = (bool)perm["CanComment"],
+        message = "User has approval authority"
+    });
+})
+.WithName("CheckApprovalPermission")
+.WithOpenApi()
+.RequireAuthorization();
+
 app.Run();
 
 /// <summary>Body model for POST /api/auth/reset-password.</summary>
@@ -3395,4 +3740,33 @@ class VerifyDomainRequest
 {
     public string Domain { get; set; } = "";
     public string VerificationToken { get; set; } = "";
+}
+
+// Approval permissions DTOs
+class CreateApprovalPermissionRequest
+{
+    public string? RoleId { get; set; }
+    public int UserId { get; set; }
+    public string ModuleType { get; set; } = "Expense";
+    public int ApprovalLevel { get; set; } = 1;
+    public decimal? MinThreshold { get; set; }
+    public decimal? MaxThreshold { get; set; }
+    public bool? CanDelegate { get; set; }
+    public bool? CanReject { get; set; }
+    public bool? CanComment { get; set; }
+}
+
+class UpdateApprovalPermissionRequest
+{
+    public decimal? MinThreshold { get; set; }
+    public decimal? MaxThreshold { get; set; }
+    public bool? CanDelegate { get; set; }
+    public bool? CanReject { get; set; }
+}
+
+class CheckApprovalPermissionRequest
+{
+    public string ModuleType { get; set; } = "Expense";
+    public int ApprovalLevel { get; set; } = 1;
+    public decimal? Amount { get; set; }
 }
