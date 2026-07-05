@@ -552,6 +552,51 @@ input, textarea { border: none; outline: none; font-family: inherit; }
             <div style="font-size:12px;font-weight:600;color:var(--text-1);">POs</div>
           </button>
         </div>
+
+        <!-- Phase 1 & 2 Module Links (Row 1) -->
+        <div style="padding:0 14px;display:flex;gap:8px;margin-top:8px;">
+          <button class="stat-card" style="flex:1;cursor:pointer;padding:12px;text-align:center;" onclick="navigate('expenses')">
+            <div style="font-size:20px;margin-bottom:4px;">💸</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-1);">Expenses</div>
+          </button>
+          <button class="stat-card" style="flex:1;cursor:pointer;padding:12px;text-align:center;" onclick="navigate('timesheets')">
+            <div style="font-size:20px;margin-bottom:4px;">⏱️</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-1);">Timesheets</div>
+          </button>
+          <button class="stat-card" style="flex:1;cursor:pointer;padding:12px;text-align:center;" onclick="navigate('tasks')">
+            <div style="font-size:20px;margin-bottom:4px;">✓</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-1);">Tasks</div>
+          </button>
+        </div>
+
+        <!-- Phase 1 & 2 Module Links (Row 2) -->
+        <div style="padding:0 14px;display:flex;gap:8px;margin-top:8px;">
+          <button class="stat-card" style="flex:1;cursor:pointer;padding:12px;text-align:center;" onclick="navigate('despatch')">
+            <div style="font-size:20px;margin-bottom:4px;">🚚</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-1);">Despatch</div>
+          </button>
+          <button class="stat-card" style="flex:1;cursor:pointer;padding:12px;text-align:center;" onclick="navigate('contacts')">
+            <div style="font-size:20px;margin-bottom:4px;">👥</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-1);">Contacts</div>
+          </button>
+          <button class="stat-card" style="flex:1;cursor:pointer;padding:12px;text-align:center;" onclick="navigate('cashflow')">
+            <div style="font-size:20px;margin-bottom:4px;">📊</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-1);">CashFlow</div>
+          </button>
+        </div>
+
+        <!-- Phase 1 & 2 Module Links (Row 3) -->
+        <div style="padding:0 14px;display:flex;gap:8px;margin-top:8px;margin-bottom:14px;">
+          <button class="stat-card" style="flex:1;cursor:pointer;padding:12px;text-align:center;" onclick="navigate('goals')">
+            <div style="font-size:20px;margin-bottom:4px;">🎯</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-1);">Goals</div>
+          </button>
+          <button class="stat-card" style="flex:1;cursor:pointer;padding:12px;text-align:center;" onclick="navigate('projects')">
+            <div style="font-size:20px;margin-bottom:4px;">📈</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-1);">Projects</div>
+          </button>
+          <div style="flex:1;"></div>
+        </div>
       </div>
 
       <!-- Inline Chat -->
@@ -636,6 +681,104 @@ input, textarea { border: none; outline: none; font-family: inherit; }
           <svg viewBox="0 0 24 24"><path d="M22 2L11 13m11-11l-7 20L11 13m0 0L3 9m8 4l0 8"/></svg>
         </button>
       </div>
+    </div>
+
+    <!-- EXPENSES -->
+    <div class="screen" id="screen-expenses">
+      <div class="screen-header"><h2>Expenses</h2></div>
+      <div id="expensesList" class="module-list"></div>
+    </div>
+
+    <!-- EXPENSE DETAIL -->
+    <div class="screen" id="screen-expense-detail">
+      <div class="screen-header">
+        <button style="background:none;font-size:18px;color:var(--text-2);" onclick="navigate('expenses')">←</button>
+        <h2>Expense</h2>
+        <div style="width:30px;"></div>
+      </div>
+      <div class="module-detail" id="expenseDetail"></div>
+    </div>
+
+    <!-- TIMESHEETS -->
+    <div class="screen" id="screen-timesheets">
+      <div class="screen-header"><h2>Timesheets</h2></div>
+      <div id="timesheetsList" class="module-list"></div>
+    </div>
+
+    <!-- TIMESHEET DETAIL -->
+    <div class="screen" id="screen-timesheet-detail">
+      <div class="screen-header">
+        <button style="background:none;font-size:18px;color:var(--text-2);" onclick="navigate('timesheets')">←</button>
+        <h2>Timesheet</h2>
+        <div style="width:30px;"></div>
+      </div>
+      <div class="module-detail" id="timesheetDetail"></div>
+    </div>
+
+    <!-- TASKS -->
+    <div class="screen" id="screen-tasks">
+      <div class="screen-header"><h2>Tasks</h2></div>
+      <div id="tasksList" class="module-list"></div>
+    </div>
+
+    <!-- TASK DETAIL -->
+    <div class="screen" id="screen-task-detail">
+      <div class="screen-header">
+        <button style="background:none;font-size:18px;color:var(--text-2);" onclick="navigate('tasks')">←</button>
+        <h2>Task</h2>
+        <div style="width:30px;"></div>
+      </div>
+      <div class="module-detail" id="taskDetail"></div>
+    </div>
+
+    <!-- DESPATCH -->
+    <div class="screen" id="screen-despatch">
+      <div class="screen-header"><h2>Despatch</h2></div>
+      <div id="despatchList" class="module-list"></div>
+    </div>
+
+    <!-- DESPATCH DETAIL -->
+    <div class="screen" id="screen-despatch-detail">
+      <div class="screen-header">
+        <button style="background:none;font-size:18px;color:var(--text-2);" onclick="navigate('despatch')">←</button>
+        <h2>Despatch</h2>
+        <div style="width:30px;"></div>
+      </div>
+      <div class="module-detail" id="despatchDetail"></div>
+    </div>
+
+    <!-- CONTACTS -->
+    <div class="screen" id="screen-contacts">
+      <div class="screen-header"><h2>Contacts</h2></div>
+      <div id="contactsList" class="module-list"></div>
+    </div>
+
+    <!-- CONTACT DETAIL -->
+    <div class="screen" id="screen-contact-detail">
+      <div class="screen-header">
+        <button style="background:none;font-size:18px;color:var(--text-2);" onclick="navigate('contacts')">←</button>
+        <h2>Contact</h2>
+        <div style="width:30px;"></div>
+      </div>
+      <div class="module-detail" id="contactDetail"></div>
+    </div>
+
+    <!-- CASHFLOW FORECAST -->
+    <div class="screen" id="screen-cashflow">
+      <div class="screen-header"><h2>Cash Flow Forecast</h2></div>
+      <div id="cashflowContent" style="padding:14px;"></div>
+    </div>
+
+    <!-- GOALS/KPIs -->
+    <div class="screen" id="screen-goals">
+      <div class="screen-header"><h2>Business Goals</h2></div>
+      <div id="goalsList" class="module-list"></div>
+    </div>
+
+    <!-- PROJECTS -->
+    <div class="screen" id="screen-projects">
+      <div class="screen-header"><h2>Projects</h2></div>
+      <div id="projectsList" class="module-list"></div>
     </div>
 
     <!-- CONFIG -->
@@ -743,10 +886,23 @@ const state = {
   quotes: [],
   pos: [],
   files: [],
+  expenses: [],
+  timesheets: [],
+  tasks: [],
+  despatch: [],
+  contacts: [],
+  cashflow: [],
+  goals: [],
+  projects: [],
   pagination: {
     invoices: { offset: 0, hasMore: true, loading: false },
     quotes: { offset: 0, hasMore: true, loading: false },
     pos: { offset: 0, hasMore: true, loading: false },
+    expenses: { offset: 0, hasMore: true, loading: false },
+    timesheets: { offset: 0, hasMore: true, loading: false },
+    tasks: { offset: 0, hasMore: true, loading: false },
+    despatch: { offset: 0, hasMore: true, loading: false },
+    contacts: { offset: 0, hasMore: true, loading: false },
   }
 };
 
@@ -1245,6 +1401,11 @@ async function loadData() {
   state.pagination.invoices = { offset: 0, hasMore: true, loading: false };
   state.pagination.quotes = { offset: 0, hasMore: true, loading: false };
   state.pagination.pos = { offset: 0, hasMore: true, loading: false };
+  state.pagination.expenses = { offset: 0, hasMore: true, loading: false };
+  state.pagination.timesheets = { offset: 0, hasMore: true, loading: false };
+  state.pagination.tasks = { offset: 0, hasMore: true, loading: false };
+  state.pagination.despatch = { offset: 0, hasMore: true, loading: false };
+  state.pagination.contacts = { offset: 0, hasMore: true, loading: false };
 
   // Load invoices (if available)
   if (state.modules.includes('invoices')) {
@@ -1285,6 +1446,107 @@ async function loadData() {
     document.getElementById('posList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Purchase Orders not available for this workspace</div>';
   }
 
+  // Load expenses (if available)
+  if (state.modules.includes('expenses')) {
+    const exps = await apiCall('/api/mobile/expenses?limit=50&offset=0');
+    if (exps) {
+      state.expenses = Array.isArray(exps) ? exps : [];
+      state.pagination.expenses.hasMore = exps.length >= 50;
+      buildExpensesList();
+    }
+  } else {
+    state.expenses = [];
+    document.getElementById('expensesList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Expenses not available for this workspace</div>';
+  }
+
+  // Load timesheets (if available)
+  if (state.modules.includes('timesheets')) {
+    const ts = await apiCall('/api/mobile/timesheets?limit=50&offset=0');
+    if (ts) {
+      state.timesheets = Array.isArray(ts) ? ts : [];
+      state.pagination.timesheets.hasMore = ts.length >= 50;
+      buildTimesheetsList();
+    }
+  } else {
+    state.timesheets = [];
+    document.getElementById('timesheetsList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Timesheets not available for this workspace</div>';
+  }
+
+  // Load tasks (if available)
+  if (state.modules.includes('tasks')) {
+    const tks = await apiCall('/api/mobile/tasks?limit=50&offset=0');
+    if (tks) {
+      state.tasks = Array.isArray(tks) ? tks : [];
+      state.pagination.tasks.hasMore = tks.length >= 50;
+      buildTasksList();
+    }
+  } else {
+    state.tasks = [];
+    document.getElementById('tasksList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Tasks not available for this workspace</div>';
+  }
+
+  // Load despatch (if available)
+  if (state.modules.includes('despatch')) {
+    const desp = await apiCall('/api/mobile/despatch?limit=50&offset=0');
+    if (desp) {
+      state.despatch = Array.isArray(desp) ? desp : [];
+      state.pagination.despatch.hasMore = desp.length >= 50;
+      buildDespatchList();
+    }
+  } else {
+    state.despatch = [];
+    document.getElementById('despatchList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Despatch not available for this workspace</div>';
+  }
+
+  // Load contacts (if available)
+  if (state.modules.includes('contacts')) {
+    const con = await apiCall('/api/mobile/contacts?limit=50&offset=0');
+    if (con) {
+      state.contacts = Array.isArray(con) ? con : [];
+      state.pagination.contacts.hasMore = con.length >= 50;
+      buildContactsList();
+    }
+  } else {
+    state.contacts = [];
+    document.getElementById('contactsList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Contacts not available for this workspace</div>';
+  }
+
+  // Load cashflow (if available)
+  if (state.modules.includes('cashflow')) {
+    const cf = await apiCall('/api/mobile/cashflow');
+    if (cf) {
+      state.cashflow = Array.isArray(cf) ? cf : [];
+      buildCashflowView();
+    }
+  } else {
+    state.cashflow = [];
+    document.getElementById('cashflowContent').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Cash Flow not available for this workspace</div>';
+  }
+
+  // Load goals (if available)
+  if (state.modules.includes('goals')) {
+    const gls = await apiCall('/api/mobile/goals');
+    if (gls) {
+      state.goals = Array.isArray(gls) ? gls : [];
+      buildGoalsList();
+    }
+  } else {
+    state.goals = [];
+    document.getElementById('goalsList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Goals not available for this workspace</div>';
+  }
+
+  // Load projects (if available)
+  if (state.modules.includes('projects')) {
+    const prj = await apiCall('/api/mobile/projects');
+    if (prj) {
+      state.projects = Array.isArray(prj) ? prj : [];
+      buildProjectsList();
+    }
+  } else {
+    state.projects = [];
+    document.getElementById('projectsList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Projects not available for this workspace</div>';
+  }
+
   // Load files (always available)
   const files = await apiCall('/api/mobile/files');
   if (files) {
@@ -1301,13 +1563,23 @@ async function loadData() {
 
 function updateModuleButtons() {
   // Hide module buttons that are not available
-  const invoicesBtn = document.querySelector('button[onclick="navigate(\'invoices\')"]');
-  const quotesBtn = document.querySelector('button[onclick="navigate(\'quotes\')"]');
-  const posBtn = document.querySelector('button[onclick="navigate(\'pos\')"]');
+  const buttons = {
+    invoices: document.querySelector('button[onclick="navigate(\'invoices\')"]'),
+    quotes: document.querySelector('button[onclick="navigate(\'quotes\')"]'),
+    pos: document.querySelector('button[onclick="navigate(\'pos\')"]'),
+    expenses: document.querySelector('button[onclick="navigate(\'expenses\')"]'),
+    timesheets: document.querySelector('button[onclick="navigate(\'timesheets\')"]'),
+    tasks: document.querySelector('button[onclick="navigate(\'tasks\')"]'),
+    despatch: document.querySelector('button[onclick="navigate(\'despatch\')"]'),
+    contacts: document.querySelector('button[onclick="navigate(\'contacts\')"]'),
+    cashflow: document.querySelector('button[onclick="navigate(\'cashflow\')"]'),
+    goals: document.querySelector('button[onclick="navigate(\'goals\')"]'),
+    projects: document.querySelector('button[onclick="navigate(\'projects\')"]'),
+  };
 
-  if (invoicesBtn) invoicesBtn.style.display = state.modules.includes('invoices') ? 'block' : 'none';
-  if (quotesBtn) quotesBtn.style.display = state.modules.includes('quotes') ? 'block' : 'none';
-  if (posBtn) posBtn.style.display = state.modules.includes('pos') ? 'block' : 'none';
+  Object.entries(buttons).forEach(([module, btn]) => {
+    if (btn) btn.style.display = state.modules.includes(module) ? 'block' : 'none';
+  });
 }
 
 function updateHomeStats() {
@@ -1628,6 +1900,575 @@ async function showPODetail(id) {
 
   document.getElementById('poDetail').innerHTML = html;
   navigate('po-detail');
+}
+
+// ── Expenses ───────────────────────────────────────────────
+function buildExpensesList() {
+  const list = document.getElementById('expensesList');
+  if (!state.expenses || state.expenses.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">No expenses</div>';
+    return;
+  }
+
+  let html = state.expenses.map(e => `
+    <div class="module-item" onclick="showExpenseDetail(${e.id})">
+      <div class="module-item-info">
+        <div class="module-item-title">${e.reference || '#' + e.id}</div>
+        <div class="module-item-meta">
+          <span>${e.status || 'Pending'}</span>
+          <span>${formatDate(e.createdAt)}</span>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div class="module-item-value">${formatCurrency(e.totalAmount || 0)}</div>
+      </div>
+    </div>
+  `).join('');
+
+  if (state.pagination.expenses.hasMore) {
+    html += `<div style="padding:16px;text-align:center;"><button style="padding:10px 20px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-1);border-radius:8px;cursor:pointer;" onclick="loadMoreExpenses()">Load more</button></div>`;
+  }
+  list.innerHTML = html;
+}
+
+async function loadMoreExpenses() {
+  if (state.pagination.expenses.loading) return;
+  state.pagination.expenses.loading = true;
+  state.pagination.expenses.offset += 50;
+  const exps = await apiCall(`/api/mobile/expenses?limit=50&offset=${state.pagination.expenses.offset}`);
+  state.pagination.expenses.loading = false;
+  if (exps && Array.isArray(exps) && exps.length > 0) {
+    state.expenses.push(...exps);
+    state.pagination.expenses.hasMore = exps.length >= 50;
+    buildExpensesList();
+  }
+}
+
+async function showExpenseDetail(id) {
+  const exp = await apiCall('/api/mobile/expenses/' + id);
+  if (!exp) return;
+
+  const html = `
+    <div class="detail-header">
+      <h2>${exp.reference || '#' + exp.id}</h2>
+      <div class="detail-status">${exp.status || 'Pending'} · ${formatDate(exp.createdAt)}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Overview</div>
+      <div class="detail-kpi">
+        <div class="detail-kpi-card">
+          <div class="detail-kpi-label">Employee</div>
+          <div class="detail-kpi-value" style="font-size:14px;">${exp.employee || 'N/A'}</div>
+        </div>
+        <div class="detail-kpi-card">
+          <div class="detail-kpi-label">Total</div>
+          <div class="detail-kpi-value">${formatCurrency(exp.totalAmount || 0)}</div>
+        </div>
+      </div>
+    </div>
+
+    ${exp.items && exp.items.length > 0 ? `
+      <div class="detail-section">
+        <div class="detail-section-title">Items</div>
+        <div class="line-items">
+          ${exp.items.map(item => `
+            <div class="line-item">
+              <div>
+                <div class="line-item-desc">${item.category || 'Expense'}</div>
+                <div class="line-item-meta">${item.description || ''}</div>
+              </div>
+              <div class="line-item-total">
+                <div class="line-item-price">${formatCurrency(item.amount || 0)}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+  `;
+
+  document.getElementById('expenseDetail').innerHTML = html;
+  navigate('expense-detail');
+}
+
+// ── Timesheets ────────────────────────────────────────────
+function buildTimesheetsList() {
+  const list = document.getElementById('timesheetsList');
+  if (!state.timesheets || state.timesheets.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">No timesheets</div>';
+    return;
+  }
+
+  let html = state.timesheets.map(t => `
+    <div class="module-item" onclick="showTimesheetDetail(${t.id})">
+      <div class="module-item-info">
+        <div class="module-item-title">Week ${t.weekNumber || t.id}</div>
+        <div class="module-item-meta">
+          <span>${t.status || 'Draft'}</span>
+          <span>${formatDate(t.weekStart)}</span>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div class="module-item-value">${t.totalHours || 0}h</div>
+      </div>
+    </div>
+  `).join('');
+
+  if (state.pagination.timesheets.hasMore) {
+    html += `<div style="padding:16px;text-align:center;"><button style="padding:10px 20px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-1);border-radius:8px;cursor:pointer;" onclick="loadMoreTimesheets()">Load more</button></div>`;
+  }
+  list.innerHTML = html;
+}
+
+async function loadMoreTimesheets() {
+  if (state.pagination.timesheets.loading) return;
+  state.pagination.timesheets.loading = true;
+  state.pagination.timesheets.offset += 50;
+  const ts = await apiCall(`/api/mobile/timesheets?limit=50&offset=${state.pagination.timesheets.offset}`);
+  state.pagination.timesheets.loading = false;
+  if (ts && Array.isArray(ts) && ts.length > 0) {
+    state.timesheets.push(...ts);
+    state.pagination.timesheets.hasMore = ts.length >= 50;
+    buildTimesheetsList();
+  }
+}
+
+async function showTimesheetDetail(id) {
+  const ts = await apiCall('/api/mobile/timesheets/' + id);
+  if (!ts) return;
+
+  const html = `
+    <div class="detail-header">
+      <h2>Week ${ts.weekNumber || ts.id}</h2>
+      <div class="detail-status">${ts.status || 'Draft'} · ${formatDate(ts.weekStart)}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Summary</div>
+      <div class="detail-kpi">
+        <div class="detail-kpi-card">
+          <div class="detail-kpi-label">Total Hours</div>
+          <div class="detail-kpi-value">${ts.totalHours || 0}</div>
+        </div>
+      </div>
+    </div>
+
+    ${ts.entries && ts.entries.length > 0 ? `
+      <div class="detail-section">
+        <div class="detail-section-title">Daily Entries</div>
+        <div class="line-items">
+          ${ts.entries.map((entry, idx) => `
+            <div class="line-item">
+              <div>
+                <div class="line-item-desc">Day ${idx + 1}</div>
+                <div class="line-item-meta">${formatDate(entry.date)}</div>
+              </div>
+              <div class="line-item-total">
+                <div class="line-item-price">${entry.hours || 0}h</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+  `;
+
+  document.getElementById('timesheetDetail').innerHTML = html;
+  navigate('timesheet-detail');
+}
+
+// ── Tasks ──────────────────────────────────────────────────
+function buildTasksList() {
+  const list = document.getElementById('tasksList');
+  if (!state.tasks || state.tasks.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">No tasks</div>';
+    return;
+  }
+
+  let html = state.tasks.map(t => `
+    <div class="module-item" onclick="showTaskDetail(${t.id})">
+      <div class="module-item-info">
+        <div class="module-item-title">${t.title || 'Task'}</div>
+        <div class="module-item-meta">
+          <span>${t.status || 'ToDo'}</span>
+          <span>${t.dueDate ? formatDate(t.dueDate) : 'No date'}</span>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div class="module-item-status" style="color:${t.priority === 'High' ? 'var(--error)' : t.priority === 'Urgent' ? 'var(--error)' : 'var(--text-2)'};">${t.priority || 'Normal'}</div>
+      </div>
+    </div>
+  `).join('');
+
+  if (state.pagination.tasks.hasMore) {
+    html += `<div style="padding:16px;text-align:center;"><button style="padding:10px 20px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-1);border-radius:8px;cursor:pointer;" onclick="loadMoreTasks()">Load more</button></div>`;
+  }
+  list.innerHTML = html;
+}
+
+async function loadMoreTasks() {
+  if (state.pagination.tasks.loading) return;
+  state.pagination.tasks.loading = true;
+  state.pagination.tasks.offset += 50;
+  const tks = await apiCall(`/api/mobile/tasks?limit=50&offset=${state.pagination.tasks.offset}`);
+  state.pagination.tasks.loading = false;
+  if (tks && Array.isArray(tks) && tks.length > 0) {
+    state.tasks.push(...tks);
+    state.pagination.tasks.hasMore = tks.length >= 50;
+    buildTasksList();
+  }
+}
+
+async function showTaskDetail(id) {
+  const task = await apiCall('/api/mobile/tasks/' + id);
+  if (!task) return;
+
+  const html = `
+    <div class="detail-header">
+      <h2>${task.title}</h2>
+      <div class="detail-status">${task.status} · ${task.priority}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Details</div>
+      <div style="padding:14px;background:var(--bg-card2);border-radius:var(--radius-md);">
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Description</div>
+          <div style="color:var(--text-1);">${task.description || 'No description'}</div>
+        </div>
+        ${task.dueDate ? `
+          <div style="margin-bottom:12px;">
+            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Due Date</div>
+            <div style="color:var(--text-1);">${formatDate(task.dueDate)}</div>
+          </div>
+        ` : ''}
+        ${task.assignee ? `
+          <div>
+            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Assigned To</div>
+            <div style="color:var(--text-1);">${task.assignee}</div>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+
+  document.getElementById('taskDetail').innerHTML = html;
+  navigate('task-detail');
+}
+
+// ── Despatch ───────────────────────────────────────────────
+function buildDespatchList() {
+  const list = document.getElementById('despatchList');
+  if (!state.despatch || state.despatch.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">No despatch</div>';
+    return;
+  }
+
+  let html = state.despatch.map(d => `
+    <div class="module-item" onclick="showDespatchDetail(${d.id})">
+      <div class="module-item-info">
+        <div class="module-item-title">${d.reference || '#' + d.id}</div>
+        <div class="module-item-meta">
+          <span>${d.status || 'Pending'}</span>
+          <span>${formatDate(d.deliveryDate)}</span>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div class="module-item-status">${d.status || 'Pending'}</div>
+      </div>
+    </div>
+  `).join('');
+
+  if (state.pagination.despatch.hasMore) {
+    html += `<div style="padding:16px;text-align:center;"><button style="padding:10px 20px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-1);border-radius:8px;cursor:pointer;" onclick="loadMoreDespatch()">Load more</button></div>`;
+  }
+  list.innerHTML = html;
+}
+
+async function loadMoreDespatch() {
+  if (state.pagination.despatch.loading) return;
+  state.pagination.despatch.loading = true;
+  state.pagination.despatch.offset += 50;
+  const desp = await apiCall(`/api/mobile/despatch?limit=50&offset=${state.pagination.despatch.offset}`);
+  state.pagination.despatch.loading = false;
+  if (desp && Array.isArray(desp) && desp.length > 0) {
+    state.despatch.push(...desp);
+    state.pagination.despatch.hasMore = desp.length >= 50;
+    buildDespatchList();
+  }
+}
+
+async function showDespatchDetail(id) {
+  const desp = await apiCall('/api/mobile/despatch/' + id);
+  if (!desp) return;
+
+  const html = `
+    <div class="detail-header">
+      <h2>${desp.reference || '#' + desp.id}</h2>
+      <div class="detail-status">${desp.status} · ${formatDate(desp.deliveryDate)}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Delivery Info</div>
+      <div class="detail-kpi">
+        <div class="detail-kpi-card">
+          <div class="detail-kpi-label">Recipient</div>
+          <div class="detail-kpi-value" style="font-size:14px;">${desp.recipientName || 'N/A'}</div>
+        </div>
+      </div>
+      <div style="padding:14px;background:var(--bg-card2);border-radius:var(--radius-md);">
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Address</div>
+        <div style="color:var(--text-1);">${desp.recipientAddress || 'N/A'}</div>
+      </div>
+    </div>
+
+    ${desp.items && desp.items.length > 0 ? `
+      <div class="detail-section">
+        <div class="detail-section-title">Items</div>
+        <div class="line-items">
+          ${desp.items.map(item => `
+            <div class="line-item">
+              <div>
+                <div class="line-item-desc">${item.description}</div>
+                <div class="line-item-meta">${item.quantity} units</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+  `;
+
+  document.getElementById('despatchDetail').innerHTML = html;
+  navigate('despatch-detail');
+}
+
+// ── Contacts ───────────────────────────────────────────────
+function buildContactsList() {
+  const list = document.getElementById('contactsList');
+  if (!state.contacts || state.contacts.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">No contacts</div>';
+    return;
+  }
+
+  let html = state.contacts.map(c => `
+    <div class="module-item" onclick="showContactDetail(${c.id})">
+      <div class="module-item-info">
+        <div class="module-item-title">${c.firstName} ${c.lastName}</div>
+        <div class="module-item-meta">
+          <span>${c.role || 'Contact'}</span>
+          <span>${c.email || c.phone || 'No info'}</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  if (state.pagination.contacts.hasMore) {
+    html += `<div style="padding:16px;text-align:center;"><button style="padding:10px 20px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-1);border-radius:8px;cursor:pointer;" onclick="loadMoreContacts()">Load more</button></div>`;
+  }
+  list.innerHTML = html;
+}
+
+async function loadMoreContacts() {
+  if (state.pagination.contacts.loading) return;
+  state.pagination.contacts.loading = true;
+  state.pagination.contacts.offset += 50;
+  const con = await apiCall(`/api/mobile/contacts?limit=50&offset=${state.pagination.contacts.offset}`);
+  state.pagination.contacts.loading = false;
+  if (con && Array.isArray(con) && con.length > 0) {
+    state.contacts.push(...con);
+    state.pagination.contacts.hasMore = con.length >= 50;
+    buildContactsList();
+  }
+}
+
+async function showContactDetail(id) {
+  const contact = await apiCall('/api/mobile/contacts/' + id);
+  if (!contact) return;
+
+  const html = `
+    <div class="detail-header">
+      <h2>${contact.firstName} ${contact.lastName}</h2>
+      <div class="detail-status">${contact.role || 'Contact'}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Contact Information</div>
+      <div style="padding:14px;background:var(--bg-card2);border-radius:var(--radius-md);display:flex;flex-direction:column;gap:12px;">
+        ${contact.email ? `
+          <div>
+            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Email</div>
+            <div style="color:var(--text-1);">${contact.email}</div>
+          </div>
+        ` : ''}
+        ${contact.phone ? `
+          <div>
+            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Phone</div>
+            <div style="color:var(--text-1);">${contact.phone}</div>
+          </div>
+        ` : ''}
+        ${contact.mobile ? `
+          <div>
+            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Mobile</div>
+            <div style="color:var(--text-1);">${contact.mobile}</div>
+          </div>
+        ` : ''}
+        ${contact.address ? `
+          <div>
+            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Address</div>
+            <div style="color:var(--text-1);">${contact.address}</div>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+
+  document.getElementById('contactDetail').innerHTML = html;
+  navigate('contact-detail');
+}
+
+// ── Cash Flow ──────────────────────────────────────────────
+function buildCashflowView() {
+  const content = document.getElementById('cashflowContent');
+  if (!state.cashflow || state.cashflow.length === 0) {
+    content.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">No forecast data</div>';
+    return;
+  }
+
+  const weeks = state.cashflow.slice(0, 12);
+  let html = '<div style="display:flex;flex-direction:column;gap:12px;">';
+
+  weeks.forEach(w => {
+    const balance = w.cashPosition || 0;
+    const isNegative = balance < 0;
+    html += `
+      <div style="padding:12px;background:var(--bg-card);border-radius:var(--radius-md);border:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-1);">Week ${w.weekNumber || ''}</div>
+            <div style="font-size:11px;color:var(--text-3);">${formatDate(w.forecastDate)}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:14px;font-weight:700;color:${isNegative ? 'var(--error)' : 'var(--success)'};">${formatCurrency(balance)}</div>
+            <div style="font-size:10px;color:var(--text-3);">
+              📥 ${formatCurrency(w.projectedIncoming || 0)} / 📤 ${formatCurrency(w.projectedOutgoing || 0)}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  html += '</div>';
+  content.innerHTML = html;
+}
+
+// ── Goals/KPIs ────────────────────────────────────────────
+function buildGoalsList() {
+  const list = document.getElementById('goalsList');
+  if (!state.goals || state.goals.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">No goals</div>';
+    return;
+  }
+
+  let html = state.goals.map(g => {
+    const progress = g.targetValue ? Math.min(100, (g.currentValue / g.targetValue) * 100) : 0;
+    return `
+      <div class="module-item">
+        <div class="module-item-info">
+          <div class="module-item-title">${g.title || 'Goal'}</div>
+          <div class="module-item-meta">
+            <span>${g.period || 'Annual'}</span>
+            <span>${g.status || 'Active'}</span>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div class="module-item-value">${Math.round(progress)}%</div>
+          <div style="margin-top:4px;width:60px;height:4px;background:var(--bg-card);border-radius:2px;overflow:hidden;">
+            <div style="width:${progress}%;height:100%;background:var(--brand-primary);"></div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  list.innerHTML = html;
+}
+
+// ── Projects ───────────────────────────────────────────────
+function buildProjectsList() {
+  const list = document.getElementById('projectsList');
+  if (!state.projects || state.projects.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">No projects</div>';
+    return;
+  }
+
+  let html = state.projects.map(p => {
+    const healthColor = p.health === 'Red' ? 'var(--error)' : p.health === 'Amber' ? 'var(--warning)' : 'var(--success)';
+    return `
+      <div class="module-item" onclick="showProjectDetail(${p.id})">
+        <div class="module-item-info">
+          <div class="module-item-title">${p.name || 'Project'}</div>
+          <div class="module-item-meta">
+            <span style="color:${healthColor};">● ${p.health || 'Green'}</span>
+            <span>${p.percent || 0}%</span>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="margin-bottom:4px;width:60px;height:4px;background:var(--bg-card);border-radius:2px;overflow:hidden;">
+            <div style="width:${p.percent || 0}%;height:100%;background:var(--brand-primary);"></div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  list.innerHTML = html;
+}
+
+async function showProjectDetail(id) {
+  const project = await apiCall('/api/mobile/projects/' + id);
+  if (!project) return;
+
+  const healthColor = project.health === 'Red' ? 'var(--error)' : project.health === 'Amber' ? 'var(--warning)' : 'var(--success)';
+
+  const html = `
+    <div class="detail-header">
+      <h2>${project.name}</h2>
+      <div class="detail-status" style="color:${healthColor};">● ${project.health || 'Green'}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Progress</div>
+      <div style="padding:14px;background:var(--bg-card2);border-radius:var(--radius-md);">
+        <div style="margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span style="font-size:12px;color:var(--text-2);">Completion</span>
+            <span style="font-size:14px;font-weight:600;color:var(--text-1);">${project.percent || 0}%</span>
+          </div>
+          <div style="width:100%;height:6px;background:var(--bg-card);border-radius:3px;overflow:hidden;">
+            <div style="width:${project.percent || 0}%;height:100%;background:var(--brand-primary);"></div>
+          </div>
+        </div>
+        ${project.milestone ? `
+          <div style="margin-top:12px;">
+            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Next Milestone</div>
+            <div style="color:var(--text-1);">${project.milestone}</div>
+          </div>
+        ` : ''}
+        ${project.teamMembers ? `
+          <div style="margin-top:12px;">
+            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Team</div>
+            <div style="color:var(--text-1);">${project.teamMembers}</div>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+
+  document.getElementById('projectDetail').innerHTML = html;
+  navigate('project-detail');
 }
 
 // ── Files ──────────────────────────────────────────────────
