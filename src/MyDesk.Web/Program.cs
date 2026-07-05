@@ -368,12 +368,12 @@ builder.Services.AddScoped<BankingService>();
     builder.Services.AddScoped<FavouritesService>();
     builder.Services.AddScoped<AIFunctionExecutor>();
     builder.Services.AddScoped<FinancialExtractionService>();
-    builder.Services.AddScoped<WorkflowApprovalService>();
+    // builder.Services.AddScoped<WorkflowApprovalService>();
     // builder.Services.AddScoped<PhotoProcessingService>();
-    builder.Services.AddScoped<NotificationService>();
+    // builder.Services.AddScoped<NotificationService>();
 
     // ── Security Services (Phase 1 Week 4) ──────────────────────────────────
-    builder.Services.AddScoped<RateLimitingService>();
+    // builder.Services.AddScoped<RateLimitingService>();
 
     // ── Ports from legacy MyDesk (in-memory services) ──────────────────────
     builder.Services.AddScoped<RfqService>();
@@ -2723,7 +2723,8 @@ app.MapGet("/quotes/{id:int}/action/{action}", async (int id, string action, Quo
 // ─────────────────────────────────────────────────────────────────────────────
 // APPROVAL WORKFLOWS API
 // ─────────────────────────────────────────────────────────────────────────────
-
+// TEMPORARILY DISABLED FOR DIAGNOSTICS
+/*
 // ── Get Approval Workflows ──────────────────────────────────────────────────
 app.MapGet("/api/approval/workflows", async (HttpContext ctx, DatabaseService db) =>
 {
@@ -5397,6 +5398,7 @@ app.MapPut("/api/notifications/preferences", async (HttpContext ctx, UpdateNotif
 .WithName("UpdateNotificationPreferences")
 .WithOpenApi()
 .RequireAuthorization();
+*/
 
 // Phase 4 API endpoints and DTOs temporarily disabled for debugging CI
 // TODO: Re-enable after resolving build issues
