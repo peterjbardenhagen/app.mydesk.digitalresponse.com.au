@@ -2669,6 +2669,247 @@ app.MapGet("/quotes/{id:int}/action/{action}", async (int id, string action, Quo
     return Results.Content($@"<html><body style='font-family:sans-serif;text-align:center;padding:50px;'><h1>{resultMessage}</h1><p>Thank you.</p></body></html>", "text/html");
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// APPROVAL WORKFLOWS API
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Get Approval Workflows ──────────────────────────────────────────────────
+app.MapGet("/api/approval/workflows", async (HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    if (string.IsNullOrWhiteSpace(tenantId)) return Results.BadRequest(new { error = "No tenant context" });
+
+    var dt = await db.QueryAsync(
+        "SELECT WorkflowId, TenantId, ModuleType, [Name], [Description], IsDefault, ApprovalLevels, CreatedAt FROM ApprovalWorkflows WHERE TenantId = @TenantId ORDER BY ModuleType, [Name]",
+        new() { ["TenantId"] = Guid.Parse(tenantId) });
+
+    var workflows = new List<object>();
+    foreach (DataRow row in dt.Rows)
+    {
+        workflows.Add(new
+        {
+            id = (int)row["WorkflowId"],
+            moduleType = (string)row["ModuleType"],
+            name = (string)row["Name"],
+            description = row["Description"] != DBNull.Value ? (string)row["Description"] : null,
+            isDefault = (bool)row["IsDefault"],
+            approvalLevels = (int)row["ApprovalLevels"],
+            createdAt = ((DateTime)row["CreatedAt"]).ToString("yyyy-MM-dd")
+        });
+    }
+    return Results.Ok(new { workflows, totalCount = workflows.Count });
+}).RequireAuthorization();
+
+// ── Submit Expense for Approval ────────────────────────────────────────────
+app.MapPost("/api/expenses/{id}/submit-for-approval", async (int id, HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = int.TryParse(ctx.User.FindFirst("user_id")?.Value ?? "", out var uid) ? uid : 0;
+    if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
+
+    var expenseDt = await db.QueryAsync(
+        "SELECT ExpenseId, Status FROM Expenses WHERE ExpenseId = @ExpenseId AND TenantId = @TenantId",
+        new() { ["ExpenseId"] = id, ["TenantId"] = Guid.Parse(tenantId) });
+
+    if (expenseDt.Rows.Count == 0) return Results.NotFound(new { error = "Expense not found" });
+
+    var workflowDt = await db.QueryAsync(
+        "SELECT WorkflowId FROM ApprovalWorkflows WHERE TenantId = @TenantId AND ModuleType = 'Expense' AND IsDefault = 1",
+        new() { ["TenantId"] = Guid.Parse(tenantId) });
+
+    if (workflowDt.Rows.Count == 0) return Results.BadRequest(new { error = "No default approval workflow configured" });
+
+    int workflowId = (int)workflowDt.Rows[0]["WorkflowId"];
+
+    await db.ExecuteNonQueryAsync(
+        "INSERT INTO ApprovalRequests (TenantId, WorkflowId, ModuleType, ModuleId, SubmittedById, SubmittedAt, [Status], CurrentLevel) VALUES (@TenantId, @WorkflowId, 'Expense', @ModuleId, @UserId, GETUTCDATE(), 'Pending', 1)",
+        new() { ["TenantId"] = Guid.Parse(tenantId), ["WorkflowId"] = workflowId, ["ModuleId"] = id, ["UserId"] = userId });
+
+    return Results.Ok(new { message = "Expense submitted for approval", requestId = id });
+}).RequireAuthorization();
+
+// ── Submit Timesheet for Approval ──────────────────────────────────────────
+app.MapPost("/api/timesheets/{id}/submit-for-approval", async (int id, HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = int.TryParse(ctx.User.FindFirst("user_id")?.Value ?? "", out var uid) ? uid : 0;
+    if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
+
+    var timesheetDt = await db.QueryAsync(
+        "SELECT TimesheetId, [Status] FROM Timesheets WHERE TimesheetId = @TimesheetId AND TenantId = @TenantId",
+        new() { ["TimesheetId"] = id, ["TenantId"] = Guid.Parse(tenantId) });
+
+    if (timesheetDt.Rows.Count == 0) return Results.NotFound(new { error = "Timesheet not found" });
+
+    var workflowDt = await db.QueryAsync(
+        "SELECT WorkflowId FROM ApprovalWorkflows WHERE TenantId = @TenantId AND ModuleType = 'Timesheet' AND IsDefault = 1",
+        new() { ["TenantId"] = Guid.Parse(tenantId) });
+
+    if (workflowDt.Rows.Count == 0) return Results.BadRequest(new { error = "No default approval workflow configured" });
+
+    int workflowId = (int)workflowDt.Rows[0]["WorkflowId"];
+
+    await db.ExecuteNonQueryAsync(
+        "INSERT INTO ApprovalRequests (TenantId, WorkflowId, ModuleType, ModuleId, SubmittedById, SubmittedAt, [Status], CurrentLevel) VALUES (@TenantId, @WorkflowId, 'Timesheet', @ModuleId, @UserId, GETUTCDATE(), 'Pending', 1)",
+        new() { ["TenantId"] = Guid.Parse(tenantId), ["WorkflowId"] = workflowId, ["ModuleId"] = id, ["UserId"] = userId });
+
+    return Results.Ok(new { message = "Timesheet submitted for approval", requestId = id });
+}).RequireAuthorization();
+
+// ── Get Pending Approvals ───────────────────────────────────────────────────
+app.MapGet("/api/approval/pending", async (HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = int.TryParse(ctx.User.FindFirst("user_id")?.Value ?? "", out var uid) ? uid : 0;
+    if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
+
+    var dt = await db.QueryAsync(
+        @"SELECT ar.RequestId, ar.ModuleType, ar.ModuleId, ar.CurrentLevel, ar.SubmittedAt,
+                 u.[Name] AS SubmitterName, ar.[Status]
+          FROM ApprovalRequests ar
+          JOIN ApprovalRules ar2 ON ar2.WorkflowId = ar.WorkflowId AND ar2.[Level] = ar.CurrentLevel
+          JOIN Users u ON u.UserId = ar.SubmittedById
+          WHERE ar.TenantId = @TenantId AND ar.[Status] = 'Pending'
+            AND (ar2.ApproverUserId = @UserId OR ar2.ApproverRole IS NOT NULL)
+          ORDER BY ar.SubmittedAt",
+        new() { ["TenantId"] = Guid.Parse(tenantId), ["UserId"] = userId });
+
+    var approvals = new List<object>();
+    foreach (DataRow row in dt.Rows)
+    {
+        approvals.Add(new
+        {
+            requestId = (int)row["RequestId"],
+            moduleType = (string)row["ModuleType"],
+            moduleId = (int)row["ModuleId"],
+            currentLevel = (int)row["CurrentLevel"],
+            submitterName = (string)row["SubmitterName"],
+            submittedAt = ((DateTime)row["SubmittedAt"]).ToString("yyyy-MM-dd HH:mm")
+        });
+    }
+    return Results.Ok(new { approvals, count = approvals.Count });
+}).RequireAuthorization();
+
+// ── Approve Request ─────────────────────────────────────────────────────────
+app.MapPost("/api/approval/requests/{requestId}/approve", async (int requestId, HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = int.TryParse(ctx.User.FindFirst("user_id")?.Value ?? "", out var uid) ? uid : 0;
+    if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
+
+    var requestDt = await db.QueryAsync(
+        "SELECT RequestId, [Status], CurrentLevel, WorkflowId FROM ApprovalRequests WHERE RequestId = @RequestId AND TenantId = @TenantId",
+        new() { ["RequestId"] = requestId, ["TenantId"] = Guid.Parse(tenantId) });
+
+    if (requestDt.Rows.Count == 0) return Results.NotFound(new { error = "Request not found" });
+
+    if (requestDt.Rows[0]["Status"].ToString() != "Pending")
+        return Results.BadRequest(new { error = "Request is not pending" });
+
+    int currentLevel = (int)requestDt.Rows[0]["CurrentLevel"];
+    int workflowId = (int)requestDt.Rows[0]["WorkflowId"];
+
+    var workflowDt = await db.QueryAsync(
+        "SELECT ApprovalLevels FROM ApprovalWorkflows WHERE WorkflowId = @WorkflowId",
+        new() { ["WorkflowId"] = workflowId });
+
+    int totalLevels = (int)workflowDt.Rows[0]["ApprovalLevels"];
+    bool isFinal = currentLevel >= totalLevels;
+
+    await db.ExecuteNonQueryAsync(
+        "INSERT INTO ApprovalActions (RequestId, ApprovalLevel, ApprovedById, [Action], ActionAt) VALUES (@RequestId, @Level, @UserId, 'Approved', GETUTCDATE())",
+        new() { ["RequestId"] = requestId, ["Level"] = currentLevel, ["UserId"] = userId });
+
+    if (isFinal)
+    {
+        await db.ExecuteNonQueryAsync(
+            "UPDATE ApprovalRequests SET [Status] = 'Approved', CompletedAt = GETUTCDATE() WHERE RequestId = @RequestId",
+            new() { ["RequestId"] = requestId });
+        return Results.Ok(new { message = "Request approved", finalApproval = true });
+    }
+    else
+    {
+        await db.ExecuteNonQueryAsync(
+            "UPDATE ApprovalRequests SET CurrentLevel = @NextLevel WHERE RequestId = @RequestId",
+            new() { ["NextLevel"] = currentLevel + 1, ["RequestId"] = requestId });
+        return Results.Ok(new { message = "Approved, forwarding to next level", nextLevel = currentLevel + 1 });
+    }
+}).RequireAuthorization();
+
+// ── Reject Request ──────────────────────────────────────────────────────────
+app.MapPost("/api/approval/requests/{requestId}/reject", async (int requestId, HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    var userId = int.TryParse(ctx.User.FindFirst("user_id")?.Value ?? "", out var uid) ? uid : 0;
+    if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
+
+    var requestDt = await db.QueryAsync(
+        "SELECT RequestId, [Status] FROM ApprovalRequests WHERE RequestId = @RequestId AND TenantId = @TenantId",
+        new() { ["RequestId"] = requestId, ["TenantId"] = Guid.Parse(tenantId) });
+
+    if (requestDt.Rows.Count == 0) return Results.NotFound(new { error = "Request not found" });
+    if (requestDt.Rows[0]["Status"].ToString() != "Pending")
+        return Results.BadRequest(new { error = "Request is not pending" });
+
+    var currentDt = await db.QueryAsync(
+        "SELECT CurrentLevel FROM ApprovalRequests WHERE RequestId = @RequestId",
+        new() { ["RequestId"] = requestId });
+
+    int currentLevel = (int)currentDt.Rows[0]["CurrentLevel"];
+
+    await db.ExecuteNonQueryAsync(
+        "INSERT INTO ApprovalActions (RequestId, ApprovalLevel, ApprovedById, [Action], ActionAt) VALUES (@RequestId, @Level, @UserId, 'Rejected', GETUTCDATE())",
+        new() { ["RequestId"] = requestId, ["Level"] = currentLevel, ["UserId"] = userId });
+
+    await db.ExecuteNonQueryAsync(
+        "UPDATE ApprovalRequests SET [Status] = 'Rejected', CompletedAt = GETUTCDATE() WHERE RequestId = @RequestId",
+        new() { ["RequestId"] = requestId });
+
+    return Results.Ok(new { message = "Request rejected" });
+}).RequireAuthorization();
+
+// ── Get Approval History ────────────────────────────────────────────────────
+app.MapGet("/api/approval/requests/{requestId}/history", async (int requestId, HttpContext ctx, DatabaseService db) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
+    if (string.IsNullOrWhiteSpace(tenantId)) return Results.BadRequest(new { error = "No tenant context" });
+
+    var requestDt = await db.QueryAsync(
+        "SELECT RequestId FROM ApprovalRequests WHERE RequestId = @RequestId AND TenantId = @TenantId",
+        new() { ["RequestId"] = requestId, ["TenantId"] = Guid.Parse(tenantId) });
+
+    if (requestDt.Rows.Count == 0) return Results.NotFound(new { error = "Request not found" });
+
+    var dt = await db.QueryAsync(
+        @"SELECT aa.ActionId, aa.ApprovalLevel, aa.[Action], aa.[Comments], u.[Name] AS ApprovedBy, aa.ActionAt
+          FROM ApprovalActions aa
+          LEFT JOIN Users u ON u.UserId = aa.ApprovedById
+          WHERE aa.RequestId = @RequestId
+          ORDER BY aa.ActionAt",
+        new() { ["RequestId"] = requestId });
+
+    var actions = new List<object>();
+    foreach (DataRow row in dt.Rows)
+    {
+        actions.Add(new
+        {
+            level = (int)row["ApprovalLevel"],
+            action = (string)row["Action"],
+            comments = row["Comments"] != DBNull.Value ? (string)row["Comments"] : null,
+            approvedBy = row["ApprovedBy"] != DBNull.Value ? (string)row["ApprovedBy"] : "System",
+            actionAt = ((DateTime)row["ActionAt"]).ToString("yyyy-MM-dd HH:mm:ss")
+        });
+    }
+    return Results.Ok(new { actions, timeline = actions.Count });
+}).RequireAuthorization();
+
 app.Run();
 
 /// <summary>Body model for POST /api/auth/reset-password.</summary>
