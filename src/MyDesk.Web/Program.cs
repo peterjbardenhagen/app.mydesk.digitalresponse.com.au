@@ -2115,18 +2115,6 @@ app.MapGet("/quotes/{id:int}/action/{action}", async (int id, string action, Quo
 
 app.Run();
 
-}
-catch (Exception ex)
-{
-    Log.Fatal(ex, "Application terminated unexpectedly during startup");
-    throw;
-}
-finally
-{
-    Log.Information("Application shutting down");
-    Log.CloseAndFlush();
-}
-
 /// <summary>Body model for POST /api/auth/mobile/login.</summary>
 public record MobileLoginRequest(string Login, string Password);
 
