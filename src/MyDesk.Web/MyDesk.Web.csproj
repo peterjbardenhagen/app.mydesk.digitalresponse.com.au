@@ -70,21 +70,13 @@
     <ProjectReference Include="..\MyDesk.Shared\MyDesk.Shared.csproj" />
   </ItemGroup>
 
-  <!-- Exclude disabled services and related middleware/components from compilation -->
+  <!-- Exclude disabled services from compilation -->
   <ItemGroup>
     <Compile Remove="Services/PhotoProcessingService.cs" />
     <Compile Remove="Services/NotificationService.cs" />
     <Compile Remove="Services/RateLimitingService.cs" />
     <Compile Remove="Services/WorkflowApprovalService.cs" />
     <Compile Remove="Middleware/RateLimitingMiddleware.cs" />
-    <!-- Exclude all dialogs and problematic approval components -->
-    <Compile Remove="Components/Dialogs/**/*.razor" />
-    <Compile Remove="Components/NotificationBell.razor" />
-    <Compile Remove="Components/Pages/Approvals/**/*.razor" />
-    <Compile Remove="Components/Pages/Expenses.razor" />
-    <Compile Remove="Components/Pages/Profile.razor" />
-    <Compile Remove="Components/Shared/DelegationManager.razor" />
-    <Compile Remove="Components/Shared/CreateDelegationDialog.razor" />
   </ItemGroup>
 
 </Project>
