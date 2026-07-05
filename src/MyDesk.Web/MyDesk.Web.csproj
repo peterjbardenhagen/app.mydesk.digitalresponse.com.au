@@ -64,7 +64,7 @@
     <!-- Image Processing (Photo and receipt processing) -->
     <PackageReference Include="SixLabors.ImageSharp" Version="3.2.0" />
     <!-- PDF Generation -->
-    <PackageReference Include="QuestPDF" Version="2024.12.4" />
+    <PackageReference Include="QuestPDF" Version="2026.2.4" />
   </ItemGroup>
 
   <ItemGroup>
