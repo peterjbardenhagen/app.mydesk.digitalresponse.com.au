@@ -16,6 +16,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
 using System.Security.Claims;
 using System.Text;
@@ -1133,7 +1134,44 @@ app.MapPost("/api/email/purchase-order/{id:int}",
     return ok ? Results.Ok(new { sent = true }) : Results.Problem("Email send failed — check SMTP config.");
 }).RequireAuthorization();
 
-// ── Telegram Bot webhook (Proposal #272) ─────────────────────────────────────
+// ── Telegram Bot webhooks (Proposal #272) ──────────────────────────────────────
+// Production webhook: POST /api/telegram/webhook/prod
+app.MapPost("/api/telegram/webhook/prod", async (HttpRequest request, TelegramBotService tg) =>
+{
+    try
+    {
+        using var reader = new StreamReader(request.Body);
+        var body = await reader.ReadToEndAsync();
+        var doc = System.Text.Json.JsonDocument.Parse(body);
+        await tg.HandleUpdateAsync("prod", doc.RootElement);
+        return Results.Ok();
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Telegram webhook error (prod)");
+        return Results.Ok(); // Always 200 to Telegram
+    }
+});
+
+// Development webhook: POST /api/telegram/webhook/dev
+app.MapPost("/api/telegram/webhook/dev", async (HttpRequest request, TelegramBotService tg) =>
+{
+    try
+    {
+        using var reader = new StreamReader(request.Body);
+        var body = await reader.ReadToEndAsync();
+        var doc = System.Text.Json.JsonDocument.Parse(body);
+        await tg.HandleUpdateAsync("dev", doc.RootElement);
+        return Results.Ok();
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Telegram webhook error (dev)");
+        return Results.Ok(); // Always 200 to Telegram
+    }
+});
+
+// Generic webhook (defaults to prod for backward compatibility)
 app.MapPost("/api/telegram/webhook", async (HttpRequest request, TelegramBotService tg) =>
 {
     try
@@ -1141,14 +1179,56 @@ app.MapPost("/api/telegram/webhook", async (HttpRequest request, TelegramBotServ
         using var reader = new StreamReader(request.Body);
         var body = await reader.ReadToEndAsync();
         var doc = System.Text.Json.JsonDocument.Parse(body);
-        await tg.HandleUpdateAsync(doc.RootElement);
+        await tg.HandleUpdateAsync("prod", doc.RootElement);
         return Results.Ok();
     }
     catch (Exception ex)
     {
-        Log.Error(ex, "Telegram webhook error");
+        Log.Error(ex, "Telegram webhook error (default/prod)");
         return Results.Ok(); // Always 200 to Telegram
     }
+});
+
+// ── Telegram Bot Management endpoints (Admin endpoints ──────────────────────────────────────────
+app.MapGet("/api/admin/telegram/bots", [Authorize(Roles = "Admin,Director")] async (TelegramBotService tg) =>
+{
+    var environments = tg.GetConfiguredEnvironments().Select(env => new
+    {
+        environment = env,
+        configured = tg.IsConfigured(env),
+        config = tg.GetBotConfig(env)
+    });
+    return Results.Ok(environments);
+});
+
+app.MapPost("/api/admin/telegram/webhook/set/{environment}", [Authorize(Roles = "Admin,Director")] async (string environment, TelegramBotService tg, HttpContext ctx) =>
+{
+    var url = ctx.Request.Query["url"].ToString();
+    var success = await tg.SetWebhookAsync(environment, string.IsNullOrEmpty(url) ? null : url);
+    return success ? Results.Ok(new { success = true, environment }) : Results.BadRequest(new { success = false, environment });
+});
+
+app.MapPost("/api/admin/telegram/webhook/delete/{environment}", [Authorize(Roles = "Admin,Director")] async (string environment, TelegramBotService tg) =>
+{
+    var success = await tg.DeleteWebhookAsync(environment);
+    return success ? Results.Ok(new { success = true, environment }) : Results.BadRequest(new { success = false, environment });
+});
+
+app.MapGet("/api/admin/telegram/webhook/info/{environment}", [Authorize(Roles = "Admin,Director")] async (string environment, TelegramBotService tg) =>
+{
+    var info = await tg.GetWebhookInfoAsync(environment);
+    return info.HasValue ? Results.Ok(info.Value) : Results.NotFound(new { error = "Webhook info not found", environment });
+});
+
+app.MapPost("/api/admin/telegram/broadcast/{environment}", [Authorize(Roles = "Admin,Director")] async (string environment, HttpContext ctx, TelegramBotService tg) =>
+{
+    var body = await new StreamReader(ctx.Request.Body).ReadToEndAsync();
+    var doc = JsonDocument.Parse(body);
+    var message = doc.RootElement.GetProperty("message").GetString();
+    if (string.IsNullOrEmpty(message)) return Results.BadRequest(new { error = "Message required" });
+    
+    await tg.BroadcastAsync(environment, message!);
+    return Results.Ok(new { success = true, environment });
 });
 
 // ── Log Viewer API endpoints ─────────────────────────────────────────────────

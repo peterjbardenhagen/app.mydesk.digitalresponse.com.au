@@ -1,5 +1,20 @@
 namespace MyDesk.Shared.Models;
 
+/// <summary>
+/// Configuration for a single Telegram bot environment
+/// </summary>
+public class TelegramBotConfig
+{
+    public string BotToken { get; set; } = "";
+    public string BotUsername { get; set; } = "";
+    public string[] AllowedUsers { get; set; } = Array.Empty<string>();
+    public long[] AllowedChatIds { get; set; } = Array.Empty<long>();
+    public string WebhookUrl { get; set; } = "";
+    public string Environment { get; set; } = "prod"; // prod, dev, staging, etc.
+    public bool Enabled { get; set; } = true;
+    public Dictionary<string, string> CustomCommands { get; set; } = new();
+}
+
 public class PlatformSettings
 {
     public static string GetBrandingName() => PlatformBranding.Title;
@@ -117,6 +132,52 @@ public class PlatformSettings
 
     // Client Notifications (SMS + Email)
     public NotificationSettings Notifications { get; set; } = new();
+
+    // Telegram Bot Configuration (simple prod/dev)
+    public TelegramSettings Telegram { get; set; } = new();
+
+    // Telegram Bot Configuration (flexible multi-environment)
+    /// <summary>
+    /// Dictionary of bot configurations by environment name (e.g., "prod", "dev", "staging")
+    /// This provides more flexibility than the simple ProdBotToken/DevBotToken approach.
+    /// </summary>
+    public Dictionary<string, TelegramBotConfig> TelegramBots { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+}
+
+public class TelegramSettings
+{
+    /// <summary>Production bot token from @BotFather</summary>
+    public string? ProdBotToken { get; set; }
+
+    /// <summary>Development bot token from @BotFather</summary>
+    public string? DevBotToken { get; set; }
+
+    /// <summary>Telegram usernames (without @) allowed to use the bot</summary>
+    public string[] AllowedUsers { get; set; } = Array.Empty<string>();
+
+    /// <summary>Telegram chat IDs allowed to use the bot (optional, more secure than usernames)</summary>
+    public long[] AllowedChatIds { get; set; } = Array.Empty<long>();
+
+    /// <summary>Default environment: "prod" or "dev"</summary>
+    public string DefaultEnvironment { get; set; } = "prod";
+
+    /// <summary>Webhook base URL (e.g., https://mydesk.digitalresponse.com.au or https://dev.digitalresponse.com.au)</summary>
+    public string? WebhookBaseUrl { get; set; }
+
+    /// <summary>Production webhook URL (auto-generated if not set)</summary>
+    public string? ProdWebhookUrl { get; set; }
+
+    /// <summary>Development webhook URL (auto-generated if not set)</summary>
+    public string? DevWebhookUrl { get; set; }
+
+    /// <summary>Custom commands mapping (trigger -> description)</summary>
+    public Dictionary<string, string> CustomCommands { get; set; } = new();
+
+    /// <summary>Enable voice message transcription</summary>
+    public bool EnableVoiceTranscription { get; set; } = true;
+
+    /// <summary>Enable markdown formatting in responses</summary>
+    public bool EnableMarkdown { get; set; } = true;
 }
 
 public class NotificationSettings

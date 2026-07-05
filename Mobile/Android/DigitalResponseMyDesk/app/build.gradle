@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId "com.digitalresponse.mydesk"
-        minSdk 24
+        minSdk 21
         targetSdk 34
         versionCode 1
         versionName "1.0.0"
@@ -30,7 +30,23 @@ android {
 }
 
 dependencies {
+    // Compose & Material3
+    implementation "androidx.activity:activity-compose:1.8.2"
+    implementation "androidx.compose.ui:ui:1.6.4"
+    implementation "androidx.compose.material3:material3:1.2.1"
+    implementation "androidx.compose.ui:ui-tooling-preview:1.6.4"
+    implementation "androidx.navigation:navigation-compose:2.7.7"
+    implementation "io.insert-koin:koin-androidx-compose:3.5.0"
+    // Shared module
+    implementation project(":shared")
+    // Existing deps
     implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.11.0'
+    implementation 'androidx.webkit:webkit:1.9.0'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     implementation 'com.google.android.material:material:1.11.0'
     implementation 'androidx.webkit:webkit:1.9.0'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'

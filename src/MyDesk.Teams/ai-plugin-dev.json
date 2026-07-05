@@ -1,0 +1,19 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/copilot/plugin/v2.1/schema.json",
+  "schema_version": "v2.1",
+  "name_for_human": "MyDesk Dev",
+  "name_for_model": "mydesk_dev",
+  "description_for_human": "Access your MyDesk business data (Development) — timesheets, approvals, contacts, invoices, and more.",
+  "description_for_model": "Use this plugin to query and act on data in the MyDesk business platform (Development environment). Supports timesheets, pending approvals, contacts, companies, invoices, and quotes. All data is tenant-scoped and requires the user to be authenticated.",
+  "auth": {
+    "type": "OAuthPluginVault",
+    "reference_id": "mydesk_dev_oauth"
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://dev.digitalresponse.com.au/api/openapi.json"
+  },
+  "logo_url": "https://dev.digitalresponse.com.au/images/mydesk-logo-color.svg",
+  "contact_email": "support@digitalresponse.com.au",
+  "legal_info_url": "https://dev.digitalresponse.com.au/terms.html"
+}
