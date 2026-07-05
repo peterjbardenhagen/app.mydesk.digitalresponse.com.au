@@ -1252,7 +1252,7 @@ app.MapPost("/api/chat/desky", async (HttpContext ctx, MyDesk.Web.AI.AiProviderF
 // JSON endpoint for the Android app (loaded from file://, cannot use cookie flow).
 // Accepts login by code, name, or email. Returns user info + tenant list.
 // No cookie is set — the app stores session state in localStorage.
-app.MapPost("/api/auth/mobile/login", async (HttpContext ctx, UserService userSvc, TenantService tenantSvc) =>
+app.MapPost("/api/auth/mobile/login", async (HttpContext ctx, UserService userSvc, TenantService tenantSvc, PersonalAccessTokenService patSvc) =>
 {
     MobileLoginRequest? req;
     try { req = await ctx.Request.ReadFromJsonAsync<MobileLoginRequest>(); }
@@ -1285,12 +1285,28 @@ app.MapPost("/api/auth/mobile/login", async (HttpContext ctx, UserService userSv
             user.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries)
                 .Take(2).Select(p => p[0].ToString().ToUpper()));
 
+        // Issue a long-lived PAT so the mobile app can call data APIs.
+        // The default (or first) tenant is the initial context; user can switch tenants
+        // by calling /api/auth/mobile/switch-tenant to get a new token scoped to that tenant.
+        var defaultMembership = memberships.FirstOrDefault(m => m.IsDefault) ?? memberships.FirstOrDefault();
+        string? rawToken = null;
+        if (defaultMembership is not null)
+        {
+            var (tok, _) = await patSvc.GenerateAsync(
+                user.UserId, defaultMembership.TenantId,
+                "MyDesk Mobile App",
+                scopes: "chat tools data",
+                expiresAt: DateTime.UtcNow.AddYears(1));
+            rawToken = tok;
+        }
+
         Log.Information("Mobile login SUCCESS: {Code} ({Name}) - {Count} tenants",
             user.Code, user.Name, memberships.Count);
 
         return Results.Ok(new
         {
             success = true,
+            token   = rawToken,
             user = new
             {
                 name    = user.Name,
@@ -1336,7 +1352,7 @@ app.MapGet("/api/auth/mobile/azure-start", (HttpContext ctx, IMemoryCache cache)
 // picks it up.
 app.MapGet("/api/auth/mobile/azure-callback", async (
     HttpContext ctx, IMemoryCache cache, UserService userSvc, TenantService tenantSvc,
-    IHttpClientFactory httpFactory) =>
+    IHttpClientFactory httpFactory, PersonalAccessTokenService patSvc) =>
 {
     var code  = ctx.Request.Query["code"].ToString();
     var state = ctx.Request.Query["state"].ToString();
@@ -1411,10 +1427,24 @@ app.MapGet("/api/auth/mobile/azure-callback", async (
             user.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries)
                 .Take(2).Select(p => p[0].ToString().ToUpper()));
 
+        // Issue a PAT for the default tenant so the app can call data APIs immediately.
+        var defaultMembership = memberships.FirstOrDefault(m => m.IsDefault) ?? memberships.FirstOrDefault();
+        string? rawPat = null;
+        if (defaultMembership is not null)
+        {
+            var (tok, _) = await patSvc.GenerateAsync(
+                user.UserId, defaultMembership.TenantId,
+                "MyDesk Mobile App (Microsoft SSO)",
+                scopes: "chat tools data",
+                expiresAt: DateTime.UtcNow.AddYears(1));
+            rawPat = tok;
+        }
+
         var mobileToken = Guid.NewGuid().ToString("N");
         cache.Set("mobile_token_" + mobileToken, new
         {
-            user = new { name = user.Name, code = user.Code, email = user.Email ?? email, role = user.Role.ToString(), initials },
+            token   = rawPat,
+            user    = new { name = user.Name, code = user.Code, email = user.Email ?? email, role = user.Role.ToString(), initials },
             tenants = memberships.Select(m => new { id = m.TenantId, name = m.TenantName, slug = m.TenantSlug, isDefault = m.IsDefault }).ToList()
         }, TimeSpan.FromMinutes(5));
 
@@ -1432,6 +1462,245 @@ app.MapGet("/api/auth/mobile/token", (string t, IMemoryCache cache) =>
     cache.Remove("mobile_token_" + t); // single-use
     return Results.Ok(new { success = true, data });
 }).RequireRateLimiting("login");
+
+// ── Mobile Data API ───────────────────────────────────────────────────────────
+// All endpoints accept Authorization: Bearer mdk_xxx (PAT issued at mobile login).
+// Tenant context is resolved automatically from the PAT claims via CurrentTenantAccessor.
+
+app.MapGet("/api/mobile/invoices", async (HttpContext ctx, InvoiceService invoiceSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var q       = ctx.Request.Query;
+    var statusId = int.TryParse(q["status"],  out var s) ? s : 0;
+    var customer = q["customer"].ToString();
+    var limit    = int.TryParse(q["limit"],    out var l) ? Math.Min(l, 200) : 100;
+    var list = await invoiceSvc.GetInvoicesAsync(
+        statusId: statusId,
+        customer: string.IsNullOrEmpty(customer) ? null : customer,
+        limit: limit);
+    return Results.Ok(list.Select(i => new {
+        id       = i.InvoiceId,
+        number   = i.InvoiceNum,
+        date     = i.InvoiceDate.ToString("yyyy-MM-dd"),
+        status   = i.StatusName,
+        statusId = i.InvoiceStatusId,
+        company  = i.CCompany,
+        division = i.DivisionName,
+        total    = i.NettPriceTotal,
+        gst      = i.GSTTotal,
+        totalInc = i.TotalIncGST,
+    }));
+}).RequireAuthorization();
+
+app.MapGet("/api/mobile/invoices/{id:int}", async (int id, HttpContext ctx, InvoiceService invoiceSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var inv = await invoiceSvc.GetInvoiceAsync(id);
+    if (inv is null) return Results.NotFound();
+    var lines = await invoiceSvc.GetLineItemsAsync(id);
+    return Results.Ok(new {
+        id        = inv.InvoiceId,
+        number    = inv.InvoiceNum,
+        date      = inv.InvoiceDate.ToString("yyyy-MM-dd"),
+        status    = inv.StatusName,
+        statusId  = inv.InvoiceStatusId,
+        company   = inv.CCompany,
+        division  = inv.DivisionName,
+        customerPO = inv.CustomerPO,
+        terms     = inv.Terms,
+        notes     = inv.CustomerNotes,
+        total     = inv.NettPriceTotal,
+        gst       = inv.GSTTotal,
+        totalInc  = inv.TotalIncGST,
+        lines     = lines.Select(li => new {
+            description = li.Description,
+            qty         = li.Quantity,
+            unitPrice   = li.NettPrice,
+            extended    = li.ExtNettPrice,
+        }),
+    });
+}).RequireAuthorization();
+
+app.MapGet("/api/mobile/quotes", async (HttpContext ctx, QuoteService quoteSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var q        = ctx.Request.Query;
+    var statusId = int.TryParse(q["status"], out var s) ? s : 0;
+    var keyword  = q["keyword"].ToString();
+    var list = await quoteSvc.GetQuotesAsync(
+        dateFrom: null, dateTo: null,
+        customerName: null,
+        contactId: null,
+        statusId: statusId,
+        keyword: string.IsNullOrEmpty(keyword) ? null : keyword);
+    return Results.Ok(list.Select(qt => new {
+        id       = qt.Qid,
+        reference = qt.Reference,
+        number   = qt.QuoteNumber,
+        date     = qt.QuoteDate.ToString("yyyy-MM-dd"),
+        status   = qt.QuoteStatus,
+        statusId = qt.QuoteStatusId,
+        company  = qt.CompanyName,
+        project  = qt.Project,
+        total    = qt.NettPriceTotal,
+        expired  = qt.IsExpired,
+        expiringSoon = qt.IsExpiringSoon,
+    }));
+}).RequireAuthorization();
+
+app.MapGet("/api/mobile/quotes/{id:int}", async (int id, HttpContext ctx, QuoteService quoteSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var qt = await quoteSvc.GetQuoteAsync(id);
+    if (qt is null) return Results.NotFound();
+    var lines = await quoteSvc.GetLineItemsAsync(id);
+    return Results.Ok(new {
+        id        = qt.Qid,
+        reference = qt.Reference,
+        number    = qt.QuoteNumber,
+        date      = qt.QuoteDate.ToString("yyyy-MM-dd"),
+        expiryDate = qt.ExpiryDate.ToString("yyyy-MM-dd"),
+        status    = qt.QuoteStatus,
+        statusId  = qt.QuoteStatusId,
+        company   = qt.CompanyName,
+        contact   = qt.ContactName,
+        project   = qt.Project,
+        terms     = qt.Terms,
+        notes     = qt.CustomerNotes,
+        total     = qt.NettPriceTotal,
+        margin    = qt.Margin,
+        lines     = lines.Select(li => new {
+            description = li.Description,
+            qty         = li.EffectiveQty,
+            unitPrice   = li.NettPrice,
+            extended    = li.ExtNettPrice,
+        }),
+    });
+}).RequireAuthorization();
+
+app.MapGet("/api/mobile/purchase-orders", async (HttpContext ctx, PurchaseOrderService poSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var q        = ctx.Request.Query;
+    var statusId = int.TryParse(q["status"], out var s) ? s : 0;
+    var supplier = q["supplier"].ToString();
+    var list = await poSvc.GetPurchaseOrdersAsync(
+        statusId: statusId,
+        supplier: string.IsNullOrEmpty(supplier) ? null : supplier);
+    return Results.Ok(list.Select(po => new {
+        id       = po.POid,
+        date     = po.PODate.ToString("yyyy-MM-dd"),
+        required = po.DateRequired.ToString("yyyy-MM-dd"),
+        status   = po.StatusName,
+        statusId = po.POStatusId,
+        supplier = po.SupplierName,
+        project  = po.Project,
+        division = po.DivisionName,
+        totalEx  = po.PriceExTotal,
+        totalInc = po.PriceIncTotal,
+    }));
+}).RequireAuthorization();
+
+app.MapGet("/api/mobile/purchase-orders/{id:int}", async (int id, HttpContext ctx, PurchaseOrderService poSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var po = await poSvc.GetPurchaseOrderAsync(id);
+    if (po is null) return Results.NotFound();
+    var lines = await poSvc.GetLineItemsAsync(id);
+    return Results.Ok(new {
+        id        = po.POid,
+        date      = po.PODate.ToString("yyyy-MM-dd"),
+        required  = po.DateRequired.ToString("yyyy-MM-dd"),
+        status    = po.StatusName,
+        statusId  = po.POStatusId,
+        supplier  = po.SupplierName,
+        project   = po.Project,
+        division  = po.DivisionName,
+        terms     = po.Terms,
+        notes     = po.InternalNotes,
+        totalEx   = po.PriceExTotal,
+        gst       = po.PriceGSTTotal,
+        totalInc  = po.PriceIncTotal,
+        lines     = lines.Select(li => new {
+            description = li.Description,
+            qty         = li.Quantity,
+            unitPrice   = li.PriceEx,
+            extended    = li.PriceExSubTotal,
+        }),
+    });
+}).RequireAuthorization();
+
+app.MapGet("/api/mobile/files", async (HttpContext ctx, FileLibraryService fileSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var folderIdStr = ctx.Request.Query["folderId"].ToString();
+    List<FileLibraryItem> items;
+    if (Guid.TryParse(folderIdStr, out var folderId))
+        items = await fileSvc.GetFolderContentsAsync(folderId);
+    else
+        items = await fileSvc.GetRootFoldersAsync();
+    return Results.Ok(items.Select(f => new {
+        id          = f.FileId,
+        parentId    = f.ParentFolderId,
+        name        = f.Name,
+        isFolder    = f.IsFolder,
+        size        = f.SizeBytes,
+        contentType = f.ContentType,
+        createdBy   = f.CreatedBy,
+        createdAt   = f.CreatedAt.ToString("yyyy-MM-dd"),
+        modifiedAt  = f.ModifiedAt.ToString("yyyy-MM-dd"),
+    }));
+}).RequireAuthorization();
+
+// ── Mobile AI Chat (Desky with real tools) ───────────────────────────────────
+// Accepts PAT bearer auth; uses AskAiAgentService for full tool access.
+app.MapPost("/api/chat/mobile", async (HttpContext ctx, MyDesk.Web.AI.AskAiAgentService agentSvc) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+
+    DeskyChatRequest? req;
+    try { req = await ctx.Request.ReadFromJsonAsync<DeskyChatRequest>(); }
+    catch { return Results.BadRequest(new { error = "Invalid JSON" }); }
+    if (req is null || string.IsNullOrWhiteSpace(req.Message))
+        return Results.BadRequest(new { error = "message required" });
+
+    // Build history string prefix if provided
+    string userPrompt = req.Message;
+    if (req.History is { Count: > 0 })
+    {
+        var histLines = req.History.TakeLast(10)
+            .Where(h => !string.IsNullOrWhiteSpace(h.Role) && !string.IsNullOrWhiteSpace(h.Content))
+            .Select(h => $"{h.Role}: {h.Content}");
+        userPrompt = string.Join("\n", histLines) + "\nuser: " + req.Message;
+    }
+
+    var brandLabel = (req.Brand ?? "techlight").ToLowerInvariant() switch
+    {
+        "ccl" or "cartercapner" => "Carter Capner Law",
+        "dr"  or "digitalresponse" => "Digital Response",
+        _ => "Techlight"
+    };
+
+    var systemPrompt = $"""
+        You are Desky — the AI assistant for {brandLabel}, built into MyDesk.
+        You have live access to this tenant's database via tools. Use them to retrieve
+        real data when the user asks about quotes, invoices, purchase orders, pipeline,
+        cash flow, or anything business-related.
+        Reply concisely (Australian English, under 150 words unless detail is requested).
+        After using tools, summarise the real data — never fabricate figures.
+        """;
+
+    try
+    {
+        var reply = await agentSvc.AskAsync(userPrompt, systemPrompt, maxIterations: 4, maxTokens: 800);
+        return Results.Ok(new { reply = reply.Text, charts = reply.Renderables });
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "Mobile chat endpoint error");
+        return Results.Ok(new { reply = "I hit a snag checking my notes. Try again in a moment." });
+    }
+}).RequireAuthorization().RequireRateLimiting("desky");
 
 // ── Personal Access Token API (used by AI Agents page) ──────────────────────
 // All three endpoints require a logged-in browser session (cookie auth).
