@@ -1652,6 +1652,24 @@ app.MapGet("/api/mobile/files", async (HttpContext ctx, FileLibraryService fileS
     }));
 }).RequireAuthorization();
 
+app.MapGet("/api/mobile/modules", (HttpContext ctx, ICurrentTenantAccessor tenantAccessor) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
+    var tenantId = tenantAccessor.TenantId;
+    if (!tenantId.HasValue) return Results.BadRequest(new { error = "No tenant context" });
+
+    var modules = tenantId switch
+    {
+        // Techlight and Digital Response: all modules
+        var id when id == Guid.Parse("11111111-1111-1111-1111-111111111111") ||
+                   id == Guid.Parse("22222222-2222-2222-2222-222222222222")
+            => new[] { "invoices", "quotes", "pos", "files", "chat" },
+        // Demo and others: files + chat only
+        _ => new[] { "files", "chat" }
+    };
+    return Results.Ok(new { modules });
+}).RequireAuthorization();
+
 // ── Mobile AI Chat (Desky with real tools) ───────────────────────────────────
 // Accepts PAT bearer auth; uses AskAiAgentService for full tool access.
 app.MapPost("/api/chat/mobile", async (HttpContext ctx, MyDesk.Web.AI.AskAiAgentService agentSvc) =>

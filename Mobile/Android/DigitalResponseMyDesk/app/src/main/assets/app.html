@@ -702,6 +702,7 @@ const state = {
   theme: 'dark',
   brand: 'techlight',
   patToken: null,
+  modules: [],
   chatHistory: [],
   invoices: [],
   quotes: [],
@@ -1014,28 +1015,47 @@ async function apiCall(endpoint, method = 'GET', body = null) {
 async function loadData() {
   if (!state.patToken) return;
 
-  // Load invoices
-  const invs = await apiCall('/api/mobile/invoices?limit=50');
-  if (invs) {
-    state.invoices = Array.isArray(invs) ? invs : [];
-    buildInvoicesList();
+  // Fetch available modules for current tenant
+  const modResp = await apiCall('/api/mobile/modules');
+  state.modules = (modResp?.modules || []);
+
+  // Load invoices (if available)
+  if (state.modules.includes('invoices')) {
+    const invs = await apiCall('/api/mobile/invoices?limit=50');
+    if (invs) {
+      state.invoices = Array.isArray(invs) ? invs : [];
+      buildInvoicesList();
+    }
+  } else {
+    state.invoices = [];
+    document.getElementById('invoicesList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Invoices not available for this workspace</div>';
   }
 
-  // Load quotes
-  const qts = await apiCall('/api/mobile/quotes');
-  if (qts) {
-    state.quotes = Array.isArray(qts) ? qts : [];
-    buildQuotesList();
+  // Load quotes (if available)
+  if (state.modules.includes('quotes')) {
+    const qts = await apiCall('/api/mobile/quotes');
+    if (qts) {
+      state.quotes = Array.isArray(qts) ? qts : [];
+      buildQuotesList();
+    }
+  } else {
+    state.quotes = [];
+    document.getElementById('quotesList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Quotes not available for this workspace</div>';
   }
 
-  // Load POs
-  const pos = await apiCall('/api/mobile/purchase-orders');
-  if (pos) {
-    state.pos = Array.isArray(pos) ? pos : [];
-    buildPOsList();
+  // Load POs (if available)
+  if (state.modules.includes('pos')) {
+    const pos = await apiCall('/api/mobile/purchase-orders');
+    if (pos) {
+      state.pos = Array.isArray(pos) ? pos : [];
+      buildPOsList();
+    }
+  } else {
+    state.pos = [];
+    document.getElementById('posList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Purchase Orders not available for this workspace</div>';
   }
 
-  // Load files
+  // Load files (always available)
   const files = await apiCall('/api/mobile/files');
   if (files) {
     state.files = Array.isArray(files) ? files : [];
@@ -1044,6 +1064,20 @@ async function loadData() {
 
   // Load home stats
   updateHomeStats();
+
+  // Update module button visibility
+  updateModuleButtons();
+}
+
+function updateModuleButtons() {
+  // Hide module buttons that are not available
+  const invoicesBtn = document.querySelector('button[onclick="navigate(\'invoices\')"]');
+  const quotesBtn = document.querySelector('button[onclick="navigate(\'quotes\')"]');
+  const posBtn = document.querySelector('button[onclick="navigate(\'pos\')"]');
+
+  if (invoicesBtn) invoicesBtn.style.display = state.modules.includes('invoices') ? 'block' : 'none';
+  if (quotesBtn) quotesBtn.style.display = state.modules.includes('quotes') ? 'block' : 'none';
+  if (posBtn) posBtn.style.display = state.modules.includes('pos') ? 'block' : 'none';
 }
 
 function updateHomeStats() {
