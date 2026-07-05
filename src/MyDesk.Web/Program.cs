@@ -5247,8 +5247,6 @@ app.MapPut("/api/notifications/preferences", async (HttpContext ctx, UpdateNotif
 .WithOpenApi()
 .RequireAuthorization();
 
-app.Run();
-
 /// <summary>Body model for POST /api/auth/reset-password.</summary>
 public class ResetPasswordRequest
 {
@@ -5386,3 +5384,5 @@ class UpdateNotificationPreferencesRequest
     public TimeSpan? QuietHoursStart { get; set; }
     public TimeSpan? QuietHoursEnd { get; set; }
 }
+
+app.Run();
