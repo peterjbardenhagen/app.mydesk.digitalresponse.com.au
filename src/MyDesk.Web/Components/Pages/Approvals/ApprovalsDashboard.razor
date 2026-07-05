@@ -1,0 +1,158 @@
+@page "/approvals/expenses-timesheets"
+@attribute [Authorize]
+@using MyDesk.Shared.Services
+@using MudBlazor
+@inject WorkflowApprovalService ApprovalSvc
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Approval Queue - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">MyDesk</a><span class="sep">/</span>
+            <span>Approvals</span>
+        </div>
+        <h1>Approval Queue</h1>
+        <p class="tl-subtitle">Pending expense and timesheet approvals requiring your action.</p>
+    </div>
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Refresh"
+               OnClick="LoadPendingAsync">Refresh</MudButton>
+</div>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+
+<MudGrid Spacing="3">
+    <MudItem xs="12">
+        @if (_pendingApprovals.Count == 0)
+        {
+            <MudPaper Class="pa-8" Elevation="0">
+                <div class="tl-empty-state">
+                    <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Size="Size.Large" Color="Color.Success" />
+                    <MudText Typo="Typo.h6" Class="mt-4">All caught up!</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Default" Class="mt-2">No pending approvals at this time.</MudText>
+                </div>
+            </MudPaper>
+        }
+        else
+        {
+            <MudPaper Elevation="1">
+                <MudDataGrid T="WorkflowApprovalService.PendingApprovalDto" Items="@_pendingApprovals"
+                            Dense="true" Hover="true" Bordered="false" Striped="true"
+                            Filterable="true" QuickFilter="@QuickFilter" Class="tl-data-grid">
+                    <ToolBarContent>
+                        <MudText Typo="Typo.h6">@_pendingApprovals.Count Pending Approval@(_pendingApprovals.Count != 1 ? "s" : "")</MudText>
+                        <MudSpacer />
+                        <MudTextField @bind-Value="_searchString" Placeholder="Search by submitter, module..."
+                                      Adornment="Adornment.Start" Immediate="true"
+                                      AdornmentIcon="@Icons.Material.Rounded.Search" IconSize="Size.Medium" Class="mt-0" />
+                    </ToolBarContent>
+                    <Columns>
+                        <PropertyColumn Property="x => x.ModuleType" Title="Type" CellStyle="width:100px;" />
+                        <PropertyColumn Property="x => x.ModuleId" Title="ID" CellStyle="width:70px;" />
+                        <PropertyColumn Property="x => x.SubmitterName" Title="Submitter" />
+                        <PropertyColumn Property="x => x.SubmittedAt" Title="Submitted" Format="dd MMM yyyy HH:mm" />
+                        <TemplateColumn Title="Level" CellStyle="width:80px;">
+                            <CellTemplate>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Text">
+                                    @($"{context.Item.CurrentLevel}/{context.Item.ApprovalLevels}")
+                                </MudChip>
+                            </CellTemplate>
+                        </TemplateColumn>
+                        <TemplateColumn Title="Actions" CellStyle="width:200px;" Sortable="false">
+                            <CellTemplate>
+                                <div class="d-flex gap-1">
+                                    <MudButton Size="Size.Small" Color="Color.Success" Variant="Variant.Filled"
+                                               StartIcon="@Icons.Material.Rounded.Check"
+                                               OnClick="@(() => OpenApproveDialogAsync(context.Item))">Approve</MudButton>
+                                    <MudButton Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined"
+                                               StartIcon="@Icons.Material.Rounded.Close"
+                                               OnClick="@(() => OpenRejectDialogAsync(context.Item))">Reject</MudButton>
+                                </div>
+                            </CellTemplate>
+                        </TemplateColumn>
+                    </Columns>
+                </MudDataGrid>
+            </MudPaper>
+        }
+    </MudItem>
+</MudGrid>
+
+@code {
+    private bool _loading;
+    private string _searchString = "";
+    private List<WorkflowApprovalService.PendingApprovalDto> _pendingApprovals = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPendingAsync();
+    }
+
+    private async Task LoadPendingAsync()
+    {
+        _loading = true;
+        try
+        {
+            _pendingApprovals = await ApprovalSvc.GetPendingApprovalsAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load approvals: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OpenApproveDialogAsync(WorkflowApprovalService.PendingApprovalDto approval)
+    {
+        var parameters = new DialogParameters<ApprovalDecisionDialog>
+        {
+            { x => x.RequestId, approval.RequestId },
+            { x => x.ModuleType, approval.ModuleType },
+            { x => x.ModuleId, approval.ModuleId },
+            { x => x.IsApproval, true }
+        };
+
+        var dialog = await DialogService.ShowAsync<ApprovalDecisionDialog>("Approve Request", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadPendingAsync();
+        }
+    }
+
+    private async Task OpenRejectDialogAsync(WorkflowApprovalService.PendingApprovalDto approval)
+    {
+        var parameters = new DialogParameters<ApprovalDecisionDialog>
+        {
+            { x => x.RequestId, approval.RequestId },
+            { x => x.ModuleType, approval.ModuleType },
+            { x => x.ModuleId, approval.ModuleId },
+            { x => x.IsApproval, false }
+        };
+
+        var dialog = await DialogService.ShowAsync<ApprovalDecisionDialog>("Reject Request", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadPendingAsync();
+        }
+    }
+
+    private bool QuickFilter(WorkflowApprovalService.PendingApprovalDto item)
+    {
+        if (string.IsNullOrWhiteSpace(_searchString)) return true;
+        var search = _searchString.ToLower();
+        return item.SubmitterName.ToLower().Contains(search) ||
+               item.ModuleType.ToLower().Contains(search) ||
+               item.ModuleId.ToString().Contains(search);
+    }
+}

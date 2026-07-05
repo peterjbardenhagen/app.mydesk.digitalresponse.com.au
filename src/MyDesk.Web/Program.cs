@@ -368,6 +368,7 @@ builder.Services.AddScoped<BankingService>();
     builder.Services.AddScoped<FavouritesService>();
     builder.Services.AddScoped<AIFunctionExecutor>();
     builder.Services.AddScoped<FinancialExtractionService>();
+    builder.Services.AddScoped<WorkflowApprovalService>();
 
     // ── Ports from legacy MyDesk (in-memory services) ──────────────────────
     builder.Services.AddScoped<RfqService>();
