@@ -4034,6 +4034,347 @@ app.MapPut("/api/security/rate-limiting/violations/{id:int}/unblock", async (int
 .WithOpenApi()
 .RequireAuthorization();
 
+// ── Product Admin Module (Phase 2 Weeks 5-6) ────────────────────────────────────────
+// Client management, billing configuration, and invoice tracking
+// Protected: Only accessible to MyDesk Super Admin users
+
+// Helper: Verify user is MyDesk Super Admin (only product admins can manage clients)
+async Task<bool> IsMyDeskSuperAdminAsync(HttpContext ctx, DatabaseService db)
+{
+    var userId = ctx.User.FindFirst("UserId")?.Value;
+    if (!int.TryParse(userId, out int parsedUserId))
+        return false;
+
+    var result = await db.QueryAsync(
+        "SELECT UserTypeId FROM dbo.Users WHERE UserId = @UserId",
+        new() { ["UserId"] = parsedUserId });
+
+    // UserTypeId 5 = Super Administrator (MyDesk platform admin)
+    return result.Rows.Count > 0 && (int)result.Rows[0]["UserTypeId"] == 5;
+}
+
+// GET /api/product-admin/clients - List all client tenants
+app.MapGet("/api/product-admin/clients", async (HttpContext ctx, DatabaseService db, int page = 1, int pageSize = 50) =>
+{
+    if (!await IsMyDeskSuperAdminAsync(ctx, db))
+        return Results.Forbid();
+
+    int skip = (page - 1) * pageSize;
+
+    var result = await db.QueryAsync(
+        @"SELECT t.TenantId, t.Name, t.Code, t.IsActive, cbc.BillingModel, cbc.Status as BillingStatus,
+                 (SELECT COUNT(*) FROM dbo.Users u WHERE u.TenantId = t.TenantId) as UserCount,
+                 t.CreatedAt
+          FROM dbo.Tenants t
+          LEFT JOIN dbo.ClientBillingConfig cbc ON cbc.TenantId = t.TenantId
+          WHERE t.IsActive = 1 AND t.TenantId > 1  -- Exclude MyDesk platform tenant (ID=1)
+          ORDER BY t.CreatedAt DESC
+          OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY",
+        new() { ["Skip"] = skip, ["Take"] = pageSize });
+
+    var totalResult = await db.QueryAsync(
+        @"SELECT COUNT(*) as total FROM dbo.Tenants
+          WHERE IsActive = 1 AND TenantId > 1");
+
+    int total = (int)totalResult.Rows[0]["total"];
+
+    var clients = result.Rows.Cast<DataRow>().Select(row => new
+    {
+        tenantId = (int)row["TenantId"],
+        name = (string)row["Name"],
+        code = (string)row["Code"],
+        isActive = (bool)row["IsActive"],
+        billingModel = row["BillingModel"]?.ToString(),
+        billingStatus = row["BillingStatus"]?.ToString(),
+        userCount = (int)row["UserCount"],
+        createdAt = row["CreatedAt"]
+    }).ToList();
+
+    return Results.Ok(new
+    {
+        clients,
+        pagination = new { page, pageSize, total, totalPages = (total + pageSize - 1) / pageSize }
+    });
+})
+.WithName("ListClients")
+.WithOpenApi()
+.RequireAuthorization();
+
+// GET /api/product-admin/clients/{tenantId}/billing - View client billing configuration
+app.MapGet("/api/product-admin/clients/{tenantId:int}/billing", async (int tenantId, HttpContext ctx, DatabaseService db) =>
+{
+    if (!await IsMyDeskSuperAdminAsync(ctx, db))
+        return Results.Forbid();
+
+    var result = await db.QueryAsync(
+        @"SELECT Id, BillingModel, BillingContactEmail, Currency, TaxPercentage, Status, CycleStartDay, CycleStartMonth
+          FROM dbo.ClientBillingConfig
+          WHERE TenantId = @TenantId",
+        new() { ["TenantId"] = tenantId });
+
+    if (result.Rows.Count == 0)
+        return Results.NotFound();
+
+    var config = result.Rows[0];
+    return Results.Ok(new
+    {
+        billingModel = (string)config["BillingModel"],
+        billingContactEmail = config["BillingContactEmail"]?.ToString(),
+        currency = (string)config["Currency"],
+        taxPercentage = (decimal?)config["TaxPercentage"],
+        status = (string)config["Status"],
+        cycleStartDay = (int?)config["CycleStartDay"],
+        cycleStartMonth = (int?)config["CycleStartMonth"]
+    });
+})
+.WithName("GetClientBillingConfig")
+.WithOpenApi()
+.RequireAuthorization();
+
+// POST /api/product-admin/clients/{tenantId}/billing - Update client billing configuration
+app.MapPost("/api/product-admin/clients/{tenantId:int}/billing", async (int tenantId, HttpContext ctx, UpdateBillingConfigRequest body, DatabaseService db) =>
+{
+    if (!await IsMyDeskSuperAdminAsync(ctx, db))
+        return Results.Forbid();
+
+    var userId = int.TryParse(ctx.User.FindFirst("UserId")?.Value, out var uid) ? uid : 0;
+
+    // Verify billing model is valid
+    var validModels = new[] { "MONTHLY_ADVANCE", "YEARLY_ADVANCE", "PAY_AS_YOU_GO", "FLAT_RATE" };
+    if (!validModels.Contains(body.BillingModel))
+        return Results.BadRequest(new { error = "Invalid billing model" });
+
+    try
+    {
+        // Check if config exists
+        var existingResult = await db.QueryAsync(
+            "SELECT Id FROM dbo.ClientBillingConfig WHERE TenantId = @TenantId",
+            new() { ["TenantId"] = tenantId });
+
+        if (existingResult.Rows.Count == 0)
+        {
+            // Create new config
+            await db.ExecuteNonQueryAsync(
+                @"INSERT INTO dbo.ClientBillingConfig (TenantId, BillingModel, BillingContactEmail, Currency, TaxPercentage,
+                    CycleStartDay, CycleStartMonth, Status, CreatedBy)
+                  VALUES (@TenantId, @Model, @Email, @Currency, @Tax, @StartDay, @StartMonth, 'ACTIVE', @UserId)",
+                new()
+                {
+                    ["TenantId"] = tenantId,
+                    ["Model"] = body.BillingModel,
+                    ["Email"] = body.BillingContactEmail ?? (object)DBNull.Value,
+                    ["Currency"] = body.Currency ?? "AUD",
+                    ["Tax"] = body.TaxPercentage ?? 10,
+                    ["StartDay"] = body.CycleStartDay ?? 1,
+                    ["StartMonth"] = body.CycleStartMonth ?? 1,
+                    ["UserId"] = userId
+                });
+
+            // Log change
+            await db.ExecuteNonQueryAsync(
+                @"INSERT INTO dbo.ClientBillingHistory (TenantId, ChangeType, NewValues, Reason, ChangedBy)
+                  VALUES (@TenantId, 'CONFIG_CHANGE', @Values, @Reason, @UserId)",
+                new()
+                {
+                    ["TenantId"] = tenantId,
+                    ["Values"] = $"BillingModel={body.BillingModel}",
+                    ["Reason"] = "Initial billing configuration created",
+                    ["UserId"] = userId
+                });
+
+            return Results.Created($"/api/product-admin/clients/{tenantId}/billing",
+                new { message = "Billing configuration created" });
+        }
+        else
+        {
+            // Update existing config
+            await db.ExecuteNonQueryAsync(
+                @"UPDATE dbo.ClientBillingConfig
+                  SET BillingModel = @Model, BillingContactEmail = @Email, Currency = @Currency,
+                      TaxPercentage = @Tax, CycleStartDay = @StartDay, CycleStartMonth = @StartMonth,
+                      UpdatedAt = GETUTCDATE(), UpdatedBy = @UserId
+                  WHERE TenantId = @TenantId",
+                new()
+                {
+                    ["TenantId"] = tenantId,
+                    ["Model"] = body.BillingModel,
+                    ["Email"] = body.BillingContactEmail ?? (object)DBNull.Value,
+                    ["Currency"] = body.Currency ?? "AUD",
+                    ["Tax"] = body.TaxPercentage ?? 10,
+                    ["StartDay"] = body.CycleStartDay ?? 1,
+                    ["StartMonth"] = body.CycleStartMonth ?? 1,
+                    ["UserId"] = userId
+                });
+
+            // Log change
+            await db.ExecuteNonQueryAsync(
+                @"INSERT INTO dbo.ClientBillingHistory (TenantId, ChangeType, NewValues, Reason, ChangedBy)
+                  VALUES (@TenantId, 'CONFIG_CHANGE', @Values, @Reason, @UserId)",
+                new()
+                {
+                    ["TenantId"] = tenantId,
+                    ["Values"] = $"BillingModel={body.BillingModel}",
+                    ["Reason"] = "Billing configuration updated",
+                    ["UserId"] = userId
+                });
+
+            return Results.Ok(new { message = "Billing configuration updated" });
+        }
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Failed to update billing config: {ex.Message}" });
+    }
+})
+.WithName("UpdateBillingConfig")
+.WithOpenApi()
+.RequireAuthorization();
+
+// GET /api/product-admin/invoices - List all invoices (with optional filtering)
+app.MapGet("/api/product-admin/invoices", async (HttpContext ctx, DatabaseService db,
+    int? tenantId = null, string? status = null, int page = 1, int pageSize = 50) =>
+{
+    if (!await IsMyDeskSuperAdminAsync(ctx, db))
+        return Results.Forbid();
+
+    int skip = (page - 1) * pageSize;
+
+    string query = @"SELECT Id, TenantId, InvoiceNumber, InvoiceDate, DueDate, TotalAmount,
+                           Status, PaidAt, CreatedAt
+                    FROM dbo.ClientInvoice
+                    WHERE 1=1";
+
+    var @params = new Dictionary<string, object?>();
+
+    if (tenantId.HasValue)
+    {
+        query += " AND TenantId = @TenantId";
+        @params["TenantId"] = tenantId;
+    }
+
+    if (!string.IsNullOrWhiteSpace(status))
+    {
+        query += " AND Status = @Status";
+        @params["Status"] = status;
+    }
+
+    query += " ORDER BY InvoiceDate DESC OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY";
+    @params["Skip"] = skip;
+    @params["Take"] = pageSize;
+
+    var result = await db.QueryAsync(query, @params);
+
+    // Get total count
+    string countQuery = "SELECT COUNT(*) as total FROM dbo.ClientInvoice WHERE 1=1";
+    if (tenantId.HasValue)
+        countQuery += " AND TenantId = @TenantId";
+    if (!string.IsNullOrWhiteSpace(status))
+        countQuery += " AND Status = @Status";
+
+    var countResult = await db.QueryAsync(countQuery, @params);
+    int total = (int)countResult.Rows[0]["total"];
+
+    var invoices = result.Rows.Cast<DataRow>().Select(row => new
+    {
+        id = (int)row["Id"],
+        tenantId = (int)row["TenantId"],
+        invoiceNumber = (string)row["InvoiceNumber"],
+        invoiceDate = row["InvoiceDate"],
+        dueDate = row["DueDate"],
+        totalAmount = (decimal)row["TotalAmount"],
+        status = (string)row["Status"],
+        paidAt = row["PaidAt"],
+        createdAt = row["CreatedAt"]
+    }).ToList();
+
+    return Results.Ok(new
+    {
+        invoices,
+        pagination = new { page, pageSize, total, totalPages = (total + pageSize - 1) / pageSize }
+    });
+})
+.WithName("ListInvoices")
+.WithOpenApi()
+.RequireAuthorization();
+
+// GET /api/product-admin/invoices/{invoiceId} - Get invoice details
+app.MapGet("/api/product-admin/invoices/{invoiceId:int}", async (int invoiceId, HttpContext ctx, DatabaseService db) =>
+{
+    if (!await IsMyDeskSuperAdminAsync(ctx, db))
+        return Results.Forbid();
+
+    var result = await db.QueryAsync(
+        @"SELECT Id, TenantId, InvoiceNumber, InvoiceDate, DueDate, BillingPeriodStart, BillingPeriodEnd,
+                 BaseAmount, UsageAmount, DiscountAmount, TaxAmount, TotalAmount, Status, PaidAt,
+                 PaymentMethod, PaymentReference, BillingContactEmail, Notes
+          FROM dbo.ClientInvoice
+          WHERE Id = @Id",
+        new() { ["Id"] = invoiceId });
+
+    if (result.Rows.Count == 0)
+        return Results.NotFound();
+
+    var inv = result.Rows[0];
+    return Results.Ok(new
+    {
+        id = (int)inv["Id"],
+        tenantId = (int)inv["TenantId"],
+        invoiceNumber = (string)inv["InvoiceNumber"],
+        invoiceDate = inv["InvoiceDate"],
+        dueDate = inv["DueDate"],
+        billingPeriodStart = inv["BillingPeriodStart"],
+        billingPeriodEnd = inv["BillingPeriodEnd"],
+        baseAmount = (decimal)inv["BaseAmount"],
+        usageAmount = (decimal)inv["UsageAmount"],
+        discountAmount = (decimal)inv["DiscountAmount"],
+        taxAmount = (decimal)inv["TaxAmount"],
+        totalAmount = (decimal)inv["TotalAmount"],
+        status = (string)inv["Status"],
+        paidAt = inv["PaidAt"],
+        paymentMethod = inv["PaymentMethod"]?.ToString(),
+        paymentReference = inv["PaymentReference"]?.ToString(),
+        notes = inv["Notes"]?.ToString()
+    });
+})
+.WithName("GetInvoiceDetails")
+.WithOpenApi()
+.RequireAuthorization();
+
+// PUT /api/product-admin/invoices/{invoiceId}/mark-paid - Mark invoice as paid
+app.MapPut("/api/product-admin/invoices/{invoiceId:int}/mark-paid", async (int invoiceId, HttpContext ctx, MarkInvoicePaidRequest body, DatabaseService db) =>
+{
+    if (!await IsMyDeskSuperAdminAsync(ctx, db))
+        return Results.Forbid();
+
+    var userId = int.TryParse(ctx.User.FindFirst("UserId")?.Value, out var uid) ? uid : 0;
+
+    try
+    {
+        await db.ExecuteNonQueryAsync(
+            @"UPDATE dbo.ClientInvoice
+              SET Status = 'PAID', PaidAt = GETUTCDATE(), PaidAmount = @Amount,
+                  PaymentMethod = @Method, PaymentReference = @Reference, UpdatedBy = @UserId, UpdatedAt = GETUTCDATE()
+              WHERE Id = @Id",
+            new()
+            {
+                ["Id"] = invoiceId,
+                ["Amount"] = body.Amount,
+                ["Method"] = body.PaymentMethod ?? (object)DBNull.Value,
+                ["Reference"] = body.PaymentReference ?? (object)DBNull.Value,
+                ["UserId"] = userId
+            });
+
+        return Results.Ok(new { message = "Invoice marked as paid" });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Failed to mark invoice as paid: {ex.Message}" });
+    }
+})
+.WithName("MarkInvoicePaid")
+.WithOpenApi()
+.RequireAuthorization();
+
 app.Run();
 
 /// <summary>Body model for POST /api/auth/reset-password.</summary>
@@ -4123,4 +4464,22 @@ class InvestigateSecurityEventRequest
 {
     public string Notes { get; set; } = "";
     public bool IsResolved { get; set; } = false;
+}
+
+// Product Admin DTOs
+class UpdateBillingConfigRequest
+{
+    public string BillingModel { get; set; } = "MONTHLY_ADVANCE";
+    public string? BillingContactEmail { get; set; }
+    public string? Currency { get; set; }
+    public decimal? TaxPercentage { get; set; }
+    public int? CycleStartDay { get; set; }
+    public int? CycleStartMonth { get; set; }
+}
+
+class MarkInvoicePaidRequest
+{
+    public decimal Amount { get; set; }
+    public string? PaymentMethod { get; set; }
+    public string? PaymentReference { get; set; }
 }
