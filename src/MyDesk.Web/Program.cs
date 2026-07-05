@@ -386,12 +386,13 @@ builder.Services.AddScoped<BankingService>();
     builder.Services.AddScoped<SalesReportsService>();
 
     // ── Phase 4: Teams & Departments (2026) ────────────────────────────────
-    builder.Services.AddScoped<DepartmentService>();
-    builder.Services.AddScoped<TeamService>();
-    builder.Services.AddScoped<BudgetService>();
-    builder.Services.AddScoped<ApprovalDelegationService>();
-    builder.Services.AddScoped<ApprovalEscalationService>();
-    builder.Services.AddScoped<BulkUserImportService>();
+    // TEMPORARILY DISABLED FOR DIAGNOSTIC - CI build fails with these registered
+    // builder.Services.AddScoped<DepartmentService>();
+    // builder.Services.AddScoped<TeamService>();
+    // builder.Services.AddScoped<BudgetService>();
+    // builder.Services.AddScoped<ApprovalDelegationService>();
+    // builder.Services.AddScoped<ApprovalEscalationService>();
+    // builder.Services.AddScoped<BulkUserImportService>();
 
 builder.Services.AddHttpClient();
 
