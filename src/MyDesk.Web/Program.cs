@@ -370,6 +370,7 @@ builder.Services.AddScoped<BankingService>();
     builder.Services.AddScoped<FinancialExtractionService>();
     builder.Services.AddScoped<WorkflowApprovalService>();
     builder.Services.AddScoped<PhotoProcessingService>();
+    builder.Services.AddScoped<NotificationService>();
 
     // ── Security Services (Phase 1 Week 4) ──────────────────────────────────
     builder.Services.AddScoped<RateLimitingService>();
@@ -5033,6 +5034,219 @@ app.MapGet("/api/expenses/{expenseId:int}/receipt", async (int expenseId, HttpCo
 .WithOpenApi()
 .RequireAuthorization();
 
+// ── Notifications System (Phase 3) ────────────────────────────────────────────
+
+// GET /api/notifications - Get unread in-app notifications
+app.MapGet("/api/notifications", async (HttpContext ctx, DatabaseService db) =>
+{
+    var userId = int.TryParse(ctx.User.FindFirst("UserId")?.Value, out var uid) ? uid : 0;
+    var tenantId = int.TryParse(ctx.User.FindFirst("tenant_id")?.Value, out var tid) ? tid : 0;
+
+    if (userId == 0 || tenantId == 0)
+        return Results.Unauthorized();
+
+    try
+    {
+        var result = await db.QueryAsync(
+            @"SELECT NotificationId, Title, Message, Icon, ActionUrl, ActionText, Type, Category, EntityType, EntityId, CreatedAt, IsRead
+              FROM dbo.InAppNotifications
+              WHERE TenantId = @TenantId AND UserId = @UserId AND IsRead = 0 AND (ExpiresAt IS NULL OR ExpiresAt > GETUTCDATE())
+              ORDER BY CreatedAt DESC
+              OFFSET 0 ROWS FETCH NEXT 20 ROWS ONLY",
+            new() { ["TenantId"] = tenantId, ["UserId"] = userId });
+
+        var countResult = await db.QueryAsync(
+            "SELECT UnreadTotal FROM dbo.NotificationState WHERE TenantId = @TenantId AND UserId = @UserId",
+            new() { ["TenantId"] = tenantId, ["UserId"] = userId });
+
+        int unreadCount = countResult.Rows.Count > 0 ? (int)countResult.Rows[0]["UnreadTotal"] : 0;
+
+        var notifications = result.Rows.Cast<System.Data.DataRow>().Select(row => new
+        {
+            notificationId = (int)row["NotificationId"],
+            title = row["Title"]?.ToString(),
+            message = row["Message"]?.ToString(),
+            icon = row["Icon"]?.ToString(),
+            actionUrl = row["ActionUrl"]?.ToString(),
+            actionText = row["ActionText"]?.ToString(),
+            type = row["Type"]?.ToString(),
+            category = row["Category"]?.ToString(),
+            entityType = row["EntityType"]?.ToString(),
+            entityId = row["EntityId"] != DBNull.Value ? (int?)row["EntityId"] : null,
+            createdAt = (DateTime)row["CreatedAt"],
+            isRead = (bool)row["IsRead"]
+        }).ToList();
+
+        return Results.Ok(new { notifications, unreadCount });
+    }
+    catch (Exception ex)
+    {
+        return Results.StatusCode(500, new { error = ex.Message });
+    }
+})
+.WithName("GetNotifications")
+.WithOpenApi()
+.RequireAuthorization();
+
+// POST /api/notifications/{notificationId}/read - Mark as read
+app.MapPost("/api/notifications/{notificationId:int}/read", async (int notificationId, HttpContext ctx, DatabaseService db) =>
+{
+    var userId = int.TryParse(ctx.User.FindFirst("UserId")?.Value, out var uid) ? uid : 0;
+
+    if (userId == 0)
+        return Results.Unauthorized();
+
+    try
+    {
+        // Verify ownership
+        var verifyResult = await db.QueryAsync(
+            "SELECT UserId FROM dbo.InAppNotifications WHERE NotificationId = @NotificationId",
+            new() { ["NotificationId"] = notificationId });
+
+        if (verifyResult.Rows.Count == 0 || (int)verifyResult.Rows[0]["UserId"] != userId)
+            return Results.Forbid();
+
+        await db.ExecuteNonQueryAsync(
+            "UPDATE dbo.InAppNotifications SET IsRead = 1, ReadAt = GETUTCDATE() WHERE NotificationId = @NotificationId",
+            new() { ["NotificationId"] = notificationId });
+
+        return Results.Ok(new { message = "Notification marked as read" });
+    }
+    catch (Exception ex)
+    {
+        return Results.StatusCode(500, new { error = ex.Message });
+    }
+})
+.WithName("MarkNotificationAsRead")
+.WithOpenApi()
+.RequireAuthorization();
+
+// POST /api/notifications/read-all - Mark all as read
+app.MapPost("/api/notifications/read-all", async (HttpContext ctx, DatabaseService db) =>
+{
+    var userId = int.TryParse(ctx.User.FindFirst("UserId")?.Value, out var uid) ? uid : 0;
+    var tenantId = int.TryParse(ctx.User.FindFirst("tenant_id")?.Value, out var tid) ? tid : 0;
+
+    if (userId == 0 || tenantId == 0)
+        return Results.Unauthorized();
+
+    try
+    {
+        await db.ExecuteNonQueryAsync(
+            @"UPDATE dbo.InAppNotifications SET IsRead = 1, ReadAt = GETUTCDATE()
+              WHERE TenantId = @TenantId AND UserId = @UserId AND IsRead = 0",
+            new() { ["TenantId"] = tenantId, ["UserId"] = userId });
+
+        await db.ExecuteNonQueryAsync(
+            @"UPDATE dbo.NotificationState SET UnreadTotal = 0 WHERE TenantId = @TenantId AND UserId = @UserId",
+            new() { ["TenantId"] = tenantId, ["UserId"] = userId });
+
+        return Results.Ok(new { message = "All notifications marked as read" });
+    }
+    catch (Exception ex)
+    {
+        return Results.StatusCode(500, new { error = ex.Message });
+    }
+})
+.WithName("MarkAllNotificationsAsRead")
+.WithOpenApi()
+.RequireAuthorization();
+
+// GET /api/notifications/preferences - Get notification preferences
+app.MapGet("/api/notifications/preferences", async (HttpContext ctx, DatabaseService db) =>
+{
+    var userId = int.TryParse(ctx.User.FindFirst("UserId")?.Value, out var uid) ? uid : 0;
+    var tenantId = int.TryParse(ctx.User.FindFirst("tenant_id")?.Value, out var tid) ? tid : 0;
+
+    if (userId == 0 || tenantId == 0)
+        return Results.Unauthorized();
+
+    try
+    {
+        var result = await db.QueryAsync(
+            @"SELECT EnableEmailNotifications, EmailOnApprovalRequired, EmailDigestFrequency,
+                     EnableSmsNotifications, PhoneNumber, EnableInAppNotifications,
+                     QuietHoursEnabled, QuietHoursStart, QuietHoursEnd
+              FROM dbo.NotificationSettings
+              WHERE TenantId = @TenantId AND UserId = @UserId",
+            new() { ["TenantId"] = tenantId, ["UserId"] = userId });
+
+        if (result.Rows.Count == 0)
+            return Results.NotFound();
+
+        var prefs = result.Rows[0];
+        return Results.Ok(new
+        {
+            enableEmailNotifications = (bool)prefs["EnableEmailNotifications"],
+            emailOnApprovalRequired = (bool)prefs["EmailOnApprovalRequired"],
+            emailDigestFrequency = prefs["EmailDigestFrequency"]?.ToString(),
+            enableSmsNotifications = (bool)prefs["EnableSmsNotifications"],
+            phoneNumber = prefs["PhoneNumber"]?.ToString(),
+            enableInAppNotifications = (bool)prefs["EnableInAppNotifications"],
+            quietHoursEnabled = (bool)prefs["QuietHoursEnabled"],
+            quietHoursStart = prefs["QuietHoursStart"],
+            quietHoursEnd = prefs["QuietHoursEnd"]
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.StatusCode(500, new { error = ex.Message });
+    }
+})
+.WithName("GetNotificationPreferences")
+.WithOpenApi()
+.RequireAuthorization();
+
+// PUT /api/notifications/preferences - Update preferences
+app.MapPut("/api/notifications/preferences", async (HttpContext ctx, UpdateNotificationPreferencesRequest body, DatabaseService db) =>
+{
+    var userId = int.TryParse(ctx.User.FindFirst("UserId")?.Value, out var uid) ? uid : 0;
+    var tenantId = int.TryParse(ctx.User.FindFirst("tenant_id")?.Value, out var tid) ? tid : 0;
+
+    if (userId == 0 || tenantId == 0)
+        return Results.Unauthorized();
+
+    try
+    {
+        await db.ExecuteNonQueryAsync(
+            @"UPDATE dbo.NotificationSettings
+              SET EnableEmailNotifications = @EmailEnabled,
+                  EmailOnApprovalRequired = @EmailApproval,
+                  EmailDigestFrequency = @DigestFreq,
+                  EnableSmsNotifications = @SmsEnabled,
+                  PhoneNumber = @Phone,
+                  EnableInAppNotifications = @InAppEnabled,
+                  QuietHoursEnabled = @QuietEnabled,
+                  QuietHoursStart = @QuietStart,
+                  QuietHoursEnd = @QuietEnd,
+                  ModifiedAt = GETUTCDATE()
+              WHERE TenantId = @TenantId AND UserId = @UserId",
+            new()
+            {
+                ["TenantId"] = tenantId,
+                ["UserId"] = userId,
+                ["EmailEnabled"] = body.EnableEmailNotifications,
+                ["EmailApproval"] = body.EmailOnApprovalRequired,
+                ["DigestFreq"] = body.EmailDigestFrequency,
+                ["SmsEnabled"] = body.EnableSmsNotifications,
+                ["Phone"] = body.PhoneNumber ?? (object)DBNull.Value,
+                ["InAppEnabled"] = body.EnableInAppNotifications,
+                ["QuietEnabled"] = body.QuietHoursEnabled,
+                ["QuietStart"] = body.QuietHoursStart ?? (object)DBNull.Value,
+                ["QuietEnd"] = body.QuietHoursEnd ?? (object)DBNull.Value
+            });
+
+        return Results.Ok(new { message = "Preferences updated" });
+    }
+    catch (Exception ex)
+    {
+        return Results.StatusCode(500, new { error = ex.Message });
+    }
+})
+.WithName("UpdateNotificationPreferences")
+.WithOpenApi()
+.RequireAuthorization();
+
 app.Run();
 
 /// <summary>Body model for POST /api/auth/reset-password.</summary>
@@ -5158,4 +5372,17 @@ class OnboardingStepRequest
     public string? BillingModel { get; set; }
     public string? BillingContactEmail { get; set; }
     public int UserSeats { get; set; }
+}
+
+class UpdateNotificationPreferencesRequest
+{
+    public bool EnableEmailNotifications { get; set; } = true;
+    public bool EmailOnApprovalRequired { get; set; } = true;
+    public string EmailDigestFrequency { get; set; } = "Immediate";
+    public bool EnableSmsNotifications { get; set; } = false;
+    public string? PhoneNumber { get; set; }
+    public bool EnableInAppNotifications { get; set; } = true;
+    public bool QuietHoursEnabled { get; set; } = false;
+    public TimeSpan? QuietHoursStart { get; set; }
+    public TimeSpan? QuietHoursEnd { get; set; }
 }
