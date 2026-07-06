@@ -43,15 +43,6 @@ jobs:
         run: dotnet test MyDesk.slnx --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --verbosity minimal
         continue-on-error: true
 
-      - name: Upload test results
-        if: always()
-        uses: dorny/test-reporter@v1
-        with:
-          name: Test Results
-          path: '**/test-results.trx'
-          reporter: 'dotnet-trx'
-          fail-on-error: false
-
       - name: Publish application
         run: dotnet publish src/MyDesk.Web/MyDesk.Web.csproj -c Release -r win-x64 --self-contained false -o ./artifacts/publish
 
