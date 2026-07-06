@@ -61,7 +61,179 @@ User Request (Expense Submitted)
 
 ## Agent Architecture & Responsibilities
 
----
+### Phase 4: Organizations & Teams Agent
+
+**Owner:** Teams & Departments Implementation  
+**Feature Areas:** Departments, Teams, Approval Delegation, Budget Management, Bulk Import  
+**Status:** Complete (Feature Development)  
+**Database:** Migrations 022 (Schema), 023 (Admin Users)
+
+#### Responsibilities
+
+The Phase 4 agent manages organizational structure, approval workflows, and budget controls:
+
+| Component | Service | Responsibility |
+|-----------|---------|-----------------|
+| **Departments** | `DepartmentService` | Multi-level department hierarchy, manager assignment, cost center tracking |
+| **Teams** | `TeamService` | Team creation, member management, approval team flagging |
+| **Approvals** | `ApprovalDelegationService` | Delegation creation, threshold management, permission control |
+| **Escalation** | `ApprovalEscalationService` | Route approvals to delegates, escalate to managers, build approval chains |
+| **Budgets** | `BudgetService` | Allocate budgets, enforce spending limits, category tracking (Expense/Travel/Meals/Other) |
+| **Bulk Import** | `BulkUserImportService` | CSV parsing, user creation, team/department assignment, validation |
+
+#### Services & Methods
+
+**DepartmentService.cs** (127 lines)
+- `GetDepartmentsAsync(tenantId)` - List all departments with hierarchy
+- `GetDepartmentAsync(tenantId, id)` - Get specific department details
+- `CreateDepartmentAsync(tenantId, name, description, managerId, costCenter)` - Create new department
+- `UpdateDepartmentAsync(tenantId, id, name, description, managerId)` - Update department
+- `DeleteDepartmentAsync(tenantId, id)` - Archive/soft delete department
+
+**TeamService.cs** (175 lines)
+- `GetTeamsAsync(tenantId, departmentFilter)` - List teams by department
+- `GetTeamAsync(tenantId, id)` - Get team details
+- `CreateTeamAsync(tenantId, deptId, name, description, leadId)` - Create team
+- `UpdateTeamAsync(tenantId, id, name, description)` - Update team
+- `AddTeamMemberAsync(tenantId, teamId, userId, role)` - Add user to team
+- `RemoveTeamMemberAsync(tenantId, teamId, userId)` - Remove user from team
+- `GetTeamMembersAsync(tenantId, teamId)` - List team members with roles
+- `GetUserTeamsAsync(tenantId, userId)` - Get teams user belongs to
+
+**ApprovalDelegationService.cs** (196 lines)
+- `CreateDelegationAsync(tenantId, teamId, fromId, toId, module, minAmount, maxAmount, startDate, endDate, perms...)` - Create delegation
+- `GetActiveDelegatesAsync(tenantId, userId, module)` - Get active delegates for user
+- `GetDelegationAsync(tenantId, id)` - Get delegation details
+- `CanApproveAsync(tenantId, delegateId, amount)` - Check if delegate can approve amount
+- `GetUserDelegationsAsync(tenantId, userId)` - List user's delegations (as delegator or delegatee)
+- `DeactivateDelegationAsync(tenantId, id)` - Deactivate delegation
+
+**ApprovalEscalationService.cs** (189 lines)
+- `ResolveApprovalChainAsync(tenantId, userId, amount, module)` - Build complete approval chain with delegates
+- `RouteApprovalAsync(tenantId, approverId, amount, module)` - Route to delegate or escalate to manager
+- `NotifyDelegateAsync(tenantId, delegateId, approvalId)` - Send delegation notification (Phase 5)
+- `NotifyEscalationAsync(tenantId, approverId, approvalId)` - Send escalation notification (Phase 5)
+
+**BudgetService.cs** (176 lines)
+- `GetBudgetAsync(tenantId, deptId, year)` - Get budget for fiscal year
+- `CreateBudgetAsync(tenantId, deptId, year, allocated, allowOverspend, thresholdPercent)` - Allocate budget
+- `CanApproveAsync(tenantId, deptId, amount)` - Check if approval would exceed budget
+- `GetRemainingBudgetAsync(tenantId, deptId)` - Calculate available funds
+- `GetBudgetAlertPercentageAsync(tenantId, deptId)` - Calculate usage percentage
+- `AddExpenseAsync(tenantId, deptId, amount)` - Record expense against budget
+- `EncumberAmountAsync(tenantId, deptId, amount)` - Reserve amount for pending approval
+- `GetDepartmentBudgetsAsync(tenantId, deptFilter)` - List budgets with filters
+
+**BulkUserImportService.cs** (266 lines)
+- `ImportUsersAsync(tenantId, importedById, stream, filename)` - Process CSV upload
+  - Parse CSV with quote handling and header validation
+  - Map to user records with department/team assignment
+  - Handle role assignment (Member, Lead, Manager)
+  - Log import results with success/failure counts
+
+#### Blazor Components
+
+| Component | Purpose | Location |
+|-----------|---------|----------|
+| **DepartmentsList.razor** | Department management with CRUD and filtering | `/admin/departments` |
+| **DepartmentEditDialog.razor** | Create/edit department modal | Shared modal |
+| **TeamsList.razor** | Team management with department filtering | `/admin/teams` |
+| **TeamEditDialog.razor** | Create/edit team modal | Shared modal |
+| **TeamMembersDialog.razor** | Manage team membership dialog | Shared modal |
+| **ApprovalDelegationManager.razor** | View/manage delegations (As Delegator + Received tabs) | `/admin/approvals/delegations` |
+| **ApprovalDelegationDialog.razor** | Create/edit delegation modal | Shared modal |
+| **BudgetManager.razor** | Budget tracking with fiscal year and department filters | `/admin/budgets` |
+| **BudgetEditDialog.razor** | Create/edit budget allocation modal | Shared modal |
+| **BulkUserImportDialog.razor** | CSV file upload with progress tracking | Shared modal |
+
+#### Database Integration
+
+**Tables Created (Migration 022):**
+- `Departments` - Multi-level hierarchy with parent references
+- `Teams` - Team records scoped to departments
+- `TeamMembers` - User membership in teams with roles
+- `ApprovalDelegation` - Delegate authority with amount thresholds and permissions
+- `DepartmentBudgets` - Budget allocation and tracking with category breakdown
+- `BulkUserImportLog` - Audit trail of all imports
+
+**Indexes:**
+- `IX_Departments_TenantId` - Fast tenant filtering
+- `IX_Teams_DepartmentId` - Fast team lookup by department
+- `IX_ApprovalDelegation_Active` - Fast active delegation queries
+- `IX_DepartmentBudgets_FiscalYear` - Fast budget queries by year
+
+#### Administrator Users (Migration 023)
+
+Two tenant administrators created with full privileges:
+- **Peter Bardenhagen** (peterb@digitalresponse.com.au) - CEO, User ID 1000
+- **John Bardenhagen** (johnb@digitalresponse.com.au) - CFO, User ID 1001
+
+Both configured as Tenant Directors with all administrative privileges.
+
+#### Integration Points
+
+**With Expense Module:**
+- Budget enforcement on expense approval
+- Expense routing through approval delegation chain
+- Category-based budget tracking (Expense, Travel, Meals, Other)
+
+**With Approval Workflow:**
+- Delegation-based approval routing (Phase 4)
+- Escalation to manager for amounts exceeding delegate limits
+- Approval chain resolution with multiple approvers
+- Delegation history and audit trail
+
+**With Notifications (Phase 5):**
+- Notify delegates when approval routed to them
+- Notify on escalation events
+- Budget threshold alerts
+
+#### Testing
+
+**Unit Tests:** 6 test files with >50 test cases covering:
+- Department CRUD operations with hierarchy
+- Team management and member operations
+- Budget allocation and enforcement
+- Delegation threshold validation
+- Approval routing and escalation logic
+- CSV import with validation and error handling
+
+**Integration Tests:** Verify multi-tenant isolation, budget enforcement, delegation activation/expiration, cascade operations
+
+#### Configuration
+
+**Feature Flags:**
+- `EnableApprovalDelegation` - Show delegation UI
+- `EnableBudgetTracking` - Enforce budget controls
+- `EnableTeamsFeature` - Show teams in navigation
+
+**Budget Settings:**
+- Default threshold alert: 80% of allocated
+- Support overspend allowance per department
+- Category tracking with optional sub-budgets
+
+**Delegation Rules:**
+- Min/max amount thresholds
+- Time-based validity (start/end dates)
+- Granular permissions (approve, reject, delegate, comment)
+- Support for null ModuleType (applies to all modules)
+
+#### Security Considerations
+
+- All queries filtered by TenantId
+- Department/Team management restricted to Administrators
+- Delegation creation restricted to approval authority
+- Budget editing restricted to Finance or Admin roles
+- User passwords hashed (BCrypt)
+- Audit trail of all modifications
+
+#### Performance
+
+- Department lists cached (5 min TTL)
+- Team lists cached by department (5 min TTL)
+- Active delegations cached (10 min TTL)
+- Budget threshold calculations on-demand
+- Supports 1000s of departments/teams without performance degradation
 
 ---
 
