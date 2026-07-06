@@ -1,0 +1,180 @@
+@using MyDesk.Web.Services
+@using System.Data
+@inject TeamService TeamService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.h6">Add Team Member</MudText>
+            <MudStack Row="true" Spacing="2">
+                <MudSelect @bind-Value="selectedUserId" Label="Select User" Variant="Variant.Outlined"
+                    Dense="true" Style="flex: 1;">
+                    @foreach (var user in availableUsers ?? new())
+                    {
+                        <MudSelectItem Value="@user.UserId">@user.Name</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudSelect @bind-Value="selectedRole" Label="Role" Variant="Variant.Outlined" Dense="true">
+                    <MudSelectItem Value="@("Member")">Member</MudSelectItem>
+                    <MudSelectItem Value="@("Lead")">Lead</MudSelectItem>
+                    <MudSelectItem Value="@("Manager")">Manager</MudSelectItem>
+                </MudSelect>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddMember">
+                    Add
+                </MudButton>
+            </MudStack>
+
+            <MudDivider />
+
+            <MudText Typo="Typo.h6">Current Members</MudText>
+            @if (members == null)
+            {
+                <MudProgressLinear Indeterminate="true" />
+            }
+            else if (members.Rows.Count == 0)
+            {
+                <MudAlert Severity="Info">No members in this team.</MudAlert>
+            }
+            else
+            {
+                <MudDataGrid Items="@GetMemberList()" Striped="true" Dense="true">
+                    <PropertyColumn Property="m => m.Name" Title="Name" />
+                    <PropertyColumn Property="m => m.Email" Title="Email" />
+                    <PropertyColumn Property="m => m.Role" Title="Role" />
+                    <PropertyColumn Property="m => m.JoinedDate" Title="Joined" />
+                    <TemplateColumn Title="Actions" Sortable="false">
+                        <CellTemplate>
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                OnClick="@(() => RemoveMember(context.Item.MemberId))" />
+                        </CellTemplate>
+                    </TemplateColumn>
+                </MudDataGrid>
+            }
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public int TenantId { get; set; }
+    [Parameter] public int TeamId { get; set; }
+
+    private DataTable? members;
+    private List<UserViewModel>? availableUsers;
+    private int? selectedUserId;
+    private string selectedRole = "Member";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMembers();
+        await LoadAvailableUsers();
+    }
+
+    private async Task LoadMembers()
+    {
+        try
+        {
+            members = await TeamService.GetTeamMembersAsync(TenantId, TeamId);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading members: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadAvailableUsers()
+    {
+        // TODO: Load from UserService
+        availableUsers = new List<UserViewModel>
+        {
+            new() { UserId = 1, Name = "John Doe", Email = "john@example.com" },
+            new() { UserId = 2, Name = "Jane Smith", Email = "jane@example.com" },
+            new() { UserId = 3, Name = "Bob Johnson", Email = "bob@example.com" }
+        };
+    }
+
+    private List<MemberViewModel> GetMemberList()
+    {
+        if (members == null) return new();
+
+        var list = new List<MemberViewModel>();
+        foreach (DataRow row in members.Rows)
+        {
+            list.Add(new MemberViewModel
+            {
+                MemberId = (int)row["TeamMemberId"],
+                Name = row["Name"]?.ToString() ?? "",
+                Email = row["Email"]?.ToString() ?? "",
+                Role = row["Role"]?.ToString() ?? "",
+                JoinedDate = ((DateTime?)row["JoinedAt"])?.ToString("MMM dd, yyyy") ?? ""
+            });
+        }
+        return list;
+    }
+
+    private async Task AddMember()
+    {
+        if (!selectedUserId.HasValue)
+        {
+            Snackbar.Add("Please select a user", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            await TeamService.AddTeamMemberAsync(TenantId, TeamId, selectedUserId.Value, selectedRole);
+            await LoadMembers();
+            selectedUserId = null;
+            Snackbar.Add("Member added successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error adding member: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task RemoveMember(int memberId)
+    {
+        var confirmed = await MudDialog.ShowMessageBox(
+            "Remove Member",
+            "Are you sure?",
+            "Remove", "Cancel");
+
+        if (confirmed == true)
+        {
+            try
+            {
+                // TODO: Find userId from memberId and call RemoveTeamMemberAsync
+                await LoadMembers();
+                Snackbar.Add("Member removed successfully", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error removing member: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private void Close() => MudDialog.Close();
+
+    private class MemberViewModel
+    {
+        public int MemberId { get; set; }
+        public string Name { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Role { get; set; } = "";
+        public string JoinedDate { get; set; } = "";
+    }
+
+    private class UserViewModel
+    {
+        public int UserId { get; set; }
+        public string Name { get; set; } = "";
+        public string Email { get; set; } = "";
+    }
+}

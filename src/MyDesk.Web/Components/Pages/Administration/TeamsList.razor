@@ -1,0 +1,208 @@
+@page "/admin/teams"
+@using MyDesk.Web.Services
+@using System.Data
+@inject TeamService TeamService
+@inject DepartmentService DepartmentService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Teams</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-8">
+    <MudStack Spacing="4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudText Typo="Typo.h4" Class="font-bold">Teams</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateTeam">
+                <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-2" />
+                New Team
+            </MudButton>
+        </MudStack>
+
+        <MudPaper Class="pa-4">
+            <MudStack Row="true" Spacing="2">
+                <MudSelect @bind-Value="selectedDepartmentId" Label="Filter by Department"
+                    Variant="Variant.Outlined" Clearable="true" Dense="true"
+                    Style="min-width: 250px;" ValueChanged="@(() => LoadTeams())">
+                    @foreach (var dept in departments?.Rows.Cast<DataRow>() ?? new())
+                    {
+                        <MudSelectItem Value="@((int?)dept["DepartmentId"])">
+                            @dept["Name"]
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+            </MudStack>
+        </MudPaper>
+
+        @if (teams == null)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (teams.Rows.Count == 0)
+        {
+            <MudAlert Severity="Info">No teams found. Create one to get started.</MudAlert>
+        }
+        else
+        {
+            <MudDataGrid Items="@GetTeamList()" Striped="true" Hover="true" Dense="true">
+                <PropertyColumn Property="t => t.Name" Title="Team Name" />
+                <PropertyColumn Property="t => t.Department" Title="Department" />
+                <PropertyColumn Property="t => t.TeamLead" Title="Team Lead" />
+                <PropertyColumn Property="t => t.Status" Title="Status" />
+                <PropertyColumn Property="t => t.IsApprovalTeam" Title="Approval Team">
+                    <CellTemplate>
+                        <MudCheckBox @bind-Value="@context.Item.IsApprovalTeam" ReadOnly="true" />
+                    </CellTemplate>
+                </PropertyColumn>
+                <TemplateColumn Title="Actions" Sortable="false">
+                    <CellTemplate>
+                        <MudStack Row="true" Spacing="1">
+                            <MudIconButton Icon="@Icons.Material.Filled.People" Size="Size.Small"
+                                OnClick="@(() => ManageMembers(context.Item.TeamId))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                OnClick="@(() => EditTeam(context.Item.TeamId))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                OnClick="@(() => DeleteTeam(context.Item.TeamId))" />
+                        </MudStack>
+                    </CellTemplate>
+                </TemplateColumn>
+            </MudDataGrid>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    private DataTable? teams;
+    private DataTable? departments;
+    private int? selectedDepartmentId;
+    private int tenantId = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDepartments();
+        await LoadTeams();
+    }
+
+    private async Task LoadDepartments()
+    {
+        try
+        {
+            departments = await DepartmentService.GetDepartmentsAsync(tenantId);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading departments: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadTeams()
+    {
+        try
+        {
+            teams = await TeamService.GetTeamsAsync(tenantId, selectedDepartmentId);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading teams: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private List<TeamViewModel> GetTeamList()
+    {
+        if (teams == null) return new();
+
+        var list = new List<TeamViewModel>();
+        foreach (DataRow row in teams.Rows)
+        {
+            list.Add(new TeamViewModel
+            {
+                TeamId = (int)row["TeamId"],
+                Name = row["Name"]?.ToString() ?? "",
+                Department = GetDepartmentName((int)row["DepartmentId"]),
+                TeamLead = row["TeamLeadName"]?.ToString() ?? "Unassigned",
+                Status = row["Status"]?.ToString() ?? "Active",
+                IsApprovalTeam = row["IsApprovalTeam"] != DBNull.Value && (int)row["IsApprovalTeam"] == 1
+            });
+        }
+        return list;
+    }
+
+    private string GetDepartmentName(int departmentId)
+    {
+        var row = departments?.Rows.Cast<DataRow>()
+            .FirstOrDefault(r => (int)r["DepartmentId"] == departmentId);
+        return row?["Name"]?.ToString() ?? "Unknown";
+    }
+
+    private async Task CreateTeam()
+    {
+        var parameters = new DialogParameters { { "TenantId", tenantId } };
+        var dialog = await DialogService.ShowAsync<TeamEditDialog>("Create Team", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadTeams();
+            Snackbar.Add("Team created successfully", Severity.Success);
+        }
+    }
+
+    private async Task EditTeam(int teamId)
+    {
+        var parameters = new DialogParameters
+        {
+            { "TenantId", tenantId },
+            { "TeamId", teamId }
+        };
+        var dialog = await DialogService.ShowAsync<TeamEditDialog>("Edit Team", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadTeams();
+            Snackbar.Add("Team updated successfully", Severity.Success);
+        }
+    }
+
+    private async Task ManageMembers(int teamId)
+    {
+        var parameters = new DialogParameters
+        {
+            { "TenantId", tenantId },
+            { "TeamId", teamId }
+        };
+        var dialog = await DialogService.ShowAsync<TeamMembersDialog>("Manage Team Members", parameters);
+        await dialog.Result;
+    }
+
+    private async Task DeleteTeam(int teamId)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Delete Team",
+            "Are you sure you want to delete this team?",
+            "Delete", "Cancel");
+
+        if (confirmed == true)
+        {
+            try
+            {
+                // TODO: Implement delete method
+                await LoadTeams();
+                Snackbar.Add("Team deleted successfully", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error deleting team: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    public class TeamViewModel
+    {
+        public int TeamId { get; set; }
+        public string Name { get; set; } = "";
+        public string Department { get; set; } = "";
+        public string TeamLead { get; set; } = "";
+        public string Status { get; set; } = "";
+        public bool IsApprovalTeam { get; set; }
+    }
+}

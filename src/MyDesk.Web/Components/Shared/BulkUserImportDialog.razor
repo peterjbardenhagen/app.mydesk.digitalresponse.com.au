@@ -1,0 +1,184 @@
+@using MyDesk.Web.Services
+@inject BulkUserImportService BulkImportService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="4">
+            <MudText Typo="Typo.h6">Bulk User Import</MudText>
+
+            <MudAlert Severity="Info" Class="mb-4">
+                <MudText>
+                    Upload a CSV file with columns: Email, FirstName, LastName, DepartmentId (optional), TeamId (optional), Role (optional)
+                </MudText>
+            </MudAlert>
+
+            <MudFileUpload T="IBrowserFile" OnFilesChanged="OnFileSelected" Hidden="@false"
+                Class="flex-1" Accept=".csv" MaximumFileCount="1">
+                <ButtonTemplate>
+                    <MudButton HtmlTag="label" Variant="Variant.Filled" Color="Color.Primary"
+                        StartIcon="@Icons.Material.Filled.CloudUpload" for="@context.Id">
+                        Choose CSV File
+                    </MudButton>
+                </ButtonTemplate>
+            </MudFileUpload>
+
+            @if (selectedFile != null)
+            {
+                <MudPaper Class="pa-4">
+                    <MudText Typo="Typo.body2">Selected: @selectedFile.Name</MudText>
+                    <MudText Typo="Typo.caption">@FormatBytes(selectedFile.Size)</MudText>
+                </MudPaper>
+            }
+
+            @if (isImporting)
+            {
+                <MudStack Spacing="2">
+                    <MudProgressLinear Value="@importProgress" />
+                    <MudText Typo="Typo.body2" Align="Align.Center">
+                        Importing: @importStatus
+                    </MudText>
+                </MudStack>
+            }
+
+            @if (importResult != null)
+            {
+                <MudPaper Class="pa-4" Style="background-color: var(--mud-palette-success-lighten);">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.h6" Color="Color.Success">Import Complete</MudText>
+                        <MudText Typo="Typo.body2">Total Rows: @importResult.TotalRows</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Success">Successful: @importResult.SuccessfulRows</MudText>
+                        @if (importResult.FailedRows > 0)
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Error">Failed: @importResult.FailedRows</MudText>
+                        }
+                        @if (!string.IsNullOrEmpty(importResult.ErrorMessage))
+                        {
+                            <MudText Typo="Typo.caption" Class="mt-2">@importResult.ErrorMessage</MudText>
+                        }
+                    </MudStack>
+                </MudPaper>
+            }
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="ImportUsers" Disabled="@(selectedFile == null || isImporting)">
+            @if (isImporting)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Importing...</span>
+            }
+            else
+            {
+                <span>Import Users</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public int TenantId { get; set; }
+    [Parameter] public int CurrentUserId { get; set; }
+
+    private IBrowserFile? selectedFile;
+    private bool isImporting = false;
+    private int importProgress = 0;
+    private string importStatus = "";
+    private BulkImportResult? importResult;
+
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        selectedFile = e.File;
+        importResult = null;
+    }
+
+    private async Task ImportUsers()
+    {
+        if (selectedFile == null)
+        {
+            Snackbar.Add("Please select a CSV file", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            isImporting = true;
+            importStatus = "Processing file...";
+            importProgress = 10;
+
+            using (var stream = selectedFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024)) // 5 MB limit
+            {
+                importStatus = "Importing users...";
+                importProgress = 50;
+
+                importResult = await BulkImportService.ImportUsersAsync(
+                    TenantId,
+                    CurrentUserId,
+                    stream,
+                    selectedFile.Name);
+
+                importProgress = 100;
+                importStatus = "Complete!";
+
+                if (importResult.Status == "Success")
+                {
+                    Snackbar.Add($"Successfully imported {importResult.SuccessfulRows} users", Severity.Success);
+                }
+                else if (importResult.Status == "PartialSuccess")
+                {
+                    Snackbar.Add($"Imported {importResult.SuccessfulRows} users with {importResult.FailedRows} failures", Severity.Warning);
+                }
+                else
+                {
+                    Snackbar.Add($"Import failed: {importResult.ErrorMessage}", Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error importing users: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isImporting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        if (importResult != null && importResult.SuccessfulRows > 0)
+        {
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        else
+        {
+            MudDialog.Cancel();
+        }
+    }
+
+    private string FormatBytes(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    public class BulkImportResult
+    {
+        public string Filename { get; set; } = "";
+        public int TotalRows { get; set; }
+        public int SuccessfulRows { get; set; }
+        public int FailedRows { get; set; }
+        public string Status { get; set; } = "Pending";
+        public string? ErrorMessage { get; set; }
+    }
+}

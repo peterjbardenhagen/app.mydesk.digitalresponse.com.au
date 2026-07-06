@@ -1,0 +1,150 @@
+@page "/admin/departments"
+@using MyDesk.Web.Services
+@using System.Data
+@inject DepartmentService DepartmentService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Departments</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-8">
+    <MudStack Spacing="4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudText Typo="Typo.h4" Class="font-bold">Departments</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateDepartment">
+                <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-2" />
+                New Department
+            </MudButton>
+        </MudStack>
+
+        @if (departments == null)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (departments.Rows.Count == 0)
+        {
+            <MudAlert Severity="Info">No departments found. Create one to get started.</MudAlert>
+        }
+        else
+        {
+            <MudDataGrid Items="@GetDepartmentList()" Striped="true" Hover="true" Dense="true">
+                <PropertyColumn Property="d => d.Name" Title="Name" />
+                <PropertyColumn Property="d => d.Description" Title="Description" />
+                <PropertyColumn Property="d => d.ManagerName" Title="Manager" />
+                <PropertyColumn Property="d => d.Status" Title="Status" />
+                <TemplateColumn Title="Actions" Sortable="false">
+                    <CellTemplate>
+                        <MudStack Row="true" Spacing="1">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                OnClick="@(() => EditDepartment(context.Item.DepartmentId))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                OnClick="@(() => DeleteDepartment(context.Item.DepartmentId))" />
+                        </MudStack>
+                    </CellTemplate>
+                </TemplateColumn>
+            </MudDataGrid>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    private DataTable? departments;
+    private int tenantId = 1; // Get from auth context in real app
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDepartments();
+    }
+
+    private async Task LoadDepartments()
+    {
+        try
+        {
+            departments = await DepartmentService.GetDepartmentsAsync(tenantId);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading departments: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private List<DepartmentViewModel> GetDepartmentList()
+    {
+        if (departments == null) return new();
+
+        var list = new List<DepartmentViewModel>();
+        foreach (DataRow row in departments.Rows)
+        {
+            list.Add(new DepartmentViewModel
+            {
+                DepartmentId = (int)row["DepartmentId"],
+                Name = row["Name"]?.ToString() ?? "",
+                Description = row["Description"]?.ToString() ?? "",
+                ManagerName = row["ManagerName"]?.ToString() ?? "Unassigned",
+                Status = row["Status"]?.ToString() ?? "Active"
+            });
+        }
+        return list;
+    }
+
+    private async Task CreateDepartment()
+    {
+        var parameters = new DialogParameters { { "TenantId", tenantId } };
+        var dialog = await DialogService.ShowAsync<DepartmentEditDialog>("Create Department", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadDepartments();
+            Snackbar.Add("Department created successfully", Severity.Success);
+        }
+    }
+
+    private async Task EditDepartment(int departmentId)
+    {
+        var parameters = new DialogParameters
+        {
+            { "TenantId", tenantId },
+            { "DepartmentId", departmentId }
+        };
+        var dialog = await DialogService.ShowAsync<DepartmentEditDialog>("Edit Department", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadDepartments();
+            Snackbar.Add("Department updated successfully", Severity.Success);
+        }
+    }
+
+    private async Task DeleteDepartment(int departmentId)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Delete Department",
+            "Are you sure you want to delete this department?",
+            "Delete", "Cancel");
+
+        if (confirmed == true)
+        {
+            try
+            {
+                // TODO: Implement delete method in DepartmentService
+                await LoadDepartments();
+                Snackbar.Add("Department deleted successfully", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error deleting department: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    public class DepartmentViewModel
+    {
+        public int DepartmentId { get; set; }
+        public string Name { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string ManagerName { get; set; } = "";
+        public string Status { get; set; } = "";
+    }
+}

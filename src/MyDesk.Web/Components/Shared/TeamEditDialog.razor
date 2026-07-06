@@ -1,0 +1,144 @@
+@using MyDesk.Web.Services
+@using System.Data
+@inject TeamService TeamService
+@inject DepartmentService DepartmentService
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="isFormValid">
+            <MudStack Spacing="3">
+                <MudSelect @bind-Value="model.DepartmentId" Label="Department"
+                    Variant="Variant.Outlined" Required="true">
+                    @foreach (var dept in departments?.Rows.Cast<DataRow>() ?? new())
+                    {
+                        <MudSelectItem Value="@((int)dept["DepartmentId"])">
+                            @dept["Name"]
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudTextField @bind-Value="model.Name" Label="Team Name"
+                    Variant="Variant.Outlined" Required="true"
+                    Validation="@(new Func<string, IEnumerable<string>>(ValidateName))" />
+
+                <MudTextField @bind-Value="model.Description" Label="Description"
+                    Variant="Variant.Outlined" Lines="3" />
+
+                <MudSelect @bind-Value="model.TeamLeadUserId" Label="Team Lead"
+                    Variant="Variant.Outlined" Clearable="true">
+                    @foreach (var user in users ?? new())
+                    {
+                        <MudSelectItem Value="@user.UserId">@user.Name</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudCheckBox @bind-Value="model.IsApprovalTeam" Label="This is an approval team" />
+
+                <MudSelect @bind-Value="model.Status" Label="Status" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("Active")">Active</MudSelectItem>
+                    <MudSelectItem Value="@("Inactive")">Inactive</MudSelectItem>
+                    <MudSelectItem Value="@("Archived")">Archived</MudSelectItem>
+                </MudSelect>
+            </MudStack>
+        </MudForm>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Save" Disabled="@(!isFormValid)">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public int TenantId { get; set; }
+    [Parameter] public int? TeamId { get; set; }
+
+    private MudForm form = null!;
+    private bool isFormValid = false;
+    private DataTable? departments;
+    private List<UserViewModel>? users;
+
+    private TeamModel model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDepartments();
+
+        users = new List<UserViewModel>
+        {
+            new() { UserId = 1, Name = "John Doe" },
+            new() { UserId = 2, Name = "Jane Smith" }
+        };
+
+        if (TeamId.HasValue)
+        {
+            // TODO: Load existing team
+        }
+    }
+
+    private async Task LoadDepartments()
+    {
+        try
+        {
+            var deptService = new DepartmentService(null!);
+            departments = await deptService.GetDepartmentsAsync(TenantId);
+        }
+        catch { }
+    }
+
+    private IEnumerable<string> ValidateName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            yield return "Team name is required";
+        else if (name.Length < 2)
+            yield return "Team name must be at least 2 characters";
+    }
+
+    private async Task Save()
+    {
+        if (form != null && form.IsValid)
+        {
+            try
+            {
+                if (TeamId.HasValue)
+                {
+                    // TODO: Update existing team
+                }
+                else
+                {
+                    await TeamService.CreateTeamAsync(
+                        TenantId,
+                        model.DepartmentId,
+                        model.Name,
+                        model.Description,
+                        model.TeamLeadUserId,
+                        model.IsApprovalTeam);
+                }
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            catch (Exception ex)
+            {
+                // TODO: Show error
+            }
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class TeamModel
+    {
+        public int DepartmentId { get; set; }
+        public string Name { get; set; } = "";
+        public string? Description { get; set; }
+        public int? TeamLeadUserId { get; set; }
+        public bool IsApprovalTeam { get; set; }
+        public string Status { get; set; } = "Active";
+    }
+
+    private class UserViewModel
+    {
+        public int UserId { get; set; }
+        public string Name { get; set; } = "";
+    }
+}

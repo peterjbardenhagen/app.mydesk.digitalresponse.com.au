@@ -1,0 +1,121 @@
+@using MyDesk.Web.Services
+@inject DepartmentService DepartmentService
+@inject DialogService DialogService
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="isFormValid">
+            <MudStack Spacing="3">
+                <MudTextField @bind-Value="model.Name" Label="Department Name"
+                    Variant="Variant.Outlined" Required="true"
+                    Validation="@(new Func<string, IEnumerable<string>>(ValidateName))" />
+
+                <MudTextField @bind-Value="model.Description" Label="Description"
+                    Variant="Variant.Outlined" Lines="3" />
+
+                <MudSelect @bind-Value="model.ManagerUserId" Label="Department Manager"
+                    Variant="Variant.Outlined" Clearable="true">
+                    @foreach (var user in users ?? new())
+                    {
+                        <MudSelectItem Value="@user.UserId">@user.Name</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudTextField @bind-Value="model.CostCenter" Label="Cost Center"
+                    Variant="Variant.Outlined" />
+
+                <MudSelect @bind-Value="model.Status" Label="Status" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("Active")">Active</MudSelectItem>
+                    <MudSelectItem Value="@("Inactive")">Inactive</MudSelectItem>
+                    <MudSelectItem Value="@("Archived")">Archived</MudSelectItem>
+                </MudSelect>
+            </MudStack>
+        </MudForm>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Save" Disabled="@(!isFormValid)">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public int TenantId { get; set; }
+    [Parameter] public int? DepartmentId { get; set; }
+
+    private MudForm form = null!;
+    private bool isFormValid = false;
+    private List<UserViewModel>? users;
+
+    private DepartmentModel model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // TODO: Load users list
+        // TODO: If DepartmentId provided, load existing department
+        users = new List<UserViewModel>
+        {
+            new() { UserId = 1, Name = "John Doe" },
+            new() { UserId = 2, Name = "Jane Smith" }
+        };
+    }
+
+    private IEnumerable<string> ValidateName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            yield return "Department name is required";
+        else if (name.Length < 3)
+            yield return "Department name must be at least 3 characters";
+    }
+
+    private async Task Save()
+    {
+        if (form != null && form.IsValid)
+        {
+            try
+            {
+                if (DepartmentId.HasValue)
+                {
+                    // TODO: Update existing department
+                }
+                else
+                {
+                    // TODO: Create new department
+                    await DepartmentService.CreateDepartmentAsync(
+                        TenantId,
+                        model.Name,
+                        model.Description,
+                        null,
+                        model.ManagerUserId,
+                        model.CostCenter);
+                }
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            catch (Exception ex)
+            {
+                // TODO: Show error message
+            }
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private class DepartmentModel
+    {
+        public string Name { get; set; } = "";
+        public string? Description { get; set; }
+        public int? ManagerUserId { get; set; }
+        public string? CostCenter { get; set; }
+        public string Status { get; set; } = "Active";
+    }
+
+    private class UserViewModel
+    {
+        public int UserId { get; set; }
+        public string Name { get; set; } = "";
+    }
+}
