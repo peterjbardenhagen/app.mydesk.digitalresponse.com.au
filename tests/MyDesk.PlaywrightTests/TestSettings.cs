@@ -18,6 +18,6 @@ public class TestSettings
 
 public class TestUserSettings
 {
-    public string Username { get; set; } = "peter bardenhagen";
-    public string Password { get; set; } = "fairmont";
+    public string Username { get; set; } = "DEMO";
+    public string Password { get; set; } = "demo123";
 }
