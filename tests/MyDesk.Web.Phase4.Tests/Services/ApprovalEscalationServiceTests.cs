@@ -11,18 +11,16 @@ namespace MyDesk.Web.Phase4.Tests.Services
         private ApprovalEscalationService _service = null!;
         private Mock<DatabaseService> _mockDatabase = null!;
         private Mock<ApprovalDelegationService> _mockDelegationService = null!;
-        private Mock<TeamService> _mockTeamService = null!;
 
         [SetUp]
         public void SetUp()
         {
             _mockDatabase = new Mock<DatabaseService>();
             _mockDelegationService = new Mock<ApprovalDelegationService>();
-            _mockTeamService = new Mock<TeamService>();
             _service = new ApprovalEscalationService(
                 _mockDatabase.Object,
                 _mockDelegationService.Object,
-                _mockTeamService.Object);
+                null);  // NotificationService is optional
         }
 
         [Test]
