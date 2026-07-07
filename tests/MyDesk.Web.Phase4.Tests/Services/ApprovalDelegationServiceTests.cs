@@ -37,7 +37,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             var canComment = true;
 
             _mockDatabase
-                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(1);
 
             // Act
@@ -47,7 +47,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
                 canApprove, canReject, canDelegate, canComment);
 
             // Assert
-            _mockDatabase.Verify(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()), Times.Once);
+            _mockDatabase.Verify(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()), Times.Once);
         }
 
         [Test]
@@ -62,7 +62,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(expectedTable);
 
             // Act
@@ -86,7 +86,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(expectedTable);
 
             // Act
@@ -110,7 +110,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(expectedTable);
 
             // Act
@@ -133,7 +133,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(expectedTable);
 
             // Act
@@ -156,7 +156,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(expectedTable);
 
             // Act
@@ -175,14 +175,14 @@ namespace MyDesk.Web.Phase4.Tests.Services
             var delegationId = 1;
 
             _mockDatabase
-                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(1);
 
             // Act
             var result = await _service.DeactivateDelegationAsync(tenantId, delegationId);
 
             // Assert
-            _mockDatabase.Verify(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()), Times.Once);
+            _mockDatabase.Verify(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()), Times.Once);
         }
 
         [Test]
@@ -198,7 +198,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(expectedTable);
 
             // Act

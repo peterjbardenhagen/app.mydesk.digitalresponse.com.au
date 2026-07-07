@@ -31,7 +31,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(expectedTable);
 
             // Act
@@ -55,7 +55,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             var thresholdPercent = 80;
 
             _mockDatabase
-                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(1);
 
             // Act
@@ -63,7 +63,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
                 tenantId, departmentId, fiscalYear, allocatedAmount, allowOverspend, thresholdPercent);
 
             // Assert
-            _mockDatabase.Verify(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()), Times.Once);
+            _mockDatabase.Verify(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()), Times.Once);
         }
 
         [Test]
@@ -79,7 +79,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(expectedTable);
 
             // Act
@@ -102,7 +102,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(expectedTable);
 
             // Act
@@ -124,7 +124,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(expectedTable);
 
             // Act
@@ -147,7 +147,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(expectedTable);
 
             // Act
@@ -170,7 +170,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(expectedTable);
 
             // Act
@@ -197,18 +197,18 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(budgetTable);
 
             _mockDatabase
-                .Setup(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(1);
 
             // Act
             await _service.AddExpenseAsync(tenantId, departmentId, fiscalYear, amount, category);
 
             // Assert
-            _mockDatabase.Verify(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()), Times.Once);
+            _mockDatabase.Verify(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()), Times.Once);
         }
 
         private DataTable CreateBudgetTable(dynamic[] budgets)

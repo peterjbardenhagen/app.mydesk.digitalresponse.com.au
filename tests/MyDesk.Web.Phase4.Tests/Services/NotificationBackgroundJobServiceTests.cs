@@ -168,19 +168,19 @@ namespace MyDesk.Web.Phase4.Tests.Services
             _mockDatabase
                 .Setup(x => x.QueryAsync(
                     It.Is<string>(s => s.Contains("FROM dbo.Users")),
-                    It.IsAny<Dictionary<string, object>>()))
+                    It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(userDataTable);
 
             _mockDatabase
                 .Setup(x => x.QueryAsync(
                     It.Is<string>(s => s.Contains("BudgetAlerts")),
-                    It.IsAny<Dictionary<string, object>>()))
+                    It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(budgetAlertsTable);
 
             _mockDatabase
                 .Setup(x => x.QueryAsync(
                     It.Is<string>(s => s.Contains("ApprovalNotifications")),
-                    It.IsAny<Dictionary<string, object>>()))
+                    It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(approvalNotifsTable);
 
             _mockDatabase
@@ -265,19 +265,19 @@ namespace MyDesk.Web.Phase4.Tests.Services
             _mockDatabase
                 .Setup(x => x.QueryAsync(
                     It.Is<string>(s => s.Contains("FROM dbo.Users")),
-                    It.IsAny<Dictionary<string, object>>()))
+                    It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(userDataTable);
 
             _mockDatabase
                 .Setup(x => x.QueryAsync(
                     It.Is<string>(s => s.Contains("BudgetAlerts")),
-                    It.IsAny<Dictionary<string, object>>()))
+                    It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(budgetAlertsTable);
 
             _mockDatabase
                 .Setup(x => x.QueryAsync(
                     It.Is<string>(s => s.Contains("ApprovalNotifications")),
-                    It.IsAny<Dictionary<string, object>>()))
+                    It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(approvalNotifsTable);
 
             _mockDatabase

@@ -45,9 +45,9 @@ namespace MyDesk.Web.Phase4.Tests.Services
             emptyAlerts.Columns.Add("AlertId", typeof(int));
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(budgetTable)
-                .Returns((string sql, Dictionary<string, object> _) =>
+                .Returns((string sql, Dictionary<string, object?> _) =>
                 {
                     if (sql.Contains("BudgetAlerts") && sql.Contains("SELECT TOP 1"))
                         return Task.FromResult(emptyAlerts);
@@ -59,7 +59,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
                 });
 
             _mockDatabase
-                .Setup(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(1);
 
             // Act
@@ -67,7 +67,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
 
             // Assert
             Assert.IsTrue(result);
-            _mockDatabase.Verify(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()), Times.AtLeastOnce);
+            _mockDatabase.Verify(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()), Times.AtLeastOnce);
         }
 
         [Test]
@@ -82,7 +82,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(budgetTable);
 
             // Act
@@ -112,8 +112,8 @@ namespace MyDesk.Web.Phase4.Tests.Services
             emptyAlerts.Columns.Add("AlertId", typeof(int));
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
-                .Returns((string sql, Dictionary<string, object> _) =>
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
+                .Returns((string sql, Dictionary<string, object?> _) =>
                 {
                     if (sql.Contains("BudgetAlerts") && sql.Contains("SELECT TOP 1"))
                         return Task.FromResult(emptyAlerts);
@@ -125,7 +125,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
                 });
 
             _mockDatabase
-                .Setup(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(1);
 
             // Act
@@ -145,7 +145,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             emptyTable.Columns.Add("BudgetId", typeof(int));
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(emptyTable);
 
             // Act
@@ -164,7 +164,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             var userId = 100;
 
             _mockDatabase
-                .Setup(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(1);
 
             // Act
@@ -172,7 +172,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
 
             // Assert
             Assert.IsTrue(result);
-            _mockDatabase.Verify(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()), Times.Once);
+            _mockDatabase.Verify(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()), Times.Once);
         }
 
         [Test]
@@ -188,7 +188,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(expectedTable);
 
             // Act
@@ -211,7 +211,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(expectedTable);
 
             // Act
@@ -236,8 +236,8 @@ namespace MyDesk.Web.Phase4.Tests.Services
             emptyBudgetTable.Columns.Add("BudgetId", typeof(int));
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
-                .Returns((string sql, Dictionary<string, object> _) =>
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
+                .Returns((string sql, Dictionary<string, object?> _) =>
                 {
                     if (sql.Contains("SELECT DISTINCT DepartmentId"))
                         return Task.FromResult(budgetsTable);

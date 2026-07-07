@@ -30,7 +30,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(expectedTable);
 
             // Act
@@ -55,7 +55,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(expectedTable);
 
             // Act
@@ -83,11 +83,11 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(1);
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(expectedTable);
 
             // Act
@@ -95,7 +95,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
 
             // Assert
             Assert.IsNotNull(result);
-            _mockDatabase.Verify(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()), Times.Once);
+            _mockDatabase.Verify(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()), Times.Once);
         }
 
         [Test]
@@ -108,14 +108,14 @@ namespace MyDesk.Web.Phase4.Tests.Services
             var description = "Updated Finance Department";
 
             _mockDatabase
-                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(1);
 
             // Act
             var result = await _service.UpdateDepartmentAsync(tenantId, departmentId, name, description);
 
             // Assert
-            _mockDatabase.Verify(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()), Times.Once);
+            _mockDatabase.Verify(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()), Times.Once);
         }
 
         [Test]
@@ -126,14 +126,14 @@ namespace MyDesk.Web.Phase4.Tests.Services
             var departmentId = 1;
 
             _mockDatabase
-                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(1);
 
             // Act
             var result = await _service.DeleteDepartmentAsync(tenantId, departmentId);
 
             // Assert
-            _mockDatabase.Verify(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()), Times.Once);
+            _mockDatabase.Verify(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()), Times.Once);
         }
 
         [Test]
@@ -146,7 +146,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             emptyTable.Columns.Add("Name", typeof(string));
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(emptyTable);
 
             // Act

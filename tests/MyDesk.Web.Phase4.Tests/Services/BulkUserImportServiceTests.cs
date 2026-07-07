@@ -32,7 +32,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(csvContent));
 
             _mockDatabase
-                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(1);
 
             // Act
@@ -58,7 +58,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(csvContent));
 
             _mockDatabase
-                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(1);
 
             // Act
@@ -123,7 +123,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(csvContent));
 
             _mockDatabase
-                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(1);
 
             // Act
@@ -148,7 +148,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(csvContent));
 
             _mockDatabase
-                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(1);
 
             // Act
@@ -172,7 +172,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(csvContent));
 
             _mockDatabase
-                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(1);
 
             _mockUserService
@@ -184,7 +184,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
 
             // Assert
             Assert.IsNotNull(result);
-            _mockDatabase.Verify(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()), Times.Once);
+            _mockDatabase.Verify(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()), Times.Once);
         }
     }
 }

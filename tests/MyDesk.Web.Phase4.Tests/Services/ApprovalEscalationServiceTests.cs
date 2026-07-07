@@ -106,7 +106,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(userTable);
 
             // Act

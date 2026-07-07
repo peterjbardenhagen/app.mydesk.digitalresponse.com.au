@@ -45,7 +45,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(approvalTable);
 
             _mockDatabase
@@ -57,7 +57,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
                     It.IsAny<int>(),
                     It.IsAny<int>(),
                     It.IsAny<string>(),
-                    It.IsAny<Dictionary<string, object>>(),
+                    It.IsAny<Dictionary<string, object?>>(),
                     It.IsAny<string>(),
                     It.IsAny<int>(),
                     It.IsAny<int>()))
@@ -74,7 +74,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
                     tenantId,
                     delegateUserId,
                     "ApprovalDelegated",
-                    It.IsAny<Dictionary<string, object>>(),
+                    It.IsAny<Dictionary<string, object?>>(),
                     "Approval",
                     approvalId,
                     delegatedByUserId),
@@ -94,7 +94,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             emptyTable.Columns.Add("ApprovalId", typeof(int));
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(emptyTable);
 
             // Act
@@ -121,7 +121,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(approvalTable);
 
             _mockDatabase
@@ -133,7 +133,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
                     It.IsAny<int>(),
                     It.IsAny<int>(),
                     It.IsAny<string>(),
-                    It.IsAny<Dictionary<string, object>>(),
+                    It.IsAny<Dictionary<string, object?>>(),
                     It.IsAny<string>(),
                     It.IsAny<int>(),
                     It.IsAny<int>()))
@@ -150,7 +150,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
                     tenantId,
                     escalatedToUserId,
                     "ApprovalEscalated",
-                    It.IsAny<Dictionary<string, object>>(),
+                    It.IsAny<Dictionary<string, object?>>(),
                     "Approval",
                     approvalId,
                     escalatedByUserId),
@@ -171,7 +171,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(pendingApprovalsTable);
 
             _mockDatabase
@@ -183,7 +183,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
                     It.IsAny<int>(),
                     It.IsAny<int>(),
                     It.IsAny<string>(),
-                    It.IsAny<Dictionary<string, object>>(),
+                    It.IsAny<Dictionary<string, object?>>(),
                     It.IsAny<string>(),
                     It.IsAny<int>(),
                     It.IsAny<int>()))
@@ -199,7 +199,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
                     tenantId,
                     It.IsAny<int>(),
                     "ApprovalReminder",
-                    It.IsAny<Dictionary<string, object>>(),
+                    It.IsAny<Dictionary<string, object?>>(),
                     "Approval",
                     It.IsAny<int>(),
                     It.IsAny<int>()),
@@ -215,7 +215,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             emptyTable.Columns.Add("ApprovalId", typeof(int));
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(emptyTable);
 
             // Act
@@ -242,7 +242,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(approvalTable);
 
             _mockDatabase
@@ -254,7 +254,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
                     It.IsAny<int>(),
                     It.IsAny<int>(),
                     It.IsAny<string>(),
-                    It.IsAny<Dictionary<string, object>>(),
+                    It.IsAny<Dictionary<string, object?>>(),
                     It.IsAny<string>(),
                     It.IsAny<int>(),
                     It.IsAny<int>()))
@@ -271,7 +271,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
                     tenantId,
                     requestorUserId,
                     "ApprovalApproved",
-                    It.IsAny<Dictionary<string, object>>(),
+                    It.IsAny<Dictionary<string, object?>>(),
                     "Approval",
                     approvalId,
                     approverUserId),
@@ -295,7 +295,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(approvalTable);
 
             _mockDatabase
@@ -307,7 +307,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
                     It.IsAny<int>(),
                     It.IsAny<int>(),
                     It.IsAny<string>(),
-                    It.IsAny<Dictionary<string, object>>(),
+                    It.IsAny<Dictionary<string, object?>>(),
                     It.IsAny<string>(),
                     It.IsAny<int>(),
                     It.IsAny<int>()))
@@ -324,7 +324,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
                     tenantId,
                     requestorUserId,
                     "ApprovalRejected",
-                    It.IsAny<Dictionary<string, object>>(),
+                    It.IsAny<Dictionary<string, object?>>(),
                     "Approval",
                     approvalId,
                     approverUserId),
@@ -344,7 +344,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             });
 
             _mockDatabase
-                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(expectedTable);
 
             // Act
