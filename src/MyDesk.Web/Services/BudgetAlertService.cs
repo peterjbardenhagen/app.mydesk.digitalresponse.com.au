@@ -258,7 +258,7 @@ public class BudgetAlertService
     {
         try
         {
-            int affected = await _db.ExecuteAsync(
+            int affected = await _db.ExecuteNonQueryAsync(
                 @"UPDATE BudgetAlerts
                   SET IsAcknowledged = 1, AcknowledgedAt = GETUTCDATE(), AcknowledgedBy = @UserId
                   WHERE TenantId = @TenantId AND AlertId = @AlertId",
