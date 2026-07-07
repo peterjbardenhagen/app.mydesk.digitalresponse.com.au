@@ -37,7 +37,7 @@ jobs:
         run: dotnet restore -r win-x64
 
       - name: Build (Release)
-        run: dotnet build MyDesk.slnx --configuration Release --no-restore -r win-x64
+        run: dotnet build MyDesk.slnx --configuration Release --no-restore
 
       - name: Run tests
         run: dotnet test MyDesk.slnx --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --verbosity minimal
