@@ -393,6 +393,9 @@ builder.Services.AddScoped<BankingService>();
     builder.Services.AddScoped<ApprovalEscalationService>();
     builder.Services.AddScoped<BulkUserImportService>();
 
+    // ── Phase 5: Notifications & Alerts (2026) ──────────────────────────────
+    builder.Services.AddScoped<BudgetAlertService>();
+
 builder.Services.AddHttpClient();
 
 // ── Hangfire (background + recurring jobs) ─────────────────────────────────
