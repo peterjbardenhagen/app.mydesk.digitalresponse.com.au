@@ -398,7 +398,7 @@ public class ApprovalNotificationService
     {
         try
         {
-            await _db.ExecuteAsync(
+            await _db.ExecuteNonQueryAsync(
                 @"INSERT INTO dbo.ApprovalNotifications
                   (TenantId, ApprovalId, EventType, RecipientUserId, TriggeredByUserId, Status, CreatedAt)
                   VALUES (@TenantId, @ApprovalId, @EventType, @RecipientUserId, @TriggeredBy, 'Sent', GETUTCDATE())",
