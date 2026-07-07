@@ -394,6 +394,8 @@ builder.Services.AddScoped<BankingService>();
     builder.Services.AddScoped<BulkUserImportService>();
 
     // ── Phase 5: Notifications & Alerts (2026) ──────────────────────────────
+    builder.Services.AddScoped<NotificationService>();
+    builder.Services.AddScoped<ApprovalNotificationService>();
     builder.Services.AddScoped<BudgetAlertService>();
 
 builder.Services.AddHttpClient();
