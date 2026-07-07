@@ -59,7 +59,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
                 });
 
             _mockDatabase
-                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
                 .ReturnsAsync(1);
 
             // Act
@@ -125,7 +125,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
                 });
 
             _mockDatabase
-                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
                 .ReturnsAsync(1);
 
             // Act
@@ -164,7 +164,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
             var userId = 100;
 
             _mockDatabase
-                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
                 .ReturnsAsync(1);
 
             // Act
@@ -172,7 +172,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
 
             // Assert
             Assert.IsTrue(result);
-            _mockDatabase.Verify(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()), Times.Once);
+            _mockDatabase.Verify(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()), Times.Once);
         }
 
         [Test]
