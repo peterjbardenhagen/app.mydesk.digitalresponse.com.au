@@ -2,21 +2,22 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>MyDesk.Web</RootNamespace>
     <AssemblyName>MyDesk.Web</AssemblyName>
-    
+
     <!-- Production optimizations -->
     <PublishAot>false</PublishAot>
     <TrimUnusedDependencies>false</TrimUnusedDependencies>
     <InvariantGlobalization>false</InvariantGlobalization>
-    
+
     <!-- Runtime settings -->
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
     <RetainVMGarbageCollection>true</RetainVMGarbageCollection>
-    
+
     <!-- Warning suppression for MudBlazor analyzers and other non-critical warnings -->
     <NoWarn>$(NoWarn);MUD0002;RZ10012;CS8618;CS8619;CS8602;CS8604;CS0414;CS8669;CS0169</NoWarn>
   </PropertyGroup>
