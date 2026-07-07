@@ -182,22 +182,33 @@ namespace MyDesk.Web.Phase4.Tests.Services
         }
 
         [Test]
-        public async Task AddExpenseAsync_WithValidAmount_EncumbersAmount()
+        public async Task AddExpenseAsync_WithValidAmount_UpdatesBudgetSpentAmount()
         {
             // Arrange
             var tenantId = 1;
             var departmentId = 1;
+            var fiscalYear = 2026;
             var amount = 5000m;
+            var category = "Meals";
+
+            var budgetTable = CreateBudgetTable(new[]
+            {
+                new { BudgetId = 1, DepartmentId = 1, FiscalYear = 2026, AllocatedAmount = 100000m, SpentAmount = 0m, EncumberedAmount = 0m }
+            });
 
             _mockDatabase
-                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.QueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .ReturnsAsync(budgetTable);
+
+            _mockDatabase
+                .Setup(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
                 .ReturnsAsync(1);
 
             // Act
-            var result = await _service.AddExpenseAsync(tenantId, departmentId, amount);
+            await _service.AddExpenseAsync(tenantId, departmentId, fiscalYear, amount, category);
 
             // Assert
-            _mockDatabase.Verify(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()), Times.Once);
+            _mockDatabase.Verify(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()), Times.Once);
         }
 
         private DataTable CreateBudgetTable(dynamic[] budgets)

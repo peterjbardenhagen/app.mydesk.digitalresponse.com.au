@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using MyDesk.Shared.Services;
 
 namespace MyDesk.Web.Services;
@@ -9,10 +10,17 @@ namespace MyDesk.Web.Services;
 public class BudgetService
 {
     private readonly DatabaseService _db;
+    private readonly BudgetAlertService? _alertService;
+    private readonly ILogger<BudgetService>? _logger;
 
-    public BudgetService(DatabaseService db)
+    public BudgetService(
+        DatabaseService db,
+        BudgetAlertService? alertService = null,
+        ILogger<BudgetService>? logger = null)
     {
         _db = db;
+        _alertService = alertService;
+        _logger = logger;
     }
 
     public async Task<DataRow?> GetBudgetAsync(int tenantId, int departmentId, int fiscalYear)
@@ -90,6 +98,24 @@ public class BudgetService
                 ["DepartmentId"] = departmentId,
                 ["FiscalYear"] = fiscalYear
             });
+
+        _logger?.LogInformation(
+            "Added expense: Amount={Amount}, Category={Category}, TenantId={TenantId}, DepartmentId={DepartmentId}",
+            amount, category, tenantId, departmentId);
+
+        // Trigger budget alert check if alert service is available
+        if (_alertService != null)
+        {
+            try
+            {
+                await _alertService.CheckBudgetThresholdAsync(tenantId, departmentId);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error checking budget threshold after adding expense");
+                // Don't throw - alert checking is non-critical to expense creation
+            }
+        }
     }
 
     public async Task EncumberAmountAsync(int tenantId, int departmentId, int fiscalYear, decimal amount)

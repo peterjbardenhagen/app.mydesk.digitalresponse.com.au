@@ -385,6 +385,12 @@ builder.Services.AddScoped<BankingService>();
     builder.Services.AddScoped<ApprovalService>();
     builder.Services.AddScoped<SalesReportsService>();
 
+    // ── Phase 5: Notifications & Alerts (2026) ──────────────────────────────
+    // Registered before Phase 4 so BudgetService can depend on BudgetAlertService
+    builder.Services.AddScoped<NotificationService>();
+    builder.Services.AddScoped<ApprovalNotificationService>();
+    builder.Services.AddScoped<BudgetAlertService>();
+
     // ── Phase 4: Teams & Departments (2026) ────────────────────────────────
     builder.Services.AddScoped<DepartmentService>();
     builder.Services.AddScoped<TeamService>();
@@ -392,11 +398,6 @@ builder.Services.AddScoped<BankingService>();
     builder.Services.AddScoped<ApprovalDelegationService>();
     builder.Services.AddScoped<ApprovalEscalationService>();
     builder.Services.AddScoped<BulkUserImportService>();
-
-    // ── Phase 5: Notifications & Alerts (2026) ──────────────────────────────
-    builder.Services.AddScoped<NotificationService>();
-    builder.Services.AddScoped<ApprovalNotificationService>();
-    builder.Services.AddScoped<BudgetAlertService>();
 
 builder.Services.AddHttpClient();
 
