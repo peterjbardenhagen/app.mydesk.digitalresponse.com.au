@@ -1,0 +1,318 @@
+@page "/notifications"
+@using MyDesk.Web.Services
+@using System.Data
+@inject DatabaseService DatabaseService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>Notification Center</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-8">
+    <MudStack Spacing="4">
+        <!-- Header -->
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudStack Row="true" AlignItems="AlignItems.Center">
+                <MudIcon Icon="@Icons.Material.Filled.NotificationsActive" Size="Size.Large" />
+                <MudText Typo="Typo.h4" Class="font-bold">Notification Center</MudText>
+                @if (unreadCount > 0)
+                {
+                    <MudChip Color="Color.Primary" Size="Size.Small">@unreadCount unread</MudChip>
+                }
+            </MudStack>
+            <MudButton
+                Variant="Variant.Outlined"
+                Size="Size.Small"
+                OnClick="MarkAllAsRead"
+                Disabled="unreadCount == 0">
+                Mark all as read
+            </MudButton>
+        </MudStack>
+
+        <!-- Filter Section -->
+        <MudPaper Class="pa-4">
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                <MudSelect @bind-Value="selectedFilter" Label="Filter by Type">
+                    <MudSelectItem Value="@("All")">All Notifications</MudSelectItem>
+                    <MudSelectItem Value="@("BudgetAlert")">Budget Alerts</MudSelectItem>
+                    <MudSelectItem Value="@("ApprovalNotification")">Approval Notifications</MudSelectItem>
+                    <MudSelectItem Value="@("System")">System Notifications</MudSelectItem>
+                </MudSelect>
+
+                <MudSelect @bind-Value="readFilter" Label="Status">
+                    <MudSelectItem Value="@("All")">All</MudSelectItem>
+                    <MudSelectItem Value="@("Unread")">Unread Only</MudSelectItem>
+                    <MudSelectItem Value="@("Read")">Read Only</MudSelectItem>
+                </MudSelect>
+
+                <MudButton
+                    Variant="Variant.Outlined"
+                    OnClick="RefreshNotifications">
+                    <MudIcon Icon="@Icons.Material.Filled.Refresh" Class="mr-2" />
+                    Refresh
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+
+        <!-- Loading State -->
+        @if (isLoading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (notifications?.Count == 0)
+        {
+            <MudAlert Severity="Info" Class="mt-4">
+                No notifications found
+            </MudAlert>
+        }
+        else
+        {
+            <!-- Notifications List -->
+            <MudStack Spacing="2">
+                @foreach (var notification in notifications!)
+                {
+                    <MudPaper Class="pa-4" Elevation="1">
+                        <MudStack Spacing="1">
+                            <!-- Notification Header -->
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                <MudStack Row="true" AlignItems="AlignItems.Center">
+                                    @{
+                                        var iconColor = notification["IsRead"] != DBNull.Value && (bool)notification["IsRead"]
+                                            ? Color.Default
+                                            : Color.Primary;
+                                    }
+                                    <MudIcon
+                                        Icon="@GetNotificationIcon(notification["Type"]?.ToString())"
+                                        Color="iconColor"
+                                        Size="Size.Medium" />
+
+                                    <MudStack Spacing="0">
+                                        <MudText Typo="Typo.subtitle1" Class="font-bold">
+                                            @notification["Title"]
+                                        </MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.TextSecondary">
+                                            @((DateTime)notification["CreatedAt"]).ToString("g")
+                                        </MudText>
+                                    </MudStack>
+                                </MudStack>
+
+                                <MudStack Row="true" Spacing="1">
+                                    @if (!(bool)notification["IsRead"])
+                                    {
+                                        <MudButton
+                                            Size="Size.Small"
+                                            Variant="Variant.Text"
+                                            OnClick="() => MarkAsRead((int)notification["NotificationId"])">
+                                            Mark as read
+                                        </MudButton>
+                                    }
+                                </MudStack>
+                            </MudStack>
+
+                            <!-- Notification Body -->
+                            <MudText Typo="Typo.body2" Class="mt-2">
+                                @notification["Message"]
+                            </MudText>
+
+                            <!-- Notification Footer -->
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-3">
+                                <MudChip Size="Size.Small" Color="Color.Info">
+                                    @notification["Category"]
+                                </MudChip>
+                                @if (notification["EntityId"] != DBNull.Value)
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.TextSecondary">
+                                        ID: @notification["EntityId"]
+                                    </MudText>
+                                }
+                            </MudStack>
+                        </MudStack>
+                    </MudPaper>
+                }
+            </MudStack>
+
+            <!-- Pagination -->
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.Center" Class="mt-4">
+                <MudButton
+                    Variant="Variant.Outlined"
+                    Disabled="@(currentPage <= 1)"
+                    OnClick="PreviousPage">
+                    Previous
+                </MudButton>
+                <MudText>Page @currentPage of @totalPages</MudText>
+                <MudButton
+                    Variant="Variant.Outlined"
+                    Disabled="@(currentPage >= totalPages)"
+                    OnClick="NextPage">
+                    Next
+                </MudButton>
+            </MudStack>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    private List<DataRow>? notifications;
+    private bool isLoading = true;
+    private int unreadCount = 0;
+    private string selectedFilter = "All";
+    private string readFilter = "All";
+    private int currentPage = 1;
+    private int totalPages = 1;
+    private const int PageSize = 20;
+    private int tenantId = 1;
+    private int userId = 1;  // TODO: Get from authentication
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadNotifications();
+    }
+
+    private async Task LoadNotifications()
+    {
+        try
+        {
+            isLoading = true;
+
+            // Build filter criteria
+            string typeFilter = selectedFilter switch
+            {
+                "BudgetAlert" => "AND Category = 'Budget Alert'",
+                "ApprovalNotification" => "AND Category = 'Approval'",
+                "System" => "AND Category = 'System'",
+                _ => ""
+            };
+
+            string readFilterSql = readFilter switch
+            {
+                "Unread" => "AND IsRead = 0",
+                "Read" => "AND IsRead = 1",
+                _ => ""
+            };
+
+            // Get total count
+            var countResult = await DatabaseService.QueryAsync(
+                $@"SELECT COUNT(*) as Total FROM dbo.InAppNotifications
+                   WHERE TenantId = @TenantId AND UserId = @UserId {typeFilter} {readFilterSql}",
+                new() { ["TenantId"] = tenantId, ["UserId"] = userId });
+
+            int totalCount = (int)countResult.Rows[0]["Total"];
+            totalPages = (totalCount + PageSize - 1) / PageSize;
+            currentPage = Math.Min(currentPage, totalPages);
+
+            // Load notifications for current page
+            int offset = (currentPage - 1) * PageSize;
+            var result = await DatabaseService.QueryAsync(
+                $@"SELECT NotificationId, Title, Message, Icon, Type, Category, EntityType, EntityId,
+                           CreatedAt, IsRead
+                   FROM dbo.InAppNotifications
+                   WHERE TenantId = @TenantId AND UserId = @UserId {typeFilter} {readFilterSql}
+                   ORDER BY CreatedAt DESC
+                   OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY",
+                new()
+                {
+                    ["TenantId"] = tenantId,
+                    ["UserId"] = userId,
+                    ["Offset"] = offset,
+                    ["PageSize"] = PageSize
+                });
+
+            notifications = new List<DataRow>();
+            foreach (var row in result.Rows)
+            {
+                notifications.Add(row);
+            }
+
+            // Get unread count
+            var unreadResult = await DatabaseService.QueryAsync(
+                @"SELECT COUNT(*) as Total FROM dbo.InAppNotifications
+                  WHERE TenantId = @TenantId AND UserId = @UserId AND IsRead = 0",
+                new() { ["TenantId"] = tenantId, ["UserId"] = userId });
+
+            unreadCount = (int)unreadResult.Rows[0]["Total"];
+            isLoading = false;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading notifications: {ex.Message}", Severity.Error);
+            isLoading = false;
+        }
+    }
+
+    private async Task MarkAsRead(int notificationId)
+    {
+        try
+        {
+            await DatabaseService.ExecuteNonQueryAsync(
+                @"UPDATE dbo.InAppNotifications
+                  SET IsRead = 1, ReadAt = GETUTCDATE()
+                  WHERE NotificationId = @NotificationId AND TenantId = @TenantId",
+                new()
+                {
+                    ["NotificationId"] = notificationId,
+                    ["TenantId"] = tenantId
+                });
+
+            Snackbar.Add("Notification marked as read", Severity.Success);
+            await LoadNotifications();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error marking notification as read: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task MarkAllAsRead()
+    {
+        try
+        {
+            await DatabaseService.ExecuteNonQueryAsync(
+                @"UPDATE dbo.InAppNotifications
+                  SET IsRead = 1, ReadAt = GETUTCDATE()
+                  WHERE TenantId = @TenantId AND UserId = @UserId AND IsRead = 0",
+                new()
+                {
+                    ["TenantId"] = tenantId,
+                    ["UserId"] = userId
+                });
+
+            Snackbar.Add("All notifications marked as read", Severity.Success);
+            await LoadNotifications();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error marking notifications as read: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task RefreshNotifications()
+    {
+        await LoadNotifications();
+    }
+
+    private void PreviousPage()
+    {
+        if (currentPage > 1)
+        {
+            currentPage--;
+            LoadNotifications();
+        }
+    }
+
+    private void NextPage()
+    {
+        if (currentPage < totalPages)
+        {
+            currentPage++;
+            LoadNotifications();
+        }
+    }
+
+    private string GetNotificationIcon(string? type) => type switch
+    {
+        "Action" => Icons.Material.Filled.NotificationsActive,
+        "Info" => Icons.Material.Filled.InfoOutlined,
+        "Warning" => Icons.Material.Filled.WarningAmber,
+        "Error" => Icons.Material.Filled.ErrorOutline,
+        _ => Icons.Material.Filled.NotificationsNone
+    };
+}
