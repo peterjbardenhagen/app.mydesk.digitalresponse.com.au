@@ -49,7 +49,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
                 .ReturnsAsync(approvalTable);
 
             _mockDatabase
-                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(1);
 
             _mockNotification
@@ -125,7 +125,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
                 .ReturnsAsync(approvalTable);
 
             _mockDatabase
-                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(1);
 
             _mockNotification
@@ -175,7 +175,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
                 .ReturnsAsync(pendingApprovalsTable);
 
             _mockDatabase
-                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(1);
 
             _mockNotification
@@ -246,7 +246,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
                 .ReturnsAsync(approvalTable);
 
             _mockDatabase
-                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(1);
 
             _mockNotification
@@ -299,7 +299,7 @@ namespace MyDesk.Web.Phase4.Tests.Services
                 .ReturnsAsync(approvalTable);
 
             _mockDatabase
-                .Setup(x => x.ExecuteAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>()))
+                .Setup(x => x.ExecuteNonQueryAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>()))
                 .ReturnsAsync(1);
 
             _mockNotification
