@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NUnit.Framework;
 using MyDesk.Web.Services;
@@ -12,6 +13,8 @@ namespace MyDesk.Web.Phase4.Tests.Services
     public class NotificationBackgroundJobServiceTests
     {
         private NotificationBackgroundJobService _service = null!;
+        private Mock<IServiceProvider> _mockServiceProvider = null!;
+        private Mock<IServiceScope> _mockServiceScope = null!;
         private Mock<DatabaseService> _mockDatabase = null!;
         private Mock<ApprovalNotificationService> _mockApprovalNotification = null!;
         private Mock<BudgetAlertService> _mockBudgetAlert = null!;
@@ -22,11 +25,41 @@ namespace MyDesk.Web.Phase4.Tests.Services
             _mockDatabase = new Mock<DatabaseService>();
             _mockApprovalNotification = new Mock<ApprovalNotificationService>();
             _mockBudgetAlert = new Mock<BudgetAlertService>();
-            _service = new NotificationBackgroundJobService(
-                _mockDatabase.Object,
-                _mockApprovalNotification.Object,
-                _mockBudgetAlert.Object,
-                null);
+            _mockServiceScope = new Mock<IServiceScope>();
+            _mockServiceProvider = new Mock<IServiceProvider>();
+
+            // Setup service scope to return mocked services
+            var mockScopeServiceProvider = new Mock<IServiceProvider>();
+            mockScopeServiceProvider
+                .Setup(x => x.GetService(typeof(DatabaseService)))
+                .Returns(_mockDatabase.Object);
+            mockScopeServiceProvider
+                .Setup(x => x.GetService(typeof(ApprovalNotificationService)))
+                .Returns(_mockApprovalNotification.Object);
+            mockScopeServiceProvider
+                .Setup(x => x.GetService(typeof(BudgetAlertService)))
+                .Returns(_mockBudgetAlert.Object);
+
+            _mockServiceScope
+                .Setup(x => x.ServiceProvider)
+                .Returns(mockScopeServiceProvider.Object);
+
+            _mockServiceProvider
+                .Setup(x => x.CreateScope())
+                .Returns(_mockServiceScope.Object);
+
+            // Add GetRequiredService setup for extension method compatibility
+            mockScopeServiceProvider
+                .Setup(x => x.GetService(It.IsAny<Type>()))
+                .Returns((Type t) =>
+                {
+                    if (t == typeof(DatabaseService)) return _mockDatabase.Object;
+                    if (t == typeof(ApprovalNotificationService)) return _mockApprovalNotification.Object;
+                    if (t == typeof(BudgetAlertService)) return _mockBudgetAlert.Object;
+                    return null;
+                });
+
+            _service = new NotificationBackgroundJobService(_mockServiceProvider.Object, null);
         }
 
         [Test]
