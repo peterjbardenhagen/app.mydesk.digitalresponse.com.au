@@ -38,21 +38,21 @@ public class NotificationBackgroundJobService
         _logger?.LogInformation("Registering recurring notification background jobs");
 
         // Send approval reminders for pending approvals (every hour)
-        RecurringJob.AddOrUpdate(
+        RecurringJob.AddOrUpdate<NotificationBackgroundJobService>(
             "send-approval-reminders",
-            () => SendApprovalReminders(),
+            x => x.SendApprovalReminders(),
             Cron.Hourly);
 
         // Check budget thresholds for all tenants (every 30 minutes)
-        RecurringJob.AddOrUpdate(
+        RecurringJob.AddOrUpdate<NotificationBackgroundJobService>(
             "check-all-budgets",
-            () => CheckAllBudgetThresholds(),
+            x => x.CheckAllBudgetThresholds(),
             Cron.MinuteInterval(30));
 
         // Process notification digests (every morning at 8 AM)
-        RecurringJob.AddOrUpdate(
+        RecurringJob.AddOrUpdate<NotificationBackgroundJobService>(
             "process-digests",
-            () => ProcessDailyDigests(),
+            x => x.ProcessDailyDigests(),
             "0 8 * * *");
 
         _logger?.LogInformation("Recurring notification jobs registered successfully");
