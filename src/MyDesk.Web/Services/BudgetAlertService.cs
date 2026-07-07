@@ -15,7 +15,6 @@ public class BudgetAlertService
 {
     private readonly DatabaseService _db;
     private readonly NotificationService _notification;
-    private readonly BudgetService _budget;
     private readonly ILogger<BudgetAlertService>? _logger;
 
     // Default threshold percentages
@@ -25,12 +24,10 @@ public class BudgetAlertService
     public BudgetAlertService(
         DatabaseService db,
         NotificationService notification,
-        BudgetService budget,
         ILogger<BudgetAlertService>? logger = null)
     {
         _db = db;
         _notification = notification;
-        _budget = budget;
         _logger = logger;
     }
 

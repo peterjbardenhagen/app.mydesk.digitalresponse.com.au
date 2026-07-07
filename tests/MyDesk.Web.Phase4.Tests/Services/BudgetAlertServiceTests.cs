@@ -13,18 +13,15 @@ namespace MyDesk.Web.Phase4.Tests.Services
         private BudgetAlertService _service = null!;
         private Mock<DatabaseService> _mockDatabase = null!;
         private Mock<NotificationService> _mockNotification = null!;
-        private Mock<BudgetService> _mockBudget = null!;
 
         [SetUp]
         public void SetUp()
         {
             _mockDatabase = new Mock<DatabaseService>();
             _mockNotification = new Mock<NotificationService>();
-            _mockBudget = new Mock<BudgetService>();
             _service = new BudgetAlertService(
                 _mockDatabase.Object,
                 _mockNotification.Object,
-                _mockBudget.Object,
                 null);
         }
 
