@@ -139,19 +139,21 @@
         {
             isLoading = true;
 
-            // TODO: Load preferences from database
-            // var prefs = await DatabaseService.QueryAsync(
-            //     "SELECT * FROM NotificationSettings WHERE TenantId = @TenantId AND UserId = @UserId",
-            //     new() { ["TenantId"] = tenantId, ["UserId"] = userId });
+            var prefs = await DatabaseService.QueryAsync(
+                @"SELECT EnableEmailNotifications, EnableInAppNotifications, BudgetAlertFrequency,
+                         ApprovalAlertFrequency, DigestEnabled, EnableSmsNotifications
+                  FROM dbo.NotificationSettings
+                  WHERE TenantId = @TenantId AND UserId = @UserId",
+                new() { ["TenantId"] = tenantId, ["UserId"] = userId });
 
-            // if (prefs.Rows.Count > 0)
-            // {
-            //     enableEmailNotifications = (bool)prefs.Rows[0]["EnableEmailNotifications"];
-            //     enableInAppNotifications = (bool)prefs.Rows[0]["EnableInAppNotifications"];
-            //     budgetAlertFrequency = prefs.Rows[0]["BudgetAlertFrequency"].ToString() ?? "Immediate";
-            //     approvalAlertFrequency = prefs.Rows[0]["ApprovalAlertFrequency"].ToString() ?? "Immediate";
-            //     enableDigest = (bool)prefs.Rows[0]["DigestEnabled"];
-            // }
+            if (prefs.Rows.Count > 0)
+            {
+                enableEmailNotifications = (bool)prefs.Rows[0]["EnableEmailNotifications"];
+                enableInAppNotifications = (bool)prefs.Rows[0]["EnableInAppNotifications"];
+                budgetAlertFrequency = prefs.Rows[0]["BudgetAlertFrequency"].ToString() ?? "Immediate";
+                approvalAlertFrequency = prefs.Rows[0]["ApprovalAlertFrequency"].ToString() ?? "Immediate";
+                enableDigest = (bool)prefs.Rows[0]["DigestEnabled"];
+            }
 
             isLoading = false;
         }
@@ -166,26 +168,25 @@
     {
         try
         {
-            // TODO: Save preferences to database
-            // await DatabaseService.ExecuteAsync(
-            //     @"UPDATE NotificationSettings
-            //       SET EnableEmailNotifications = @Email,
-            //           EnableInAppNotifications = @InApp,
-            //           BudgetAlertFrequency = @BudgetFreq,
-            //           ApprovalAlertFrequency = @ApprovalFreq,
-            //           DigestEnabled = @Digest,
-            //           UpdatedAt = GETUTCDATE()
-            //       WHERE TenantId = @TenantId AND UserId = @UserId",
-            //     new()
-            //     {
-            //         ["Email"] = enableEmailNotifications,
-            //         ["InApp"] = enableInAppNotifications,
-            //         ["BudgetFreq"] = budgetAlertFrequency,
-            //         ["ApprovalFreq"] = approvalAlertFrequency,
-            //         ["Digest"] = enableDigest,
-            //         ["TenantId"] = tenantId,
-            //         ["UserId"] = userId
-            //     });
+            await DatabaseService.ExecuteNonQueryAsync(
+                @"UPDATE dbo.NotificationSettings
+                  SET EnableEmailNotifications = @Email,
+                      EnableInAppNotifications = @InApp,
+                      BudgetAlertFrequency = @BudgetFreq,
+                      ApprovalAlertFrequency = @ApprovalFreq,
+                      DigestEnabled = @Digest,
+                      UpdatedAt = GETUTCDATE()
+                  WHERE TenantId = @TenantId AND UserId = @UserId",
+                new()
+                {
+                    ["Email"] = enableEmailNotifications ? 1 : 0,
+                    ["InApp"] = enableInAppNotifications ? 1 : 0,
+                    ["BudgetFreq"] = budgetAlertFrequency,
+                    ["ApprovalFreq"] = approvalAlertFrequency,
+                    ["Digest"] = enableDigest ? 1 : 0,
+                    ["TenantId"] = tenantId,
+                    ["UserId"] = userId
+                });
 
             Snackbar.Add("Notification preferences saved successfully", Severity.Success);
         }
