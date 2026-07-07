@@ -16,7 +16,7 @@
                 <MudText Typo="Typo.h4" Class="font-bold">Notification Center</MudText>
                 @if (unreadCount > 0)
                 {
-                    <MudChip Color="Color.Primary" Size="Size.Small">@unreadCount unread</MudChip>
+                    <MudChip T="string" Color="Color.Primary" Size="Size.Small">@unreadCount unread</MudChip>
                 }
             </MudStack>
             <MudButton
@@ -115,7 +115,7 @@
 
                             <!-- Notification Footer -->
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-3">
-                                <MudChip Size="Size.Small" Color="Color.Info">
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info">
                                     @notification["Category"]
                                 </MudChip>
                                 @if (notification["EntityId"] != DBNull.Value)
