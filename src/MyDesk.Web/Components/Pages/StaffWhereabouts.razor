@@ -281,7 +281,7 @@ else
         _ => status
     };
 
-    private async Task UpdateSlot(User staff, int day, int slot, string status)
+    private async Task UpdateSlot(UserModel staff, int day, int slot, string status)
     {
         await WhereaboutsService.SetWhereaboutsAsync(staff.UserId, staff.Name, _weekStartDate, day, slot, status, null, null);
         await LoadData();
