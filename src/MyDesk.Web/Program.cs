@@ -390,6 +390,7 @@ builder.Services.AddScoped<BankingService>();
     builder.Services.AddScoped<NotificationService>();
     builder.Services.AddScoped<ApprovalNotificationService>();
     builder.Services.AddScoped<BudgetAlertService>();
+    builder.Services.AddSingleton<NotificationBackgroundJobService>();
 
     // ── Phase 4: Teams & Departments (2026) ────────────────────────────────
     builder.Services.AddScoped<DepartmentService>();
@@ -842,6 +843,10 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions
 {
     Authorization = new[] { new MyDesk.Web.Scheduling.HangfireAdminAuthorizationFilter() }
 });
+
+// ── Initialize recurring notification jobs ──────────────────────────────────
+var jobService = app.Services.GetRequiredService<NotificationBackgroundJobService>();
+jobService.RegisterRecurringJobs();
 
 // ── Blazor Server sign-in endpoint (one-time-token pattern) ─────────────────
 // Blazor components cannot set cookies (response already started over SignalR).
