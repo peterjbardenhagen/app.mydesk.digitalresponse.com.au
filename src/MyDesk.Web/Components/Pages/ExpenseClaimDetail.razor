@@ -3,6 +3,7 @@
 @using MyDesk.Shared.Models
 @using MyDesk.Shared.Services
 @using MudBlazor
+@using UserModel = MyDesk.Shared.Models.User
 @inject ExpenseService ExpenseService
 @inject UserService UserService
 @inject ISnackbar Snackbar
@@ -361,7 +362,7 @@ else
     private bool _saving = false;
     private bool _isApprover = false;
     private bool _isAccounts = false;
-    private List<User> _users = new();
+    private List<UserModel> _users = new();
     private string? _currentUserName;
 
     // Submit modal

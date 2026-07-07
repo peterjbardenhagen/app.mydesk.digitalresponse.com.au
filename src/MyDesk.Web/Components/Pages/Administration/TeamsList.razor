@@ -20,9 +20,9 @@
 
         <MudPaper Class="pa-4">
             <MudStack Row="true" Spacing="2">
-                <MudSelect @bind-Value="selectedDepartmentId" Label="Filter by Department"
+                <MudSelect Value="selectedDepartmentId" Label="Filter by Department"
                     Variant="Variant.Outlined" Clearable="true" Dense="true"
-                    Style="min-width: 250px;" ValueChanged="@(() => LoadTeams())">
+                    Style="min-width: 250px;" ValueChanged="@(async (int? deptId) => { selectedDepartmentId = deptId; await LoadTeams(); })">
                     @foreach (var dept in departments?.Rows.Cast<DataRow>() ?? new())
                     {
                         <MudSelectItem Value="@((int?)dept["DepartmentId"])">

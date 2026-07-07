@@ -6,6 +6,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ISnackbar Snackbar
 @using MyDesk.Shared.Models
+@using UserModel = MyDesk.Shared.Models.User
 
 <PageTitle>Staff Whereabouts - @PlatformSettings.GetBrandingName()</PageTitle>
 
@@ -156,7 +157,7 @@ else
 </style>
 
 @code {
-    private List<User> _staff = new();
+    private List<UserModel> _staff = new();
     private List<MyDesk.Shared.Models.StaffWhereabouts> _whereabouts = new();
     private DateTime _weekStartDate = GetMondayOfCurrentWeek();
     private bool _loading = true;
