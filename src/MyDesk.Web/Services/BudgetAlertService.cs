@@ -69,7 +69,7 @@ public class BudgetAlertService
             int budgetId = (int)budget["BudgetId"];
 
             decimal totalCommitted = spent + encumbered;
-            double usagePercentage = allocated > 0 ? (totalCommitted / allocated) * 100 : 0;
+            double usagePercentage = allocated > 0 ? (double)((totalCommitted / allocated) * 100) : 0;
 
             _logger?.LogInformation(
                 "Budget usage: {Usage}% ({Spent} of {Allocated})",

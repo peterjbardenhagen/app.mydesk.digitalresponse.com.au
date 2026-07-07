@@ -89,7 +89,7 @@
                                         <MudText Typo="Typo.subtitle1" Class="font-bold">
                                             @notification["Title"]
                                         </MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.TextSecondary">
+                                        <MudText Typo="Typo.caption" Color="Color.Default">
                                             @((DateTime)notification["CreatedAt"]).ToString("g")
                                         </MudText>
                                     </MudStack>
@@ -120,7 +120,7 @@
                                 </MudChip>
                                 @if (notification["EntityId"] != DBNull.Value)
                                 {
-                                    <MudText Typo="Typo.caption" Color="Color.TextSecondary">
+                                    <MudText Typo="Typo.caption" Color="Color.Default">
                                         ID: @notification["EntityId"]
                                     </MudText>
                                 }

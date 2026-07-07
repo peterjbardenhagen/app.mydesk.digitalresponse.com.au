@@ -53,7 +53,7 @@ public class NotificationBackgroundJobService
         RecurringJob.AddOrUpdate(
             "process-digests",
             () => ProcessDailyDigests(),
-            Cron.DailyAt(8, 0));
+            "0 8 * * *");
 
         _logger?.LogInformation("Recurring notification jobs registered successfully");
     }
