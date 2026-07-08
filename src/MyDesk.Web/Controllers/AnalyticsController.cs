@@ -1,0 +1,78 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using MyDesk.Web.Services;
+
+namespace MyDesk.Web.Controllers;
+
+/// <summary>
+/// API endpoints for dashboard and analytics data.
+/// Part of Phase 6: Dashboard & Analytics
+/// </summary>
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
+public class AnalyticsController : ControllerBase
+{
+    private readonly AnalyticsService _analyticsService;
+
+    public AnalyticsController(AnalyticsService analyticsService)
+    {
+        _analyticsService = analyticsService;
+    }
+
+    /// <summary>
+    /// Get executive dashboard metrics (CFO view)
+    /// </summary>
+    [HttpGet("executive-dashboard")]
+    public async Task<IActionResult> GetExecutiveDashboard([FromQuery] int tenantId)
+    {
+        // TODO: Validate user has CFO/Admin role for this tenant
+        var dashboard = await _analyticsService.GetExecutiveDashboardAsync(tenantId);
+        return Ok(dashboard);
+    }
+
+    /// <summary>
+    /// Get manager dashboard metrics (Team view)
+    /// </summary>
+    [HttpGet("manager-dashboard")]
+    public async Task<IActionResult> GetManagerDashboard([FromQuery] int tenantId, [FromQuery] int managerId)
+    {
+        // TODO: Validate user is this manager or has admin role
+        var dashboard = await _analyticsService.GetManagerDashboardAsync(tenantId, managerId);
+        return Ok(dashboard);
+    }
+
+    /// <summary>
+    /// Get employee dashboard metrics (Personal view)
+    /// </summary>
+    [HttpGet("employee-dashboard")]
+    public async Task<IActionResult> GetEmployeeDashboard([FromQuery] int tenantId, [FromQuery] int userId)
+    {
+        // TODO: Validate user is this employee or has admin role
+        var dashboard = await _analyticsService.GetEmployeeDashboardAsync(tenantId, userId);
+        return Ok(dashboard);
+    }
+
+    /// <summary>
+    /// Export dashboard data as CSV
+    /// </summary>
+    [HttpGet("export-csv")]
+    public async Task<IActionResult> ExportCsv([FromQuery] int tenantId, [FromQuery] string dashboardType = "executive")
+    {
+        // TODO: Implement CSV export
+        return BadRequest("Export functionality not yet implemented");
+    }
+
+    /// <summary>
+    /// Export dashboard data as PDF
+    /// </summary>
+    [HttpGet("export-pdf")]
+    public async Task<IActionResult> ExportPdf([FromQuery] int tenantId, [FromQuery] string dashboardType = "executive")
+    {
+        // TODO: Implement PDF export using QuestPDF
+        return BadRequest("Export functionality not yet implemented");
+    }
+}
