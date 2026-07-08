@@ -79,9 +79,6 @@
 
     private async Task DrawerOpenChanged(bool state)
     {
-        if (drawer != null)
-        {
-            await drawer.CloseAsync();
-        }
+        // Drawer closes automatically on navigation or click outside
     }
 }

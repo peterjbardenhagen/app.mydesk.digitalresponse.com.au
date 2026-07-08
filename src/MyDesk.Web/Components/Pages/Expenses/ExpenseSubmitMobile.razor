@@ -81,12 +81,12 @@
                             <MudText Typo="Typo.body2" Align="Align.Center">
                                 Tap to take photo or upload receipt
                             </MudText>
-                            <InputFile OnChange="HandleFileSelected" accept="image/*" style="display: none;" @ref="inputFile" />
+                            <InputFile id="fileInput" OnChange="HandleFileSelected" accept="image/*" style="display: none;" @ref="inputFile" />
                             <MudButton Variant="Variant.Outlined"
                                 Color="Color.Primary"
                                 FullWidth="true"
                                 Class="mt-3"
-                                OnClick="@(() => inputFile?.Click())">
+                                OnClick="TriggerFileInput">
                                 Choose File
                             </MudButton>
                         </div>
@@ -164,7 +164,7 @@
                         </div>
                         <div class="review-item">
                             <span class="label">Amount:</span>
-                            <span class="value">$@expense.Amount?.ToString("F2")</span>
+                            <span class="value">$@expense.Amount.ToString("F2")</span>
                         </div>
                         <div class="review-item">
                             <span class="label">Date:</span>
@@ -354,6 +354,12 @@
     {
         receiptFileName = "";
         Snackbar.Add("Receipt removed", Severity.Info);
+    }
+
+    private async Task TriggerFileInput()
+    {
+        await JS.InvokeVoidAsync("document.getElementById", "fileInput").ConfigureAwait(false);
+        await JS.InvokeVoidAsync("click");
     }
 
     private async Task SubmitExpense()
