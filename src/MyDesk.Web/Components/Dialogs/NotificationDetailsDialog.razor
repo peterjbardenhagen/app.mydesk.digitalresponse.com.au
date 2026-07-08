@@ -6,9 +6,7 @@
             <!-- Header -->
             <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
                 <MudText Typo="Typo.h6" Class="font-bold">Notification Details</MudText>
-                <MudChip Size="Size.Small" Color="GetStatusColor(Notification.status)">
-                    @Notification.status
-                </MudChip>
+                <MudChip T="string" Size="Size.Small" Color="GetStatusColor(Notification.status)" Text="@Notification.status" />
             </MudStack>
 
             <MudDivider />
