@@ -5,5 +5,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/MyDesk.PlaywrightTests/MyDesk.PlaywrightTests.csproj" />
+    <Project Path="tests/MyDesk.Web.Phase4.Tests/MyDesk.Web.Phase4.Tests.csproj" />
+    <Project Path="tests/MyDesk.Web.Phase5.Tests/MyDesk.Web.Phase5.Tests.csproj" />
   </Folder>
 </Solution>
