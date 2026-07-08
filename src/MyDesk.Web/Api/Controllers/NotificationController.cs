@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using MyDesk.Web.Services;
 using MyDesk.Shared.Services;
+using MyDesk.Shared.Services;
 
 namespace MyDesk.Web.Api.Controllers;
 
