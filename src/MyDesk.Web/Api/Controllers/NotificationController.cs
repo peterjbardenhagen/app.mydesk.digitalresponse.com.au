@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using MyDesk.Web.Services;
 using MyDesk.Shared.Services;
 
 namespace MyDesk.Web.Api.Controllers;
@@ -19,12 +18,12 @@ namespace MyDesk.Web.Api.Controllers;
 [Authorize]
 public class NotificationController : ControllerBase
 {
-    private readonly NotificationService _notification;
+    private readonly MyDesk.Web.Services.NotificationService _notification;
     private readonly DatabaseService _db;
     private readonly ILogger<NotificationController> _logger;
 
     public NotificationController(
-        NotificationService notification,
+        MyDesk.Web.Services.NotificationService notification,
         DatabaseService db,
         ILogger<NotificationController> logger)
     {
