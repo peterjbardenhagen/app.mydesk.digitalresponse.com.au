@@ -7,6 +7,9 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 
 namespace MyDesk.Web.Services;
 
@@ -347,6 +350,454 @@ public class DashboardExportService
             new JsonSerializerOptions { WriteIndented = true });
 
         return Encoding.UTF8.GetBytes(json);
+    }
+
+    /// <summary>
+    /// Export executive dashboard as PDF
+    /// </summary>
+    public async Task<byte[]> ExportExecutiveDashboardAsPdfAsync(
+        int tenantId, bool includeCharts = true, bool includeDetailed = true, bool includeSummary = true)
+    {
+        _logger?.LogInformation("Exporting executive dashboard as PDF for tenant {TenantId}", tenantId);
+
+        var dashboard = await _analyticsService.GetExecutiveDashboardAsync(tenantId);
+
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Margin(20);
+                page.DefaultTextStyle(x => x.FontSize(11));
+
+                page.Content().Column(column =>
+                {
+                    column.Spacing(10);
+
+                    column.Item().Text("EXECUTIVE DASHBOARD")
+                        .FontSize(24)
+                        .Bold()
+                        .FontColor("#2c3e50");
+
+                    column.Item().Text($"Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}")
+                        .FontSize(10)
+                        .FontColor("#7f8c8d");
+
+                    if (includeSummary)
+                    {
+                        column.Item().Text("Summary Metrics").FontSize(14).Bold().Margin(0, 10, 0, 5);
+
+                        column.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(cols =>
+                            {
+                                cols.RelativeColumn();
+                                cols.RelativeColumn();
+                            });
+
+                            table.Header(header =>
+                            {
+                                header.Cell().Text("Metric").Bold().Background("#ecf0f1");
+                                header.Cell().Text("Value").Bold().Background("#ecf0f1");
+                            });
+
+                            table.Cell().Text("Total Expenses MTD");
+                            table.Cell().Text(dashboard.TotalExpensesMonthToDate.ToString("C"));
+
+                            table.Cell().Text("Pending Approvals");
+                            table.Cell().Text(dashboard.PendingApprovals.ToString());
+
+                            table.Cell().Text("Approved This Month");
+                            table.Cell().Text(dashboard.ApprovedThisMonth.ToString());
+
+                            table.Cell().Text("Average Approval Time");
+                            table.Cell().Text($"{dashboard.AverageApprovalTimeHours:F1}h");
+                        });
+                    }
+
+                    if (includeDetailed)
+                    {
+                        column.Item().Text("Expenses by Department").FontSize(14).Bold().Margin(0, 15, 0, 5);
+
+                        if (dashboard.ByDepartment?.Count > 0)
+                        {
+                            column.Item().Table(table =>
+                            {
+                                table.ColumnsDefinition(cols =>
+                                {
+                                    cols.RelativeColumn(2);
+                                    cols.RelativeColumn(1);
+                                    cols.RelativeColumn(1);
+                                });
+
+                                table.Header(header =>
+                                {
+                                    header.Cell().Text("Department").Bold().Background("#ecf0f1");
+                                    header.Cell().Text("Amount").Bold().Background("#ecf0f1");
+                                    header.Cell().Text("Count").Bold().Background("#ecf0f1");
+                                });
+
+                                foreach (var dept in dashboard.ByDepartment)
+                                {
+                                    table.Cell().Text(dept.Department);
+                                    table.Cell().Text(dept.Amount.ToString("C"));
+                                    table.Cell().Text(dept.Count.ToString());
+                                }
+                            });
+                        }
+
+                        column.Item().Text("Expenses by Category").FontSize(14).Bold().Margin(0, 15, 0, 5);
+
+                        if (dashboard.ByCategory?.Count > 0)
+                        {
+                            column.Item().Table(table =>
+                            {
+                                table.ColumnsDefinition(cols =>
+                                {
+                                    cols.RelativeColumn(2);
+                                    cols.RelativeColumn(1);
+                                    cols.RelativeColumn(1);
+                                });
+
+                                table.Header(header =>
+                                {
+                                    header.Cell().Text("Category").Bold().Background("#ecf0f1");
+                                    header.Cell().Text("Amount").Bold().Background("#ecf0f1");
+                                    header.Cell().Text("Count").Bold().Background("#ecf0f1");
+                                });
+
+                                foreach (var cat in dashboard.ByCategory)
+                                {
+                                    table.Cell().Text(cat.Category);
+                                    table.Cell().Text(cat.Amount.ToString("C"));
+                                    table.Cell().Text(cat.Count.ToString());
+                                }
+                            });
+                        }
+
+                        column.Item().Text("Budget vs Actual").FontSize(14).Bold().Margin(0, 15, 0, 5);
+
+                        if (dashboard.BudgetVsActual?.Count > 0)
+                        {
+                            column.Item().Table(table =>
+                            {
+                                table.ColumnsDefinition(cols =>
+                                {
+                                    cols.RelativeColumn(2);
+                                    cols.RelativeColumn(1);
+                                    cols.RelativeColumn(1);
+                                    cols.RelativeColumn(1);
+                                    cols.RelativeColumn(1);
+                                });
+
+                                table.Header(header =>
+                                {
+                                    header.Cell().Text("Department").Bold().Background("#ecf0f1");
+                                    header.Cell().Text("Allocated").Bold().Background("#ecf0f1");
+                                    header.Cell().Text("Spent").Bold().Background("#ecf0f1");
+                                    header.Cell().Text("Available").Bold().Background("#ecf0f1");
+                                    header.Cell().Text("% Used").Bold().Background("#ecf0f1");
+                                });
+
+                                foreach (var budget in dashboard.BudgetVsActual)
+                                {
+                                    var available = budget.Allocated - budget.Spent;
+                                    var utilization = budget.Allocated > 0 ? (budget.Spent / budget.Allocated * 100) : 0;
+
+                                    table.Cell().Text(budget.Department);
+                                    table.Cell().Text(budget.Allocated.ToString("C"));
+                                    table.Cell().Text(budget.Spent.ToString("C"));
+                                    table.Cell().Text(available.ToString("C"));
+                                    table.Cell().Text($"{utilization:F1}%");
+                                }
+                            });
+                        }
+                    }
+                });
+
+                page.Footer().AlignCenter().Text(x =>
+                {
+                    x.Span("Page ").FontColor("#7f8c8d");
+                    x.CurrentPageNumber().FontColor("#7f8c8d");
+                });
+            });
+        });
+
+        return document.GeneratePdf();
+    }
+
+    /// <summary>
+    /// Export manager dashboard as PDF
+    /// </summary>
+    public async Task<byte[]> ExportManagerDashboardAsPdfAsync(
+        int tenantId, int managerId, bool includeCharts = true, bool includeDetailed = true, bool includeSummary = true)
+    {
+        _logger?.LogInformation("Exporting manager dashboard as PDF for manager {ManagerId} in tenant {TenantId}",
+            managerId, tenantId);
+
+        var dashboard = await _analyticsService.GetManagerDashboardAsync(tenantId, managerId);
+
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Margin(20);
+                page.DefaultTextStyle(x => x.FontSize(11));
+
+                page.Content().Column(column =>
+                {
+                    column.Spacing(10);
+
+                    column.Item().Text("MANAGER DASHBOARD")
+                        .FontSize(24)
+                        .Bold()
+                        .FontColor("#2c3e50");
+
+                    column.Item().Text($"Team: {dashboard.TeamName}")
+                        .FontSize(12);
+
+                    column.Item().Text($"Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}")
+                        .FontSize(10)
+                        .FontColor("#7f8c8d");
+
+                    if (includeSummary)
+                    {
+                        column.Item().Text("Team Summary").FontSize(14).Bold().Margin(0, 10, 0, 5);
+
+                        column.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(cols =>
+                            {
+                                cols.RelativeColumn();
+                                cols.RelativeColumn();
+                            });
+
+                            table.Header(header =>
+                            {
+                                header.Cell().Text("Metric").Bold().Background("#ecf0f1");
+                                header.Cell().Text("Value").Bold().Background("#ecf0f1");
+                            });
+
+                            table.Cell().Text("Team Members");
+                            table.Cell().Text(dashboard.TeamMembersCount.ToString());
+
+                            table.Cell().Text("Expenses MTD");
+                            table.Cell().Text(dashboard.TeamExpensesMonthToDate.ToString("C"));
+
+                            table.Cell().Text("Pending Approvals");
+                            table.Cell().Text(dashboard.PendingApprovals.ToString());
+
+                            table.Cell().Text("Overdue Approvals");
+                            table.Cell().Text(dashboard.OverdueApprovals.ToString());
+                        });
+                    }
+
+                    if (includeDetailed)
+                    {
+                        column.Item().Text("Team Spending by Category").FontSize(14).Bold().Margin(0, 15, 0, 5);
+
+                        if (dashboard.TeamSpendingByCategory?.Count > 0)
+                        {
+                            column.Item().Table(table =>
+                            {
+                                table.ColumnsDefinition(cols =>
+                                {
+                                    cols.RelativeColumn(2);
+                                    cols.RelativeColumn(1);
+                                });
+
+                                table.Header(header =>
+                                {
+                                    header.Cell().Text("Category").Bold().Background("#ecf0f1");
+                                    header.Cell().Text("Amount").Bold().Background("#ecf0f1");
+                                });
+
+                                foreach (var cat in dashboard.TeamSpendingByCategory)
+                                {
+                                    table.Cell().Text(cat.Category);
+                                    table.Cell().Text(cat.Amount.ToString("C"));
+                                }
+                            });
+                        }
+
+                        if (dashboard.OverdueItems?.Count > 0)
+                        {
+                            column.Item().Text("Overdue Approvals").FontSize(14).Bold().Margin(0, 15, 0, 5);
+
+                            column.Item().Table(table =>
+                            {
+                                table.ColumnsDefinition(cols =>
+                                {
+                                    cols.RelativeColumn(2);
+                                    cols.RelativeColumn(1);
+                                    cols.RelativeColumn(1);
+                                });
+
+                                table.Header(header =>
+                                {
+                                    header.Cell().Text("Employee").Bold().Background("#ecf0f1");
+                                    header.Cell().Text("Amount").Bold().Background("#ecf0f1");
+                                    header.Cell().Text("Days Overdue").Bold().Background("#ecf0f1");
+                                });
+
+                                foreach (var item in dashboard.OverdueItems.Take(50))
+                                {
+                                    table.Cell().Text(item.EmployeeName);
+                                    table.Cell().Text(item.Amount.ToString("C"));
+                                    table.Cell().Text(item.DaysOverdue.ToString());
+                                }
+                            });
+                        }
+                    }
+                });
+
+                page.Footer().AlignCenter().Text(x =>
+                {
+                    x.Span("Page ").FontColor("#7f8c8d");
+                    x.CurrentPageNumber().FontColor("#7f8c8d");
+                });
+            });
+        });
+
+        return document.GeneratePdf();
+    }
+
+    /// <summary>
+    /// Export employee dashboard as PDF
+    /// </summary>
+    public async Task<byte[]> ExportEmployeeDashboardAsPdfAsync(
+        int tenantId, int userId, bool includeCharts = true, bool includeDetailed = true, bool includeSummary = true)
+    {
+        _logger?.LogInformation("Exporting employee dashboard as PDF for user {UserId} in tenant {TenantId}",
+            userId, tenantId);
+
+        var dashboard = await _analyticsService.GetEmployeeDashboardAsync(tenantId, userId);
+
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Margin(20);
+                page.DefaultTextStyle(x => x.FontSize(11));
+
+                page.Content().Column(column =>
+                {
+                    column.Spacing(10);
+
+                    column.Item().Text("MY DASHBOARD")
+                        .FontSize(24)
+                        .Bold()
+                        .FontColor("#2c3e50");
+
+                    column.Item().Text($"Employee: {dashboard.EmployeeName}")
+                        .FontSize(12);
+
+                    column.Item().Text($"Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}")
+                        .FontSize(10)
+                        .FontColor("#7f8c8d");
+
+                    if (includeSummary)
+                    {
+                        column.Item().Text("Expense Summary").FontSize(14).Bold().Margin(0, 10, 0, 5);
+
+                        column.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(cols =>
+                            {
+                                cols.RelativeColumn();
+                                cols.RelativeColumn();
+                            });
+
+                            table.Header(header =>
+                            {
+                                header.Cell().Text("Metric").Bold().Background("#ecf0f1");
+                                header.Cell().Text("Value").Bold().Background("#ecf0f1");
+                            });
+
+                            table.Cell().Text("Submitted This Month");
+                            table.Cell().Text(dashboard.SubmittedThisMonth.ToString());
+
+                            table.Cell().Text("Approved");
+                            table.Cell().Text(dashboard.ApprovedThisMonth.ToString());
+
+                            table.Cell().Text("Pending Approval");
+                            table.Cell().Text(dashboard.PendingApproval.ToString());
+
+                            table.Cell().Text("Reimbursed");
+                            table.Cell().Text(dashboard.ReimbursedThisMonth.ToString());
+                        });
+                    }
+
+                    if (includeDetailed)
+                    {
+                        if (dashboard.MyExpenses?.Count > 0)
+                        {
+                            column.Item().Text("Recent Expenses").FontSize(14).Bold().Margin(0, 15, 0, 5);
+
+                            column.Item().Table(table =>
+                            {
+                                table.ColumnsDefinition(cols =>
+                                {
+                                    cols.RelativeColumn(2);
+                                    cols.RelativeColumn(1);
+                                    cols.RelativeColumn(1);
+                                    cols.RelativeColumn(1);
+                                });
+
+                                table.Header(header =>
+                                {
+                                    header.Cell().Text("Description").Bold().Background("#ecf0f1");
+                                    header.Cell().Text("Amount").Bold().Background("#ecf0f1");
+                                    header.Cell().Text("Category").Bold().Background("#ecf0f1");
+                                    header.Cell().Text("Status").Bold().Background("#ecf0f1");
+                                });
+
+                                foreach (var expense in dashboard.MyExpenses.Take(50))
+                                {
+                                    table.Cell().Text(expense.Description);
+                                    table.Cell().Text(expense.Amount.ToString("C"));
+                                    table.Cell().Text(expense.Category);
+                                    table.Cell().Text(expense.Status);
+                                }
+                            });
+                        }
+
+                        if (dashboard.MonthlySummary?.Count > 0)
+                        {
+                            column.Item().Text("Monthly Summary").FontSize(14).Bold().Margin(0, 15, 0, 5);
+
+                            column.Item().Table(table =>
+                            {
+                                table.ColumnsDefinition(cols =>
+                                {
+                                    cols.RelativeColumn();
+                                    cols.RelativeColumn();
+                                });
+
+                                table.Header(header =>
+                                {
+                                    header.Cell().Text("Month").Bold().Background("#ecf0f1");
+                                    header.Cell().Text("Amount").Bold().Background("#ecf0f1");
+                                });
+
+                                foreach (var month in dashboard.MonthlySummary)
+                                {
+                                    table.Cell().Text(month.Month);
+                                    table.Cell().Text(month.Amount.ToString("C"));
+                                }
+                            });
+                        }
+                    }
+                });
+
+                page.Footer().AlignCenter().Text(x =>
+                {
+                    x.Span("Page ").FontColor("#7f8c8d");
+                    x.CurrentPageNumber().FontColor("#7f8c8d");
+                });
+            });
+        });
+
+        return document.GeneratePdf();
     }
 
     /// <summary>
