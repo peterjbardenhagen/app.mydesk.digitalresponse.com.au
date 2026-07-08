@@ -88,7 +88,7 @@ public class NotificationBackgroundJobService
                 int totalReminders = 0;
 
                 // Send reminders for each tenant
-                foreach (var row in tenantsResult.Rows)
+                foreach (DataRow row in tenantsResult.Rows)
                 {
                     int tenantId = (int)row["TenantId"];
                     int remindersSent = await approvalNotification.SendApprovalRemindersAsync(tenantId, daysOld: 3);
@@ -131,7 +131,7 @@ public class NotificationBackgroundJobService
                 int totalAlerts = 0;
 
                 // Check budgets for each tenant
-                foreach (var row in tenantsResult.Rows)
+                foreach (DataRow row in tenantsResult.Rows)
                 {
                     int tenantId = (int)row["TenantId"];
                     int alertsCreated = await budgetAlert.CheckAllBudgetsAsync(tenantId);
@@ -176,7 +176,7 @@ public class NotificationBackgroundJobService
                 int digestsProcessed = 0;
 
                 // Process digest for each user
-                foreach (var row in usersResult.Rows)
+                foreach (DataRow row in usersResult.Rows)
                 {
                     int tenantId = (int)row["TenantId"];
                     int userId = (int)row["UserId"];
@@ -290,7 +290,7 @@ public class NotificationBackgroundJobService
                 int totalRetried = 0;
 
                 // Process failed notifications for each tenant
-                foreach (var row in tenantsResult.Rows)
+                foreach (DataRow row in tenantsResult.Rows)
                 {
                     int tenantId = (int)row["TenantId"];
                     int retriedCount = await retryService.ProcessFailedNotificationsAsync(tenantId);

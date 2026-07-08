@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using MyDesk.Web.Services;
 
 namespace MyDesk.Web.Api.Controllers;
 
@@ -353,19 +354,6 @@ public class NotificationController : ControllerBase
             return BadRequest(new { error = "Failed to retrieve audit trail" });
         }
     }
-}
-
-public class NotificationPreferences
-{
-    public bool EnableEmailNotifications { get; set; }
-    public bool EmailOnApprovalRequired { get; set; }
-    public string EmailDigestFrequency { get; set; } = "Immediate";
-    public bool EnableSmsNotifications { get; set; }
-    public string? PhoneNumber { get; set; }
-    public bool EnableInAppNotifications { get; set; }
-    public bool QuietHoursEnabled { get; set; }
-    public TimeSpan? QuietHoursStart { get; set; }
-    public TimeSpan? QuietHoursEnd { get; set; }
 }
 
 public class NotificationPreferencesRequest
