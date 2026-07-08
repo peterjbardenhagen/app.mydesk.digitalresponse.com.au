@@ -1,5 +1,7 @@
 @using System.Text
+@using System.Net.Http.Json
 @inject ISnackbar Snackbar
+@inject HttpClient Http
 
 <MudDialog>
     <DialogContent>
@@ -85,20 +87,59 @@
             var timestamp = DateTime.Now.ToString("yyyy-MM-dd-HHmmss");
             var finalFileName = $"{fileName}-{timestamp}.{selectedFormat}";
 
-            // TODO: Implement actual export logic
-            // For now, just show success message
-            Snackbar.Add($"Export as {selectedFormat.ToUpper()} started: {finalFileName}", Severity.Success);
-
-            await Task.Delay(500);  // Simulate export
-
-            MudDialog.Close(DialogResult.Ok(new ExportOptions
+            // Prepare export request
+            var exportRequest = new
             {
-                Format = selectedFormat,
-                FileName = finalFileName,
-                IncludeCharts = includeCharts,
-                IncludeDetailed = includeDetailed,
-                IncludeSummary = includeSummary
-            }));
+                format = selectedFormat,
+                fileName = fileName,
+                includeCharts = includeCharts,
+                includeDetailed = includeDetailed,
+                includeSummary = includeSummary
+            };
+
+            // Determine API endpoint based on dashboard type
+            string apiEndpoint = DashboardType switch
+            {
+                "manager" => "/api/dashboard/manager/export?tenantId=1&managerId=1000",
+                "employee" => "/api/dashboard/employee/export?tenantId=1&userId=100",
+                _ => "/api/dashboard/executive/export?tenantId=1"
+            };
+
+            // Call API
+            var response = await Http.PostAsJsonAsync(apiEndpoint, exportRequest);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Download file from response
+                var contentBytes = await response.Content.ReadAsByteArrayAsync();
+
+                // Create blob and trigger download
+                var fileExtension = selectedFormat.ToLower();
+                var contentType = selectedFormat.ToLower() switch
+                {
+                    "json" => "application/json",
+                    "pdf" => "application/pdf",
+                    _ => "text/csv"
+                };
+
+                // Close dialog and provide file data
+                MudDialog.Close(DialogResult.Ok(new ExportOptions
+                {
+                    Format = selectedFormat,
+                    FileName = finalFileName,
+                    IncludeCharts = includeCharts,
+                    IncludeDetailed = includeDetailed,
+                    IncludeSummary = includeSummary,
+                    FileContent = contentBytes
+                }));
+
+                Snackbar.Add($"Export successful: {finalFileName}", Severity.Success);
+            }
+            else
+            {
+                var errorMessage = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Export failed: {response.StatusCode}", Severity.Error);
+            }
         }
         catch (Exception ex)
         {
@@ -123,4 +164,5 @@ public class ExportOptions
     public bool IncludeCharts { get; set; }
     public bool IncludeDetailed { get; set; }
     public bool IncludeSummary { get; set; }
+    public byte[] FileContent { get; set; }
 }
