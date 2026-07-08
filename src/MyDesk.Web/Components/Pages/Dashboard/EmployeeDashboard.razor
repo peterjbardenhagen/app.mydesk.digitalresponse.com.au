@@ -100,18 +100,18 @@
             <!-- Monthly Summary -->
             <MudPaper Class="pa-6">
                 <MudText Typo="Typo.h6" Class="font-bold mb-4">Monthly Summary</MudText>
-                <MudList T="MonthlySummary">
+                <MudStack Spacing="2">
                     @foreach (var month in dashboard.MonthlySummary)
                     {
-                        <MudListItem T="MonthlySummary" Class="pa-2">
+                        <MudPaper Class="pa-3" Elevation="0">
                             <div class="d-flex justify-space-between w-100">
                                 <MudText>@month.Month</MudText>
                                 <MudText Class="font-semibold">@FormatCurrency(month.Amount)</MudText>
                             </div>
                             <MudProgressLinear Value="@GetMonthPercentage(month.Amount)" Class="mt-2" />
-                        </MudListItem>
+                        </MudPaper>
                     }
-                </MudList>
+                </MudStack>
             </MudPaper>
 
             <!-- Helpful Information -->

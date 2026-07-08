@@ -63,18 +63,18 @@
             <!-- Team Spending Breakdown -->
             <MudPaper Class="pa-6">
                 <MudText Typo="Typo.h6" Class="font-bold mb-4">Team Spending by Category</MudText>
-                <MudList T="CategoryMetric">
+                <MudStack Spacing="2">
                     @foreach (var cat in dashboard.TeamSpendingByCategory)
                     {
-                        <MudListItem T="CategoryMetric" Class="pa-2">
+                        <MudPaper Class="pa-3" Elevation="0">
                             <div class="d-flex justify-space-between w-100">
                                 <MudText>@cat.Category</MudText>
                                 <MudText Class="font-semibold">@FormatCurrency(cat.Amount)</MudText>
                             </div>
                             <MudProgressLinear Value="@GetPercentage(cat.Amount)" Class="mt-2" />
-                        </MudListItem>
+                        </MudPaper>
                     }
-                </MudList>
+                </MudStack>
             </MudPaper>
 
             <!-- Overdue Approvals -->
@@ -89,10 +89,10 @@
 
                 @if (dashboard.OverdueItems.Count > 0)
                 {
-                    <MudList T="OverdueItem">
+                    <MudStack Spacing="2">
                         @foreach (var item in dashboard.OverdueItems)
                         {
-                            <MudListItem T="OverdueItem" Class="pa-3" Style="border-bottom: 1px solid var(--mud-palette-lines-default);">
+                            <MudPaper Class="pa-3" Style="border-bottom: 1px solid var(--mud-palette-lines-default);">
                                 <MudStack Spacing="0">
                                     <div class="d-flex justify-space-between align-center">
                                         <MudText Typo="Typo.body2" Class="font-semibold">@item.EmployeeName</MudText>
@@ -105,9 +105,9 @@
                                         Review & Approve
                                     </MudButton>
                                 </MudStack>
-                            </MudListItem>
+                            </MudPaper>
                         }
-                    </MudList>
+                    </MudStack>
                 }
                 else
                 {

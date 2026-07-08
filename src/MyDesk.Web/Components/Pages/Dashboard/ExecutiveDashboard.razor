@@ -66,10 +66,10 @@
                 <MudText Typo="Typo.h6" Class="font-bold mb-4">Expenses by Department</MudText>
                 <MudGrid>
                     <MudItem xs="12" md="6">
-                        <MudList T="DepartmentMetric">
+                        <MudStack Spacing="2">
                             @foreach (var dept in dashboard.ByDepartment)
                             {
-                                <MudListItem T="DepartmentMetric" Class="pa-2">
+                                <MudPaper Class="pa-3" Elevation="0">
                                     <div class="d-flex justify-space-between w-100">
                                         <MudText>@dept.Department</MudText>
                                         <MudStack Row="true" Spacing="2">
@@ -78,9 +78,9 @@
                                         </MudStack>
                                     </div>
                                     <MudProgressLinear Value="@GetPercentage(dept.Amount)" Class="mt-2" />
-                                </MudListItem>
+                                </MudPaper>
                             }
-                        </MudList>
+                        </MudStack>
                     </MudItem>
 
                     <MudItem xs="12" md="6">
@@ -101,10 +101,10 @@
                 <MudText Typo="Typo.h6" Class="font-bold mb-4">Expenses by Category</MudText>
                 <MudGrid>
                     <MudItem xs="12" md="6">
-                        <MudList T="CategoryMetric">
+                        <MudStack Spacing="2">
                             @foreach (var cat in dashboard.ByCategory)
                             {
-                                <MudListItem T="CategoryMetric" Class="pa-2">
+                                <MudPaper Class="pa-3" Elevation="0">
                                     <div class="d-flex justify-space-between w-100">
                                         <MudText>@cat.Category</MudText>
                                         <MudStack Row="true" Spacing="2">
@@ -113,9 +113,9 @@
                                         </MudStack>
                                     </div>
                                     <MudProgressLinear Value="@GetPercentage(cat.Amount)" Class="mt-2" />
-                                </MudListItem>
+                                </MudPaper>
                             }
-                        </MudList>
+                        </MudStack>
                     </MudItem>
 
                     <MudItem xs="12" md="6">
