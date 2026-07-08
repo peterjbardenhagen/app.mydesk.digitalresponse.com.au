@@ -1,4 +1,4 @@
-@using MyDesk.Web.Components.Pages.Notifications
+@using MyDesk.Web.Models
 
 <MudDialog>
     <DialogContent>
@@ -59,7 +59,7 @@
     MudDialogInstance? MudDialog { get; set; }
 
     [Parameter]
-    public DeliveryStatus.NotificationLog Notification { get; set; } = new();
+    public NotificationLog Notification { get; set; } = new();
 
     private void CloseDialog() => MudDialog?.Close(DialogResult.Ok(true));
 
