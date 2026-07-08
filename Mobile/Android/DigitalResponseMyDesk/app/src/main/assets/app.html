@@ -398,6 +398,11 @@ input, textarea { border: none; outline: none; font-family: inherit; }
 .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(var(--brand-rgb), 0.3); border-top-color: var(--brand-primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── Demo Banner ───────────────────────────────────────── */
+.demo-banner { display:flex; align-items:center; justify-content:center; gap:10px; padding:6px 14px; background:var(--brand-gradient); color:#fff; font-size:11px; font-weight:700; flex-shrink:0; letter-spacing:0.02em; }
+.demo-banner button { background:rgba(255,255,255,0.22); color:#fff; border:none; border-radius:12px; padding:4px 12px; font-size:11px; font-weight:700; cursor:pointer; }
+.demo-banner button:active { opacity:0.8; }
+
 </style>
 </head>
 <body>
@@ -417,6 +422,8 @@ input, textarea { border: none; outline: none; font-family: inherit; }
       <svg width="18" height="18" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
       Sign in with Microsoft
     </button>
+    <button class="login-btn" style="margin-top:14px;background:var(--bg-card);color:var(--text-1);border:1px solid var(--border);" onclick="startDemo()">✨ Explore Demo</button>
+    <div style="font-size:11px;color:var(--text-3);text-align:center;">See MyDeskAI with realistic sample data — no account needed.</div>
     <button class="forgot-pw-link" onclick="showForgotPasswordScreen()">Forgot password?</button>
   </div>
 </div>
@@ -477,12 +484,13 @@ input, textarea { border: none; outline: none; font-family: inherit; }
 
 <!-- Main App -->
 <div id="app" data-theme="dark" data-brand="techlight">
+  <div id="demoBanner" class="demo-banner" style="display:none;">🎬 Demo Mode — showing sample data, no live account. <button onclick="exitDemo()">Exit Demo</button></div>
   <!-- Header -->
   <header class="app-header">
     <div class="app-logo" onclick="navigate('home')">✦</div>
     <div class="header-titles">
       <h1>MyDeskAI</h1>
-      <span class="header-badge"><span class="badge-dot"></span>Connected</span>
+        <span class="header-badge" id="headerBadge"><span class="badge-dot"></span><span id="headerBadgeText">Connected</span></span>
     </div>
     <div class="header-actions">
       <div class="notif-wrap icon-btn" onclick="toggleNotifications()">
@@ -880,6 +888,7 @@ const state = {
   theme: 'dark',
   brand: 'techlight',
   patToken: null,
+  demo: false,
   modules: [],
   chatHistory: [],
   invoices: [],
@@ -951,7 +960,11 @@ function init() {
   loadSession();
 
   if (!session.user) {
-    document.getElementById('login-screen').classList.remove('hidden');
+    if (localStorage.getItem('md_demo') === '1') {
+      startDemo();
+    } else {
+      document.getElementById('login-screen').classList.remove('hidden');
+    }
   } else {
     document.getElementById('login-screen').classList.add('hidden');
     applySessionToUI();
@@ -1099,7 +1112,12 @@ function doLogout() {
   session.tenants = [];
   session.activeTenant = null;
   state.patToken = null;
-  try { localStorage.removeItem('md_session'); } catch(e) {}
+  state.demo = false;
+  try { localStorage.removeItem('md_session'); localStorage.removeItem('md_demo'); } catch(e) {}
+  const banner = document.getElementById('demoBanner');
+  if (banner) banner.style.display = 'none';
+  const badge = document.getElementById('headerBadgeText');
+  if (badge) badge.textContent = 'Connected';
   closeUserMenu();
   document.getElementById('login-screen').classList.remove('hidden');
 }
@@ -1253,7 +1271,189 @@ window.onResetPasswordToken = function(token) {
   document.getElementById('passwordStrengthBar').style.display = 'none';
 };
 
+
+
+// ── Demo Mode ───────────────────────────────────────────
+function demoFind(arr, id) {
+  return (state[arr] || []).find(x => x.id === id);
+}
+
+function getDemoData() {
+  const invoices = [
+    { id: 1, number: 'INV-1001', company: 'Brisbane Markets', date: '2026-06-12', total: 8500, gst: 850, totalInc: 9350, status: 'Paid', statusId: 3, division: 'Lighting', lines: [{ description: 'LED highbay x12', qty: 12, unitPrice: 540, extended: 6480 }, { description: 'Emergency batten x6', qty: 6, unitPrice: 337, extended: 2020 }] },
+    { id: 2, number: 'INV-1002', company: 'QLD Health', date: '2026-06-20', total: 12400, gst: 1240, totalInc: 13640, status: 'Overdue', statusId: 2, division: 'Health', lines: [{ description: 'Panel luminaire x40', qty: 40, unitPrice: 310, extended: 12400 }] },
+    { id: 3, number: 'INV-1003', company: 'Sunshine Coast Council', date: '2026-07-01', total: 5400, gst: 540, totalInc: 5940, status: 'Sent', statusId: 1, division: 'Civic', lines: [{ description: 'Bollard light x30', qty: 30, unitPrice: 180, extended: 5400 }] },
+    { id: 4, number: 'INV-1004', company: 'Techlight Retail', date: '2026-07-03', total: 3200, gst: 320, totalInc: 3520, status: 'Paid', statusId: 3, division: 'Retail', lines: [{ description: 'Track spotlight x20', qty: 20, unitPrice: 160, extended: 3200 }] },
+    { id: 5, number: 'INV-1005', company: 'Gold Coast TAFE', date: '2026-07-05', total: 9800, gst: 980, totalInc: 10780, status: 'Overdue', statusId: 2, division: 'Education', lines: [{ description: 'Linear trunking x80m', qty: 80, unitPrice: 122.5, extended: 9800 }] },
+    { id: 6, number: 'INV-1006', company: 'Moreton Bay Region', date: '2026-07-08', total: 7600, gst: 760, totalInc: 8360, status: 'Sent', statusId: 1, division: 'Civic', lines: [{ description: 'Floodlight x19', qty: 19, unitPrice: 400, extended: 7600 }] },
+    { id: 7, number: 'INV-1007', company: 'Logan City', date: '2026-07-10', total: 4100, gst: 410, totalInc: 4510, status: 'Paid', statusId: 3, division: 'Civic', lines: [{ description: 'Downlight kit x82', qty: 82, unitPrice: 50, extended: 4100 }] },
+    { id: 8, number: 'INV-1008', company: 'Redland Bay', date: '2026-07-12', total: 2900, gst: 290, totalInc: 3190, status: 'Draft', statusId: 4, division: 'Retail', lines: [{ description: 'Sensor switch x58', qty: 58, unitPrice: 50, extended: 2900 }] }
+  ];
+
+  const quotes = [
+    { id: 1, reference: 'Q-2041', company: 'Brisbane Airport', date: '2026-07-01', total: 18500, status: 'Open', expiryDate: '2026-08-15', margin: 0.42, expired: false, expiringSoon: false, lines: [{ description: 'Terminal upgrade package', qty: 1, unitPrice: 18500, extended: 18500 }] },
+    { id: 2, reference: 'Q-2042', company: 'Toowoomba Hospital', date: '2026-07-04', total: 24000, status: 'Open', expiryDate: '2026-07-20', margin: 0.38, expired: false, expiringSoon: true, lines: [{ description: 'Retrofit labour + materials', qty: 1, unitPrice: 24000, extended: 24000 }] },
+    { id: 3, reference: 'Q-2043', company: 'Ipswich Council', date: '2026-06-10', total: 12000, status: 'Won', expiryDate: '2026-06-01', margin: 0.45, expired: true, expiringSoon: false, lines: [{ description: 'Street lighting x60', qty: 60, unitPrice: 200, extended: 12000 }] },
+    { id: 4, reference: 'Q-2044', company: 'Griffith University', date: '2026-07-08', total: 8700, status: 'Open', expiryDate: '2026-09-01', margin: 0.40, expired: false, expiringSoon: false, lines: [{ description: 'Science block fit-out', qty: 1, unitPrice: 8700, extended: 8700 }] },
+    { id: 5, reference: 'Q-2045', company: 'University of Sunshine Coast', date: '2026-07-09', total: 15300, status: 'Open', expiryDate: '2026-08-20', margin: 0.36, expired: false, expiringSoon: false, lines: [{ description: 'Campus LED rollout', qty: 1, unitPrice: 15300, extended: 15300 }] },
+    { id: 6, reference: 'Q-2046', company: 'Tweed Shire', date: '2026-07-11', total: 6700, status: 'Lost', expiryDate: '2026-07-15', margin: 0.30, expired: false, expiringSoon: true, lines: [{ description: 'Depot lighting', qty: 1, unitPrice: 6700, extended: 6700 }] }
+  ];
+
+  const pos = [
+    { id: 501, supplier: 'Eaton Lighting', date: '2026-07-02', totalEx: 4200, totalInc: 4620, status: 'Ordered', required: '2026-07-20', lines: [{ description: 'LED panel x100', qty: 100, unitPrice: 42, extended: 4200 }] },
+    { id: 502, supplier: 'Philips', date: '2026-07-05', totalEx: 3100, totalInc: 3410, status: 'Received', required: '2026-07-12', lines: [{ description: 'Driver module x155', qty: 155, unitPrice: 20, extended: 3100 }] },
+    { id: 503, supplier: 'Clipsal', date: '2026-07-08', totalEx: 5600, totalInc: 6160, status: 'Ordered', required: '2026-07-25', lines: [{ description: 'Switchgear x70', qty: 70, unitPrice: 80, extended: 5600 }] },
+    { id: 504, supplier: 'Hager', date: '2026-07-10', totalEx: 2300, totalInc: 2530, status: 'Partially Received', required: '2026-07-18', lines: [{ description: 'Distribution board x23', qty: 23, unitPrice: 100, extended: 2300 }] },
+    { id: 505, supplier: 'Schneider Electric', date: '2026-07-12', totalEx: 4800, totalInc: 5280, status: 'Ordered', required: '2026-07-28', lines: [{ description: 'Contactors x120', qty: 120, unitPrice: 40, extended: 4800 }] }
+  ];
+
+  const expenses = [
+    { id: 301, reference: 'EXP-0881', status: 'Approved', createdAt: '2026-07-01', employee: 'Sarah Chen', totalAmount: 340.50, items: [{ category: 'Fuel', description: 'Work vehicle', amount: 120 }, { category: 'Meals', description: 'Client lunch', amount: 85.50 }, { category: 'Tools', description: 'Multimeter', amount: 135 }] },
+    { id: 302, reference: 'EXP-0882', status: 'Pending', createdAt: '2026-07-03', employee: 'Matt Olsen', totalAmount: 210.00, items: [{ category: 'Travel', description: 'Tolls', amount: 210 }] },
+    { id: 303, reference: 'EXP-0883', status: 'Approved', createdAt: '2026-07-05', employee: 'Sarah Chen', totalAmount: 540.20, items: [{ category: 'Materials', description: 'Sample fittings', amount: 540.20 }] },
+    { id: 304, reference: 'EXP-0884', status: 'Rejected', createdAt: '2026-07-06', employee: 'James Wright', totalAmount: 90.00, items: [{ category: 'Meals', description: 'Personal', amount: 90 }] },
+    { id: 305, reference: 'EXP-0885', status: 'Pending', createdAt: '2026-07-09', employee: 'Matt Olsen', totalAmount: 175.75, items: [{ category: 'Fuel', description: 'Work vehicle', amount: 175.75 }] }
+  ];
+
+  const timesheets = [
+    { id: 201, weekNumber: 28, status: 'Submitted', weekStart: '2026-07-06', totalHours: 38.5, entries: [{ date: '2026-07-06', hours: 7.5 }, { date: '2026-07-07', hours: 8 }, { date: '2026-07-08', hours: 7.5 }, { date: '2026-07-09', hours: 7.5 }, { date: '2026-07-10', hours: 8 }] },
+    { id: 202, weekNumber: 27, status: 'Approved', weekStart: '2026-06-29', totalHours: 41, entries: [{ date: '2026-06-29', hours: 8 }, { date: '2026-06-30', hours: 8.5 }, { date: '2026-07-01', hours: 8 }, { date: '2026-07-02', hours: 8 }, { date: '2026-07-03', hours: 8.5 }] },
+    { id: 203, weekNumber: 29, status: 'Draft', weekStart: '2026-07-13', totalHours: 12, entries: [{ date: '2026-07-13', hours: 6 }, { date: '2026-07-14', hours: 6 }] },
+    { id: 204, weekNumber: 26, status: 'Approved', weekStart: '2026-06-22', totalHours: 40, entries: [{ date: '2026-06-22', hours: 8 }, { date: '2026-06-23', hours: 8 }, { date: '2026-06-24', hours: 8 }, { date: '2026-06-25', hours: 8 }, { date: '2026-06-26', hours: 8 }] }
+  ];
+
+  const tasks = [
+    { id: 401, title: 'Finalise Q3 lighting tender', status: 'In Progress', dueDate: '2026-07-18', priority: 'High', assignee: 'Sarah Chen', description: 'Complete pricing and submit to Brisbane Airport procurement portal.' },
+    { id: 402, title: 'Follow up overdue invoices', status: 'To Do', dueDate: '2026-07-15', priority: 'Urgent', assignee: 'Matt Olsen', description: 'Call QLD Health and Gold Coast TAFE to arrange payment.' },
+    { id: 403, title: 'Site inspection — Toowoomba Hospital', status: 'To Do', dueDate: '2026-07-16', priority: 'Normal', assignee: 'James Wright', description: 'Verify emergency lighting layout against plans.' },
+    { id: 404, title: 'Approve expense claims', status: 'In Progress', dueDate: '2026-07-14', priority: 'Normal', assignee: 'Peter B', description: 'Review EXP-0882 and EXP-0885.' },
+    { id: 405, title: 'Order stock for Redland Bay job', status: 'Done', dueDate: '2026-07-10', priority: 'Normal', assignee: 'Matt Olsen', description: 'PO raised to Clipsal.' },
+    { id: 406, title: 'Quarterly safety audit', status: 'To Do', dueDate: '2026-07-22', priority: 'High', assignee: 'James Wright', description: 'Complete WHS checklist for all sites.' }
+  ];
+
+  const despatch = [
+    { id: 601, reference: 'DES-3301', status: 'Delivered', deliveryDate: '2026-07-08', recipientName: 'Brisbane Markets', recipientAddress: '1100 Nudgee Rd, Brisbane QLD 4034', items: [{ description: 'LED panel x20', quantity: 20 }, { description: 'Emergency batten x6', quantity: 6 }] },
+    { id: 602, reference: 'DES-3302', status: 'In Transit', deliveryDate: '2026-07-12', recipientName: 'QLD Health', recipientAddress: 'Floor 3, 1 William St, Brisbane QLD 4000', items: [{ description: 'Panel luminaire x40', quantity: 40 }] },
+    { id: 603, reference: 'DES-3303', status: 'Pending', deliveryDate: '2026-07-13', recipientName: 'Griffith University', recipientAddress: '170 Kessels Rd, Nathan QLD 4111', items: [{ description: 'Linear trunking 80m', quantity: 1 }] },
+    { id: 604, reference: 'DES-3304', status: 'Delivered', deliveryDate: '2026-07-09', recipientName: 'Logan City', recipientAddress: '150 Wembley Rd, Logan QLD 4114', items: [{ description: 'Downlight kit x82', quantity: 82 }] },
+    { id: 605, reference: 'DES-3305', status: 'Out for Delivery', deliveryDate: '2026-07-12', recipientName: 'Redland Bay', recipientAddress: '12 Middle St, Cleveland QLD 4163', items: [{ description: 'Sensor switch x58', quantity: 58 }] }
+  ];
+
+  const contacts = [
+    { id: 701, firstName: 'Rebecca', lastName: 'Nguyen', role: 'Procurement Officer', email: 'rebecca.nguyen@brisbanemarkets.com.au', phone: '(07) 3403 8888', mobile: '0412 334 556', address: '1100 Nudgee Rd, Brisbane QLD 4034' },
+    { id: 702, firstName: 'David', lastName: 'Thompson', role: 'Facilities Manager', email: 'david.thompson@qldhealth.gov.au', phone: '(07) 3111 2233', mobile: '0422 889 110', address: '1 William St, Brisbane QLD 4000' },
+    { id: 703, firstName: 'Amanda', lastName: 'Lee', role: 'Project Coordinator', email: 'amanda.lee@usc.edu.au', phone: '(07) 5430 1234', mobile: '0433 221 998', address: '90 Sippy Downs Dr, Sippy Downs QLD 4575' },
+    { id: 704, firstName: 'Chris', lastName: 'Patel', role: 'Buyer', email: 'chris.patel@ipswich.qld.gov.au', phone: '(07) 3810 6666', mobile: '0444 112 335', address: '45 Roderick St, Ipswich QLD 4305' },
+    { id: 705, firstName: 'Olivia', lastName: 'Martin', role: 'Accounts', email: 'olivia.martin@tweed.nsw.gov.au', phone: '(07) 5536 2000', mobile: '0455 667 889', address: '1 Brett St, Tweed Heads NSW 2485' },
+    { id: 706, firstName: 'Daniel', lastName: 'Wright', role: 'Site Supervisor', email: 'daniel.wright@griffith.edu.au', phone: '(07) 3735 5555', mobile: '0466 778 991', address: '170 Kessels Rd, Nathan QLD 4111' }
+  ];
+
+  const cashflow = [];
+  let balance = 86000;
+  const incoming = [42000, 38000, 51000, 33000, 47000, 29000, 62000, 35000, 41000, 39000, 54000, 30000];
+  const outgoing = [38000, 41000, 44000, 30000, 46000, 33000, 50000, 37000, 42000, 35000, 48000, 31000];
+  const start = new Date('2026-07-13');
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(start); d.setDate(d.getDate() + i * 7);
+    balance += incoming[i] - outgoing[i];
+    cashflow.push({ weekNumber: 29 + i, forecastDate: d.toISOString().slice(0, 10), cashPosition: balance, projectedIncoming: incoming[i], projectedOutgoing: outgoing[i] });
+  }
+
+  const goals = [
+    { id: 801, title: 'Annual Revenue $2.5M', period: 'FY26', status: 'On Track', currentValue: 1780000, targetValue: 2500000 },
+    { id: 802, title: 'New Clients 40', period: 'FY26', status: 'At Risk', currentValue: 22, targetValue: 40 },
+    { id: 803, title: 'Net Margin 18%', period: 'FY26', status: 'On Track', currentValue: 0.17, targetValue: 0.18 },
+    { id: 804, title: 'Quotes Won 120', period: 'FY26', status: 'On Track', currentValue: 84, targetValue: 120 }
+  ];
+
+  const projects = [
+    { id: 901, name: 'Brisbane Airport Terminal Upgrade', health: 'Green', percent: 72, milestone: 'Stage 3 commissioning — Aug 5', teamMembers: 'Sarah Chen, James Wright' },
+    { id: 902, name: 'Toowoomba Hospital Retrofit', health: 'Amber', percent: 45, milestone: 'Tender response due Jul 20', teamMembers: 'Matt Olsen' },
+    { id: 903, name: 'Griffith Uni Science Block', health: 'Green', percent: 88, milestone: 'Handover — Jul 25', teamMembers: 'Daniel Wright' },
+    { id: 904, name: 'Logan City LED Rollout', health: 'Red', percent: 30, milestone: 'Resolve PO 504 supplier delay', teamMembers: 'Matt Olsen, James Wright' }
+  ];
+
+  const files = [
+    { name: 'Invoices', isFolder: true },
+    { name: 'Quotes', isFolder: true },
+    { name: '2026-07 Invoice Run.pdf', isFolder: false, size: 245000, createdAt: '2026-07-12' },
+    { name: 'Brisbane Airport Tender.docx', isFolder: false, size: 1820000, createdAt: '2026-07-02' },
+    { name: 'Safety Audit Q2.pdf', isFolder: false, size: 980000, createdAt: '2026-06-28' },
+    { name: 'Product Catalog', isFolder: true }
+  ];
+
+  return { invoices, quotes, pos, expenses, timesheets, tasks, despatch, contacts, cashflow, goals, projects, files };
+}
+
+function startDemo() {
+  state.demo = true;
+  try { localStorage.setItem('md_demo', '1'); } catch (e) {}
+  state.patToken = 'demo-token';
+  session.user = { name: 'Demo User', initials: 'DU', email: 'demo@mydesk.app', role: 'Business Owner', code: 'demo' };
+  session.tenants = [{ id: 'techlight', name: 'Techlight (Demo)', slug: 'techlight', isDefault: true }];
+  session.activeTenant = session.tenants[0];
+
+  const d = getDemoData();
+  state.modules = ['invoices', 'quotes', 'pos', 'expenses', 'timesheets', 'tasks', 'despatch', 'contacts', 'cashflow', 'goals', 'projects', 'files'];
+  state.invoices = d.invoices; state.quotes = d.quotes; state.pos = d.pos; state.expenses = d.expenses;
+  state.timesheets = d.timesheets; state.tasks = d.tasks; state.despatch = d.despatch; state.contacts = d.contacts;
+  state.cashflow = d.cashflow; state.goals = d.goals; state.projects = d.projects; state.files = d.files;
+
+  Object.keys(state.pagination).forEach(k => { state.pagination[k].hasMore = false; });
+
+  applySessionToUI();
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('forgot-password-screen').classList.add('hidden');
+  document.getElementById('reset-password-screen').classList.add('hidden');
+
+  const banner = document.getElementById('demoBanner');
+  if (banner) banner.style.display = 'flex';
+  const badge = document.getElementById('headerBadgeText');
+  if (badge) badge.textContent = 'Demo';
+
+  buildInvoicesList(); buildQuotesList(); buildPOsList(); buildExpensesList();
+  buildTimesheetsList(); buildTasksList(); buildDespatchList(); buildContactsList();
+  buildCashflowView(); buildGoalsList(); buildProjectsList(); buildFilesList();
+  updateHomeStats(); updateModuleButtons();
+  navigate('home');
+}
+
+function exitDemo() {
+  state.demo = false;
+  try { localStorage.removeItem('md_demo'); } catch (e) {}
+  const banner = document.getElementById('demoBanner');
+  if (banner) banner.style.display = 'none';
+  const badge = document.getElementById('headerBadgeText');
+  if (badge) badge.textContent = 'Connected';
+  document.getElementById('login-screen').classList.remove('hidden');
+}
+
+function demoChatReply(msg) {
+  const m = (msg || '').toLowerCase();
+  const invCount = state.invoices.length;
+  const overdue = state.invoices.filter(i => i.statusId === 2).length;
+  const openQuotes = state.quotes.filter(q => q.status === 'Open').length;
+  const lastCash = state.cashflow[state.cashflow.length - 1];
+  if (m.includes('invoice')) {
+    return 'You have ' + invCount + ' invoices in the demo workspace, with ' + overdue + ' currently overdue. The largest is INV-1005 for Gold Coast TAFE at $10,780. Want me to draft a reminder?';
+  }
+  if (m.includes('quote') || m.includes('tender')) {
+    return 'There are ' + openQuotes + ' open quotes. Q-2042 for Toowoomba Hospital expires 20 Jul and is at risk — I would follow up this week.';
+  }
+  if (m.includes('cash') || m.includes('forecast') || m.includes('money')) {
+    return 'Projected cash position in 12 weeks is ' + formatCurrency(lastCash.cashPosition) + ', trending positive. Week 31 dips slightly due to the Clipsal PO.';
+  }
+  if (m.includes('project') || m.includes('job')) {
+    return 'Logan City LED Rollout is flagged Red at 30% — the Clipsal PO (504) is delayed. The other three projects are Green or Amber.';
+  }
+  if (m.includes('task') || m.includes('to do')) {
+    return 'You have 2 urgent/overdue items: follow up overdue invoices (due 15 Jul) and the Q3 lighting tender (due 18 Jul).';
+  }
+  return 'Hi, I am Desky. In this demo I can summarise your invoices, quotes, cash flow, projects and tasks. Try asking "How are my invoices looking?" or "What is my cash position?"';
+}
+
 // ── Navigation ─────────────────────────────────────────────
+
 function navigate(screen) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -1637,7 +1837,7 @@ async function loadMoreInvoices() {
 }
 
 async function showInvoiceDetail(id) {
-  const inv = await apiCall('/api/mobile/invoices/' + id);
+  const inv = state.demo ? demoFind('invoices', id) : await apiCall('/api/mobile/invoices/' + id);
   if (!inv) return;
 
   const html = `
@@ -1744,7 +1944,7 @@ async function loadMoreQuotes() {
 }
 
 async function showQuoteDetail(id) {
-  const q = await apiCall('/api/mobile/quotes/' + id);
+  const q = state.demo ? demoFind('quotes', id) : await apiCall('/api/mobile/quotes/' + id);
   if (!q) return;
 
   const html = `
@@ -1845,7 +2045,7 @@ async function loadMorePOs() {
 }
 
 async function showPODetail(id) {
-  const po = await apiCall('/api/mobile/purchase-orders/' + id);
+  const po = state.demo ? demoFind('pos', id) : await apiCall('/api/mobile/purchase-orders/' + id);
   if (!po) return;
 
   const html = `
@@ -1945,7 +2145,7 @@ async function loadMoreExpenses() {
 }
 
 async function showExpenseDetail(id) {
-  const exp = await apiCall('/api/mobile/expenses/' + id);
+  const exp = state.demo ? demoFind('expenses', id) : await apiCall('/api/mobile/expenses/' + id);
   if (!exp) return;
 
   const html = `
@@ -2035,7 +2235,7 @@ async function loadMoreTimesheets() {
 }
 
 async function showTimesheetDetail(id) {
-  const ts = await apiCall('/api/mobile/timesheets/' + id);
+  const ts = state.demo ? demoFind('timesheets', id) : await apiCall('/api/mobile/timesheets/' + id);
   if (!ts) return;
 
   const html = `
@@ -2121,7 +2321,7 @@ async function loadMoreTasks() {
 }
 
 async function showTaskDetail(id) {
-  const task = await apiCall('/api/mobile/tasks/' + id);
+  const task = state.demo ? demoFind('tasks', id) : await apiCall('/api/mobile/tasks/' + id);
   if (!task) return;
 
   const html = `
@@ -2200,7 +2400,7 @@ async function loadMoreDespatch() {
 }
 
 async function showDespatchDetail(id) {
-  const desp = await apiCall('/api/mobile/despatch/' + id);
+  const desp = state.demo ? demoFind('despatch', id) : await apiCall('/api/mobile/despatch/' + id);
   if (!desp) return;
 
   const html = `
@@ -2284,7 +2484,7 @@ async function loadMoreContacts() {
 }
 
 async function showContactDetail(id) {
-  const contact = await apiCall('/api/mobile/contacts/' + id);
+  const contact = state.demo ? demoFind('contacts', id) : await apiCall('/api/mobile/contacts/' + id);
   if (!contact) return;
 
   const html = `
@@ -2428,7 +2628,7 @@ function buildProjectsList() {
 }
 
 async function showProjectDetail(id) {
-  const project = await apiCall('/api/mobile/projects/' + id);
+  const project = state.demo ? demoFind('projects', id) : await apiCall('/api/mobile/projects/' + id);
   if (!project) return;
 
   const healthColor = project.health === 'Red' ? 'var(--error)' : project.health === 'Amber' ? 'var(--warning)' : 'var(--success)';
@@ -2512,22 +2712,27 @@ async function sendChat() {
   autoResize(input);
   container.scrollTop = container.scrollHeight;
 
-  // Send to chat/mobile endpoint
+  // Send to chat/mobile endpoint (demo mode uses a local responder)
   try {
-    const resp = await fetch(API_BASE + '/api/chat/mobile', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + state.patToken,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        message: msg,
-        brand: state.brand,
-        history: state.chatHistory
-      })
-    });
+    let data;
+    if (state.demo) {
+      data = { reply: demoChatReply(msg) };
+    } else {
+      const resp = await fetch(API_BASE + '/api/chat/mobile', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + state.patToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: msg,
+          brand: state.brand,
+          history: state.chatHistory
+        })
+      });
 
-    const data = await resp.json();
+      data = await resp.json();
+    }
     container.innerHTML += `
       <div class="msg">
         <div class="msg-avatar agent">🤖</div>

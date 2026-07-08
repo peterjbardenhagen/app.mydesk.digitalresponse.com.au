@@ -227,6 +227,25 @@ Mobile/Android/DigitalResponseMyDesk/
 - **CSRF**: App-to-API calls use PAT bearer auth (no cookies)
 - **Token Revocation**: User can revoke tokens from web app
 
+## Demo Mode (Client Demos)
+
+The app ships with a built-in **Demo Mode** so new clients can explore the full MyDeskAI experience with realistic sample data — no backend, login, or network required. This is the fastest way to run a sales demo on a sideloaded APK.
+
+### Starting Demo Mode
+1. Open the app (or tap **Settings → Log Off** to return to the login screen).
+2. On the login screen tap **✨ Explore Demo**.
+3. All 12 modules load with sample Australian business data (invoices, quotes, POs, expenses, timesheets, tasks, despatch, contacts, cash flow, goals, projects, files).
+4. A **Demo Mode** banner appears under the header and the status badge reads **Demo** so it is never confused with live data.
+5. Tap **Exit Demo** in the banner (or **Settings → Log Off**) to return to the login screen.
+
+### What works in Demo Mode
+- Every module list and detail view renders from bundled sample data.
+- The **Desky** chat responds locally with summaries drawn from the sample data (e.g. "How are my invoices looking?", "What is my cash position?").
+- Theme (dark/light) and brand switching work as normal.
+- No requests are made to the API; the demo is fully offline.
+
+The demo preference (`md_demo`) is remembered in localStorage, so reopening the app resumes the demo until the user logs in or exits.
+
 ## Known Limitations
 - Single tenant per PAT (no workspace switching in current build)
 - No offline write capability (read-only when offline)
