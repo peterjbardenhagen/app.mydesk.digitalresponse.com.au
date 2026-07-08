@@ -6,7 +6,7 @@
         <MudStack Spacing="3">
             <MudText Typo="Typo.h6" Class="font-bold">Export Dashboard Data</MudText>
 
-            <MudRadioGroup @bind-SelectedOption="@selectedFormat">
+            <MudRadioGroup T="string" @bind-SelectedOption="@selectedFormat">
                 <MudStack Spacing="2">
                     <MudRadio T="string" Option="@("csv")" Color="Color.Primary">
                         <MudText>CSV (Spreadsheet)</MudText>
@@ -35,9 +35,9 @@
 
             <MudStack Spacing="2">
                 <MudText Typo="Typo.subtitle2" Class="font-semibold">Include in Export</MudText>
-                <MudCheckBox @bind-Checked="@includeCharts" Label="Charts & Visualizations" />
-                <MudCheckBox @bind-Checked="@includeDetailed" Label="Detailed Data (full tables)" />
-                <MudCheckBox @bind-Checked="@includeSummary" Label="Summary Metrics" />
+                <MudCheckBox T="bool" @bind-Checked="@includeCharts" Label="Charts & Visualizations" />
+                <MudCheckBox T="bool" @bind-Checked="@includeDetailed" Label="Detailed Data (full tables)" />
+                <MudCheckBox T="bool" @bind-Checked="@includeSummary" Label="Summary Metrics" />
             </MudStack>
 
             <MudStack Row="true" Spacing="2" Class="mt-4">

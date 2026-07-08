@@ -1,7 +1,6 @@
 @page "/admin/notifications"
 @attribute [Authorize(Roles = "Admin,Director")]
-@using MyDesk.Web.Services
-@inject PlatformSettingsService PlatformSettings
+@inject MyDesk.Web.Services.PlatformSettingsService PlatformSettings
 @inject MyDesk.Web.Services.ClientNotificationService NotifSvc
 @inject ISnackbar Snackbar
 
