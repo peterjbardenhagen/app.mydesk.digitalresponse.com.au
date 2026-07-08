@@ -60,7 +60,7 @@ public class AnalyticsController : ControllerBase
     /// Export dashboard data as CSV
     /// </summary>
     [HttpGet("export-csv")]
-    public async Task<IActionResult> ExportCsv([FromQuery] int tenantId, [FromQuery] string dashboardType = "executive")
+    public IActionResult ExportCsv([FromQuery] int tenantId, [FromQuery] string dashboardType = "executive")
     {
         // TODO: Implement CSV export
         return BadRequest("Export functionality not yet implemented");
@@ -70,7 +70,7 @@ public class AnalyticsController : ControllerBase
     /// Export dashboard data as PDF
     /// </summary>
     [HttpGet("export-pdf")]
-    public async Task<IActionResult> ExportPdf([FromQuery] int tenantId, [FromQuery] string dashboardType = "executive")
+    public IActionResult ExportPdf([FromQuery] int tenantId, [FromQuery] string dashboardType = "executive")
     {
         // TODO: Implement PDF export using QuestPDF
         return BadRequest("Export functionality not yet implemented");
