@@ -1,4 +1,5 @@
 @page "/dashboards/employee"
+@using System.Security.Claims
 @using MyDesk.Web.Services
 @using MyDesk.Web.Components.Shared
 @using MyDesk.Web.Components.Dialogs
@@ -6,6 +7,7 @@
 @inject DashboardChartService ChartService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>My Dashboard - MyDesk</PageTitle>
 
@@ -138,12 +140,34 @@
 @code {
     private bool isLoading = true;
     private EmployeeDashboard? dashboard;
-    private int tenantId = 1;  // TODO: Get from authentication
-    private int userId = 100;  // TODO: Get from authentication
+    private int tenantId = 1;
+    private int userId = 100;
 
     protected override async Task OnInitializedAsync()
     {
+        await GetAuthenticationContext();
         await LoadDashboard();
+    }
+
+    private async Task GetAuthenticationContext()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user?.Identity?.IsAuthenticated == true)
+        {
+            var tenantClaim = user.FindFirst("tenant_id")?.Value;
+            if (int.TryParse(tenantClaim, out var tid))
+            {
+                tenantId = tid;
+            }
+
+            var userIdClaim = user.FindFirst("sub")?.Value;
+            if (int.TryParse(userIdClaim, out var uid))
+            {
+                userId = uid;
+            }
+        }
     }
 
     private async Task LoadDashboard()

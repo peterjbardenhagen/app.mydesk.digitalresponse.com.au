@@ -1,5 +1,6 @@
 @page "/dashboards/executive"
 @using System.Net.Http.Json
+@using System.Security.Claims
 @using MyDesk.Web.Services
 @using MyDesk.Web.Components.Shared
 @using MyDesk.Web.Components.Dialogs
@@ -7,6 +8,7 @@
 @inject DashboardChartService ChartService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Executive Dashboard - MyDesk</PageTitle>
 
@@ -149,11 +151,27 @@
 @code {
     private bool isLoading = true;
     private ExecutiveDashboard? dashboard;
-    private int tenantId = 1;  // TODO: Get from authentication
+    private int tenantId = 1;
 
     protected override async Task OnInitializedAsync()
     {
+        await GetAuthenticationContext();
         await LoadDashboard();
+    }
+
+    private async Task GetAuthenticationContext()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user?.Identity?.IsAuthenticated == true)
+        {
+            var tenantClaim = user.FindFirst("tenant_id")?.Value;
+            if (int.TryParse(tenantClaim, out var tid))
+            {
+                tenantId = tid;
+            }
+        }
     }
 
     private async Task LoadDashboard()
