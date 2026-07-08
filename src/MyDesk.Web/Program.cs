@@ -390,6 +390,7 @@ builder.Services.AddScoped<BankingService>();
     builder.Services.AddScoped<NotificationService>();
     builder.Services.AddScoped<ApprovalNotificationService>();
     builder.Services.AddScoped<BudgetAlertService>();
+    builder.Services.AddScoped<NotificationRetryService>();
     builder.Services.AddSingleton<NotificationBackgroundJobService>();
 
     // ── Phase 4: Teams & Departments (2026) ────────────────────────────────

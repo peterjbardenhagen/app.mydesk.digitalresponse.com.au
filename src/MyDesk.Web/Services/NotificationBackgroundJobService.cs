@@ -55,6 +55,12 @@ public class NotificationBackgroundJobService
             methodCall: x => x.ProcessDailyDigests(),
             cronExpression: "0 8 * * *");
 
+        // Process failed notifications with retry (every 5 minutes)
+        RecurringJob.AddOrUpdate<NotificationBackgroundJobService>(
+            recurringJobId: "process-notification-retries",
+            methodCall: x => x.ProcessFailedNotifications(),
+            cronExpression: Cron.MinuteInterval(5));
+
         _logger?.LogInformation("Recurring notification jobs registered successfully");
     }
 
@@ -261,6 +267,52 @@ public class NotificationBackgroundJobService
     }
 
     /// <summary>
+    /// Process failed notifications and schedule retries with exponential backoff.
+    /// Triggered every 5 minutes to handle failed emails.
+    /// </summary>
+    public async Task ProcessFailedNotifications()
+    {
+        try
+        {
+            _logger?.LogInformation("Starting failed notification processing job");
+
+            using (var scope = _serviceProvider.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<DatabaseService>();
+                var retryService = scope.ServiceProvider.GetRequiredService<NotificationRetryService>();
+
+                // Get all active tenants
+                var tenantsResult = await db.QueryAsync(
+                    "SELECT DISTINCT TenantId FROM dbo.Tenants WHERE IsActive = 1",
+                    null);
+
+                int totalRetried = 0;
+
+                // Process failed notifications for each tenant
+                foreach (var row in tenantsResult.Rows)
+                {
+                    int tenantId = (int)row["TenantId"];
+                    int retriedCount = await retryService.ProcessFailedNotificationsAsync(tenantId);
+                    totalRetried += retriedCount;
+
+                    if (retriedCount > 0)
+                    {
+                        _logger?.LogInformation(
+                            "Queued {RetryCount} failed notifications for retry in tenant {TenantId}",
+                            retriedCount, tenantId);
+                    }
+                }
+
+                _logger?.LogInformation("Failed notification processing completed: {TotalRetried} notifications queued for retry", totalRetried);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error processing failed notifications");
+        }
+    }
+
+    /// <summary>
     /// Manually trigger approval reminders (for testing or manual execution).
     /// </summary>
     public async Task TriggerApprovalReminders(int tenantId)
@@ -293,5 +345,18 @@ public class NotificationBackgroundJobService
     {
         _logger?.LogInformation("Manual trigger: digest processing");
         await ProcessDailyDigests();
+    }
+
+    /// <summary>
+    /// Manually trigger failed notification retry processing (for testing or manual execution).
+    /// </summary>
+    public async Task TriggerRetryProcessing(int tenantId)
+    {
+        _logger?.LogInformation("Manual trigger: retry processing for tenant {TenantId}", tenantId);
+        using (var scope = _serviceProvider.CreateScope())
+        {
+            var retryService = scope.ServiceProvider.GetRequiredService<NotificationRetryService>();
+            await retryService.ProcessFailedNotificationsAsync(tenantId);
+        }
     }
 }
