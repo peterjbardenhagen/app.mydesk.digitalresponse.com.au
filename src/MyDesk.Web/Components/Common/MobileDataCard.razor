@@ -1,0 +1,140 @@
+@* Mobile-optimized data card component
+   Phase 6: Mobile-First UI Redesign
+   Displays data in card format on mobile, table on desktop
+*@
+
+@using MudBlazor
+
+<div class="mobile-data-card">
+    @if (ShowHeader)
+    {
+        <div class="mobile-data-card-header">
+            <MudText Typo="Typo.subtitle2" Class="font-bold">@Title</MudText>
+            @if (HeaderAction != null)
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" />
+            }
+        </div>
+    }
+
+    <div class="mobile-data-card-content">
+        @foreach (var item in Items)
+        {
+            <div class="mobile-data-item">
+                @foreach (var field in Fields)
+                {
+                    <div class="mobile-data-row">
+                        <span class="mobile-data-label">@field.Label</span>
+                        <span class="mobile-data-value">@field.GetValue(item)</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    @if (ShowFooter && Footer != null)
+    {
+        <div class="mobile-data-card-footer">
+            @Footer
+        </div>
+    }
+</div>
+
+<style>
+.mobile-data-card {
+    margin-bottom: 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+    background: white;
+}
+
+.mobile-data-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background-color: #f9f9f9;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.mobile-data-card-content {
+    padding: 0;
+}
+
+.mobile-data-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.mobile-data-item:last-child {
+    border-bottom: none;
+}
+
+.mobile-data-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.mobile-data-row:last-child {
+    margin-bottom: 0;
+}
+
+.mobile-data-label {
+    font-weight: 600;
+    color: #666;
+    flex: 0 0 40%;
+}
+
+.mobile-data-value {
+    flex: 1;
+    text-align: right;
+    color: #212121;
+    word-break: break-word;
+}
+
+.mobile-data-card-footer {
+    padding: 12px 16px;
+    background-color: #f9f9f9;
+    border-top: 1px solid #e0e0e0;
+}
+
+/* Tablet and up: switch to table view */
+@media (min-width: 768px) {
+    .mobile-data-card {
+        display: none;
+    }
+}
+</style>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = "";
+
+    [Parameter]
+    public List<DataField> Fields { get; set; } = new();
+
+    [Parameter]
+    public List<object> Items { get; set; } = new();
+
+    [Parameter]
+    public bool ShowHeader { get; set; } = true;
+
+    [Parameter]
+    public bool ShowFooter { get; set; } = false;
+
+    [Parameter]
+    public RenderFragment? Footer { get; set; }
+
+    [Parameter]
+    public EventCallback HeaderAction { get; set; }
+
+    public class DataField
+    {
+        public string Label { get; set; } = "";
+        public Func<object, string> GetValue { get; set; } = x => x.ToString() ?? "";
+    }
+}

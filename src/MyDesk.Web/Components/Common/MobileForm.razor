@@ -1,0 +1,110 @@
+@* Mobile-optimized form component
+   Phase 6: Mobile-First UI Redesign
+   Responsive form layout: full-width on mobile, columnar on tablet+
+*@
+
+@using MudBlazor
+
+<div class="mobile-form">
+    <MudForm @ref="form" @bind-IsValid="isFormValid">
+        <MudGrid Spacing="2">
+            @ChildContent
+        </MudGrid>
+    </MudForm>
+</div>
+
+<style>
+.mobile-form :deep(.mud-grid) {
+    margin: 0 -4px;
+}
+
+.mobile-form :deep(.mud-grid-item) {
+    padding: 4px;
+    width: 100%;
+}
+
+/* Mobile first: full width items */
+.mobile-form :deep(.mud-grid-item.xs-12) {
+    flex: 0 0 100%;
+}
+
+/* Tablet and up: columnar layout */
+@media (min-width: 768px) {
+    .mobile-form :deep(.mud-grid-item.sm-6) {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+
+    .mobile-form :deep(.mud-grid-item.md-4) {
+        flex: 0 0 33.333%;
+        max-width: 33.333%;
+    }
+
+    .mobile-form :deep(.mud-grid-item.md-3) {
+        flex: 0 0 25%;
+        max-width: 25%;
+    }
+}
+
+/* Input field optimizations */
+.mobile-form :deep(.mud-input-control) {
+    width: 100%;
+}
+
+.mobile-form :deep(.mud-input-slot) {
+    font-size: 16px; /* Prevents iOS zoom */
+}
+
+.mobile-form :deep(.mud-input) {
+    min-height: 44px; /* Touch target */
+}
+
+/* Button group responsive */
+.mobile-form :deep(.mud-stack[style*="flex-direction: row"]) {
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mobile-form :deep(.mud-stack[style*="flex-direction: row"] .mud-button) {
+    width: 100%;
+}
+
+@media (min-width: 576px) {
+    .mobile-form :deep(.mud-stack[style*="flex-direction: row"]) {
+        flex-direction: row;
+        gap: 8px;
+    }
+
+    .mobile-form :deep(.mud-stack[style*="flex-direction: row"] .mud-button) {
+        width: auto;
+        flex: 1;
+    }
+}
+</style>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public bool IsValid { get; set; }
+
+    private MudForm? form;
+    private bool isFormValid;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        IsValid = isFormValid;
+    }
+
+    public async Task<bool> ValidateAsync()
+    {
+        if (form != null)
+        {
+            await form.Validate();
+            return isFormValid;
+        }
+        return false;
+    }
+}
