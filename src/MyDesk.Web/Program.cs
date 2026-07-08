@@ -387,6 +387,7 @@ builder.Services.AddScoped<BankingService>();
 
     // ── Phase 5: Notifications & Alerts (2026) ──────────────────────────────
     // Registered before Phase 4 so BudgetService can depend on BudgetAlertService
+    builder.Services.AddScoped<NotificationAuditService>();
     builder.Services.AddScoped<NotificationService>();
     builder.Services.AddScoped<ApprovalNotificationService>();
     builder.Services.AddScoped<BudgetAlertService>();
