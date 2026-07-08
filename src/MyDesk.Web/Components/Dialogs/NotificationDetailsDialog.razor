@@ -32,11 +32,11 @@
                 </MudItem>
 
                 <MudItem xs="12" sm="6">
-                    <MudTextField Label="Created At" Value="@Notification.createdAt.ToString(\"G\")" ReadOnly="true" />
+                    <MudTextField Label="Created At" Value="@GetCreatedAt()" ReadOnly="true" />
                 </MudItem>
 
                 <MudItem xs="12" sm="6">
-                    <MudTextField Label="Sent At" Value="@(Notification.sentAt?.ToString(\"G\") ?? \"N/A\")" ReadOnly="true" />
+                    <MudTextField Label="Sent At" Value="@GetSentAt()" ReadOnly="true" />
                 </MudItem>
 
                 @if (!string.IsNullOrEmpty(Notification.errorMessage))
@@ -64,6 +64,10 @@
     public DeliveryStatus.NotificationLog Notification { get; set; } = new();
 
     private void CloseDialog() => MudDialog?.Close(DialogResult.Ok(true));
+
+    private string GetCreatedAt() => Notification.createdAt.ToString("G");
+
+    private string GetSentAt() => Notification.sentAt?.ToString("G") ?? "N/A";
 
     private Color GetStatusColor(string status) => status switch
     {
