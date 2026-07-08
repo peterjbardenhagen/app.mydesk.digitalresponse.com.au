@@ -470,6 +470,7 @@ builder.Services.AddScoped<OneDriveService>();
 builder.Services.AddScoped<UserIntelligenceService>();
 builder.Services.AddScoped<PredictiveAnalyticsService>();
 builder.Services.AddScoped<ClientNotificationService>();
+builder.Services.AddScoped<AnalyticsService>();
 
 // IAccountingSettingsService → PlatformSettingsService (allows Shared sync services to save tokens)
 builder.Services.AddScoped<MyDesk.Shared.Services.Integrations.IAccountingSettingsService>(

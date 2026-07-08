@@ -1,0 +1,213 @@
+@page "/dashboards/manager"
+@using MyDesk.Web.Services
+@using MyDesk.Web.Components.Shared
+@inject AnalyticsService AnalyticsService
+@inject ISnackbar Snackbar
+
+<PageTitle>Manager Dashboard - MyDesk</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Lg" Class="py-8">
+    <MudStack Spacing="4">
+        <!-- Header -->
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="responsive-header">
+            <MudStack>
+                <MudText Typo="Typo.h4" Class="font-bold">Manager Dashboard</MudText>
+                <MudText Typo="Typo.body2" Color="Color.TextSecondary">Team expense oversight and approvals</MudText>
+            </MudStack>
+            <MudButton Variant="Variant.Outlined" OnClick="RefreshData" StartIcon="@Icons.Material.Filled.Refresh">
+                Refresh
+            </MudButton>
+        </MudStack>
+
+        @if (isLoading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (dashboard != null)
+        {
+            <!-- Team Overview - Mobile First Grid -->
+            <MudGrid>
+                <MudItem xs="12" sm="6" md="3">
+                    <MetricCard
+                        Title="Team Members"
+                        Value="@dashboard.TeamMembersCount.ToString()"
+                        Icon="@Icons.Material.Filled.People"
+                        IconColor="Color.Primary" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MetricCard
+                        Title="Expenses MTD"
+                        Value="@FormatCurrency(dashboard.TeamExpensesMonthToDate)"
+                        Icon="@Icons.Material.Filled.AttachMoney"
+                        IconColor="Color.Success" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MetricCard
+                        Title="Pending Approvals"
+                        Value="@dashboard.PendingApprovals.ToString()"
+                        Icon="@Icons.Material.Filled.HourglassBottom"
+                        IconColor="Color.Warning" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MetricCard
+                        Title="Overdue Items"
+                        Value="@dashboard.OverdueApprovals.ToString()"
+                        Icon="@Icons.Material.Filled.Error"
+                        IconColor="Color.Error" />
+                </MudItem>
+            </MudGrid>
+
+            <!-- Team Spending Breakdown -->
+            <MudPaper Class="pa-6">
+                <MudText Typo="Typo.h6" Class="font-bold mb-4">Team Spending by Category</MudText>
+                <MudList T="CategoryMetric">
+                    @foreach (var cat in dashboard.TeamSpendingByCategory)
+                    {
+                        <MudListItem T="CategoryMetric" Class="pa-2">
+                            <div class="d-flex justify-space-between w-100">
+                                <MudText>@cat.Category</MudText>
+                                <MudText Class="font-semibold">@FormatCurrency(cat.Amount)</MudText>
+                            </div>
+                            <MudProgressLinear Value="@GetPercentage(cat.Amount)" Class="mt-2" />
+                        </MudListItem>
+                    }
+                </MudList>
+            </MudPaper>
+
+            <!-- Overdue Approvals -->
+            <MudPaper Class="pa-6">
+                <MudStack AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Row="true" Class="mb-4">
+                    <MudText Typo="Typo.h6" Class="font-bold">Overdue Approvals Requiring Action</MudText>
+                    @if (dashboard.OverdueItems.Count == 0)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success">All caught up!</MudChip>
+                    }
+                </MudStack>
+
+                @if (dashboard.OverdueItems.Count > 0)
+                {
+                    <MudList T="OverdueItem">
+                        @foreach (var item in dashboard.OverdueItems)
+                        {
+                            <MudListItem T="OverdueItem" Class="pa-3" Style="border-bottom: 1px solid var(--mud-palette-lines-default);">
+                                <MudStack Spacing="0">
+                                    <div class="d-flex justify-space-between align-center">
+                                        <MudText Typo="Typo.body2" Class="font-semibold">@item.EmployeeName</MudText>
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Error">
+                                            @item.DaysOverdue day@(item.DaysOverdue != 1 ? "s" : "") overdue
+                                        </MudChip>
+                                    </div>
+                                    <MudText Typo="Typo.body1" Class="font-bold mt-2">@FormatCurrency(item.Amount)</MudText>
+                                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" Class="mt-1">
+                                        Review & Approve
+                                    </MudButton>
+                                </MudStack>
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Success">
+                        No overdue approvals. Your team is on track!
+                    </MudAlert>
+                }
+            </MudPaper>
+
+            <!-- Quick Actions -->
+            <MudPaper Class="pa-6">
+                <MudText Typo="Typo.h6" Class="font-bold mb-4">Quick Actions</MudText>
+                <MudStack Row="true" Spacing="2" Class="responsive-buttons">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.List">
+                        View All Expenses
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AssignmentTurnedIn">
+                        Review Pending
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FileDownload">
+                        Export Report
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Error">
+                Failed to load manager dashboard. Please try again.
+            </MudAlert>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    private bool isLoading = true;
+    private ManagerDashboard? dashboard;
+    private int tenantId = 1;  // TODO: Get from authentication
+    private int managerId = 1000;  // TODO: Get from authentication
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboard();
+    }
+
+    private async Task LoadDashboard()
+    {
+        try
+        {
+            isLoading = true;
+            dashboard = await AnalyticsService.GetManagerDashboardAsync(tenantId, managerId);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading dashboard: {ex.Message}", Severity.Error);
+            dashboard = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadDashboard();
+        Snackbar.Add("Dashboard refreshed", Severity.Success);
+    }
+
+    private string FormatCurrency(decimal amount) => amount.ToString("C");
+
+    private int GetPercentage(decimal amount)
+    {
+        var total = dashboard?.TeamSpendingByCategory.Sum(c => c.Amount) ?? 1;
+        return total > 0 ? (int)((amount / total) * 100) : 0;
+    }
+}
+
+<style>
+.responsive-header {
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.responsive-buttons {
+    flex-wrap: wrap;
+}
+
+@media (max-width: 599px) {
+    .responsive-header {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .responsive-buttons {
+        flex-direction: column;
+    }
+
+    :deep(.mud-button) {
+        width: 100%;
+    }
+}
+</style>

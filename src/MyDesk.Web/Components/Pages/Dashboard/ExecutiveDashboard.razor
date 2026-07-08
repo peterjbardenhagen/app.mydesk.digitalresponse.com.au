@@ -1,0 +1,241 @@
+@page "/dashboards/executive"
+@using System.Net.Http.Json
+@using MyDesk.Web.Services
+@using MyDesk.Web.Components.Shared
+@inject AnalyticsService AnalyticsService
+@inject ISnackbar Snackbar
+
+<PageTitle>Executive Dashboard - MyDesk</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Lg" Class="py-8">
+    <MudStack Spacing="4">
+        <!-- Header -->
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="responsive-header">
+            <MudStack>
+                <MudText Typo="Typo.h4" Class="font-bold">Executive Dashboard</MudText>
+                <MudText Typo="Typo.body2" Color="Color.TextSecondary">Real-time metrics for CFO oversight</MudText>
+            </MudStack>
+            <MudButton Variant="Variant.Outlined" OnClick="RefreshData" StartIcon="@Icons.Material.Filled.Refresh">
+                Refresh
+            </MudButton>
+        </MudStack>
+
+        @if (isLoading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (dashboard != null)
+        {
+            <!-- Key Metrics - Mobile First Grid -->
+            <MudGrid>
+                <MudItem xs="12" sm="6" md="3">
+                    <MetricCard
+                        Title="Total Expenses MTD"
+                        Value="@FormatCurrency(dashboard.TotalExpensesMonthToDate)"
+                        Icon="@Icons.Material.Filled.AttachMoney"
+                        IconColor="Color.Primary" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MetricCard
+                        Title="Pending Approvals"
+                        Value="@dashboard.PendingApprovals.ToString()"
+                        Icon="@Icons.Material.Filled.HourglassBottom"
+                        IconColor="Color.Warning" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MetricCard
+                        Title="Approved This Month"
+                        Value="@dashboard.ApprovedThisMonth.ToString()"
+                        Icon="@Icons.Material.Filled.CheckCircle"
+                        IconColor="Color.Success" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MetricCard
+                        Title="Avg. Approval Time"
+                        Value="@FormatHours(dashboard.AverageApprovalTimeHours)"
+                        Icon="@Icons.Material.Filled.Schedule"
+                        IconColor="Color.Info" />
+                </MudItem>
+            </MudGrid>
+
+            <!-- Expenses by Department -->
+            <MudPaper Class="pa-6">
+                <MudText Typo="Typo.h6" Class="font-bold mb-4">Expenses by Department</MudText>
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudList T="DepartmentMetric">
+                            @foreach (var dept in dashboard.ByDepartment)
+                            {
+                                <MudListItem T="DepartmentMetric" Class="pa-2">
+                                    <div class="d-flex justify-space-between w-100">
+                                        <MudText>@dept.Department</MudText>
+                                        <MudStack Row="true" Spacing="2">
+                                            <MudText Class="font-semibold">@FormatCurrency(dept.Amount)</MudText>
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Default">@dept.Count items</MudChip>
+                                        </MudStack>
+                                    </div>
+                                    <MudProgressLinear Value="@GetPercentage(dept.Amount)" Class="mt-2" />
+                                </MudListItem>
+                            }
+                        </MudList>
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudPaper Class="pa-4 d-flex flex-column justify-center" Elevation="0" Style="min-height:300px;background-color:var(--mud-palette-background-grey);">
+                            <MudText Typo="Typo.body2" Color="Color.TextSecondary" Align="Align.Center">
+                                Department Distribution Chart
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.TextSecondary" Align="Align.Center" Class="mt-2">
+                                (Charts integration via MudBlazor or Chart.js — to be implemented)
+                            </MudText>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+
+            <!-- Expenses by Category -->
+            <MudPaper Class="pa-6">
+                <MudText Typo="Typo.h6" Class="font-bold mb-4">Expenses by Category</MudText>
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudList T="CategoryMetric">
+                            @foreach (var cat in dashboard.ByCategory)
+                            {
+                                <MudListItem T="CategoryMetric" Class="pa-2">
+                                    <div class="d-flex justify-space-between w-100">
+                                        <MudText>@cat.Category</MudText>
+                                        <MudStack Row="true" Spacing="2">
+                                            <MudText Class="font-semibold">@FormatCurrency(cat.Amount)</MudText>
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Default">@cat.Count items</MudChip>
+                                        </MudStack>
+                                    </div>
+                                    <MudProgressLinear Value="@GetPercentage(cat.Amount)" Class="mt-2" />
+                                </MudListItem>
+                            }
+                        </MudList>
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudPaper Class="pa-4 d-flex flex-column justify-center" Elevation="0" Style="min-height:300px;background-color:var(--mud-palette-background-grey);">
+                            <MudText Typo="Typo.body2" Color="Color.TextSecondary" Align="Align.Center">
+                                Category Distribution Chart
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.TextSecondary" Align="Align.Center" Class="mt-2">
+                                (Charts integration via MudBlazor or Chart.js — to be implemented)
+                            </MudText>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+
+            <!-- Budget vs Actual -->
+            <MudPaper Class="pa-6">
+                <MudText Typo="Typo.h6" Class="font-bold mb-4">Budget vs Actual by Department</MudText>
+                <div style="overflow-x: auto;">
+                    <MudTable Items="dashboard.BudgetVsActual" Striped="true" Hover="true" Bordered="false" Dense="true">
+                        <HeaderContent>
+                            <MudTh>Department</MudTh>
+                            <MudTh Align="Align.Right">Allocated</MudTh>
+                            <MudTh Align="Align.Right">Spent</MudTh>
+                            <MudTh Align="Align.Right">Remaining</MudTh>
+                            <MudTh Align="Align.Right">% Used</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>@context.Department</MudTd>
+                            <MudTd Align="Align.Right">@FormatCurrency(context.Allocated)</MudTd>
+                            <MudTd Align="Align.Right">@FormatCurrency(context.Spent)</MudTd>
+                            <MudTd Align="Align.Right">@FormatCurrency(context.Allocated - context.Spent)</MudTd>
+                            <MudTd Align="Align.Right">
+                                <MudChip T="string" Size="Size.Small" Color="@GetBudgetColor(context.Spent, context.Allocated)">
+                                    @GetBudgetPercentage(context.Spent, context.Allocated)%
+                                </MudChip>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </div>
+            </MudPaper>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Error">
+                Failed to load dashboard data. Please try again.
+            </MudAlert>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    private bool isLoading = true;
+    private ExecutiveDashboard? dashboard;
+    private int tenantId = 1;  // TODO: Get from authentication
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboard();
+    }
+
+    private async Task LoadDashboard()
+    {
+        try
+        {
+            isLoading = true;
+            dashboard = await AnalyticsService.GetExecutiveDashboardAsync(tenantId);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading dashboard: {ex.Message}", Severity.Error);
+            dashboard = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadDashboard();
+        Snackbar.Add("Dashboard refreshed", Severity.Success);
+    }
+
+    private string FormatCurrency(decimal amount) => amount.ToString("C");
+
+    private string FormatHours(double hours) => $"{hours:F1}h";
+
+    private int GetPercentage(decimal amount) => (int)((amount / 45250.75m) * 100);
+
+    private int GetBudgetPercentage(decimal spent, decimal allocated)
+        => allocated > 0 ? (int)((spent / allocated) * 100) : 0;
+
+    private Color GetBudgetColor(decimal spent, decimal allocated)
+    {
+        var percentage = GetBudgetPercentage(spent, allocated);
+        return percentage switch
+        {
+            < 50 => Color.Success,
+            < 80 => Color.Warning,
+            _ => Color.Error
+        };
+    }
+}
+
+<style>
+.responsive-header {
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+@media (max-width: 599px) {
+    .responsive-header {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    :deep(.mud-button) {
+        width: 100%;
+    }
+}
+</style>
