@@ -3,6 +3,7 @@
 @using MyDesk.Web.Components.Shared
 @using MyDesk.Web.Components.Dialogs
 @inject AnalyticsService AnalyticsService
+@inject DashboardChartService ChartService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
@@ -68,21 +69,10 @@
             </MudGrid>
 
             <!-- Team Spending Breakdown -->
-            <MudPaper Class="pa-6">
-                <MudText Typo="Typo.h6" Class="font-bold mb-4">Team Spending by Category</MudText>
-                <MudStack Spacing="2">
-                    @foreach (var cat in dashboard.TeamSpendingByCategory)
-                    {
-                        <MudPaper Class="pa-3" Elevation="0">
-                            <div class="d-flex justify-space-between w-100">
-                                <MudText>@cat.Category</MudText>
-                                <MudText Class="font-semibold">@FormatCurrency(cat.Amount)</MudText>
-                            </div>
-                            <MudProgressLinear Value="@GetPercentage(cat.Amount)" Class="mt-2" />
-                        </MudPaper>
-                    }
-                </MudStack>
-            </MudPaper>
+            <DashboardBarChart
+                Title="Team Spending by Category"
+                TenantId="@tenantId"
+                DataSourceAsync="@(() => ChartService.GetTeamSpendingChartDataAsync(tenantId, managerId))" />
 
             <!-- Overdue Approvals -->
             <MudPaper Class="pa-6">
@@ -201,12 +191,6 @@
     }
 
     private string FormatCurrency(decimal amount) => amount.ToString("C");
-
-    private int GetPercentage(decimal amount)
-    {
-        var total = dashboard?.TeamSpendingByCategory.Sum(c => c.Amount) ?? 1;
-        return total > 0 ? (int)((amount / total) * 100) : 0;
-    }
 }
 
 <style>

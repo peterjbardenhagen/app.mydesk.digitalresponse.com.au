@@ -3,6 +3,7 @@
 @using MyDesk.Web.Components.Shared
 @using MyDesk.Web.Components.Dialogs
 @inject AnalyticsService AnalyticsService
+@inject DashboardChartService ChartService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
@@ -105,21 +106,10 @@
             </MudPaper>
 
             <!-- Monthly Summary -->
-            <MudPaper Class="pa-6">
-                <MudText Typo="Typo.h6" Class="font-bold mb-4">Monthly Summary</MudText>
-                <MudStack Spacing="2">
-                    @foreach (var month in dashboard.MonthlySummary)
-                    {
-                        <MudPaper Class="pa-3" Elevation="0">
-                            <div class="d-flex justify-space-between w-100">
-                                <MudText>@month.Month</MudText>
-                                <MudText Class="font-semibold">@FormatCurrency(month.Amount)</MudText>
-                            </div>
-                            <MudProgressLinear Value="@GetMonthPercentage(month.Amount)" Class="mt-2" />
-                        </MudPaper>
-                    }
-                </MudStack>
-            </MudPaper>
+            <DashboardLineChart
+                Title="Monthly Spending Trend"
+                TenantId="@tenantId"
+                DataSourceAsync="@(() => ChartService.GetMonthlyTrendChartDataAsync(tenantId, userId))" />
 
             <!-- Helpful Information -->
             <MudPaper Class="pa-6" Style="background-color: var(--mud-palette-info-lighter);">
@@ -203,12 +193,6 @@
     }
 
     private string FormatCurrency(decimal amount) => amount.ToString("C");
-
-    private int GetMonthPercentage(decimal amount)
-    {
-        var max = dashboard?.MonthlySummary.Max(m => m.Amount) ?? 1;
-        return max > 0 ? (int)((amount / max) * 100) : 0;
-    }
 
     private Color GetStatusColor(string status) => status switch
     {

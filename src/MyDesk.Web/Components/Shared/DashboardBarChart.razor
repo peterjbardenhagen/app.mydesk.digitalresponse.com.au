@@ -1,0 +1,71 @@
+@using MyDesk.Web.Services
+@inject DashboardChartService ChartService
+
+<MudPaper Class="pa-6">
+    <MudStack Spacing="3">
+        <MudText Typo="Typo.h6" Class="font-bold">@Title</MudText>
+
+        @if (loading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (chartData != null && chartData.Series?.Count > 0)
+        {
+            <div style="min-height: 300px;">
+                <MudChart ChartType="ChartType.Bar"
+                          InputData="chartData.Series.Select(s => s.Data).ToList()"
+                          InputLabels="chartData.Labels"
+                          @bind-SelectedIndex="selectedIndex"
+                          style="height: 300px;" />
+            </div>
+
+            @if (chartData.Series?.Count > 0)
+            {
+                <MudDivider Class="my-4" />
+                <MudStack Spacing="1">
+                    @foreach (var series in chartData.Series)
+                    {
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <div style="width: 12px; height: 12px; background-color: @series.Color; border-radius: 2px;"></div>
+                            <MudText>@series.Name</MudText>
+                        </MudStack>
+                    }
+                </MudStack>
+            }
+        }
+        else
+        {
+            <MudAlert Severity="Info" Class="mt-4">No data available</MudAlert>
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = "Chart";
+
+    [Parameter]
+    public int TenantId { get; set; } = 1;
+
+    [Parameter]
+    public Func<Task<BarChartDataResult>> DataSourceAsync { get; set; }
+
+    private BarChartDataResult chartData;
+    private bool loading = true;
+    private int selectedIndex = -1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (DataSourceAsync != null)
+        {
+            try
+            {
+                chartData = await DataSourceAsync.Invoke();
+            }
+            finally
+            {
+                loading = false;
+            }
+        }
+    }
+}

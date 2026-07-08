@@ -4,6 +4,7 @@
 @using MyDesk.Web.Components.Shared
 @using MyDesk.Web.Components.Dialogs
 @inject AnalyticsService AnalyticsService
+@inject DashboardChartService ChartService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
@@ -91,14 +92,10 @@
                     </MudItem>
 
                     <MudItem xs="12" md="6">
-                        <MudPaper Class="pa-4 d-flex flex-column justify-center" Elevation="0" Style="min-height:300px;background-color:var(--mud-palette-background-grey);">
-                            <MudText Typo="Typo.body2" Color="Color.TextSecondary" Align="Align.Center">
-                                Department Distribution Chart
-                            </MudText>
-                            <MudText Typo="Typo.caption" Color="Color.TextSecondary" Align="Align.Center" Class="mt-2">
-                                (Charts integration via MudBlazor or Chart.js — to be implemented)
-                            </MudText>
-                        </MudPaper>
+                        <DashboardPieChart
+                            Title="Department Distribution"
+                            TenantId="@tenantId"
+                            DataSourceAsync="@(() => ChartService.GetDepartmentChartDataAsync(tenantId))" />
                     </MudItem>
                 </MudGrid>
             </MudPaper>
@@ -126,44 +123,19 @@
                     </MudItem>
 
                     <MudItem xs="12" md="6">
-                        <MudPaper Class="pa-4 d-flex flex-column justify-center" Elevation="0" Style="min-height:300px;background-color:var(--mud-palette-background-grey);">
-                            <MudText Typo="Typo.body2" Color="Color.TextSecondary" Align="Align.Center">
-                                Category Distribution Chart
-                            </MudText>
-                            <MudText Typo="Typo.caption" Color="Color.TextSecondary" Align="Align.Center" Class="mt-2">
-                                (Charts integration via MudBlazor or Chart.js — to be implemented)
-                            </MudText>
-                        </MudPaper>
+                        <DashboardPieChart
+                            Title="Category Distribution"
+                            TenantId="@tenantId"
+                            DataSourceAsync="@(() => ChartService.GetCategoryChartDataAsync(tenantId))" />
                     </MudItem>
                 </MudGrid>
             </MudPaper>
 
             <!-- Budget vs Actual -->
-            <MudPaper Class="pa-6">
-                <MudText Typo="Typo.h6" Class="font-bold mb-4">Budget vs Actual by Department</MudText>
-                <div style="overflow-x: auto;">
-                    <MudTable Items="dashboard.BudgetVsActual" Striped="true" Hover="true" Bordered="false" Dense="true">
-                        <HeaderContent>
-                            <MudTh>Department</MudTh>
-                            <MudTh Align="Align.Right">Allocated</MudTh>
-                            <MudTh Align="Align.Right">Spent</MudTh>
-                            <MudTh Align="Align.Right">Remaining</MudTh>
-                            <MudTh Align="Align.Right">% Used</MudTh>
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd>@context.Department</MudTd>
-                            <MudTd Align="Align.Right">@FormatCurrency(context.Allocated)</MudTd>
-                            <MudTd Align="Align.Right">@FormatCurrency(context.Spent)</MudTd>
-                            <MudTd Align="Align.Right">@FormatCurrency(context.Allocated - context.Spent)</MudTd>
-                            <MudTd Align="Align.Right">
-                                <MudChip T="string" Size="Size.Small" Color="@GetBudgetColor(context.Spent, context.Allocated)">
-                                    @GetBudgetPercentage(context.Spent, context.Allocated)%
-                                </MudChip>
-                            </MudTd>
-                        </RowTemplate>
-                    </MudTable>
-                </div>
-            </MudPaper>
+            <DashboardBarChart
+                Title="Budget vs Actual by Department"
+                TenantId="@tenantId"
+                DataSourceAsync="@(() => ChartService.GetBudgetVsActualChartDataAsync(tenantId))" />
         }
         else
         {
@@ -229,20 +201,6 @@
     private string FormatHours(double hours) => $"{hours:F1}h";
 
     private int GetPercentage(decimal amount) => (int)((amount / 45250.75m) * 100);
-
-    private int GetBudgetPercentage(decimal spent, decimal allocated)
-        => allocated > 0 ? (int)((spent / allocated) * 100) : 0;
-
-    private Color GetBudgetColor(decimal spent, decimal allocated)
-    {
-        var percentage = GetBudgetPercentage(spent, allocated);
-        return percentage switch
-        {
-            < 50 => Color.Success,
-            < 80 => Color.Warning,
-            _ => Color.Error
-        };
-    }
 }
 
 <style>
