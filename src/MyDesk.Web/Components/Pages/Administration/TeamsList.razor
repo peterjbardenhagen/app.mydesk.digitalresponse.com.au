@@ -23,7 +23,7 @@
                 <MudSelect Value="selectedDepartmentId" Label="Filter by Department"
                     Variant="Variant.Outlined" Clearable="true" Dense="true"
                     Style="min-width: 250px;" ValueChanged="@(async (int? deptId) => { selectedDepartmentId = deptId; await LoadTeams(); })">
-                    @foreach (var dept in departments?.Rows.Cast<DataRow>() ?? new())
+                    @foreach (var dept in departments?.Rows.Cast<DataRow>() ?? Enumerable.Empty<DataRow>())
                     {
                         <MudSelectItem Value="@((int?)dept["DepartmentId"])">
                             @dept["Name"]
@@ -39,7 +39,7 @@
         }
         else if (teams.Rows.Count == 0)
         {
-            <MudAlert Severity="Info">No teams found. Create one to get started.</MudAlert>
+            <MudAlert Severity="Severity.Info">No teams found. Create one to get started.</MudAlert>
         }
         else
         {

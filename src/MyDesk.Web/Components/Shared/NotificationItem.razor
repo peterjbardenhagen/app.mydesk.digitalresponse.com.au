@@ -31,7 +31,7 @@
                     <MudButton
                         Size="Size.Small"
                         Variant="Variant.Text"
-                        OnClick="() => OnMarkAsRead.InvokeAsync((int)Notification["NotificationId"])">
+                        OnClick="HandleMarkAsRead">
                         Mark as read
                     </MudButton>
                 }
@@ -82,6 +82,11 @@
         if (elapsed.TotalHours < 24) return $"{(int)elapsed.TotalHours}h ago";
         if (elapsed.TotalDays < 7) return $"{(int)elapsed.TotalDays}d ago";
         return dt.ToString("g");
+    }
+
+    private async Task HandleMarkAsRead()
+    {
+        await OnMarkAsRead.InvokeAsync((int)Notification["NotificationId"]);
     }
 }
 

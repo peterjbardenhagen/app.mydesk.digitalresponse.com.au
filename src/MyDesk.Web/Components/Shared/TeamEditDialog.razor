@@ -9,7 +9,7 @@
             <MudStack Spacing="3">
                 <MudSelect @bind-Value="model.DepartmentId" Label="Department"
                     Variant="Variant.Outlined" Required="true">
-                    @foreach (var dept in departments?.Rows.Cast<DataRow>() ?? new())
+                    @foreach (var dept in departments?.Rows.Cast<DataRow>() ?? Enumerable.Empty<DataRow>())
                     {
                         <MudSelectItem Value="@((int)dept["DepartmentId"])">
                             @dept["Name"]

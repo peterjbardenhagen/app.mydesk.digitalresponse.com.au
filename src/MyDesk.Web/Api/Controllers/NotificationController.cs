@@ -41,8 +41,9 @@ public class NotificationController : ControllerBase
         {
             _logger.LogInformation("Getting unread notifications for tenant {TenantId}", tenantId);
 
+            var userId = int.TryParse(User.FindFirst("sub")?.Value ?? "0", out var id) ? id : 0;
             var (notifications, unreadCount) = await _notification.GetUnreadNotificationsAsync(
-                tenantId, userId: User.FindFirst("sub")?.Value ?? "0", limit);
+                tenantId, userId, limit);
 
             return Ok(new
             {
@@ -352,6 +353,19 @@ public class NotificationController : ControllerBase
             return BadRequest(new { error = "Failed to retrieve audit trail" });
         }
     }
+}
+
+public class NotificationPreferences
+{
+    public bool EnableEmailNotifications { get; set; }
+    public bool EmailOnApprovalRequired { get; set; }
+    public string EmailDigestFrequency { get; set; } = "Immediate";
+    public bool EnableSmsNotifications { get; set; }
+    public string? PhoneNumber { get; set; }
+    public bool EnableInAppNotifications { get; set; }
+    public bool QuietHoursEnabled { get; set; }
+    public TimeSpan? QuietHoursStart { get; set; }
+    public TimeSpan? QuietHoursEnd { get; set; }
 }
 
 public class NotificationPreferencesRequest

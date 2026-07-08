@@ -2,6 +2,7 @@
 @using System.Data
 @inject TeamService TeamService
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <MudDialog>
     <DialogContent>
@@ -34,7 +35,7 @@
             }
             else if (members.Rows.Count == 0)
             {
-                <MudAlert Severity="Info">No members in this team.</MudAlert>
+                <MudAlert Severity="Severity.Info">No members in this team.</MudAlert>
             }
             else
             {
@@ -140,7 +141,7 @@
 
     private async Task RemoveMember(int memberId)
     {
-        var confirmed = await MudDialog.ShowMessageBox(
+        var confirmed = await DialogService.ShowMessageBox(
             "Remove Member",
             "Are you sure?",
             "Remove", "Cancel");
