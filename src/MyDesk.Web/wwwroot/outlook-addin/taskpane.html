@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MyDesk for Outlook</title>
+  <link rel="icon" href="icons/icon-32.png" />
+  <link rel="stylesheet" href="taskpane.css" />
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <img src="icons/icon-32.png" alt="MyDesk" class="app-logo" />
+    <div class="app-title">
+      <div class="app-name">MyDesk</div>
+      <div class="app-env">Production</div>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab" data-tab="change-request" role="tab" aria-selected="true">Change Request</button>
+    <button class="tab" data-tab="contact" role="tab" aria-selected="false">Add to Contact</button>
+    <button class="tab" data-tab="legal" role="tab" aria-selected="false">Legal Report</button>
+  </nav>
+
+  <main>
+    <!-- Setup panel (shown until API key entered) -->
+    <section id="setup-panel" class="panel hidden">
+      <h2>Connect to MyDesk</h2>
+      <p class="muted">Paste the API key from your MyDesk instance (<code>appsettings.json → Api:Key</code>). Stored on this mailbox only.</p>
+      <label>
+        API key
+        <input type="password" id="api-key-input" placeholder="X-Api-Key value" autocomplete="off" />
+      </label>
+      <button type="button" class="primary" id="save-api-key">Save &amp; test</button>
+      <p id="setup-status" class="status"></p>
+    </section>
+
+    <!-- Log Change Request -->
+    <section id="change-request-panel" class="panel">
+      <h2>Log Change Request</h2>
+      <p class="muted">Capture this email as a client change request so you can revisit later — before doing the work — and decide whether to quote or bill.</p>
+
+      <div class="email-summary" id="cr-email-summary">
+        <div class="skeleton">Loading email…</div>
+      </div>
+
+      <label>
+        Title
+        <input type="text" id="cr-title" maxlength="300" />
+      </label>
+      <label>
+        Notes / commercial cover
+        <textarea id="cr-notes" rows="4" placeholder="e.g. quoted $X previously, or client on retainer, or needs a fixed-price quote…"></textarea>
+      </label>
+      <label>
+        Estimated impact ($)
+        <input type="number" step="0.01" id="cr-impact" placeholder="Optional" />
+      </label>
+
+      <button type="button" class="primary" id="cr-submit">Log change request</button>
+      <p id="cr-status" class="status"></p>
+    </section>
+
+    <!-- Add to Contact -->
+    <section id="contact-panel" class="panel hidden">
+      <h2>Add email to Contact</h2>
+      <p class="muted">Saves this email as an Email note against the sender's Contact record in MyDesk. If no Contact with this email exists, one is created from the sender's name.</p>
+
+      <div class="email-summary" id="contact-email-summary">
+        <div class="skeleton">Loading email…</div>
+      </div>
+
+      <label>
+        Note type
+        <select id="contact-note-type">
+          <option value="Email" selected>Email</option>
+          <option value="Call">Call</option>
+          <option value="Meeting">Meeting</option>
+          <option value="Note">General note</option>
+        </select>
+      </label>
+
+      <button type="button" class="primary" id="contact-submit">Save to Contact</button>
+      <p id="contact-status" class="status"></p>
+    </section>
+
+    <!-- Legal Report -->
+    <section id="legal-panel" class="panel hidden">
+      <h2>Legal Folio Report</h2>
+      <p class="muted">
+        Generates a PDF billing summary of emails sent to / received from the specified addresses in the date range.
+        Only the latest message per thread is counted. Folios = <code>ceil(words / 100)</code>.
+      </p>
+
+      <label>
+        From date
+        <input type="date" id="legal-from" />
+      </label>
+      <label>
+        To date
+        <input type="date" id="legal-to" />
+      </label>
+      <label>
+        Email addresses (comma or newline-separated). Leave blank for <strong>all</strong>.
+        <textarea id="legal-emails" rows="3" placeholder="one@client.com&#10;two@client.com"></textarea>
+      </label>
+
+      <button type="button" class="primary" id="legal-generate">Generate PDF</button>
+      <p id="legal-status" class="status"></p>
+      <div id="legal-progress" class="progress hidden">
+        <div class="progress-bar"><div class="progress-fill" id="legal-progress-fill"></div></div>
+        <div class="progress-label" id="legal-progress-label"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <a href="#" id="reset-key">Change API key</a>
+    <span>·</span>
+    <a href="https://app.mydesk.digitalresponse.com.au/" target="_blank" rel="noopener">Open MyDesk</a>
+  </footer>
+
+  <script src="taskpane.js"></script>
+</body>
+</html>
