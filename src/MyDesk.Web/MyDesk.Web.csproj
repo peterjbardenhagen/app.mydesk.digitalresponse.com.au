@@ -74,7 +74,6 @@
   <!-- Exclude disabled services from compilation -->
   <ItemGroup>
     <Compile Remove="Services/PhotoProcessingService.cs" />
-    <Compile Remove="Services/NotificationService.cs" />
     <Compile Remove="Services/RateLimitingService.cs" />
     <Compile Remove="Services/WorkflowApprovalService.cs" />
     <Compile Remove="Middleware/RateLimitingMiddleware.cs" />
