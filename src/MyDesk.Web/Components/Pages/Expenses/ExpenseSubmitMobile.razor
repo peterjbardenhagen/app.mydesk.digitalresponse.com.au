@@ -358,8 +358,14 @@
 
     private async Task TriggerFileInput()
     {
-        await JS.InvokeVoidAsync("document.getElementById", "fileInput").ConfigureAwait(false);
-        await JS.InvokeVoidAsync("click");
+        try
+        {
+            await JS.InvokeVoidAsync("clickElement", "fileInput");
+        }
+        catch
+        {
+            // Fallback if JS interop fails
+        }
     }
 
     private async Task SubmitExpense()
