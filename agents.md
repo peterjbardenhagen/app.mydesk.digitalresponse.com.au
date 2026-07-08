@@ -18,6 +18,7 @@ This document describes the specialized implementation agents responsible for bu
 - **Product Requirements:** `PRODUCT-REQUIREMENTS.md` - Feature specifications, acceptance criteria, data requirements
 - **Product Strategy:** `PRODUCT-STRATEGY.md` - Market positioning, go-to-market, roadmap, financial projections
 - **Development Guide:** `CLAUDE.md` - Local setup, build instructions, development best practices, agent development guidelines
+- **Lessons Learned (CRITICAL):** `docs/LESSONS_LEARNED.md` - Common CI/CD failures, prevention checklists, best practices for service registration and Razor components
 
 ---
 
