@@ -1,0 +1,129 @@
+@using System.Data
+
+<MudPaper Class="pa-4 notification-item" Elevation="1">
+    <MudStack Spacing="1">
+        <!-- Notification Header -->
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="responsive-header">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                @{
+                    var iconColor = Notification["IsRead"] != DBNull.Value && (bool)Notification["IsRead"]
+                        ? Color.Default
+                        : Color.Primary;
+                }
+                <MudIcon
+                    Icon="@GetNotificationIcon(Notification["Type"]?.ToString())"
+                    Color="iconColor"
+                    Size="Size.Medium" />
+
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.subtitle2" Class="font-bold">
+                        @Notification["Title"]
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.TextSecondary">
+                        @FormatDateTime((DateTime)Notification["CreatedAt"])
+                    </MudText>
+                </MudStack>
+            </MudStack>
+
+            <MudStack Row="true" Spacing="1" Class="action-buttons">
+                @if (Notification["IsRead"] != DBNull.Value && !(bool)Notification["IsRead"])
+                {
+                    <MudButton
+                        Size="Size.Small"
+                        Variant="Variant.Text"
+                        OnClick="() => OnMarkAsRead.InvokeAsync((int)Notification["NotificationId"])">
+                        Mark as read
+                    </MudButton>
+                }
+            </MudStack>
+        </MudStack>
+
+        <!-- Notification Body -->
+        <MudText Typo="Typo.body2" Class="mt-2 message-text">
+            @Notification["Message"]
+        </MudText>
+
+        <!-- Notification Footer -->
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-3 footer-info">
+            <MudChip T="string" Size="Size.Small" Color="Color.Info">
+                @Notification["Category"]
+            </MudChip>
+            @if (Notification["EntityId"] != DBNull.Value)
+            {
+                <MudText Typo="Typo.caption" Color="Color.TextSecondary">
+                    ID: @Notification["EntityId"]
+                </MudText>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public DataRow Notification { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnMarkAsRead { get; set; }
+
+    private string GetNotificationIcon(string? type) => type switch
+    {
+        "Action" => Icons.Material.Filled.NotificationsActive,
+        "Info" => Icons.Material.Filled.InfoOutlined,
+        "Warning" => Icons.Material.Filled.WarningAmber,
+        "Error" => Icons.Material.Filled.ErrorOutline,
+        _ => Icons.Material.Filled.NotificationsNone
+    };
+
+    private string FormatDateTime(DateTime dt)
+    {
+        var elapsed = DateTime.UtcNow - dt.ToUniversalTime();
+        if (elapsed.TotalMinutes < 1) return "Just now";
+        if (elapsed.TotalMinutes < 60) return $"{(int)elapsed.TotalMinutes}m ago";
+        if (elapsed.TotalHours < 24) return $"{(int)elapsed.TotalHours}h ago";
+        if (elapsed.TotalDays < 7) return $"{(int)elapsed.TotalDays}d ago";
+        return dt.ToString("g");
+    }
+}
+
+<style>
+.notification-item {
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+.notification-item:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.responsive-header {
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.action-buttons {
+    gap: 0.5rem;
+}
+
+.message-text {
+    word-break: break-word;
+}
+
+.footer-info {
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 599px) {
+    .responsive-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .action-buttons {
+        width: 100%;
+    }
+
+    :deep(.mud-button) {
+        width: 100%;
+    }
+}
+</style>
