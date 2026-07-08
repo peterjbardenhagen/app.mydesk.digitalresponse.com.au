@@ -1,8 +1,10 @@
 @page "/dashboards/employee"
 @using MyDesk.Web.Services
 @using MyDesk.Web.Components.Shared
+@using MyDesk.Web.Components.Dialogs
 @inject AnalyticsService AnalyticsService
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <PageTitle>My Dashboard - MyDesk</PageTitle>
 
@@ -14,9 +16,14 @@
                 <MudText Typo="Typo.h4" Class="font-bold">My Dashboard</MudText>
                 <MudText Typo="Typo.body2" Color="Color.TextSecondary">Your expense summary and reimbursement status</MudText>
             </MudStack>
-            <MudButton Variant="Variant.Outlined" OnClick="RefreshData" StartIcon="@Icons.Material.Filled.Refresh">
-                Refresh
-            </MudButton>
+            <MudStack Row="true" Spacing="2" Class="responsive-buttons">
+                <MudButton Variant="Variant.Outlined" OnClick="RefreshData" StartIcon="@Icons.Material.Filled.Refresh">
+                    Refresh
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" OnClick="ShowExportDialog" StartIcon="@Icons.Material.Filled.FileDownload">
+                    Export
+                </MudButton>
+            </MudStack>
         </MudStack>
 
         @if (isLoading)
@@ -179,6 +186,22 @@
         // TODO: Navigate to expense details page
     }
 
+    private async Task ShowExportDialog()
+    {
+        var dialog = await DialogService.ShowAsync<DashboardExportDialog>(
+            "Export Dashboard",
+            new DialogParameters
+            {
+                { "DashboardType", "employee" }
+            });
+
+        var result = await dialog.Result;
+        if (!result.Canceled)
+        {
+            Snackbar.Add("Dashboard export completed", Severity.Success);
+        }
+    }
+
     private string FormatCurrency(decimal amount) => amount.ToString("C");
 
     private int GetMonthPercentage(decimal amount)
@@ -202,10 +225,20 @@
     gap: 1rem;
 }
 
+.responsive-buttons {
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
 @media (max-width: 599px) {
     .responsive-header {
         flex-direction: column;
         align-items: stretch !important;
+    }
+
+    .responsive-buttons {
+        width: 100%;
+        flex-direction: column;
     }
 
     :deep(.mud-button) {

@@ -1,0 +1,126 @@
+@using System.Text
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.h6" Class="font-bold">Export Dashboard Data</MudText>
+
+            <MudRadioGroup @bind-SelectedOption="@selectedFormat">
+                <MudStack Spacing="2">
+                    <MudRadio T="string" Option="@("csv")" Color="Color.Primary">
+                        <MudText>CSV (Spreadsheet)</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.TextSecondary">
+                            Import into Excel, Google Sheets, or other spreadsheet applications
+                        </MudText>
+                    </MudRadio>
+
+                    <MudRadio T="string" Option="@("pdf")" Color="Color.Primary">
+                        <MudText>PDF (Portable Document)</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.TextSecondary">
+                            High-quality formatted report with charts and branding
+                        </MudText>
+                    </MudRadio>
+
+                    <MudRadio T="string" Option="@("json")" Color="Color.Primary">
+                        <MudText>JSON (Data Format)</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.TextSecondary">
+                            For integration with other systems or data analysis tools
+                        </MudText>
+                    </MudRadio>
+                </MudStack>
+            </MudRadioGroup>
+
+            <MudDivider />
+
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.subtitle2" Class="font-semibold">Include in Export</MudText>
+                <MudCheckBox @bind-Checked="@includeCharts" Label="Charts & Visualizations" />
+                <MudCheckBox @bind-Checked="@includeDetailed" Label="Detailed Data (full tables)" />
+                <MudCheckBox @bind-Checked="@includeSummary" Label="Summary Metrics" />
+            </MudStack>
+
+            <MudStack Row="true" Spacing="2" Class="mt-4">
+                <MudTextField @bind-Value="@fileName" Label="File Name" Placeholder="dashboard-export" />
+            </MudStack>
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Export" Disabled="@isExporting">
+            @if (isExporting)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <MudText Class="ms-2">Exporting...</MudText>
+            }
+            else
+            {
+                <span>Export</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    MudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public string DashboardType { get; set; } = "executive";
+
+    private string selectedFormat = "csv";
+    private bool includeCharts = true;
+    private bool includeDetailed = true;
+    private bool includeSummary = true;
+    private string fileName = "dashboard-export";
+    private bool isExporting = false;
+
+    private async Task Export()
+    {
+        try
+        {
+            isExporting = true;
+
+            var timestamp = DateTime.Now.ToString("yyyy-MM-dd-HHmmss");
+            var finalFileName = $"{fileName}-{timestamp}.{selectedFormat}";
+
+            // TODO: Implement actual export logic
+            // For now, just show success message
+            Snackbar.Add($"Export as {selectedFormat.ToUpper()} started: {finalFileName}", Severity.Success);
+
+            await Task.Delay(500);  // Simulate export
+
+            MudDialog.Close(DialogResult.Ok(new ExportOptions
+            {
+                Format = selectedFormat,
+                FileName = finalFileName,
+                IncludeCharts = includeCharts,
+                IncludeDetailed = includeDetailed,
+                IncludeSummary = includeSummary
+            }));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Export failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isExporting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}
+
+public class ExportOptions
+{
+    public string Format { get; set; }
+    public string FileName { get; set; }
+    public bool IncludeCharts { get; set; }
+    public bool IncludeDetailed { get; set; }
+    public bool IncludeSummary { get; set; }
+}

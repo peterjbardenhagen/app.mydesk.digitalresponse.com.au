@@ -1,8 +1,10 @@
 @page "/dashboards/manager"
 @using MyDesk.Web.Services
 @using MyDesk.Web.Components.Shared
+@using MyDesk.Web.Components.Dialogs
 @inject AnalyticsService AnalyticsService
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <PageTitle>Manager Dashboard - MyDesk</PageTitle>
 
@@ -14,9 +16,14 @@
                 <MudText Typo="Typo.h4" Class="font-bold">Manager Dashboard</MudText>
                 <MudText Typo="Typo.body2" Color="Color.TextSecondary">Team expense oversight and approvals</MudText>
             </MudStack>
-            <MudButton Variant="Variant.Outlined" OnClick="RefreshData" StartIcon="@Icons.Material.Filled.Refresh">
-                Refresh
-            </MudButton>
+            <MudStack Row="true" Spacing="2" Class="responsive-buttons">
+                <MudButton Variant="Variant.Outlined" OnClick="RefreshData" StartIcon="@Icons.Material.Filled.Refresh">
+                    Refresh
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" OnClick="ShowExportDialog" StartIcon="@Icons.Material.Filled.FileDownload">
+                    Export
+                </MudButton>
+            </MudStack>
         </MudStack>
 
         @if (isLoading)
@@ -175,6 +182,22 @@
     {
         await LoadDashboard();
         Snackbar.Add("Dashboard refreshed", Severity.Success);
+    }
+
+    private async Task ShowExportDialog()
+    {
+        var dialog = await DialogService.ShowAsync<DashboardExportDialog>(
+            "Export Dashboard",
+            new DialogParameters
+            {
+                { "DashboardType", "manager" }
+            });
+
+        var result = await dialog.Result;
+        if (!result.Canceled)
+        {
+            Snackbar.Add("Dashboard export completed", Severity.Success);
+        }
     }
 
     private string FormatCurrency(decimal amount) => amount.ToString("C");
