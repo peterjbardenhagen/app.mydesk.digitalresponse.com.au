@@ -10,10 +10,9 @@
         {
             <div style="min-height: 300px;">
                 <MudChart ChartType="ChartType.Line"
-                          InputData="chartData.Series.Select(s => s.Data).ToList()"
-                          InputLabels="chartData.Labels"
-                          @bind-SelectedIndex="selectedIndex"
-                          style="height: 300px;" />
+                          ChartSeries="@ConvertSeriesToChartSeries(chartData.Series)"
+                          XAxisLabels="@chartData.Labels"
+                          style="height: 300px;width:100%;" />
             </div>
 
             @if (chartData.Series?.Count > 0)
@@ -64,5 +63,14 @@
                 loading = false;
             }
         }
+    }
+
+    private List<ChartSeries> ConvertSeriesToChartSeries(List<MyDesk.Web.Services.ChartSeries> series)
+    {
+        return series.Select(s => new ChartSeries
+        {
+            Name = s.Name,
+            Data = s.Data.ToArray()
+        }).ToList();
     }
 }
