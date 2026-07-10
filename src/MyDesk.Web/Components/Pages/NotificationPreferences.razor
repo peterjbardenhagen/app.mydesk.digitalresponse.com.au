@@ -1,0 +1,212 @@
+@page "/notification-preferences"
+@attribute [Authorize]
+@using MudBlazor
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<PageTitle>Notification Preferences - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb"><a href="/">MyDesk</a><span class="sep">/</span><span>Notification Preferences</span></div>
+        <h1>Notification Preferences</h1>
+        <p class="tl-subtitle">Control how and when you receive notifications.</p>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else
+{
+    <MudGrid Class="mt-4">
+        <MudItem xs="12" sm="8">
+            <MudPaper Class="pa-6">
+                <MudStack Spacing="4">
+                    <!-- Email Notifications -->
+                    <div>
+                        <MudText Typo="Typo.h6" Class="mb-3">Email Notifications</MudText>
+                        
+                        <MudSwitch T="bool" @bind-Checked="_prefs.EnableEmailNotifications" 
+                                   Label="Enable email notifications" 
+                                   Color="Color.Primary" />
+
+                        @if (_prefs.EnableEmailNotifications)
+                        {
+                            <MudStack Spacing="2" Class="mt-3 ml-4">
+                                <MudSwitch T="bool" @bind-Checked="_prefs.EmailOnApprovalRequired"
+                                           Label="Send when approval is required"
+                                           Color="Color.Primary" />
+
+                                <MudSelect T="string" @bind-Value="_prefs.EmailDigestFrequency" Label="Digest Frequency" Variant="Variant.Outlined" Class="mt-2">
+                                    <MudSelectItem Value="@("Immediate")">Immediate</MudSelectItem>
+                                    <MudSelectItem Value="@("Daily")">Daily Digest</MudSelectItem>
+                                    <MudSelectItem Value="@("Weekly")">Weekly Digest</MudSelectItem>
+                                    <MudSelectItem Value="@("Never")">Never</MudSelectItem>
+                                </MudSelect>
+                            </MudStack>
+                        }
+                    </div>
+
+                    <MudDivider />
+
+                    <!-- In-App Notifications -->
+                    <div>
+                        <MudText Typo="Typo.h6" Class="mb-3">In-App Notifications</MudText>
+                        
+                        <MudSwitch T="bool" @bind-Checked="_prefs.EnableInAppNotifications"
+                                   Label="Enable in-app notifications"
+                                   Color="Color.Primary" />
+
+                        @if (_prefs.EnableInAppNotifications)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Default" Class="mt-2">
+                                You'll see notifications in the bell icon in the header
+                            </MudText>
+                        }
+                    </div>
+
+                    <MudDivider />
+
+                    <!-- SMS Notifications -->
+                    <div>
+                        <MudText Typo="Typo.h6" Class="mb-3">SMS Notifications</MudText>
+                        
+                        <MudSwitch T="bool" @bind-Checked="_prefs.EnableSmsNotifications"
+                                   Label="Enable SMS notifications (optional)"
+                                   Color="Color.Primary" />
+
+                        @if (_prefs.EnableSmsNotifications)
+                        {
+                            <MudTextField T="string" @bind-Value="_prefs.PhoneNumber"
+                                         Label="Phone Number"
+                                         Placeholder="+61 2 1234 5678"
+                                         Variant="Variant.Outlined"
+                                         Class="mt-3" />
+                        }
+                    </div>
+
+                    <MudDivider />
+
+                    <!-- Quiet Hours -->
+                    <div>
+                        <MudText Typo="Typo.h6" Class="mb-3">Quiet Hours</MudText>
+                        
+                        <MudSwitch T="bool" @bind-Checked="_prefs.QuietHoursEnabled"
+                                   Label="Enable quiet hours (no notifications during this time)"
+                                   Color="Color.Primary" />
+
+                        @if (_prefs.QuietHoursEnabled)
+                        {
+                            <MudStack Row="true" Spacing="2" Class="mt-3">
+                                <MudTimePicker @bind-Time="_prefs.QuietHoursStart" Label="Start Time" />
+                                <MudTimePicker @bind-Time="_prefs.QuietHoursEnd" Label="End Time" />
+                            </MudStack>
+                        }
+                    </div>
+
+                    <MudDivider />
+
+                    <!-- Actions -->
+                    <MudStack Row="true" Spacing="2" Class="mt-4">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SavePreferencesAsync" Class="ml-auto">
+                            Save Preferences
+                        </MudButton>
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Help Section -->
+        <MudItem xs="12" sm="4">
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h6" Class="mb-3">Notification Types</MudText>
+                
+                <MudStack Spacing="2">
+                    <div>
+                        <MudText Typo="Typo.subtitle2">Expense Submitted</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Default">When you submit an expense for approval</MudText>
+                    </div>
+
+                    <div>
+                        <MudText Typo="Typo.subtitle2">Approval Required</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Default">When an expense is pending your approval</MudText>
+                    </div>
+
+                    <div>
+                        <MudText Typo="Typo.subtitle2">Approval Decision</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Default">When your expense is approved or rejected</MudText>
+                    </div>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    private bool _loading = true;
+    private NotificationPreferencesDto _prefs = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPreferencesAsync();
+    }
+
+    private async Task LoadPreferencesAsync()
+    {
+        _loading = true;
+        try
+        {
+            var response = await Http.GetAsync("/api/notifications/preferences");
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                _prefs = System.Text.Json.JsonSerializer.Deserialize<NotificationPreferencesDto>(
+                    json,
+                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading preferences: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task SavePreferencesAsync()
+    {
+        try
+        {
+            var response = await Http.PutAsJsonAsync("/api/notifications/preferences", _prefs);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Preferences saved successfully", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Error saving preferences", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    public class NotificationPreferencesDto
+    {
+        public bool EnableEmailNotifications { get; set; } = true;
+        public bool EmailOnApprovalRequired { get; set; } = true;
+        public string EmailDigestFrequency { get; set; } = "Immediate";
+        public bool EnableSmsNotifications { get; set; } = false;
+        public string? PhoneNumber { get; set; }
+        public bool EnableInAppNotifications { get; set; } = true;
+        public bool QuietHoursEnabled { get; set; } = false;
+        public TimeSpan? QuietHoursStart { get; set; }
+        public TimeSpan? QuietHoursEnd { get; set; }
+    }
+}

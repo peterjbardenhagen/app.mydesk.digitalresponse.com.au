@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100" width="300" height="100">
+  <!-- Background -->
+  <rect width="300" height="100" fill="none"/>
+
+  <!-- Light bulb icon -->
+  <defs>
+    <linearGradient id="bulbGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF6B35;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F7B801;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Bulb body -->
+  <circle cx="45" cy="35" r="18" fill="url(#bulbGradient)"/>
+
+  <!-- Bulb highlight -->
+  <circle cx="40" cy="30" r="6" fill="#FFFFFF" opacity="0.6"/>
+
+  <!-- Bulb neck -->
+  <rect x="40" y="52" width="10" height="8" fill="#004E89"/>
+
+  <!-- Base/screw -->
+  <circle cx="45" cy="65" r="7" fill="#004E89"/>
+  <circle cx="45" cy="65" r="5" fill="#00385C"/>
+
+  <!-- Light rays -->
+  <line x1="25" y1="20" x2="10" y2="5" stroke="#FF6B35" stroke-width="2" stroke-linecap="round"/>
+  <line x1="65" y1="20" x2="80" y2="5" stroke="#FF6B35" stroke-width="2" stroke-linecap="round"/>
+  <line x1="15" y1="35" x2="0" y2="35" stroke="#FF6B35" stroke-width="2" stroke-linecap="round"/>
+  <line x1="75" y1="35" x2="90" y2="35" stroke="#FF6B35" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Text -->
+  <text x="110" y="45" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="bold" fill="#FF6B35">Demo Lighting</text>
+  <text x="110" y="65" font-family="Inter, Arial, sans-serif" font-size="12" fill="#004E89">Professional Lighting Solutions</text>
+</svg>

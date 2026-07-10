@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100" width="300" height="100">
+  <!-- Background -->
+  <rect width="300" height="100" fill="none"/>
+
+  <!-- Law book/scales icon -->
+  <defs>
+    <linearGradient id="scaleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1C3A47;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2D5A70;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Balance scale - left pan -->
+  <rect x="25" y="40" width="14" height="10" fill="url(#scaleGradient)" rx="2"/>
+  <!-- Balance scale - right pan -->
+  <rect x="47" y="40" width="14" height="10" fill="url(#scaleGradient)" rx="2"/>
+
+  <!-- Balance scale - beam -->
+  <rect x="25" y="38" width="36" height="2" fill="#D4AF37" rx="1"/>
+
+  <!-- Balance scale - center pivot -->
+  <circle cx="43" cy="38" r="4" fill="#B8860B"/>
+
+  <!-- Balance scale - left support chain -->
+  <line x1="32" y1="38" x2="32" y2="28" stroke="#1C3A47" stroke-width="1.5"/>
+  <!-- Balance scale - right support chain -->
+  <line x1="54" y1="38" x2="54" y2="28" stroke="#1C3A47" stroke-width="1.5"/>
+
+  <!-- Balance scale - apex -->
+  <polygon points="43,20 40,28 46,28" fill="#D4AF37"/>
+
+  <!-- Law book -->
+  <rect x="63" y="32" width="18" height="22" fill="#1C3A47" rx="1"/>
+  <rect x="64" y="33" width="16" height="20" fill="#2D5A70" rx="1"/>
+
+  <!-- Book spine lines -->
+  <line x1="63" y1="40" x2="81" y2="40" stroke="#D4AF37" stroke-width="0.5"/>
+  <line x1="63" y1="46" x2="81" y2="46" stroke="#D4AF37" stroke-width="0.5"/>
+
+  <!-- Book corner accent -->
+  <circle cx="81" cy="32" r="2" fill="#D4AF37"/>
+
+  <!-- Text -->
+  <text x="100" y="48" font-family="Georgia, Garamond, serif" font-size="28" font-weight="bold" fill="#1C3A47">Carter Capner Law</text>
+  <text x="100" y="65" font-family="Georgia, Garamond, serif" font-size="11" fill="#4A4A4A">Legal Advisory & Services</text>
+</svg>

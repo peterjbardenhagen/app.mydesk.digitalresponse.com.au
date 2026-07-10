@@ -15,7 +15,6 @@ input, textarea { border: none; outline: none; font-family: inherit; }
 
 /* ── CSS Variables ──────────────────────────────────────── */
 :root {
-  /* Dark theme (default) */
   --bg:          #0d0d1a;
   --bg-card:     #1a1a2e;
   --bg-input:    #252538;
@@ -25,29 +24,23 @@ input, textarea { border: none; outline: none; font-family: inherit; }
   --text-2:      #a0a0c0;
   --text-3:      #6b6b90;
   --shadow:      0 4px 24px rgba(0,0,0,0.4);
+  --success:     #22c55e;
+  --warning:     #f97316;
+  --error:       #ef4444;
+  --info:        #3b82f6;
+  --header-h:    60px;
+  --nav-h:       64px;
+  --radius-lg:   20px;
+  --radius-md:   14px;
+  --radius-sm:   8px;
 
-  /* Brand: Techlight (default) */
   --brand-primary:   #00c8c8;
   --brand-secondary: #cca05a;
   --brand-dark:      #08121a;
   --brand-gradient:  linear-gradient(135deg,#00c8c8 0%,#0097a7 100%);
   --brand-rgb:       0,200,200;
-
-  /* Semantic */
-  --success:  #22c55e;
-  --warning:  #f97316;
-  --error:    #ef4444;
-  --info:     #3b82f6;
-
-  /* Layout */
-  --header-h:  60px;
-  --nav-h:     64px;
-  --radius-lg: 20px;
-  --radius-md: 14px;
-  --radius-sm: 8px;
 }
 
-/* Light theme overrides */
 [data-theme="light"] {
   --bg:       #f4f4f8;
   --bg-card:  #ffffff;
@@ -60,7 +53,6 @@ input, textarea { border: none; outline: none; font-family: inherit; }
   --shadow:   0 4px 24px rgba(0,0,0,0.10);
 }
 
-/* Brand: Carter Capner — yellow is their primary brand colour */
 [data-brand="ccl"] {
   --brand-primary:   #FFED00;
   --brand-secondary: #1C7BC4;
@@ -70,7 +62,6 @@ input, textarea { border: none; outline: none; font-family: inherit; }
   --brand-text-on-primary: #1a1a1a;
 }
 
-/* Brand: Digital Response */
 [data-brand="dr"] {
   --brand-primary:   #3dba57;
   --brand-secondary: #2a7a3a;
@@ -79,7 +70,6 @@ input, textarea { border: none; outline: none; font-family: inherit; }
   --brand-rgb:       61,186,87;
 }
 
-/* Brand: Techlight */
 [data-brand="techlight"] {
   --brand-primary:   #00c8c8;
   --brand-secondary: #cca05a;
@@ -120,53 +110,20 @@ input, textarea { border: none; outline: none; font-family: inherit; }
   display: flex; align-items: center; justify-content: center;
   font-size: 16px; font-weight: 800; color: white;
   flex-shrink: 0;
-  position: relative;
-  overflow: hidden;
-}
-.app-logo::after {
-  content: '';
-  position: absolute; inset: 0;
-  background: rgba(255,255,255,0.1);
-  border-radius: inherit;
+  cursor: pointer;
 }
 .header-titles { flex: 1; min-width: 0; }
 .header-titles h1 { font-size: 15px; font-weight: 700; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.header-badge {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
-  color: var(--brand-primary); text-transform: uppercase;
-  margin-top: 1px;
-}
-.badge-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--brand-primary); animation: pulse 2s infinite; }
-@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+.header-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 700; color: var(--brand-primary); text-transform: uppercase; margin-top: 1px; }
 .header-actions { display: flex; align-items: center; gap: 8px; }
-.icon-btn {
-  width: 36px; height: 36px; border-radius: 50%;
-  background: var(--bg-input);
-  display: flex; align-items: center; justify-content: center;
-  color: var(--text-2); font-size: 16px;
-  transition: background 0.2s, transform 0.1s;
-  -webkit-tap-highlight-color: transparent;
-}
+.icon-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--bg-input); display: flex; align-items: center; justify-content: center; color: var(--text-2); font-size: 16px; transition: background 0.2s; }
 .icon-btn:active { transform: scale(0.92); background: var(--bg-card2); }
-.avatar {
-  width: 36px; height: 36px; border-radius: 50%;
-  background: var(--brand-gradient);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 700; color: white;
-  flex-shrink: 0;
-  cursor: pointer;
-}
+.avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--brand-gradient); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: white; flex-shrink: 0; cursor: pointer; }
 
-/* Notification badge */
 .notif-wrap { position: relative; }
-.notif-badge {
-  position: absolute; top: 0; right: 0;
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--error); border: 2px solid var(--bg-card);
-}
+.notif-badge { position: absolute; top: 0; right: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--error); border: 2px solid var(--bg-card); }
 
-/* ── Screen Container ────────────────────────────────────── */
+/* ── Screens ────────────────────────────────────────────── */
 .screens {
   flex: 1;
   overflow: hidden;
@@ -194,7 +151,6 @@ input, textarea { border: none; outline: none; font-family: inherit; }
   display: flex; flex-direction: column; gap: 12px;
 }
 
-/* Revenue card */
 .revenue-card {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
@@ -202,39 +158,20 @@ input, textarea { border: none; outline: none; font-family: inherit; }
   box-shadow: var(--shadow);
   border: 1px solid var(--border);
 }
-.revenue-label {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
-  color: var(--text-3); text-transform: uppercase; margin-bottom: 6px;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.revenue-badge {
-  font-size: 11px; font-weight: 600; color: var(--success);
-  background: rgba(34,197,94,0.12); padding: 2px 7px; border-radius: 20px;
-}
+.revenue-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: var(--text-3); text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+.revenue-badge { font-size: 11px; font-weight: 600; color: var(--success); background: rgba(34,197,94,0.12); padding: 2px 7px; border-radius: 20px; }
 .revenue-amount { font-size: 32px; font-weight: 800; color: var(--text-1); line-height: 1.1; margin-bottom: 14px; }
 .chart-bars { display: flex; align-items: flex-end; gap: 5px; height: 48px; }
-.bar {
-  flex: 1; border-radius: 4px 4px 0 0;
-  background: rgba(var(--brand-rgb), 0.35);
-  transition: background 0.3s;
-}
+.bar { flex: 1; border-radius: 4px 4px 0 0; background: rgba(var(--brand-rgb), 0.35); }
 .bar.highlight { background: rgba(var(--brand-rgb), 0.9); }
 
-/* Stats row */
 .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.stat-card {
-  background: var(--bg-card);
-  border-radius: var(--radius-md);
-  padding: 14px;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border);
-}
+.stat-card { background: var(--bg-card); border-radius: var(--radius-md); padding: 14px; box-shadow: var(--shadow); border: 1px solid var(--border); }
 .stat-label { font-size: 10px; font-weight: 700; letter-spacing: 0.07em; color: var(--text-3); text-transform: uppercase; margin-bottom: 6px; }
 .stat-value { font-size: 26px; font-weight: 800; color: var(--text-1); line-height: 1; margin-bottom: 4px; }
 .stat-sub { font-size: 11px; color: var(--text-3); }
 .stat-sub.warn { color: var(--warning); }
 
-/* Desky prediction card */
 .desky-card {
   border-radius: var(--radius-lg);
   padding: 16px;
@@ -246,16 +183,58 @@ input, textarea { border: none; outline: none; font-family: inherit; }
   transition: transform 0.15s, box-shadow 0.15s;
 }
 .desky-card:active { transform: scale(0.98); }
-.desky-icon {
-  width: 44px; height: 44px; border-radius: 50%;
-  background: rgba(255,255,255,0.2);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px; flex-shrink: 0;
-}
+.desky-icon { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
 .desky-card-text h3 { font-size: 13px; font-weight: 700; color: white; margin-bottom: 4px; }
 .desky-card-text p { font-size: 12px; color: rgba(255,255,255,0.85); line-height: 1.5; }
 
-/* ── Chat Section (part of Home) ─────────────────────────── */
+/* ── Module List (Invoices/Quotes/POs) ──────────────────── */
+.module-list {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.module-item {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+.module-item:active { background: var(--bg-card2); }
+.module-item-info { flex: 1; min-width: 0; }
+.module-item-title { font-size: 14px; font-weight: 600; color: var(--text-1); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.module-item-meta { font-size: 12px; color: var(--text-3); display: flex; gap: 8px; }
+.module-item-value { font-size: 13px; font-weight: 600; color: var(--brand-primary); text-align: right; }
+.module-item-status { font-size: 11px; padding: 2px 8px; border-radius: 12px; background: rgba(var(--brand-rgb), 0.15); color: var(--brand-primary); font-weight: 600; }
+
+.module-detail { padding: 14px; }
+.detail-header { margin-bottom: 16px; }
+.detail-header h2 { font-size: 18px; font-weight: 800; color: var(--text-1); margin-bottom: 4px; }
+.detail-header .detail-status { font-size: 12px; color: var(--text-3); }
+
+.detail-section { margin-bottom: 18px; }
+.detail-section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); margin-bottom: 10px; }
+.detail-kpi { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.detail-kpi-card { background: var(--bg-card); border-radius: var(--radius-sm); padding: 12px; border: 1px solid var(--border); }
+.detail-kpi-label { font-size: 10px; font-weight: 700; color: var(--text-3); text-transform: uppercase; margin-bottom: 4px; }
+.detail-kpi-value { font-size: 18px; font-weight: 800; color: var(--text-1); }
+
+.line-items { background: var(--bg-card); border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border); }
+.line-item { padding: 12px 14px; border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; }
+.line-item:last-child { border-bottom: none; }
+.line-item-desc { font-size: 13px; color: var(--text-1); line-height: 1.4; }
+.line-item-meta { font-size: 11px; color: var(--text-3); }
+.line-item-total { text-align: right; }
+.line-item-qty { font-size: 11px; color: var(--text-3); margin-bottom: 2px; }
+.line-item-price { font-size: 14px; font-weight: 700; color: var(--brand-primary); }
+
+/* ── Chat Section ────────────────────────────────────────── */
 .chat-section {
   flex-shrink: 0;
   display: flex;
@@ -272,88 +251,22 @@ input, textarea { border: none; outline: none; font-family: inherit; }
 }
 .msg { display: flex; gap: 8px; align-items: flex-start; }
 .msg.user { flex-direction: row-reverse; }
-.msg-avatar {
-  width: 30px; height: 30px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 700; flex-shrink: 0;
-  margin-top: 2px;
-}
+.msg-avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
 .msg-avatar.agent { background: var(--brand-gradient); color: white; font-size: 14px; }
-.msg-avatar.user-av { background: var(--bg-input); color: var(--text-2); font-size: 10px; font-weight: 700; }
+.msg-avatar.user-av { background: var(--bg-input); color: var(--text-2); }
 .msg-body { max-width: 82%; }
-.msg-sender { font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); margin-bottom: 3px; }
-.msg-bubble {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 4px 14px 14px 14px;
-  padding: 10px 13px;
-  font-size: 13px; line-height: 1.55; color: var(--text-1);
-}
-.msg.user .msg-bubble {
-  background: var(--brand-gradient);
-  color: white; border: none;
-  border-radius: 14px 4px 14px 14px;
-}
-.msg.user .msg-body { align-items: flex-end; display: flex; flex-direction: column; }
-.msg.user .msg-sender { text-align: right; }
+.msg-sender { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-3); margin-bottom: 3px; }
+.msg-bubble { background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px 14px 14px 14px; padding: 10px 13px; font-size: 13px; line-height: 1.55; color: var(--text-1); }
+.msg.user .msg-bubble { background: var(--brand-gradient); color: white; border: none; border-radius: 14px 4px 14px 14px; }
 
-/* Quick replies */
-.quick-replies { display: flex; gap: 8px; flex-wrap: wrap; padding: 4px 0 0; }
-.qr-btn {
-  padding: 7px 14px; border-radius: 20px;
-  border: 1.5px solid rgba(var(--brand-rgb),0.5);
-  background: transparent; color: var(--brand-primary);
-  font-size: 12px; font-weight: 600;
-  transition: background 0.15s, transform 0.1s;
-  -webkit-tap-highlight-color: transparent;
-}
-.qr-btn:active { background: rgba(var(--brand-rgb),0.15); transform: scale(0.96); }
-
-/* Typing indicator */
-.typing { display: flex; align-items: center; gap: 4px; padding: 8px 12px; }
-.typing-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); animation: typing 1.4s infinite; }
-.typing-dot:nth-child(2) { animation-delay: 0.2s; }
-.typing-dot:nth-child(3) { animation-delay: 0.4s; }
-@keyframes typing { 0%,60%,100% { transform: none; opacity: 0.4; } 30% { transform: translateY(-5px); opacity: 1; } }
-
-/* Chat input */
-.chat-input-wrap {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 14px 10px;
-  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-  background: var(--bg-card);
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.chat-input {
-  flex: 1; background: var(--bg-input); color: var(--text-1);
-  border-radius: 24px; padding: 10px 16px;
-  font-size: 14px; resize: none; overflow: hidden;
-  min-height: 40px; max-height: 100px; line-height: 1.4;
-}
+.chat-input-wrap { display: flex; align-items: center; gap: 10px; padding: 10px 14px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--bg-card); border-top: 1px solid var(--border); flex-shrink: 0; }
+.chat-input { flex: 1; background: var(--bg-input); color: var(--text-1); border-radius: 24px; padding: 10px 16px; font-size: 14px; resize: none; overflow: hidden; min-height: 40px; max-height: 100px; line-height: 1.4; }
 .chat-input::placeholder { color: var(--text-3); }
-.send-btn {
-  width: 42px; height: 42px; border-radius: 50%;
-  background: var(--brand-gradient);
-  display: flex; align-items: center; justify-content: center;
-  color: white; font-size: 18px; flex-shrink: 0;
-  box-shadow: 0 3px 12px rgba(var(--brand-rgb),0.35);
-  transition: transform 0.1s, box-shadow 0.15s;
-  -webkit-tap-highlight-color: transparent;
-}
+.send-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--brand-gradient); display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; flex-shrink: 0; box-shadow: 0 3px 12px rgba(var(--brand-rgb),0.35); transition: transform 0.1s; }
 .send-btn:active { transform: scale(0.9); }
 .send-btn svg { width: 18px; height: 18px; fill: none; stroke: white; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-/* Voice button */
-.voice-btn {
-  width: 36px; height: 36px; border-radius: 50%;
-  background: var(--bg-input); color: var(--text-2);
-  display: flex; align-items: center; justify-content: center; font-size: 16px;
-  flex-shrink: 0; transition: background 0.15s;
-  -webkit-tap-highlight-color: transparent;
-}
-.voice-btn.listening { background: rgba(239,68,68,0.2); color: var(--error); animation: recording 1s infinite; }
-@keyframes recording { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); } 50% { box-shadow: 0 0 0 8px rgba(239,68,68,0); } }
+.voice-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--bg-input); color: var(--text-2); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; transition: background 0.15s; }
 
 /* ── Bottom Nav ──────────────────────────────────────────── */
 .bottom-nav {
@@ -375,476 +288,512 @@ input, textarea { border: none; outline: none; font-family: inherit; }
 }
 .nav-item:active { transform: scale(0.9); }
 .nav-item.active { color: var(--brand-primary); }
-.nav-icon {
-  width: 40px; height: 32px; border-radius: 20px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px; transition: background 0.2s;
-}
+.nav-icon { width: 40px; height: 32px; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: background 0.2s; }
 .nav-item.active .nav-icon { background: rgba(var(--brand-rgb),0.15); }
 .nav-label { font-size: 10px; font-weight: 600; }
-.nav-item svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.nav-item.active svg { stroke: var(--brand-primary); }
 
-/* ── Files Screen ────────────────────────────────────────── */
+/* ── Screen Header ────────────────────────────────────────── */
 .screen-header {
   padding: 16px 16px 8px;
   display: flex; align-items: center; justify-content: space-between;
 }
 .screen-header h2 { font-size: 20px; font-weight: 800; color: var(--text-1); }
+
+/* ── Files Screen ────────────────────────────────────────── */
 .file-list { padding: 0 14px 20px; display: flex; flex-direction: column; gap: 8px; }
-.file-item {
-  background: var(--bg-card); border-radius: var(--radius-md);
-  padding: 13px 14px; display: flex; align-items: center; gap: 12px;
-  border: 1px solid var(--border);
-  -webkit-tap-highlight-color: transparent;
-  transition: transform 0.1s;
-}
-.file-item:active { transform: scale(0.98); }
-.file-icon { font-size: 26px; flex-shrink: 0; }
+.file-item { background: var(--bg-card); border-radius: var(--radius-md); padding: 13px 14px; display: flex; align-items: center; gap: 12px; border: 1px solid var(--border); }
+.file-icon { font-size: 24px; flex-shrink: 0; }
 .file-info { flex: 1; min-width: 0; }
 .file-name { font-size: 13px; font-weight: 600; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.file-meta { font-size: 11px; color: var(--text-3); margin-top: 2px; }
-.file-more { color: var(--text-3); font-size: 18px; padding: 4px; }
+.file-meta { font-size: 11px; color: var(--text-3); }
+.file-more { color: var(--text-3); font-size: 14px; }
 
-/* ── Stats Screen ────────────────────────────────────────── */
-.stats-content { padding: 0 14px 20px; display: flex; flex-direction: column; gap: 14px; }
-.chart-card {
-  background: var(--bg-card); border-radius: var(--radius-lg);
-  padding: 18px; border: 1px solid var(--border); box-shadow: var(--shadow);
-}
-.chart-title { font-size: 13px; font-weight: 700; color: var(--text-1); margin-bottom: 14px; }
-.bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 80px; }
-.bc-bar {
-  flex: 1; border-radius: 4px 4px 0 0; position: relative;
-  transition: background 0.3s;
-}
-.bc-bar::after { content: attr(data-label); position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); font-size: 9px; color: var(--text-3); white-space: nowrap; }
-.stats-kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.kpi-card { background: var(--bg-card); border-radius: var(--radius-md); padding: 14px; border: 1px solid var(--border); }
-.kpi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-bottom: 6px; }
-.kpi-value { font-size: 22px; font-weight: 800; color: var(--text-1); }
-.kpi-trend { font-size: 11px; margin-top: 3px; }
-.kpi-trend.up { color: var(--success); }
-.kpi-trend.down { color: var(--error); }
-
-/* ── Config Screen ───────────────────────────────────────── */
-.config-content { padding: 0 14px 24px; display: flex; flex-direction: column; gap: 14px; }
-.config-section { background: var(--bg-card); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border); }
+/* ── Config Screen ────────────────────────────────────────── */
+.config-scroll { padding: 16px 16px 20px; overflow-y: auto; }
+.config-section { background: var(--bg-card); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border); margin-bottom: 14px; }
 .config-section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-3); padding: 14px 16px 6px; }
-.config-row {
-  display: flex; align-items: center; gap: 12px;
-  padding: 13px 16px;
-  border-bottom: 1px solid var(--border);
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s;
-}
+.config-row { padding: 14px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); }
 .config-row:last-child { border-bottom: none; }
-.config-row:active { background: var(--bg-input); }
-.config-row-icon { font-size: 20px; width: 24px; text-align: center; }
-.config-row-label { flex: 1; font-size: 14px; color: var(--text-1); font-weight: 500; }
-.config-row-value { font-size: 13px; color: var(--text-3); }
+.config-row-icon { font-size: 18px; flex-shrink: 0; }
+.config-row-label { flex: 1; font-size: 13px; color: var(--text-1); font-weight: 500; }
+.config-row-value { font-size: 12px; color: var(--text-3); }
 .config-row-arrow { color: var(--text-3); font-size: 14px; }
 
-/* Toggle switch */
-.toggle { position: relative; width: 46px; height: 26px; }
-.toggle input { opacity: 0; width: 0; height: 0; }
-.toggle-track {
-  position: absolute; inset: 0; border-radius: 13px;
-  background: var(--bg-input); transition: background 0.3s;
-  cursor: pointer;
-}
-.toggle input:checked + .toggle-track { background: var(--brand-primary); }
-.toggle-thumb {
-  position: absolute; top: 3px; left: 3px;
-  width: 20px; height: 20px; border-radius: 50%;
-  background: white; transition: transform 0.3s;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-  pointer-events: none;
-}
-.toggle input:checked ~ .toggle-thumb { transform: translateX(20px); }
+.toggle { display: flex; align-items: center; width: 48px; height: 28px; background: var(--bg-input); border-radius: 14px; position: relative; cursor: pointer; border: 1px solid var(--border); transition: background 0.2s; }
+.toggle input { display: none; }
+.toggle input:checked + .toggle-track { background: rgba(var(--brand-rgb), 0.3); }
+.toggle input:checked ~ .toggle-thumb { right: 2px; left: auto; background: var(--brand-primary); }
+.toggle-track { position: absolute; inset: 0; border-radius: inherit; }
+.toggle-thumb { position: absolute; width: 24px; height: 24px; border-radius: 12px; background: var(--text-3); left: 2px; top: 50%; transform: translateY(-50%); transition: all 0.2s; }
 
-/* Brand palette picker */
-.brand-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 12px 16px 14px; }
-.brand-option {
-  border-radius: 12px; padding: 12px 8px;
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  border: 2px solid transparent;
-  cursor: pointer; -webkit-tap-highlight-color: transparent;
-  transition: border-color 0.2s, transform 0.1s;
-}
-.brand-option:active { transform: scale(0.96); }
-.brand-option.selected { border-color: var(--brand-primary); }
-.brand-swatch { width: 36px; height: 36px; border-radius: 10px; }
-.brand-name { font-size: 10px; font-weight: 600; color: var(--text-2); text-align: center; }
-
-/* Desky profile card */
-.desky-profile {
-  background: var(--brand-gradient);
-  margin: 0 14px; border-radius: var(--radius-lg);
-  padding: 20px; display: flex; align-items: center; gap: 14px;
-}
-.desky-avatar-lg {
-  width: 56px; height: 56px; border-radius: 50%;
-  background: rgba(255,255,255,0.2);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 28px; flex-shrink: 0;
-}
-.desky-profile-text h3 { font-size: 18px; font-weight: 800; color: white; margin-bottom: 2px; }
-.desky-profile-text p { font-size: 12px; color: rgba(255,255,255,0.75); line-height: 1.4; }
-
-/* ── Splash Screen ───────────────────────────────────────── */
-#splash {
-  position: fixed; inset: 0; z-index: 1000;
-  background: var(--bg);
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 20px;
-  transition: opacity 0.5s, transform 0.5s;
-}
-#splash.fade-out { opacity: 0; transform: scale(1.05); pointer-events: none; }
-.splash-logo {
-  width: 80px; height: 80px; border-radius: 24px;
-  background: var(--brand-gradient);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 36px;
-  box-shadow: 0 12px 40px rgba(var(--brand-rgb),0.4);
-  animation: float 3s ease-in-out infinite;
-}
-@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-.splash-title { font-size: 28px; font-weight: 800; color: var(--text-1); }
-.splash-sub { font-size: 14px; color: var(--text-3); }
-.splash-dots { display: flex; gap: 6px; }
-.splash-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand-primary); animation: typing 1.4s infinite; }
-.splash-dot:nth-child(2) { animation-delay: 0.2s; }
-.splash-dot:nth-child(3) { animation-delay: 0.4s; }
-
-/* ── CCL: dark text on yellow brand elements ─────────────── */
-[data-brand="ccl"] .send-btn,
-[data-brand="ccl"] .login-btn,
-[data-brand="ccl"] .desky-card { color: #1a1a1a !important; }
-[data-brand="ccl"] .msg.user .msg-bubble { color: #1a1a1a; }
-[data-brand="ccl"] .desky-card-text h3,
-[data-brand="ccl"] .desky-card-text p { color: #1a1a1a; }
-/* Settings screen Desky profile card */
-[data-brand="ccl"] .desky-profile-text h3,
-[data-brand="ccl"] .desky-profile-text p { color: #1a1a1a !important; }
-[data-brand="ccl"] .desky-avatar-lg { color: #1a1a1a; background: rgba(0,0,0,0.12); }
-[data-brand="ccl"] .qr-btn { border-color: rgba(26,26,26,0.3); color: #1a1a1a; }
-[data-brand="ccl"] .badge-dot { background: #1a1a1a; }
-[data-brand="ccl"] .header-badge { color: #c8aa00; }
-
-/* ── Notification Drawer ─────────────────────────────────── */
-.notif-drawer {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 900;
-  background: var(--bg-card); border-bottom: 1px solid var(--border);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-  transform: translateY(-110%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
-  padding-top: env(safe-area-inset-top, 8px);
-  max-height: 60vh; display: flex; flex-direction: column;
-}
-.notif-drawer.open { transform: translateY(0); }
-.notif-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; }
-.notif-header-title { font-size: 15px; font-weight: 700; color: var(--text-1); }
-.notif-clear-btn { font-size: 12px; color: var(--brand-primary); font-weight: 600; cursor: pointer; padding: 4px 8px; }
-.notif-list { overflow-y: auto; flex: 1; }
-.notif-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--border); }
-.notif-item-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand-primary); flex-shrink: 0; margin-top: 5px; }
-.notif-item-body { flex: 1; }
-.notif-item-text { font-size: 13px; color: var(--text-1); line-height: 1.45; }
-.notif-item-time { font-size: 11px; color: var(--text-3); margin-top: 3px; }
-.notif-empty { padding: 24px 16px; text-align: center; color: var(--text-3); font-size: 13px; }
-
-/* ── User Menu ───────────────────────────────────────────── */
-.user-menu {
-  position: fixed; top: 66px; right: 12px; z-index: 910;
-  background: var(--bg-card); border-radius: var(--radius-md);
-  border: 1px solid var(--border); box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-  min-width: 190px; overflow: hidden;
-  opacity: 0; pointer-events: none;
-  transform: scale(0.94) translateY(-6px); transform-origin: top right;
-  transition: opacity 0.2s, transform 0.2s;
-}
-.user-menu.open { opacity: 1; pointer-events: all; transform: scale(1) translateY(0); }
-.user-menu-header { padding: 14px 16px 10px; border-bottom: 1px solid var(--border); }
-.user-menu-name { font-size: 14px; font-weight: 700; color: var(--text-1); }
-.user-menu-email { font-size: 11px; color: var(--text-3); margin-top: 2px; }
-.user-menu-item {
-  display: flex; align-items: center; gap: 12px; padding: 13px 16px;
-  font-size: 14px; color: var(--text-1); cursor: pointer;
-  border-top: 1px solid var(--border); -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s;
-}
-.user-menu-item:active { background: var(--bg-input); }
-.user-menu-item.danger { color: var(--error); }
-.user-menu-icon { font-size: 17px; width: 22px; text-align: center; }
-
-/* ── Bottom Sheet (workspace switcher) ──────────────────── */
-.sheet-overlay { position: fixed; inset: 0; z-index: 800; background: rgba(0,0,0,0.5); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
-.sheet-overlay.open { opacity: 1; pointer-events: all; }
-.bottom-sheet {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 900;
-  background: var(--bg-card); border-radius: 22px 22px 0 0;
-  border: 1px solid var(--border);
-  transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.4,0,0.2,1);
-  padding-bottom: env(safe-area-inset-bottom, 12px);
-}
-.bottom-sheet.open { transform: translateY(0); }
-.sheet-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--border); margin: 10px auto 6px; }
-.sheet-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-3); padding: 6px 16px 10px; }
-.sheet-item {
-  display: flex; align-items: center; gap: 14px; padding: 14px 16px;
-  border-top: 1px solid var(--border); cursor: pointer;
-  -webkit-tap-highlight-color: transparent; transition: background 0.15s;
-}
-.sheet-item:active { background: var(--bg-input); }
-.sheet-item-icon { width: 42px; height: 42px; border-radius: 12px; background: var(--brand-gradient); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
-.sheet-item-info { flex: 1; }
-.sheet-item-name { font-size: 14px; font-weight: 600; color: var(--text-1); }
-.sheet-item-sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
-.sheet-item-check { font-size: 20px; font-weight: 700; color: var(--brand-primary); }
-
-/* ── Login Screen ────────────────────────────────────────── */
-#login-screen {
-  position: fixed; inset: 0; z-index: 2000;
-  background: var(--bg); display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  padding: 32px 28px env(safe-area-inset-bottom, 32px);
-}
-#login-screen.hidden { display: none; }
-.login-logo { font-size: 60px; margin-bottom: 20px; animation: float 3s ease-in-out infinite; }
-.login-title { font-size: 26px; font-weight: 800; color: var(--text-1); text-align: center; margin-bottom: 6px; }
-.login-sub { font-size: 14px; color: var(--text-3); text-align: center; margin-bottom: 28px; }
-.login-form { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 12px; }
-.login-field { background: var(--bg-card); border: 1.5px solid var(--border); border-radius: var(--radius-md); padding: 14px 16px; font-size: 15px; color: var(--text-1); width: 100%; transition: border-color 0.2s; }
-.login-field:focus { border-color: var(--brand-primary); outline: none; }
+/* ── Login ────────────────────────────────────────────────── */
+.login-screen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; z-index: 1000; padding: 20px; }
+.login-screen.hidden { display: none; }
+.login-logo { font-size: 48px; margin-bottom: 10px; }
+.login-title { font-size: 24px; font-weight: 800; color: var(--text-1); margin-bottom: 8px; }
+.login-subtitle { font-size: 14px; color: var(--text-2); margin-bottom: 24px; text-align: center; }
+.login-fields { width: 100%; max-width: 300px; display: flex; flex-direction: column; gap: 12px; }
+.login-field { background: var(--bg-card); color: var(--text-1); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; font-size: 14px; }
 .login-field::placeholder { color: var(--text-3); }
-.login-btn { background: var(--brand-gradient); color: white; padding: 16px; border-radius: var(--radius-md); font-size: 16px; font-weight: 700; width: 100%; box-shadow: 0 4px 16px rgba(var(--brand-rgb),0.35); transition: transform 0.1s; -webkit-tap-highlight-color: transparent; }
+.login-btn { width: 100%; background: var(--brand-gradient); color: white; border-radius: var(--radius-md); padding: 14px; font-size: 14px; font-weight: 600; transition: transform 0.15s; }
 .login-btn:active { transform: scale(0.98); }
-[data-brand="ccl"] .login-btn { color: #1a1a1a; }
-.login-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: var(--radius-sm); padding: 12px 14px; color: var(--error); font-size: 13px; text-align: center; display: none; }
+.login-btn:disabled { opacity: 0.5; }
+.login-error { color: var(--error); font-size: 13px; text-align: center; margin-bottom: 10px; display: none; }
 .login-error.show { display: block; }
-.login-divider { display: flex; align-items: center; gap: 10px; color: var(--text-3); font-size: 12px; margin: 4px 0; }
+
+.login-divider { display: flex; align-items: center; gap: 10px; margin: 16px 0; width: 100%; max-width: 300px; }
 .login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-.ms-login-btn { display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--bg-card); border: 1.5px solid var(--border); color: var(--text-1); padding: 14px; border-radius: var(--radius-md); font-size: 15px; font-weight: 600; width: 100%; -webkit-tap-highlight-color: transparent; transition: background 0.15s; }
-.ms-login-btn:active { background: var(--bg-input); }
+.login-divider span { color: var(--text-3); font-size: 12px; }
 
-/* ── Global overlay (for menus) ──────────────────────────── */
-.overlay { position: fixed; inset: 0; z-index: 800; background: rgba(0,0,0,0.3); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
-.overlay.open { opacity: 1; pointer-events: all; }
+.ms-login-btn { width: 100%; max-width: 300px; display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--bg-card); color: var(--text-1); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 16px; font-size: 14px; font-weight: 600; transition: background 0.2s; }
+.ms-login-btn:active { background: var(--bg-card2); }
+.ms-login-btn svg { width: 18px; height: 18px; }
 
-/* ── Scrollbar (webkit) ──────────────────────────────────── */
-::-webkit-scrollbar { width: 3px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.forgot-pw-link { background: transparent; color: var(--brand-primary); border: none; padding: 0; font-size: 13px; text-decoration: none; cursor: pointer; margin-top: 8px; }
+.forgot-pw-link:active { opacity: 0.8; }
 
-/* ── Desky thinking card ─────────────────────────────────── */
-.desky-thinking { opacity: 0; max-height: 0; overflow: hidden; transition: opacity 0.3s, max-height 0.4s; }
-.desky-thinking.show { opacity: 1; max-height: 200px; }
+/* ── User Menu ────────────────────────────────────────────── */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 30; display: none; }
+.overlay.show { display: block; }
 
-/* ── Utility ─────────────────────────────────────────────── */
-.divider { height: 1px; background: var(--border); margin: 2px 0; }
-.tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
-.tag-success { background: rgba(34,197,94,0.15); color: var(--success); }
-.tag-warning { background: rgba(249,115,22,0.15); color: var(--warning); }
-.tag-info { background: rgba(59,130,246,0.15); color: var(--info); }
+.user-menu { position: fixed; top: var(--header-h); right: 0; width: 200px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); z-index: 40; overflow: hidden; transform: translateY(-10px); opacity: 0; pointer-events: none; transition: all 0.2s; }
+.user-menu.show { transform: translateY(0); opacity: 1; pointer-events: all; }
+.user-menu-header { padding: 16px; border-bottom: 1px solid var(--border); }
+.user-menu-name { font-size: 14px; font-weight: 700; color: var(--text-1); margin-bottom: 2px; }
+.user-menu-email { font-size: 12px; color: var(--text-3); }
+.user-menu-item { padding: 14px 16px; font-size: 13px; color: var(--text-1); cursor: pointer; transition: background 0.2s; }
+.user-menu-item:active { background: var(--bg-card2); }
+
+/* ── Workspace Sheet ─────────────────────────────────────── */
+.sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 50; display: none; }
+.sheet-overlay.show { display: block; }
+
+.bottom-sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-card); border-top: 1px solid var(--border); border-radius: var(--radius-lg) var(--radius-lg) 0 0; z-index: 60; max-height: 70vh; overflow-y: auto; transform: translateY(100%); transition: transform 0.3s; }
+.bottom-sheet.show { transform: translateY(0); }
+.sheet-header { padding: 16px; border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 700; color: var(--text-1); }
+.sheet-item { padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.2s; }
+.sheet-item:active { background: var(--bg-card2); }
+.sheet-item-name { font-size: 13px; color: var(--text-1); font-weight: 600; margin-bottom: 3px; }
+.sheet-item-meta { font-size: 11px; color: var(--text-3); }
+
+/* ── Splash ──────────────────────────────────────────────── */
+#splash {
+  position: fixed;
+  inset: 0;
+  background: var(--brand-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  z-index: 2000;
+  color: white;
+  font-size: 48px;
+  font-weight: 800;
+  transition: opacity 0.5s;
+}
+#splash.fade-out { opacity: 0; }
+
+/* ── Loading ─────────────────────────────────────────────── */
+.loading { text-align: center; padding: 20px; color: var(--text-3); }
+.spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(var(--brand-rgb), 0.3); border-top-color: var(--brand-primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
 </style>
 </head>
 <body>
 
 <!-- Login Screen -->
-<div id="login-screen">
+<div class="login-screen" id="login-screen">
   <div class="login-logo">✦</div>
-  <div class="login-title">MyDeskAI</div>
-  <div class="login-sub">Your AI-powered business companion</div>
-  <div class="login-form">
-    <div class="login-error" id="loginError">Invalid credentials. Please try again.</div>
+  <h1 class="login-title">MyDeskAI</h1>
+  <p class="login-subtitle">Sign in to continue</p>
+  <div class="login-fields">
+    <div class="login-error" id="loginError"></div>
     <input class="login-field" id="loginInput" type="text" placeholder="Username, code, or email" autocomplete="username" />
     <input class="login-field" id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" />
-    <button class="login-btn" onclick="doLogin()">Sign in to MyDeskAI</button>
-    <div class="login-divider">or</div>
+    <button class="login-btn" onclick="doLogin()">Sign in</button>
+    <div class="login-divider"><span>or</span></div>
     <button class="ms-login-btn" onclick="startMicrosoftLogin()">
       <svg width="18" height="18" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
       Sign in with Microsoft
     </button>
+    <button class="forgot-pw-link" onclick="showForgotPasswordScreen()">Forgot password?</button>
   </div>
 </div>
 
-<!-- Notification Drawer -->
-<div class="notif-drawer" id="notifDrawer">
-  <div class="notif-header">
-    <span class="notif-header-title">Notifications</span>
-    <span class="notif-clear-btn" onclick="clearNotifications()">Clear all</span>
+<div class="login-screen hidden" id="forgot-password-screen">
+  <div class="login-logo">✦</div>
+  <h1 class="login-title">Reset Password</h1>
+  <p class="login-subtitle">Enter your email or username</p>
+  <div class="login-fields">
+    <div class="login-error" id="forgotError"></div>
+    <input class="login-field" id="forgotInput" type="text" placeholder="Email or username" autocomplete="email" />
+    <button class="login-btn" onclick="submitForgotPassword()">Send Reset Link</button>
+    <button class="forgot-pw-link" onclick="backToLogin()">Back to login</button>
   </div>
-  <div class="notif-list" id="notifList"></div>
 </div>
+
+<div class="login-screen hidden" id="reset-password-screen">
+  <div class="login-logo">✦</div>
+  <h1 class="login-title">Reset Password</h1>
+  <p class="login-subtitle">Create a strong new password</p>
+  <div class="login-fields">
+    <div class="login-error" id="resetError"></div>
+    <input class="login-field" id="resetPassword" type="password" placeholder="New password" autocomplete="new-password" oninput="updatePasswordStrength()" />
+    <div id="passwordStrengthBar" style="display:none;margin:12px 0;">
+      <div style="height:4px;background:var(--text-3);border-radius:2px;overflow:hidden;">
+        <div id="strengthFill" style="height:100%;width:0%;background:#ef4444;transition:all 0.2s;"></div>
+      </div>
+      <div style="font-size:12px;color:var(--text-2);margin-top:4px;">Strength: <span id="strengthText">Weak</span></div>
+    </div>
+    <input class="login-field" id="resetConfirm" type="password" placeholder="Confirm password" autocomplete="new-password" />
+    <button class="login-btn" onclick="submitResetPassword()">Reset Password</button>
+    <button class="forgot-pw-link" onclick="backToLogin()">Back to login</button>
+  </div>
+</div>
+
+<!-- Overlays -->
+<div class="overlay" id="userMenuOverlay" onclick="closeUserMenu()"></div>
+<div class="sheet-overlay" id="sheetOverlay" onclick="closeWorkspaceSwitcher()"></div>
 
 <!-- User Menu -->
-<div class="overlay" id="userMenuOverlay" onclick="closeUserMenu()"></div>
 <div class="user-menu" id="userMenu">
   <div class="user-menu-header">
-    <div class="user-menu-name" id="menuUserName">Peter Bardenhagen</div>
-    <div class="user-menu-email" id="menuUserEmail">peter@bardenhagen.xyz</div>
+    <div class="user-menu-name" id="menuUserName">User</div>
+    <div class="user-menu-email" id="menuUserEmail">email@example.com</div>
   </div>
-  <div class="user-menu-item" onclick="closeUserMenu(); navigate('config')">
-    <span class="user-menu-icon">⚙️</span> Settings
-  </div>
-  <div class="user-menu-item danger" onclick="doLogout()">
-    <span class="user-menu-icon">→</span> Log Out
-  </div>
+  <div class="user-menu-item" onclick="navigate('config')">Settings</div>
+  <div class="user-menu-item" onclick="doLogout()">Log Off</div>
 </div>
 
-<!-- Workspace Switcher Bottom Sheet -->
-<div class="sheet-overlay" id="sheetOverlay" onclick="closeWorkspaceSwitcher()"></div>
+<!-- Workspace Switcher -->
 <div class="bottom-sheet" id="workspaceSheet">
-  <div class="sheet-handle"></div>
-  <div class="sheet-title">Switch Workspace</div>
+  <div class="sheet-header">Choose Workspace</div>
   <div id="workspaceList"></div>
 </div>
 
-<!-- Splash Screen -->
-<div id="splash">
-  <div class="splash-logo">✦</div>
-  <div style="text-align:center">
-    <div class="splash-title">MyDeskAI</div>
-    <div class="splash-sub">Your AI-powered business companion</div>
-  </div>
-  <div class="splash-dots">
-    <div class="splash-dot"></div>
-    <div class="splash-dot"></div>
-    <div class="splash-dot"></div>
-  </div>
-</div>
+<!-- Splash -->
+<div id="splash">✦</div>
 
 <!-- Main App -->
 <div id="app" data-theme="dark" data-brand="techlight">
-
   <!-- Header -->
   <header class="app-header">
-    <div class="app-logo" onclick="navigate('home')" style="cursor:pointer;font-size:20px;">✦</div>
+    <div class="app-logo" onclick="navigate('home')">✦</div>
     <div class="header-titles">
       <h1>MyDeskAI</h1>
-      <div class="header-badge"><span class="badge-dot"></span>SuperAgent Active</div>
+      <span class="header-badge"><span class="badge-dot"></span>Connected</span>
     </div>
     <div class="header-actions">
-      <div class="notif-wrap">
-        <button class="icon-btn" onclick="toggleNotifications()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        </button>
-        <div class="notif-badge" id="notifBadge"></div>
+      <div class="notif-wrap icon-btn" onclick="toggleNotifications()">
+        <span>🔔</span>
+        <div class="notif-badge" id="notifBadge" style="display:none;"></div>
       </div>
       <div class="avatar" id="userAvatar" onclick="toggleUserMenu()">PB</div>
     </div>
   </header>
 
-  <!-- Screen Container -->
+  <!-- Screens -->
   <div class="screens">
-
-    <!-- HOME SCREEN -->
+    <!-- HOME -->
     <div class="screen active" id="screen-home">
       <div class="home-scroll" id="homeScroll">
-
         <!-- Revenue Card -->
         <div class="revenue-card">
           <div class="revenue-label">
-            Weekly Revenue
+            <span>Revenue This Month</span>
             <span class="revenue-badge" id="revBadge">+12.4%</span>
           </div>
-          <div class="revenue-amount" id="revAmount">$42,850.00</div>
+          <div class="revenue-amount" id="revAmount">$42,850</div>
           <div class="chart-bars" id="revChart">
-            <div class="bar" style="height:45%"></div>
-            <div class="bar" style="height:55%"></div>
-            <div class="bar" style="height:38%"></div>
+            <div class="bar highlight" style="height:80%"></div>
+            <div class="bar" style="height:65%"></div>
             <div class="bar" style="height:72%"></div>
             <div class="bar" style="height:60%"></div>
-            <div class="bar highlight" style="height:88%"></div>
-            <div class="bar" style="height:65%"></div>
+            <div class="bar" style="height:75%"></div>
           </div>
         </div>
 
-        <!-- Stats Row -->
+        <!-- Stats -->
         <div class="stats-row">
-          <div class="stat-card" onclick="navigateFiles('quote')" style="cursor:pointer;">
-            <div class="stat-label">Quotes</div>
+          <div class="stat-card">
+            <div class="stat-label">Open Quotes</div>
             <div class="stat-value" id="statQuotes">14</div>
-            <div class="stat-sub" id="statQuotesSub">8 Pending Approval</div>
+            <div class="stat-sub" id="statQuotesSub">8 Pending</div>
           </div>
-          <div class="stat-card" onclick="navigateFiles('invoice')" style="cursor:pointer;">
-            <div class="stat-label">Invoices</div>
+          <div class="stat-card">
+            <div class="stat-label">Receivables</div>
             <div class="stat-value" id="statInvoices">$8.2k</div>
             <div class="stat-sub warn" id="statInvoicesSub">3 Overdue</div>
           </div>
         </div>
 
-        <!-- Desky Prediction Card -->
-        <div class="desky-card" onclick="deskyChatTap('prediction')">
-          <div class="desky-icon">✦</div>
+        <!-- Desky Card -->
+        <div class="desky-card" onclick="navigate('chat-desky')">
+          <div class="desky-icon">🤖</div>
           <div class="desky-card-text">
-            <h3>Prediction from MyDeskAI</h3>
-            <p id="deskyPrediction">Upcoming cashflow dip predicted for next Thursday based on recurring subscription billings. Tap to discuss.</p>
+            <h3>Desky Insight</h3>
+            <p id="deskyPrediction">Tap to discuss business with AI</p>
           </div>
         </div>
 
-      </div><!-- /home-scroll -->
+        <!-- Module Quick Links -->
+        <div style="padding:0 14px;display:flex;gap:8px;margin-top:8px;">
+          <button class="stat-card" style="flex:1;cursor:pointer;padding:12px;text-align:center;" onclick="navigate('invoices')">
+            <div style="font-size:20px;margin-bottom:4px;">💰</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-1);">Invoices</div>
+          </button>
+          <button class="stat-card" style="flex:1;cursor:pointer;padding:12px;text-align:center;" onclick="navigate('quotes')">
+            <div style="font-size:20px;margin-bottom:4px;">📄</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-1);">Quotes</div>
+          </button>
+          <button class="stat-card" style="flex:1;cursor:pointer;padding:12px;text-align:center;" onclick="navigate('pos')">
+            <div style="font-size:20px;margin-bottom:4px;">📋</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-1);">POs</div>
+          </button>
+        </div>
+
+        <!-- Phase 1 & 2 Module Links (Row 1) -->
+        <div style="padding:0 14px;display:flex;gap:8px;margin-top:8px;">
+          <button class="stat-card" style="flex:1;cursor:pointer;padding:12px;text-align:center;" onclick="navigate('expenses')">
+            <div style="font-size:20px;margin-bottom:4px;">💸</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-1);">Expenses</div>
+          </button>
+          <button class="stat-card" style="flex:1;cursor:pointer;padding:12px;text-align:center;" onclick="navigate('timesheets')">
+            <div style="font-size:20px;margin-bottom:4px;">⏱️</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-1);">Timesheets</div>
+          </button>
+          <button class="stat-card" style="flex:1;cursor:pointer;padding:12px;text-align:center;" onclick="navigate('tasks')">
+            <div style="font-size:20px;margin-bottom:4px;">✓</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-1);">Tasks</div>
+          </button>
+        </div>
+
+        <!-- Phase 1 & 2 Module Links (Row 2) -->
+        <div style="padding:0 14px;display:flex;gap:8px;margin-top:8px;">
+          <button class="stat-card" style="flex:1;cursor:pointer;padding:12px;text-align:center;" onclick="navigate('despatch')">
+            <div style="font-size:20px;margin-bottom:4px;">🚚</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-1);">Despatch</div>
+          </button>
+          <button class="stat-card" style="flex:1;cursor:pointer;padding:12px;text-align:center;" onclick="navigate('contacts')">
+            <div style="font-size:20px;margin-bottom:4px;">👥</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-1);">Contacts</div>
+          </button>
+          <button class="stat-card" style="flex:1;cursor:pointer;padding:12px;text-align:center;" onclick="navigate('cashflow')">
+            <div style="font-size:20px;margin-bottom:4px;">📊</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-1);">CashFlow</div>
+          </button>
+        </div>
+
+        <!-- Phase 1 & 2 Module Links (Row 3) -->
+        <div style="padding:0 14px;display:flex;gap:8px;margin-top:8px;margin-bottom:14px;">
+          <button class="stat-card" style="flex:1;cursor:pointer;padding:12px;text-align:center;" onclick="navigate('goals')">
+            <div style="font-size:20px;margin-bottom:4px;">🎯</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-1);">Goals</div>
+          </button>
+          <button class="stat-card" style="flex:1;cursor:pointer;padding:12px;text-align:center;" onclick="navigate('projects')">
+            <div style="font-size:20px;margin-bottom:4px;">📈</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-1);">Projects</div>
+          </button>
+          <div style="flex:1;"></div>
+        </div>
+      </div>
 
       <!-- Inline Chat -->
       <div class="chat-section">
         <div class="chat-messages" id="chatMessages"></div>
         <div class="chat-input-wrap">
-          <button class="voice-btn" id="voiceBtn" onclick="startVoice()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-          </button>
-          <textarea class="chat-input" id="chatInput" placeholder="Ask MyDesk…" rows="1" oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
-          <button class="send-btn" onclick="sendMessage()">
-            <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          <button class="voice-btn" onclick="startVoice()">🎤</button>
+          <textarea class="chat-input" id="chatInput" placeholder="Ask Desky…" rows="1" oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
+          <button class="send-btn" onclick="sendChat()">
+            <svg viewBox="0 0 24 24"><path d="M22 2L11 13m11-11l-7 20L11 13m0 0L3 9m8 4l0 8"/></svg>
           </button>
         </div>
       </div>
-    </div><!-- /screen-home -->
+    </div>
 
-    <!-- FILES SCREEN -->
-    <div class="screen" id="screen-files">
+    <!-- INVOICES -->
+    <div class="screen" id="screen-invoices">
+      <div class="screen-header"><h2>Invoices</h2></div>
+      <div id="invoicesList" class="module-list"></div>
+    </div>
+
+    <!-- INVOICE DETAIL -->
+    <div class="screen" id="screen-invoice-detail">
       <div class="screen-header">
-        <h2>Files</h2>
-        <button class="icon-btn" style="font-size:18px;">＋</button>
+        <button style="background:none;font-size:18px;color:var(--text-2);" onclick="navigate('invoices')">←</button>
+        <h2>Invoice</h2>
+        <div style="width:30px;"></div>
       </div>
-      <div style="padding: 0 14px 10px; display:flex; gap:8px;" id="fileTabs">
-        <span class="tag tag-info file-tab" id="tab-all" onclick="filterFiles('all')" style="cursor:pointer;padding:5px 12px;font-size:11px;">All</span>
-        <span class="tag file-tab" id="tab-quote" onclick="filterFiles('quote')" style="background:var(--bg-input);color:var(--text-2);cursor:pointer;padding:5px 12px;font-size:11px;">Quotes</span>
-        <span class="tag file-tab" id="tab-invoice" onclick="filterFiles('invoice')" style="background:var(--bg-input);color:var(--text-2);cursor:pointer;padding:5px 12px;font-size:11px;">Invoices</span>
-        <span class="tag file-tab" id="tab-po" onclick="filterFiles('po')" style="background:var(--bg-input);color:var(--text-2);cursor:pointer;padding:5px 12px;font-size:11px;">POs</span>
-      </div>
-      <div class="file-list" id="fileList"></div>
+      <div class="module-detail" id="invoiceDetail"></div>
     </div>
 
-    <!-- STATS SCREEN -->
-    <div class="screen" id="screen-stats">
-      <div class="screen-header"><h2>Statistics</h2></div>
-      <div class="stats-content">
-        <div class="chart-card">
-          <div class="chart-title">Monthly Revenue</div>
-          <div class="bar-chart" id="statsChart"></div>
-          <div style="height:20px;"></div>
-        </div>
-        <div class="stats-kpi-grid" id="kpiGrid"></div>
-        <div class="chart-card">
-          <div class="chart-title">Pipeline by Stage</div>
-          <div id="pipelineChart" style="display:flex;gap:4px;height:14px;border-radius:7px;overflow:hidden;margin-top:8px;"></div>
-          <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;" id="pipelineLegend"></div>
-        </div>
+    <!-- QUOTES -->
+    <div class="screen" id="screen-quotes">
+      <div class="screen-header"><h2>Quotes</h2></div>
+      <div id="quotesList" class="module-list"></div>
+    </div>
+
+    <!-- QUOTE DETAIL -->
+    <div class="screen" id="screen-quote-detail">
+      <div class="screen-header">
+        <button style="background:none;font-size:18px;color:var(--text-2);" onclick="navigate('quotes')">←</button>
+        <h2>Quote</h2>
+        <div style="width:30px;"></div>
+      </div>
+      <div class="module-detail" id="quoteDetail"></div>
+    </div>
+
+    <!-- PURCHASE ORDERS -->
+    <div class="screen" id="screen-pos">
+      <div class="screen-header"><h2>Purchase Orders</h2></div>
+      <div id="posList" class="module-list"></div>
+    </div>
+
+    <!-- PO DETAIL -->
+    <div class="screen" id="screen-po-detail">
+      <div class="screen-header">
+        <button style="background:none;font-size:18px;color:var(--text-2);" onclick="navigate('pos')">←</button>
+        <h2>Purchase Order</h2>
+        <div style="width:30px;"></div>
+      </div>
+      <div class="module-detail" id="poDetail"></div>
+    </div>
+
+    <!-- FILES -->
+    <div class="screen" id="screen-files">
+      <div class="screen-header"><h2>Files</h2></div>
+      <div id="fileList" class="file-list"></div>
+    </div>
+
+    <!-- CHAT DESKY -->
+    <div class="screen" id="screen-chat-desky">
+      <div class="screen-header">
+        <button style="background:none;font-size:18px;color:var(--text-2);" onclick="navigate('home')">←</button>
+        <h2>Desky Chat</h2>
+        <div style="width:30px;"></div>
+      </div>
+      <div class="chat-messages" id="deskyChatMessages" style="flex:1;padding:14px;margin:0;"></div>
+      <div class="chat-input-wrap" style="border-top:1px solid var(--border);">
+        <button class="voice-btn" onclick="startVoice()">🎤</button>
+        <textarea class="chat-input" id="deskyChatInput" placeholder="Ask Desky…" rows="1" oninput="autoResize(this)" onkeydown="handleDeskyChatKey(event)"></textarea>
+        <button class="send-btn" onclick="sendDeskyChatMessage()">
+          <svg viewBox="0 0 24 24"><path d="M22 2L11 13m11-11l-7 20L11 13m0 0L3 9m8 4l0 8"/></svg>
+        </button>
       </div>
     </div>
 
-    <!-- CONFIG SCREEN -->
+    <!-- EXPENSES -->
+    <div class="screen" id="screen-expenses">
+      <div class="screen-header"><h2>Expenses</h2></div>
+      <div id="expensesList" class="module-list"></div>
+    </div>
+
+    <!-- EXPENSE DETAIL -->
+    <div class="screen" id="screen-expense-detail">
+      <div class="screen-header">
+        <button style="background:none;font-size:18px;color:var(--text-2);" onclick="navigate('expenses')">←</button>
+        <h2>Expense</h2>
+        <div style="width:30px;"></div>
+      </div>
+      <div class="module-detail" id="expenseDetail"></div>
+    </div>
+
+    <!-- TIMESHEETS -->
+    <div class="screen" id="screen-timesheets">
+      <div class="screen-header"><h2>Timesheets</h2></div>
+      <div id="timesheetsList" class="module-list"></div>
+    </div>
+
+    <!-- TIMESHEET DETAIL -->
+    <div class="screen" id="screen-timesheet-detail">
+      <div class="screen-header">
+        <button style="background:none;font-size:18px;color:var(--text-2);" onclick="navigate('timesheets')">←</button>
+        <h2>Timesheet</h2>
+        <div style="width:30px;"></div>
+      </div>
+      <div class="module-detail" id="timesheetDetail"></div>
+    </div>
+
+    <!-- TASKS -->
+    <div class="screen" id="screen-tasks">
+      <div class="screen-header"><h2>Tasks</h2></div>
+      <div id="tasksList" class="module-list"></div>
+    </div>
+
+    <!-- TASK DETAIL -->
+    <div class="screen" id="screen-task-detail">
+      <div class="screen-header">
+        <button style="background:none;font-size:18px;color:var(--text-2);" onclick="navigate('tasks')">←</button>
+        <h2>Task</h2>
+        <div style="width:30px;"></div>
+      </div>
+      <div class="module-detail" id="taskDetail"></div>
+    </div>
+
+    <!-- DESPATCH -->
+    <div class="screen" id="screen-despatch">
+      <div class="screen-header"><h2>Despatch</h2></div>
+      <div id="despatchList" class="module-list"></div>
+    </div>
+
+    <!-- DESPATCH DETAIL -->
+    <div class="screen" id="screen-despatch-detail">
+      <div class="screen-header">
+        <button style="background:none;font-size:18px;color:var(--text-2);" onclick="navigate('despatch')">←</button>
+        <h2>Despatch</h2>
+        <div style="width:30px;"></div>
+      </div>
+      <div class="module-detail" id="despatchDetail"></div>
+    </div>
+
+    <!-- CONTACTS -->
+    <div class="screen" id="screen-contacts">
+      <div class="screen-header"><h2>Contacts</h2></div>
+      <div id="contactsList" class="module-list"></div>
+    </div>
+
+    <!-- CONTACT DETAIL -->
+    <div class="screen" id="screen-contact-detail">
+      <div class="screen-header">
+        <button style="background:none;font-size:18px;color:var(--text-2);" onclick="navigate('contacts')">←</button>
+        <h2>Contact</h2>
+        <div style="width:30px;"></div>
+      </div>
+      <div class="module-detail" id="contactDetail"></div>
+    </div>
+
+    <!-- CASHFLOW FORECAST -->
+    <div class="screen" id="screen-cashflow">
+      <div class="screen-header"><h2>Cash Flow Forecast</h2></div>
+      <div id="cashflowContent" style="padding:14px;"></div>
+    </div>
+
+    <!-- GOALS/KPIs -->
+    <div class="screen" id="screen-goals">
+      <div class="screen-header"><h2>Business Goals</h2></div>
+      <div id="goalsList" class="module-list"></div>
+    </div>
+
+    <!-- PROJECTS -->
+    <div class="screen" id="screen-projects">
+      <div class="screen-header"><h2>Projects</h2></div>
+      <div id="projectsList" class="module-list"></div>
+    </div>
+
+    <!-- CONFIG -->
     <div class="screen" id="screen-config">
       <div class="screen-header"><h2>Settings</h2></div>
-      <div class="config-content">
-
+      <div class="config-scroll">
         <!-- Desky Profile -->
-        <div class="desky-profile">
-          <div class="desky-avatar-lg">✦</div>
-          <div class="desky-profile-text">
-            <h3>Meet MyDeskAI</h3>
-            <p>Your Virtual MBA. Running 24/7 simulations to keep you ahead of every risk and opportunity.</p>
+        <div class="config-section" data-brand="techlight">
+          <div class="config-section-title">Desky SuperAgent</div>
+          <div class="config-row">
+            <span style="font-size:18px;">🤖</span>
+            <div style="flex:1;">
+              <div class="config-row-label">Meet MyDeskAI</div>
+              <div class="config-row-value">Your AI business advisor</div>
+            </div>
           </div>
         </div>
 
@@ -852,7 +801,7 @@ input, textarea { border: none; outline: none; font-family: inherit; }
         <div class="config-section">
           <div class="config-section-title">Appearance</div>
           <div class="config-row">
-            <span class="config-row-icon">🌙</span>
+            <span>🌙</span>
             <span class="config-row-label">Dark Mode</span>
             <label class="toggle">
               <input type="checkbox" id="darkToggle" onchange="toggleTheme(this.checked)" checked>
@@ -862,22 +811,13 @@ input, textarea { border: none; outline: none; font-family: inherit; }
           </div>
         </div>
 
-        <!-- Brand Palette -->
+        <!-- Brand -->
         <div class="config-section">
-          <div class="config-section-title">Brand Palette</div>
-          <div class="brand-grid">
-            <div class="brand-option selected" data-brand="techlight" onclick="setBrand('techlight',this)">
-              <div class="brand-swatch" style="background:linear-gradient(135deg,#00c8c8,#0097a7);"></div>
-              <div class="brand-name">Techlight</div>
-            </div>
-            <div class="brand-option" data-brand="ccl" onclick="setBrand('ccl',this)">
-              <div class="brand-swatch" style="background:linear-gradient(135deg,#FFED00,#1C7BC4);"></div>
-              <div class="brand-name">Carter Capner</div>
-            </div>
-            <div class="brand-option" data-brand="dr" onclick="setBrand('dr',this)">
-              <div class="brand-swatch" style="background:linear-gradient(135deg,#3dba57,#2a7a3a);"></div>
-              <div class="brand-name">Digital Response</div>
-            </div>
+          <div class="config-section-title">Brand</div>
+          <div class="config-row">
+            <span>🎨</span>
+            <span class="config-row-label">Workspace</span>
+            <span class="config-row-value" id="workspaceName">Techlight</span>
           </div>
         </div>
 
@@ -885,51 +825,16 @@ input, textarea { border: none; outline: none; font-family: inherit; }
         <div class="config-section">
           <div class="config-section-title">Account</div>
           <div class="config-row">
-            <span class="config-row-icon">👤</span>
-            <span class="config-row-label">Peter Bardenhagen</span>
-            <span class="config-row-value">Director</span>
+            <span>👤</span>
+            <div style="flex:1;">
+              <div class="config-row-label" id="settingsUserName">User</div>
+              <div class="config-row-value" id="settingsUserRole">Role</div>
+            </div>
           </div>
           <div class="config-row" onclick="showWorkspaceSwitcher()" style="cursor:pointer;">
-            <span class="config-row-icon">🏢</span>
-            <span class="config-row-label">Workspace</span>
-            <span class="config-row-value" id="workspaceName">Techlight</span>
+            <span>🏢</span>
+            <span class="config-row-label">Switch Workspace</span>
             <span class="config-row-arrow">›</span>
-          </div>
-          <div class="config-row">
-            <span class="config-row-icon">📧</span>
-            <span class="config-row-label">peter@bardenhagen.xyz</span>
-          </div>
-        </div>
-
-        <!-- Desky -->
-        <div class="config-section">
-          <div class="config-section-title">Desky SuperAgent</div>
-          <div class="config-row">
-            <span class="config-row-icon">🔔</span>
-            <span class="config-row-label">Proactive Alerts</span>
-            <label class="toggle">
-              <input type="checkbox" id="alertsToggle" onchange="saveToggle('proactiveAlerts',this.checked)" checked>
-              <div class="toggle-track"></div>
-              <div class="toggle-thumb"></div>
-            </label>
-          </div>
-          <div class="config-row">
-            <span class="config-row-icon">📊</span>
-            <span class="config-row-label">Background Simulations</span>
-            <label class="toggle">
-              <input type="checkbox" id="simsToggle" onchange="saveToggle('backgroundSims',this.checked)" checked>
-              <div class="toggle-track"></div>
-              <div class="toggle-thumb"></div>
-            </label>
-          </div>
-          <div class="config-row">
-            <span class="config-row-icon">🎯</span>
-            <span class="config-row-label">OKR Monitoring</span>
-            <label class="toggle">
-              <input type="checkbox" id="okrToggle" onchange="saveToggle('okrMonitoring',this.checked)" checked>
-              <div class="toggle-track"></div>
-              <div class="toggle-thumb"></div>
-            </label>
           </div>
         </div>
 
@@ -937,51 +842,36 @@ input, textarea { border: none; outline: none; font-family: inherit; }
         <div class="config-section">
           <div class="config-section-title">App</div>
           <div class="config-row" onclick="nativeCall('openWebApp')" style="cursor:pointer;">
-            <span class="config-row-icon">🌐</span>
+            <span>🌐</span>
             <span class="config-row-label">Open in Browser</span>
             <span class="config-row-arrow">›</span>
           </div>
           <div class="config-row">
-            <span class="config-row-icon">ℹ️</span>
+            <span>ℹ️</span>
             <span class="config-row-label">Version</span>
-            <span class="config-row-value">2.0.0</span>
+            <span class="config-row-value" id="appVersion">1.0.0</span>
           </div>
         </div>
-
       </div>
-    </div><!-- /screen-config -->
+    </div>
+  </div>
 
-  </div><!-- /screens -->
-
-  <!-- Bottom Navigation -->
+  <!-- Bottom Nav -->
   <nav class="bottom-nav">
     <div class="nav-item active" id="nav-home" onclick="navigate('home')">
-      <div class="nav-icon">
-        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      </div>
+      <div class="nav-icon">🏠</div>
       <span class="nav-label">Home</span>
     </div>
     <div class="nav-item" id="nav-files" onclick="navigate('files')">
-      <div class="nav-icon">
-        <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-      </div>
+      <div class="nav-icon">📁</div>
       <span class="nav-label">Files</span>
     </div>
-    <div class="nav-item" id="nav-stats" onclick="navigate('stats')">
-      <div class="nav-icon">
-        <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      </div>
-      <span class="nav-label">Stats</span>
-    </div>
     <div class="nav-item" id="nav-config" onclick="navigate('config')">
-      <div class="nav-icon">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      </div>
-      <span class="nav-label">Config</span>
+      <div class="nav-icon">⚙️</div>
+      <span class="nav-label">Settings</span>
     </div>
   </nav>
-
-</div><!-- /app -->
+</div>
 
 <script>
 // ── App State ──────────────────────────────────────────────
@@ -989,15 +879,40 @@ const state = {
   currentScreen: 'home',
   theme: 'dark',
   brand: 'techlight',
+  patToken: null,
+  modules: [],
   chatHistory: [],
-  deskyTyping: false,
+  invoices: [],
+  quotes: [],
+  pos: [],
+  files: [],
+  expenses: [],
+  timesheets: [],
+  tasks: [],
+  despatch: [],
+  contacts: [],
+  cashflow: [],
+  goals: [],
+  projects: [],
+  pagination: {
+    invoices: { offset: 0, hasMore: true, loading: false },
+    quotes: { offset: 0, hasMore: true, loading: false },
+    pos: { offset: 0, hasMore: true, loading: false },
+    expenses: { offset: 0, hasMore: true, loading: false },
+    timesheets: { offset: 0, hasMore: true, loading: false },
+    tasks: { offset: 0, hasMore: true, loading: false },
+    despatch: { offset: 0, hasMore: true, loading: false },
+    contacts: { offset: 0, hasMore: true, loading: false },
+  }
 };
 
-// ── Native bridge abstraction (Android + iOS) ──────────────────────────────
-// Android: window.MyDeskAndroid.method(arg)
-// iOS:     window.webkit.messageHandlers.method.postMessage(arg)
-// Config:  window.MyDeskConfig injected by native layer (Android JavascriptInterface
-//          or iOS WKUserScript at document start)
+const session = {
+  user: null,
+  tenants: [],
+  activeTenant: null,
+};
+
+// ── Native bridge ──────────────────────────────────────────
 function nativeCall(name, data) {
   try {
     if (window.MyDeskAndroid?.[name]) return window.MyDeskAndroid[name](data ?? null);
@@ -1011,87 +926,42 @@ function nativeGet(name) {
   return null;
 }
 
-// API base URL: native layer exposes getApiUrl() via @JavascriptInterface on ConfigInterface
-const API_BASE = window.MyDeskConfig?.getApiUrl?.()
-              ?? nativeGet('getApiUrl')
-              ?? 'https://app.mydesk.digitalresponse.com.au';
-const DESKY_API_URL = API_BASE + '/api/chat/desky';
+const API_BASE = window.MyDeskConfig?.getApiUrl?.() ?? nativeGet('getApiUrl') ?? 'https://app.mydesk.digitalresponse.com.au';
 
-const brandData = {
-  techlight: { name: 'Techlight', workspace: 'Techlight', revenue: '$42,850.00', badge: '+12.4%', quotes: 14, quotesSub: '8 Pending Approval', invoices: '$8.2k', invoicesSub: '3 Overdue', overdue: 3, pending: 8 },
-  ccl:       { name: 'Carter Capner', workspace: 'Carter Capner Law', revenue: '$128,400.00', badge: '+8.2%', quotes: 7, quotesSub: '3 Pending Approval', invoices: '$22.5k', invoicesSub: '1 Overdue', overdue: 1, pending: 3 },
-  dr:        { name: 'Digital Response', workspace: 'Digital Response', revenue: '$61,200.00', badge: '+15.1%', quotes: 21, quotesSub: '9 Pending Approval', invoices: '$14.1k', invoicesSub: '4 Overdue', overdue: 4, pending: 9 },
-};
+// ── Helpers ────────────────────────────────────────────────
+function formatCurrency(n) {
+  return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(n);
+}
 
-const deskyPredictions = {
-  techlight: 'Upcoming cashflow dip predicted for next Thursday based on recurring subscription billings. Tap to discuss.',
-  ccl:       'Three overdue matters flagged. Billing cycle analysis suggests $22.5k at risk if not followed up by Friday.',
-  dr:        'Lead generation spike detected — 4 new enquiries from the DR campaign. Recommend follow-up within 2 hrs.',
-};
+function formatDate(d) {
+  return new Date(d).toLocaleDateString('en-AU', { month: 'short', day: 'numeric' });
+}
 
-const deskyResponses = {
-  greet: [
-    "I've analysed the recent emails and files. You have a meeting with Digital Response at 2 PM. Should I prepare a brief of the last 3 quotes we sent them?",
-    "Good timing — I've just finished running this week's OKR simulations. Revenue is trending 12.4% ahead of target. Want me to find where the upside is coming from?",
-    "I've noticed 3 invoices are overdue by more than 7 days. Based on past patterns, one is unlikely to self-resolve. Want me to draft a follow-up email?",
-  ],
-  prediction: [
-    "The cashflow dip model runs daily using your invoice due dates and recurring costs. Thursday's risk is moderate — about $4,200 short of your operating buffer. Want me to pull the specific bills causing it?",
-  ],
-  brief: [
-    "Here's the brief for Digital Response:\n\n📄 **Quote #Q-2847** — Radix Timesheet Importer V1.2 — $12,400 (sent 14 Jun)\n📄 **Quote #Q-2851** — API Integration Module — $8,800 (sent 20 Jun)\n📄 **Quote #Q-2863** — Support Retainer FY27 — $24,000/yr (sent 1 Jul)\n\nTotal pipeline value: **$45,200**. Q-2847 and Q-2851 are past their quoted decision date. Should I flag them for follow-up?",
-  ],
-  quotes: [
-    "Showing 3 recent quotes sent to Digital Response. The Radix Timesheet quote is the oldest — 19 days since sent with no response. Based on their decision timeline on past projects, this is at the 'nudge' threshold. Want me to draft a check-in?",
-  ],
-  okr: [
-    "Current OKR status:\n\n🎯 Revenue: 87% of quarterly target — on track\n🎯 New Clients: 2 of 3 — one strong prospect in pipeline\n🎯 Client Retention: 94% — above target\n\nRisk: Q3 target requires $51k in new work. Desky projects 68% probability of hitting it based on current pipeline velocity.",
-  ],
-  default: [
-    "I'm on it. Let me cross-reference your recent data and run a quick simulation...\n\nThe short answer: yes, there's an opportunity here worth exploring. Want the full analysis or just the key numbers?",
-    "Good question. Based on your business data, I'd recommend moving on this within the next 48 hours. The window of maximum leverage closes by end of week.",
-    "I've already modelled this scenario. The risk-adjusted upside is positive — but execution timing matters. Should I outline the optimal approach?",
-  ],
-};
+function getStatusColor(statusId) {
+  const colors = {
+    1: '#3b82f6', 2: '#f97316', 3: '#22c55e', 4: '#8b5cf6',
+    5: '#ec4899', 10: '#ef4444'
+  };
+  return colors[statusId] || '#a0a0c0';
+}
 
-// ── Mock Files ─────────────────────────────────────────────
-const mockFiles = [
-  { icon: '📄', name: 'Quote #Q-2863 — Support Retainer FY27.pdf', meta: 'Jul 1 · 284 KB', tag: 'quote' },
-  { icon: '💰', name: 'Invoice INV-1847 — Radix Module.pdf', meta: 'Jun 28 · 156 KB', tag: 'invoice' },
-  { icon: '📊', name: 'Q3 OKR Review — Techlight.xlsx', meta: 'Jun 25 · 92 KB', tag: 'other' },
-  { icon: '📄', name: 'Quote #Q-2851 — API Integration.pdf', meta: 'Jun 20 · 198 KB', tag: 'quote' },
-  { icon: '💰', name: 'Invoice INV-1832 — CCL Integration.pdf', meta: 'Jun 18 · 178 KB', tag: 'invoice' },
-  { icon: '📋', name: 'PO-0047 — Server Hardware.pdf', meta: 'Jun 15 · 120 KB', tag: 'po' },
-  { icon: '📄', name: 'Quote #Q-2847 — Radix Timesheet V1.2.pdf', meta: 'Jun 14 · 341 KB', tag: 'quote' },
-];
-
-// ── App State (user session) ────────────────────────────────
-const session = {
-  user: null,   // {name, code, email, role, initials}
-  tenants: [],  // [{id, name, slug, isDefault}]
-  activeTenant: null,
-};
-
-// ── Initialise ─────────────────────────────────────────────
+// ── Init ───────────────────────────────────────────────────
 function init() {
   loadPrefs();
   loadSession();
-  buildFiles();
-  buildStats();
-  buildNotifications();
 
-  // Show login screen if no session, else go straight to app
   if (!session.user) {
     document.getElementById('login-screen').classList.remove('hidden');
   } else {
     document.getElementById('login-screen').classList.add('hidden');
-    addDeskyOpener();
+    applySessionToUI();
+    loadData();
   }
 
   setTimeout(() => {
     document.getElementById('splash').classList.add('fade-out');
     setTimeout(() => document.getElementById('splash').style.display = 'none', 500);
-  }, 1800);
+  }, 1200);
 }
 
 function loadSession() {
@@ -1102,9 +972,9 @@ function loadSession() {
       session.user = s.user;
       session.tenants = s.tenants || [];
       session.activeTenant = s.activeTenant;
-      applySessionToUI();
+      state.patToken = s.patToken;
     }
-  } catch(e) { session.user = null; }
+  } catch(e) {}
 }
 
 function saveSession() {
@@ -1112,7 +982,8 @@ function saveSession() {
     localStorage.setItem('md_session', JSON.stringify({
       user: session.user,
       tenants: session.tenants,
-      activeTenant: session.activeTenant
+      activeTenant: session.activeTenant,
+      patToken: state.patToken
     }));
   } catch(e) {}
 }
@@ -1120,26 +991,32 @@ function saveSession() {
 function applySessionToUI() {
   if (!session.user) return;
   const u = session.user;
-  const av = document.getElementById('userAvatar');
-  if (av) av.textContent = u.initials || u.name.slice(0,2).toUpperCase();
-  const mn = document.getElementById('menuUserName');
-  const me = document.getElementById('menuUserEmail');
-  if (mn) mn.textContent = u.name;
-  if (me) me.textContent = u.email || u.code;
-  const acctName = document.querySelector('.config-row .config-row-label');
-  // Update config account section
-  const accountRows = document.querySelectorAll('#screen-config .config-section:nth-child(3) .config-row');
-  if (accountRows.length >= 1) {
-    accountRows[0].querySelector('.config-row-label').textContent = u.name;
-    accountRows[0].querySelector('.config-row-value').textContent = u.role;
-  }
-  if (accountRows.length >= 3) {
-    accountRows[2].querySelector('.config-row-label').textContent = u.email || u.code;
-  }
+  document.getElementById('userAvatar').textContent = u.initials || u.name.slice(0, 2).toUpperCase();
+  document.getElementById('menuUserName').textContent = u.name;
+  document.getElementById('menuUserEmail').textContent = u.email || u.code;
+  document.getElementById('settingsUserName').textContent = u.name;
+  document.getElementById('settingsUserRole').textContent = u.role;
   if (session.activeTenant) {
-    const wn = document.getElementById('workspaceName');
-    if (wn) wn.textContent = session.activeTenant.name;
+    document.getElementById('workspaceName').textContent = session.activeTenant.name;
+    const brand = getBrandForTenant(session.activeTenant.slug);
+    applyBrand(brand, false);
   }
+  document.getElementById('appVersion').textContent = nativeGet('getAppVersion') || '1.0.0';
+}
+
+function getBrandForTenant(slug) {
+  const map = { 'techlight': 'techlight', 'ccl': 'ccl', 'cartercapner': 'ccl', 'dr': 'dr', 'digitalresponse': 'dr' };
+  return map[slug?.toLowerCase()] || 'techlight';
+}
+
+function loadPrefs() {
+  try {
+    const t = localStorage.getItem('md_theme') || 'dark';
+    const b = localStorage.getItem('md_brand') || 'techlight';
+    applyTheme(t, false);
+    applyBrand(b, false);
+    document.getElementById('darkToggle').checked = (t === 'dark');
+  } catch(e) {}
 }
 
 // ── Login ──────────────────────────────────────────────────
@@ -1150,12 +1027,12 @@ async function doLogin() {
   errEl.classList.remove('show');
 
   if (!login || !password) {
-    errEl.textContent = 'Please enter your username and password.';
+    errEl.textContent = 'Enter username and password';
     errEl.classList.add('show');
     return;
   }
 
-  const btn = document.querySelector('.login-btn');
+  const btn = event.target;
   btn.textContent = 'Signing in…';
   btn.disabled = true;
 
@@ -1170,68 +1047,217 @@ async function doLogin() {
       session.user = data.user;
       session.tenants = data.tenants || [];
       session.activeTenant = data.tenants?.find(t => t.isDefault) || data.tenants?.[0] || null;
+      state.patToken = data.token;
       saveSession();
       applySessionToUI();
       document.getElementById('login-screen').classList.add('hidden');
-      if (!document.getElementById('chatMessages').children.length) addDeskyOpener();
+      loadData();
     } else {
-      errEl.textContent = data.error || 'Invalid credentials. Please try again.';
+      errEl.textContent = data.error || 'Invalid credentials';
       errEl.classList.add('show');
     }
   } catch(err) {
-    errEl.textContent = 'Cannot reach server. Check your connection.';
+    errEl.textContent = 'Cannot reach server';
     errEl.classList.add('show');
   } finally {
-    btn.textContent = 'Sign in to MyDeskAI';
+    btn.textContent = 'Sign in';
     btn.disabled = false;
   }
 }
 
-function skipLogin() {
-  document.getElementById('login-screen').classList.add('hidden');
-  if (!document.getElementById('chatMessages').children.length) addDeskyOpener();
+function startMicrosoftLogin() {
+  nativeCall('startMicrosoftLogin');
+}
+
+async function onMicrosoftAuthToken(token) {
+  try {
+    const resp = await fetch(API_BASE + '/api/auth/mobile/token?t=' + token);
+    const data = await resp.json();
+    if (data.success && data.data) {
+      session.user = data.data.user;
+      session.tenants = data.data.tenants || [];
+      session.activeTenant = data.data.tenants?.find(t => t.isDefault) || data.data.tenants?.[0] || null;
+      state.patToken = data.data.token;
+      saveSession();
+      applySessionToUI();
+      document.getElementById('login-screen').classList.add('hidden');
+      loadData();
+    }
+  } catch(err) {
+    onMicrosoftAuthError(err.message);
+  }
+}
+
+function onMicrosoftAuthError(error) {
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = error || 'Microsoft sign-in failed';
+  errEl.classList.add('show');
 }
 
 function doLogout() {
   session.user = null;
   session.tenants = [];
   session.activeTenant = null;
+  state.patToken = null;
   try { localStorage.removeItem('md_session'); } catch(e) {}
   closeUserMenu();
-  const av = document.getElementById('userAvatar');
-  if (av) av.textContent = 'PB';
   document.getElementById('login-screen').classList.remove('hidden');
 }
 
-// Allow Enter key on login fields
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('loginPassword')?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') doLogin();
-  });
-  document.getElementById('loginInput')?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('loginPassword')?.focus();
-  });
-});
-
-function loadPrefs() {
-  try {
-    const t = localStorage.getItem('md_theme') || 'dark';
-    const b = localStorage.getItem('md_brand') || 'techlight';
-    applyTheme(t, false);
-    applyBrand(b, false);
-    document.getElementById('darkToggle').checked = (t === 'dark');
-    document.querySelectorAll('.brand-option').forEach(el => {
-      el.classList.toggle('selected', el.dataset.brand === b);
-    });
-    loadTogglePrefs();
-  } catch(e) {}
+function showForgotPasswordScreen() {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('forgot-password-screen').classList.remove('hidden');
+  document.getElementById('forgotError').classList.remove('show');
+  document.getElementById('forgotInput').value = '';
 }
+
+function backToLogin() {
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('forgot-password-screen').classList.add('hidden');
+  document.getElementById('reset-password-screen').classList.add('hidden');
+  document.getElementById('loginError').classList.remove('show');
+  document.getElementById('forgotError').classList.remove('show');
+  document.getElementById('resetError').classList.remove('show');
+}
+
+async function submitForgotPassword() {
+  const emailOrCode = document.getElementById('forgotInput').value.trim();
+  const errEl = document.getElementById('forgotError');
+  const btn = event.target;
+
+  if (!emailOrCode) {
+    errEl.textContent = 'Please enter email or username';
+    errEl.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  errEl.classList.remove('show');
+
+  try {
+    const resp = await fetch(API_BASE + '/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: emailOrCode })
+    });
+    const data = await resp.json();
+    if (resp.ok) {
+      errEl.classList.remove('show');
+      alert('If an account exists with that email/username, a reset link has been sent. Check your email (including spam).');
+      backToLogin();
+    } else {
+      errEl.textContent = data.error || 'Failed to send reset email';
+      errEl.classList.add('show');
+    }
+  } catch(err) {
+    errEl.textContent = 'Cannot reach server';
+    errEl.classList.add('show');
+  } finally {
+    btn.textContent = 'Send Reset Link';
+    btn.disabled = false;
+  }
+}
+
+function updatePasswordStrength() {
+  const pwd = document.getElementById('resetPassword').value;
+  const bar = document.getElementById('passwordStrengthBar');
+  const fill = document.getElementById('strengthFill');
+  const text = document.getElementById('strengthText');
+
+  if (!pwd) {
+    bar.style.display = 'none';
+    return;
+  }
+
+  bar.style.display = 'block';
+  let strength = 0;
+
+  if (pwd.length >= 8) strength++;
+  if (pwd.length >= 12) strength++;
+  if (/[a-z]/.test(pwd)) strength++;
+  if (/[A-Z]/.test(pwd)) strength++;
+  if (/[0-9]/.test(pwd)) strength++;
+  if (/[!@#$%^&*()_+=\[\]{};':",./<>?]/.test(pwd)) strength++;
+
+  const pct = Math.min(strength, 6) * 16.67;
+  fill.style.width = pct + '%';
+  fill.style.background = strength <= 2 ? '#ef4444' : strength <= 4 ? '#f97316' : '#22c55e';
+
+  text.textContent = strength <= 2 ? 'Weak' : strength <= 4 ? 'Fair' : 'Strong';
+}
+
+async function submitResetPassword() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token') || state.resetToken;
+  const pwd = document.getElementById('resetPassword').value;
+  const confirm = document.getElementById('resetConfirm').value;
+  const errEl = document.getElementById('resetError');
+  const btn = event.target;
+
+  if (!pwd || !confirm) {
+    errEl.textContent = 'Please enter password and confirm';
+    errEl.classList.add('show');
+    return;
+  }
+
+  if (pwd !== confirm) {
+    errEl.textContent = 'Passwords do not match';
+    errEl.classList.add('show');
+    return;
+  }
+
+  if (pwd.length < 8) {
+    errEl.textContent = 'Password must be at least 8 characters';
+    errEl.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Resetting...';
+  errEl.classList.remove('show');
+
+  try {
+    const resp = await fetch(API_BASE + '/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, newPassword: pwd })
+    });
+    const data = await resp.json();
+    if (resp.ok && data.success) {
+      alert('Password reset successfully! Please log in with your new password.');
+      backToLogin();
+    } else {
+      errEl.textContent = data.error || 'Failed to reset password. Link may have expired.';
+      errEl.classList.add('show');
+    }
+  } catch(err) {
+    errEl.textContent = 'Cannot reach server';
+    errEl.classList.add('show');
+  } finally {
+    btn.textContent = 'Reset Password';
+    btn.disabled = false;
+  }
+}
+
+// ── Deep Link Handler: Reset Password Token from App ─────────
+window.onResetPasswordToken = function(token) {
+  if (!token) return;
+  state.resetToken = token;
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('forgot-password-screen').classList.add('hidden');
+  document.getElementById('reset-password-screen').classList.remove('hidden');
+  document.getElementById('resetError').classList.remove('show');
+  document.getElementById('resetPassword').value = '';
+  document.getElementById('resetConfirm').value = '';
+  document.getElementById('passwordStrengthBar').style.display = 'none';
+};
 
 // ── Navigation ─────────────────────────────────────────────
 function navigate(screen) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('screen-' + screen).classList.add('active');
+  document.getElementById('screen-' + screen)?.classList.add('active');
   const navEl = document.getElementById('nav-' + screen);
   if (navEl) navEl.classList.add('active');
   state.currentScreen = screen;
@@ -1252,452 +1278,1280 @@ function applyTheme(theme, save = true) {
 }
 
 // ── Brand ──────────────────────────────────────────────────
-function setBrand(brand, el) {
-  document.querySelectorAll('.brand-option').forEach(o => o.classList.remove('selected'));
-  if (el) el.classList.add('selected');
-  applyBrand(brand);
-}
-
 function applyBrand(brand, save = true) {
   document.getElementById('app').setAttribute('data-brand', brand);
   state.brand = brand;
-  const d = brandData[brand] || brandData.techlight;
-  document.getElementById('revAmount').textContent = d.revenue;
-  document.getElementById('revBadge').textContent = d.badge;
-  const sq = document.getElementById('statQuotes');
-  const sqsub = document.getElementById('statQuotesSub');
-  const si = document.getElementById('statInvoices');
-  const sisub = document.getElementById('statInvoicesSub');
-  if (sq) sq.textContent = d.quotes;
-  if (sqsub) sqsub.textContent = d.quotesSub;
-  if (si) si.textContent = d.invoices;
-  if (sisub) sisub.textContent = d.invoicesSub;
-  document.getElementById('deskyPrediction').textContent = deskyPredictions[brand] || deskyPredictions.techlight;
-  // Only update workspace name if user hasn't overridden with their actual tenant
-  if (!session.activeTenant) {
-    const wn = document.getElementById('workspaceName');
-    if (wn) wn.textContent = d.workspace;
-  }
   if (save) try {
     localStorage.setItem('md_brand', brand);
     nativeCall('saveBrand', brand);
   } catch(e) {}
 }
 
-// ── Files ──────────────────────────────────────────────────
-function buildFiles() {
-  const list = document.getElementById('fileList');
-  list.innerHTML = mockFiles.map(f => `
-    <div class="file-item">
-      <div class="file-icon">${f.icon}</div>
-      <div class="file-info">
-        <div class="file-name">${f.name}</div>
-        <div class="file-meta">${f.meta}</div>
-      </div>
-      <div class="file-more">›</div>
-    </div>
-  `).join('');
-}
-
-// ── File Filtering ─────────────────────────────────────────
-let currentFileFilter = 'all';
-
-function filterFiles(type) {
-  currentFileFilter = type;
-  // Update tab styles
-  document.querySelectorAll('.file-tab').forEach(t => {
-    const isActive = t.id === 'tab-' + type;
-    t.style.background = isActive ? 'var(--brand-primary)' : 'var(--bg-input)';
-    t.style.color = isActive ? (document.getElementById('app').dataset.brand === 'ccl' ? '#1a1a1a' : '#fff') : 'var(--text-2)';
-  });
-  const list = document.getElementById('fileList');
-  const filtered = type === 'all' ? mockFiles : mockFiles.filter(f => f.tag === type);
-  if (filtered.length === 0) {
-    list.innerHTML = '<div style="text-align:center;color:var(--text-2);padding:32px;font-size:13px;">No files found</div>';
-    return;
-  }
-  list.innerHTML = filtered.map(f => `
-    <div class="file-item">
-      <div class="file-icon">${f.icon}</div>
-      <div class="file-info">
-        <div class="file-name">${f.name}</div>
-        <div class="file-meta">${f.meta}</div>
-      </div>
-      <div class="file-more">›</div>
-    </div>
-  `).join('');
-}
-
-function navigateFiles(filter) {
-  navigate('files');
-  setTimeout(() => filterFiles(filter), 50);
-}
-
-// ── Toggle Preferences ─────────────────────────────────────
-function saveToggle(key, val) {
-  try { localStorage.setItem('md_toggle_' + key, val ? '1' : '0'); } catch(e) {}
-}
-
-function loadTogglePrefs() {
-  const map = {
-    proactiveAlerts: 'alertsToggle',
-    backgroundSims:  'simsToggle',
-    okrMonitoring:   'okrToggle',
-  };
-  Object.entries(map).forEach(([key, id]) => {
-    const saved = localStorage.getItem('md_toggle_' + key);
-    const el = document.getElementById(id);
-    if (el && saved !== null) el.checked = saved === '1';
-  });
-}
-
-// ── Notifications ──────────────────────────────────────────
-const mockNotifications = [
-  { id: 1, icon: '💬', title: 'Desky insight ready', body: 'Your Q3 revenue forecast is updated.', time: '2m ago' },
-  { id: 2, icon: '📄', title: 'Quote accepted', body: 'Q-2863 Support Retainer was accepted.', time: '1h ago' },
-  { id: 3, icon: '⚠️', title: 'OKR alert', body: 'Customer satisfaction dipped below target.', time: '3h ago' },
-];
-let notifications = [...mockNotifications];
-
-function buildNotifications() {
-  const list = document.getElementById('notifList');
-  const badge = document.getElementById('notifBadge');
-  if (!list) return;
-  if (notifications.length === 0) {
-    list.innerHTML = '<div style="text-align:center;color:var(--text-2);padding:32px;font-size:13px;">No notifications</div>';
-    if (badge) badge.style.display = 'none';
-    return;
-  }
-  list.innerHTML = notifications.map(n => `
-    <div class="notif-item" onclick="dismissNotification(${n.id})">
-      <div class="notif-item-dot"></div>
-      <div class="notif-item-body">
-        <div class="notif-item-text"><strong>${n.icon} ${n.title}</strong><br>${n.body}</div>
-        <div class="notif-item-time">${n.time} · tap to dismiss</div>
-      </div>
-    </div>
-  `).join('');
-  if (badge) {
-    badge.textContent = notifications.length;
-    badge.style.display = notifications.length ? '' : 'none';
-  }
-}
-
-function dismissNotification(id) {
-  notifications = notifications.filter(n => n.id !== id);
-  buildNotifications();
-}
-
-function clearNotifications() {
-  notifications = [];
-  buildNotifications();
-}
-
-function toggleNotifications() {
-  const drawer = document.getElementById('notifDrawer');
-  if (!drawer) return;
-  const isOpen = drawer.classList.contains('open');
-  if (isOpen) {
-    drawer.classList.remove('open');
-  } else {
-    closeUserMenu();
-    drawer.classList.add('open');
-    buildNotifications();
-  }
-}
-
-function closeNotifications() {
-  document.getElementById('notifDrawer')?.classList.remove('open');
-}
-
-// Close notification drawer on outside tap
-document.addEventListener('click', e => {
-  const drawer = document.getElementById('notifDrawer');
-  if (!drawer) return;
-  if (!drawer.contains(e.target) && !e.target.closest('.notif-wrap')) {
-    drawer.classList.remove('open');
-  }
-}, true);
-
 // ── User Menu ──────────────────────────────────────────────
 function toggleUserMenu() {
   const menu = document.getElementById('userMenu');
   const overlay = document.getElementById('userMenuOverlay');
-  if (!menu) return;
-  const isOpen = menu.classList.contains('open');
-  if (isOpen) {
-    closeUserMenu();
-  } else {
-    closeNotifications();
-    menu.classList.add('open');
-    if (overlay) overlay.classList.add('open');
-  }
+  const show = !menu.classList.contains('show');
+  menu.classList.toggle('show', show);
+  overlay.classList.toggle('show', show);
 }
 
 function closeUserMenu() {
-  document.getElementById('userMenu')?.classList.remove('open');
-  document.getElementById('userMenuOverlay')?.classList.remove('open');
+  document.getElementById('userMenu').classList.remove('show');
+  document.getElementById('userMenuOverlay').classList.remove('show');
 }
 
 // ── Workspace Switcher ─────────────────────────────────────
-// Brand workspaces — always available for switching client platforms
-const brandWorkspaces = [
-  { id: 'techlight', name: 'Techlight',          brand: 'techlight', icon: '🔵' },
-  { id: 'ccl',       name: 'Carter Capner Law',  brand: 'ccl',       icon: '🟡' },
-  { id: 'dr',        name: 'Digital Response',   brand: 'dr',        icon: '🟢' },
-];
-
 function showWorkspaceSwitcher() {
   const sheet = document.getElementById('workspaceSheet');
   const overlay = document.getElementById('sheetOverlay');
   const list = document.getElementById('workspaceList');
-  if (!sheet || !list) return;
 
-  // Show tenant list from API if available, otherwise show the brand platforms
-  const items = session.tenants.length
-    ? session.tenants.map(t => ({
-        id: t.slug || t.id, name: t.name,
-        brand: t.slug || 'techlight', icon: '🏢',
-        isTenant: true, tenantObj: t
-      }))
-    : brandWorkspaces;
-
-  const activeId = session.activeTenant?.slug || session.activeTenant?.id || state.brand;
-
-  list.innerHTML = items.map(w => `
-    <div class="sheet-item" onclick="switchWorkspace('${w.id}', ${w.isTenant ? 'true' : 'false'})">
-      <span style="font-size:22px;flex-shrink:0;">${w.icon}</span>
-      <span style="flex:1;font-size:15px;font-weight:600;color:var(--text-1);">${w.name}</span>
-      ${(w.id === activeId || w.brand === activeId) ? '<span style="color:var(--brand-primary);font-size:18px;">✓</span>' : ''}
+  list.innerHTML = (session.tenants || []).map(t => `
+    <div class="sheet-item" onclick="switchWorkspace('${t.id}', '${t.name}', '${t.slug}')">
+      <div class="sheet-item-name">${t.name}</div>
+      <div class="sheet-item-meta">${t.isDefault ? 'Default workspace' : ''}</div>
     </div>
   `).join('');
 
-  sheet.classList.add('open');
-  if (overlay) overlay.classList.add('open');
+  sheet.classList.add('show');
+  overlay.classList.add('show');
 }
 
 function closeWorkspaceSwitcher() {
-  document.getElementById('workspaceSheet')?.classList.remove('open');
-  document.getElementById('sheetOverlay')?.classList.remove('open');
+  document.getElementById('workspaceSheet').classList.remove('show');
+  document.getElementById('sheetOverlay').classList.remove('show');
 }
 
-function switchWorkspace(id, isTenant) {
-  if (isTenant) {
-    const tenant = session.tenants.find(t => (t.slug || t.id) === id);
-    if (tenant) {
-      session.activeTenant = tenant;
-      saveSession();
-      const wn = document.getElementById('workspaceName');
-      if (wn) wn.textContent = tenant.name;
-      // Apply matching brand from slug
-      const match = brandWorkspaces.find(b => b.id === tenant.slug);
-      if (match) setBrand(match.brand, document.querySelector(`[data-brand="${match.brand}"]`));
+function switchWorkspace(tenantId, tenantName, tenantSlug) {
+  session.activeTenant = { id: tenantId, name: tenantName, slug: tenantSlug };
+  saveSession();
+  document.getElementById('workspaceName').textContent = tenantName;
+  applyBrand(getBrandForTenant(tenantSlug), false);
+  closeWorkspaceSwitcher();
+  // Reload data for new tenant
+  loadData();
+}
+
+// ── Data Loading ───────────────────────────────────────────
+async function apiCall(endpoint, method = 'GET', body = null, useCache = true) {
+  // Try cache for GET requests
+  if (method === 'GET' && useCache) {
+    try {
+      const cached = localStorage.getItem('api_cache_' + endpoint);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        const age = Date.now() - timestamp;
+        if (age < 3600000) { // Cache valid for 1 hour
+          return data;
+        }
+      }
+    } catch(e) {}
+  }
+
+  const opts = {
+    method,
+    headers: {
+      'Authorization': 'Bearer ' + state.patToken,
+      'Content-Type': 'application/json'
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+
+  try {
+    const resp = await fetch(API_BASE + endpoint, opts);
+    if (resp.status === 401) {
+      doLogout();
+      return null;
+    }
+    const data = await resp.json();
+
+    // Cache successful GET responses
+    if (method === 'GET' && resp.ok) {
+      try {
+        localStorage.setItem('api_cache_' + endpoint, JSON.stringify({ data, timestamp: Date.now() }));
+      } catch(e) {}
+    }
+
+    return data;
+  } catch(err) {
+    // Return cached data if network fails (offline support)
+    if (method === 'GET' && useCache) {
+      try {
+        const cached = localStorage.getItem('api_cache_' + endpoint);
+        if (cached) {
+          const { data } = JSON.parse(cached);
+          return data;
+        }
+      } catch(e) {}
+    }
+    console.error(err);
+    return null;
+  }
+}
+
+async function loadData() {
+  if (!state.patToken) return;
+
+  // Fetch available modules for current tenant
+  const modResp = await apiCall('/api/mobile/modules');
+  state.modules = (modResp?.modules || []);
+
+  // Reset pagination
+  state.pagination.invoices = { offset: 0, hasMore: true, loading: false };
+  state.pagination.quotes = { offset: 0, hasMore: true, loading: false };
+  state.pagination.pos = { offset: 0, hasMore: true, loading: false };
+  state.pagination.expenses = { offset: 0, hasMore: true, loading: false };
+  state.pagination.timesheets = { offset: 0, hasMore: true, loading: false };
+  state.pagination.tasks = { offset: 0, hasMore: true, loading: false };
+  state.pagination.despatch = { offset: 0, hasMore: true, loading: false };
+  state.pagination.contacts = { offset: 0, hasMore: true, loading: false };
+
+  // Load invoices (if available)
+  if (state.modules.includes('invoices')) {
+    const invs = await apiCall('/api/mobile/invoices?limit=50&offset=0');
+    if (invs) {
+      state.invoices = Array.isArray(invs) ? invs : [];
+      state.pagination.invoices.hasMore = invs.length >= 50;
+      buildInvoicesList();
     }
   } else {
-    const workspace = brandWorkspaces.find(b => b.id === id);
-    if (workspace) {
-      setBrand(workspace.brand, document.querySelector(`[data-brand="${workspace.brand}"]`));
-      const wn = document.getElementById('workspaceName');
-      if (wn) wn.textContent = workspace.name;
-      // Store as active tenant so it persists
-      session.activeTenant = { id: workspace.id, slug: workspace.id, name: workspace.name };
-      saveSession();
-    }
+    state.invoices = [];
+    document.getElementById('invoicesList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Invoices not available for this workspace</div>';
   }
-  closeWorkspaceSwitcher();
-}
 
-// ── Microsoft SSO ──────────────────────────────────────────
-function startMicrosoftLogin() {
-  nativeCall('startMicrosoftLogin');
-}
-
-async function onMicrosoftAuthToken(token) {
-  const errEl = document.getElementById('loginError');
-  try {
-    const resp = await fetch(API_BASE + '/api/auth/mobile/token?t=' + encodeURIComponent(token));
-    const result = await resp.json();
-    if (result.success && result.data) {
-      const d = result.data;
-      session.user = d.user;
-      session.tenants = d.tenants || [];
-      session.activeTenant = d.tenants?.find(t => t.isDefault) || d.tenants?.[0] || null;
-      saveSession();
-      applySessionToUI();
-      document.getElementById('login-screen').classList.add('hidden');
-      if (!document.getElementById('chatMessages').children.length) addDeskyOpener();
-    } else {
-      errEl.textContent = 'Microsoft sign-in failed. Please try again.';
-      errEl.classList.add('show');
+  // Load quotes (if available)
+  if (state.modules.includes('quotes')) {
+    const qts = await apiCall('/api/mobile/quotes?limit=50&offset=0');
+    if (qts) {
+      state.quotes = Array.isArray(qts) ? qts : [];
+      state.pagination.quotes.hasMore = qts.length >= 50;
+      buildQuotesList();
     }
-  } catch(e) {
-    errEl.textContent = 'Could not complete sign-in. Check your connection.';
-    errEl.classList.add('show');
+  } else {
+    state.quotes = [];
+    document.getElementById('quotesList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Quotes not available for this workspace</div>';
   }
+
+  // Load POs (if available)
+  if (state.modules.includes('pos')) {
+    const pos = await apiCall('/api/mobile/purchase-orders?limit=50&offset=0');
+    if (pos) {
+      state.pos = Array.isArray(pos) ? pos : [];
+      state.pagination.pos.hasMore = pos.length >= 50;
+      buildPOsList();
+    }
+  } else {
+    state.pos = [];
+    document.getElementById('posList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Purchase Orders not available for this workspace</div>';
+  }
+
+  // Load expenses (if available)
+  if (state.modules.includes('expenses')) {
+    const exps = await apiCall('/api/mobile/expenses?limit=50&offset=0');
+    if (exps) {
+      state.expenses = Array.isArray(exps) ? exps : [];
+      state.pagination.expenses.hasMore = exps.length >= 50;
+      buildExpensesList();
+    }
+  } else {
+    state.expenses = [];
+    document.getElementById('expensesList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Expenses not available for this workspace</div>';
+  }
+
+  // Load timesheets (if available)
+  if (state.modules.includes('timesheets')) {
+    const ts = await apiCall('/api/mobile/timesheets?limit=50&offset=0');
+    if (ts) {
+      state.timesheets = Array.isArray(ts) ? ts : [];
+      state.pagination.timesheets.hasMore = ts.length >= 50;
+      buildTimesheetsList();
+    }
+  } else {
+    state.timesheets = [];
+    document.getElementById('timesheetsList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Timesheets not available for this workspace</div>';
+  }
+
+  // Load tasks (if available)
+  if (state.modules.includes('tasks')) {
+    const tks = await apiCall('/api/mobile/tasks?limit=50&offset=0');
+    if (tks) {
+      state.tasks = Array.isArray(tks) ? tks : [];
+      state.pagination.tasks.hasMore = tks.length >= 50;
+      buildTasksList();
+    }
+  } else {
+    state.tasks = [];
+    document.getElementById('tasksList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Tasks not available for this workspace</div>';
+  }
+
+  // Load despatch (if available)
+  if (state.modules.includes('despatch')) {
+    const desp = await apiCall('/api/mobile/despatch?limit=50&offset=0');
+    if (desp) {
+      state.despatch = Array.isArray(desp) ? desp : [];
+      state.pagination.despatch.hasMore = desp.length >= 50;
+      buildDespatchList();
+    }
+  } else {
+    state.despatch = [];
+    document.getElementById('despatchList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Despatch not available for this workspace</div>';
+  }
+
+  // Load contacts (if available)
+  if (state.modules.includes('contacts')) {
+    const con = await apiCall('/api/mobile/contacts?limit=50&offset=0');
+    if (con) {
+      state.contacts = Array.isArray(con) ? con : [];
+      state.pagination.contacts.hasMore = con.length >= 50;
+      buildContactsList();
+    }
+  } else {
+    state.contacts = [];
+    document.getElementById('contactsList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Contacts not available for this workspace</div>';
+  }
+
+  // Load cashflow (if available)
+  if (state.modules.includes('cashflow')) {
+    const cf = await apiCall('/api/mobile/cashflow');
+    if (cf) {
+      state.cashflow = Array.isArray(cf) ? cf : [];
+      buildCashflowView();
+    }
+  } else {
+    state.cashflow = [];
+    document.getElementById('cashflowContent').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Cash Flow not available for this workspace</div>';
+  }
+
+  // Load goals (if available)
+  if (state.modules.includes('goals')) {
+    const gls = await apiCall('/api/mobile/goals');
+    if (gls) {
+      state.goals = Array.isArray(gls) ? gls : [];
+      buildGoalsList();
+    }
+  } else {
+    state.goals = [];
+    document.getElementById('goalsList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Goals not available for this workspace</div>';
+  }
+
+  // Load projects (if available)
+  if (state.modules.includes('projects')) {
+    const prj = await apiCall('/api/mobile/projects');
+    if (prj) {
+      state.projects = Array.isArray(prj) ? prj : [];
+      buildProjectsList();
+    }
+  } else {
+    state.projects = [];
+    document.getElementById('projectsList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">Projects not available for this workspace</div>';
+  }
+
+  // Load files (always available)
+  const files = await apiCall('/api/mobile/files');
+  if (files) {
+    state.files = Array.isArray(files) ? files : [];
+    buildFilesList();
+  }
+
+  // Load home stats
+  updateHomeStats();
+
+  // Update module button visibility
+  updateModuleButtons();
 }
 
-function onMicrosoftAuthError(error) {
-  const errEl = document.getElementById('loginError');
-  errEl.textContent = 'Microsoft sign-in failed: ' + error.replace(/_/g,' ');
-  errEl.classList.add('show');
+function updateModuleButtons() {
+  // Hide module buttons that are not available
+  const buttons = {
+    invoices: document.querySelector('button[onclick="navigate(\'invoices\')"]'),
+    quotes: document.querySelector('button[onclick="navigate(\'quotes\')"]'),
+    pos: document.querySelector('button[onclick="navigate(\'pos\')"]'),
+    expenses: document.querySelector('button[onclick="navigate(\'expenses\')"]'),
+    timesheets: document.querySelector('button[onclick="navigate(\'timesheets\')"]'),
+    tasks: document.querySelector('button[onclick="navigate(\'tasks\')"]'),
+    despatch: document.querySelector('button[onclick="navigate(\'despatch\')"]'),
+    contacts: document.querySelector('button[onclick="navigate(\'contacts\')"]'),
+    cashflow: document.querySelector('button[onclick="navigate(\'cashflow\')"]'),
+    goals: document.querySelector('button[onclick="navigate(\'goals\')"]'),
+    projects: document.querySelector('button[onclick="navigate(\'projects\')"]'),
+  };
+
+  Object.entries(buttons).forEach(([module, btn]) => {
+    if (btn) btn.style.display = state.modules.includes(module) ? 'block' : 'none';
+  });
 }
 
-// ── Stats ──────────────────────────────────────────────────
-function buildStats() {
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul'];
-  const vals = [62,78,55,85,70,92,76];
-  const colors = ['0.3','0.3','0.3','0.3','0.3','0.9','0.5'];
-  const chart = document.getElementById('statsChart');
-  chart.innerHTML = months.map((m,i) => `
-    <div class="bc-bar" data-label="${m}" style="height:${vals[i]}%;background:rgba(var(--brand-rgb),${colors[i]})"></div>
-  `).join('');
+function updateHomeStats() {
+  const invoicesTotal = state.invoices.length;
+  const quotesTotal = state.quotes.length;
+  const overdueCount = state.invoices.filter(i => i.statusId === 2).length;
 
-  const kpis = [
-    { label: 'Win Rate', value: '68%', trend: '↑ 4%', up: true },
-    { label: 'Avg Deal', value: '$18.4k', trend: '↑ $2.1k', up: true },
-    { label: 'Churn', value: '6%', trend: '↓ 1%', up: false },
-    { label: 'NPS', value: '74', trend: '↑ 3', up: true },
-  ];
-  document.getElementById('kpiGrid').innerHTML = kpis.map(k => `
-    <div class="kpi-card">
-      <div class="kpi-label">${k.label}</div>
-      <div class="kpi-value">${k.value}</div>
-      <div class="kpi-trend ${k.up ? 'up' : 'down'}">${k.trend}</div>
+  document.getElementById('statQuotes').textContent = quotesTotal;
+  document.getElementById('statInvoices').textContent = invoicesTotal;
+  document.getElementById('statQuotesSub').textContent = `${quotesTotal} quotes`;
+  document.getElementById('statInvoicesSub').textContent = overdueCount > 0 ? `${overdueCount} overdue` : 'All current';
+}
+
+// ── Invoices ───────────────────────────────────────────────
+function buildInvoicesList() {
+  const list = document.getElementById('invoicesList');
+  if (!state.invoices || state.invoices.length === 0) {
+    list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    return;
+  }
+
+  let html = state.invoices.map(i => `
+    <div class="module-item" onclick="showInvoiceDetail(${i.id})">
+      <div class="module-item-info">
+        <div class="module-item-title">${i.number}</div>
+        <div class="module-item-meta">
+          <span>${i.company || 'N/A'}</span>
+          <span>${formatDate(i.date)}</span>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div class="module-item-value">${formatCurrency(i.totalInc)}</div>
+        <div class="module-item-status">${i.status || 'Draft'}</div>
+      </div>
     </div>
   `).join('');
 
-  const pipeline = [
-    { label: 'Lead', pct: 30, color: '#3b82f6' },
-    { label: 'Qualified', pct: 22, color: '#8b5cf6' },
-    { label: 'Proposal', pct: 18, color: 'var(--brand-primary)' },
-    { label: 'Negotiation', pct: 12, color: '#f59e0b' },
-    { label: 'Won', pct: 18, color: '#22c55e' },
-  ];
-  document.getElementById('pipelineChart').innerHTML = pipeline.map(p =>
-    `<div style="flex:${p.pct};background:${p.color};"></div>`
-  ).join('');
-  document.getElementById('pipelineLegend').innerHTML = pipeline.map(p =>
-    `<div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-2);">
-      <div style="width:8px;height:8px;border-radius:2px;background:${p.color};"></div>${p.label} ${p.pct}%
-    </div>`
-  ).join('');
+  if (state.pagination.invoices.hasMore) {
+    html += `<div style="padding:16px;text-align:center;"><button style="padding:10px 20px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-1);border-radius:8px;cursor:pointer;" onclick="loadMoreInvoices()">Load more invoices</button></div>`;
+  }
+  list.innerHTML = html;
 }
 
-// ── Chat ───────────────────────────────────────────────────
-function addDeskyOpener() {
-  const greet = deskyResponses.greet[Math.floor(Math.random() * deskyResponses.greet.length)];
-  // Seed history so subsequent messages have this opener as context
-  state.chatHistory.push({ role: 'assistant', content: greet });
-  appendMsg('desky', greet, [
-    { label: 'Yes, prepare brief', text: 'Prepare a brief for my next meeting' },
-    { label: 'Show me the quotes', text: 'What quotes are open right now?' },
-  ]);
+async function loadMoreInvoices() {
+  if (state.pagination.invoices.loading) return;
+  state.pagination.invoices.loading = true;
+  state.pagination.invoices.offset += 50;
+  const invs = await apiCall(`/api/mobile/invoices?limit=50&offset=${state.pagination.invoices.offset}`);
+  state.pagination.invoices.loading = false;
+  if (invs && Array.isArray(invs) && invs.length > 0) {
+    state.invoices.push(...invs);
+    state.pagination.invoices.hasMore = invs.length >= 50;
+    buildInvoicesList();
+  }
 }
 
-function appendMsg(from, text, qrs) {
-  const container = document.getElementById('chatMessages');
-  const isDesky = from === 'desky';
-  const div = document.createElement('div');
-  div.className = 'msg' + (isDesky ? '' : ' user');
-  const formattedText = text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
-  div.innerHTML = `
-    <div class="msg-avatar ${isDesky ? 'agent' : 'user-av'}">${isDesky ? '✦' : 'PB'}</div>
-    <div class="msg-body">
-      <div class="msg-sender">${isDesky ? 'Desky' : 'You'}</div>
-      <div class="msg-bubble">${formattedText}</div>
-      ${qrs && qrs.length ? '<div class="quick-replies">' + qrs.map(q => `<button class="qr-btn" onclick="handleQR(this.dataset.t)" data-t="${q.text.replace(/"/g,'&quot;').replace(/'/g,'&#39;')}">${q.label}</button>`).join('') + '</div>' : ''}
+async function showInvoiceDetail(id) {
+  const inv = await apiCall('/api/mobile/invoices/' + id);
+  if (!inv) return;
+
+  const html = `
+    <div class="detail-header">
+      <h2>${inv.number}</h2>
+      <div class="detail-status">${inv.status} · ${formatDate(inv.date)}</div>
     </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Overview</div>
+      <div class="detail-kpi">
+        <div class="detail-kpi-card">
+          <div class="detail-kpi-label">Company</div>
+          <div class="detail-kpi-value" style="font-size:14px;">${inv.company}</div>
+        </div>
+        <div class="detail-kpi-card">
+          <div class="detail-kpi-label">Division</div>
+          <div class="detail-kpi-value" style="font-size:14px;">${inv.division || '—'}</div>
+        </div>
+      </div>
+      <div class="detail-kpi">
+        <div class="detail-kpi-card">
+          <div class="detail-kpi-label">Net</div>
+          <div class="detail-kpi-value">${formatCurrency(inv.total)}</div>
+        </div>
+        <div class="detail-kpi-card">
+          <div class="detail-kpi-label">GST</div>
+          <div class="detail-kpi-value">${formatCurrency(inv.gst)}</div>
+        </div>
+      </div>
+      <div class="detail-kpi">
+        <div class="detail-kpi-card" style="grid-column:1/3;">
+          <div class="detail-kpi-label">Total Inc GST</div>
+          <div class="detail-kpi-value">${formatCurrency(inv.totalInc)}</div>
+        </div>
+      </div>
+    </div>
+
+    ${inv.lines && inv.lines.length > 0 ? `
+      <div class="detail-section">
+        <div class="detail-section-title">Line Items</div>
+        <div class="line-items">
+          ${inv.lines.map(li => `
+            <div class="line-item">
+              <div>
+                <div class="line-item-desc">${li.description}</div>
+                <div class="line-item-meta">${li.qty} × ${formatCurrency(li.unitPrice)}</div>
+              </div>
+              <div class="line-item-total">
+                <div class="line-item-price">${formatCurrency(li.extended)}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
   `;
-  container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
+
+  document.getElementById('invoiceDetail').innerHTML = html;
+  navigate('invoice-detail');
 }
 
-function handleQR(text) {
-  document.querySelectorAll('.quick-replies').forEach(r => r.remove());
-  appendMsg('user', text);
-  askDesky(text);
+// ── Quotes ─────────────────────────────────────────────────
+function buildQuotesList() {
+  const list = document.getElementById('quotesList');
+  if (!state.quotes || state.quotes.length === 0) {
+    list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    return;
+  }
+
+  let html = state.quotes.map(q => `
+    <div class="module-item" onclick="showQuoteDetail(${q.id})">
+      <div class="module-item-info">
+        <div class="module-item-title">${q.reference}</div>
+        <div class="module-item-meta">
+          <span>${q.company || 'N/A'}</span>
+          <span>${formatDate(q.date)}</span>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div class="module-item-value">${formatCurrency(q.total)}</div>
+        <div class="module-item-status" style="background:${q.expired ? 'rgba(239,68,68,0.15);color:#ef4444' : q.expiringSoon ? 'rgba(249,115,22,0.15);color:#f97316' : 'rgba(34,197,94,0.15);color:#22c55e'}">${q.status}</div>
+      </div>
+    </div>
+  `).join('');
+
+  if (state.pagination.quotes.hasMore) {
+    html += `<div style="padding:16px;text-align:center;"><button style="padding:10px 20px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-1);border-radius:8px;cursor:pointer;" onclick="loadMoreQuotes()">Load more quotes</button></div>`;
+  }
+  list.innerHTML = html;
 }
 
-function showTyping() {
-  const container = document.getElementById('chatMessages');
-  if (document.getElementById('typing-indicator')) return;
-  const typing = document.createElement('div');
-  typing.className = 'msg';
-  typing.id = 'typing-indicator';
-  typing.innerHTML = `
-    <div class="msg-avatar agent">✦</div>
-    <div class="msg-body">
-      <div class="msg-sender">Desky</div>
-      <div class="msg-bubble">
-        <div class="typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
+async function loadMoreQuotes() {
+  if (state.pagination.quotes.loading) return;
+  state.pagination.quotes.loading = true;
+  state.pagination.quotes.offset += 50;
+  const qts = await apiCall(`/api/mobile/quotes?limit=50&offset=${state.pagination.quotes.offset}`);
+  state.pagination.quotes.loading = false;
+  if (qts && Array.isArray(qts) && qts.length > 0) {
+    state.quotes.push(...qts);
+    state.pagination.quotes.hasMore = qts.length >= 50;
+    buildQuotesList();
+  }
+}
+
+async function showQuoteDetail(id) {
+  const q = await apiCall('/api/mobile/quotes/' + id);
+  if (!q) return;
+
+  const html = `
+    <div class="detail-header">
+      <h2>${q.reference}</h2>
+      <div class="detail-status">${q.status} · ${formatDate(q.date)}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Overview</div>
+      <div class="detail-kpi">
+        <div class="detail-kpi-card">
+          <div class="detail-kpi-label">Company</div>
+          <div class="detail-kpi-value" style="font-size:14px;">${q.company}</div>
+        </div>
+        <div class="detail-kpi-card">
+          <div class="detail-kpi-label">Expires</div>
+          <div class="detail-kpi-value" style="font-size:14px;">${formatDate(q.expiryDate)}</div>
+        </div>
+      </div>
+      <div class="detail-kpi">
+        <div class="detail-kpi-card">
+          <div class="detail-kpi-label">Net Total</div>
+          <div class="detail-kpi-value">${formatCurrency(q.total)}</div>
+        </div>
+        <div class="detail-kpi-card">
+          <div class="detail-kpi-label">Margin</div>
+          <div class="detail-kpi-value">${(q.margin * 100).toFixed(1)}%</div>
+        </div>
+      </div>
+    </div>
+
+    ${q.lines && q.lines.length > 0 ? `
+      <div class="detail-section">
+        <div class="detail-section-title">Line Items</div>
+        <div class="line-items">
+          ${q.lines.map(li => `
+            <div class="line-item">
+              <div>
+                <div class="line-item-desc">${li.description}</div>
+                <div class="line-item-meta">${li.qty} × ${formatCurrency(li.unitPrice)}</div>
+              </div>
+              <div class="line-item-total">
+                <div class="line-item-price">${formatCurrency(li.extended)}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+  `;
+
+  document.getElementById('quoteDetail').innerHTML = html;
+  navigate('quote-detail');
+}
+
+// ── Purchase Orders ────────────────────────────────────────
+function buildPOsList() {
+  const list = document.getElementById('posList');
+  if (!state.pos || state.pos.length === 0) {
+    list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    return;
+  }
+
+  let html = state.pos.map(p => `
+    <div class="module-item" onclick="showPODetail(${p.id})">
+      <div class="module-item-info">
+        <div class="module-item-title">PO #${p.id}</div>
+        <div class="module-item-meta">
+          <span>${p.supplier || 'N/A'}</span>
+          <span>${formatDate(p.date)}</span>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div class="module-item-value">${formatCurrency(p.totalInc)}</div>
+        <div class="module-item-status">${p.status}</div>
+      </div>
+    </div>
+  `).join('');
+
+  if (state.pagination.pos.hasMore) {
+    html += `<div style="padding:16px;text-align:center;"><button style="padding:10px 20px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-1);border-radius:8px;cursor:pointer;" onclick="loadMorePOs()">Load more POs</button></div>`;
+  }
+  list.innerHTML = html;
+}
+
+async function loadMorePOs() {
+  if (state.pagination.pos.loading) return;
+  state.pagination.pos.loading = true;
+  state.pagination.pos.offset += 50;
+  const pos = await apiCall(`/api/mobile/purchase-orders?limit=50&offset=${state.pagination.pos.offset}`);
+  state.pagination.pos.loading = false;
+  if (pos && Array.isArray(pos) && pos.length > 0) {
+    state.pos.push(...pos);
+    state.pagination.pos.hasMore = pos.length >= 50;
+    buildPOsList();
+  }
+}
+
+async function showPODetail(id) {
+  const po = await apiCall('/api/mobile/purchase-orders/' + id);
+  if (!po) return;
+
+  const html = `
+    <div class="detail-header">
+      <h2>PO #${po.id}</h2>
+      <div class="detail-status">${po.status} · ${formatDate(po.date)}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Overview</div>
+      <div class="detail-kpi">
+        <div class="detail-kpi-card">
+          <div class="detail-kpi-label">Supplier</div>
+          <div class="detail-kpi-value" style="font-size:14px;">${po.supplier}</div>
+        </div>
+        <div class="detail-kpi-card">
+          <div class="detail-kpi-label">Required By</div>
+          <div class="detail-kpi-value" style="font-size:14px;">${formatDate(po.required)}</div>
+        </div>
+      </div>
+      <div class="detail-kpi">
+        <div class="detail-kpi-card">
+          <div class="detail-kpi-label">Ex GST</div>
+          <div class="detail-kpi-value">${formatCurrency(po.totalEx)}</div>
+        </div>
+        <div class="detail-kpi-card">
+          <div class="detail-kpi-label">Inc GST</div>
+          <div class="detail-kpi-value">${formatCurrency(po.totalInc)}</div>
+        </div>
+      </div>
+    </div>
+
+    ${po.lines && po.lines.length > 0 ? `
+      <div class="detail-section">
+        <div class="detail-section-title">Line Items</div>
+        <div class="line-items">
+          ${po.lines.map(li => `
+            <div class="line-item">
+              <div>
+                <div class="line-item-desc">${li.description}</div>
+                <div class="line-item-meta">${li.qty} × ${formatCurrency(li.unitPrice)}</div>
+              </div>
+              <div class="line-item-total">
+                <div class="line-item-price">${formatCurrency(li.extended)}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+  `;
+
+  document.getElementById('poDetail').innerHTML = html;
+  navigate('po-detail');
+}
+
+// ── Expenses ───────────────────────────────────────────────
+function buildExpensesList() {
+  const list = document.getElementById('expensesList');
+  if (!state.expenses || state.expenses.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">No expenses</div>';
+    return;
+  }
+
+  let html = state.expenses.map(e => `
+    <div class="module-item" onclick="showExpenseDetail(${e.id})">
+      <div class="module-item-info">
+        <div class="module-item-title">${e.reference || '#' + e.id}</div>
+        <div class="module-item-meta">
+          <span>${e.status || 'Pending'}</span>
+          <span>${formatDate(e.createdAt)}</span>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div class="module-item-value">${formatCurrency(e.totalAmount || 0)}</div>
+      </div>
+    </div>
+  `).join('');
+
+  if (state.pagination.expenses.hasMore) {
+    html += `<div style="padding:16px;text-align:center;"><button style="padding:10px 20px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-1);border-radius:8px;cursor:pointer;" onclick="loadMoreExpenses()">Load more</button></div>`;
+  }
+  list.innerHTML = html;
+}
+
+async function loadMoreExpenses() {
+  if (state.pagination.expenses.loading) return;
+  state.pagination.expenses.loading = true;
+  state.pagination.expenses.offset += 50;
+  const exps = await apiCall(`/api/mobile/expenses?limit=50&offset=${state.pagination.expenses.offset}`);
+  state.pagination.expenses.loading = false;
+  if (exps && Array.isArray(exps) && exps.length > 0) {
+    state.expenses.push(...exps);
+    state.pagination.expenses.hasMore = exps.length >= 50;
+    buildExpensesList();
+  }
+}
+
+async function showExpenseDetail(id) {
+  const exp = await apiCall('/api/mobile/expenses/' + id);
+  if (!exp) return;
+
+  const html = `
+    <div class="detail-header">
+      <h2>${exp.reference || '#' + exp.id}</h2>
+      <div class="detail-status">${exp.status || 'Pending'} · ${formatDate(exp.createdAt)}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Overview</div>
+      <div class="detail-kpi">
+        <div class="detail-kpi-card">
+          <div class="detail-kpi-label">Employee</div>
+          <div class="detail-kpi-value" style="font-size:14px;">${exp.employee || 'N/A'}</div>
+        </div>
+        <div class="detail-kpi-card">
+          <div class="detail-kpi-label">Total</div>
+          <div class="detail-kpi-value">${formatCurrency(exp.totalAmount || 0)}</div>
+        </div>
+      </div>
+    </div>
+
+    ${exp.items && exp.items.length > 0 ? `
+      <div class="detail-section">
+        <div class="detail-section-title">Items</div>
+        <div class="line-items">
+          ${exp.items.map(item => `
+            <div class="line-item">
+              <div>
+                <div class="line-item-desc">${item.category || 'Expense'}</div>
+                <div class="line-item-meta">${item.description || ''}</div>
+              </div>
+              <div class="line-item-total">
+                <div class="line-item-price">${formatCurrency(item.amount || 0)}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+  `;
+
+  document.getElementById('expenseDetail').innerHTML = html;
+  navigate('expense-detail');
+}
+
+// ── Timesheets ────────────────────────────────────────────
+function buildTimesheetsList() {
+  const list = document.getElementById('timesheetsList');
+  if (!state.timesheets || state.timesheets.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">No timesheets</div>';
+    return;
+  }
+
+  let html = state.timesheets.map(t => `
+    <div class="module-item" onclick="showTimesheetDetail(${t.id})">
+      <div class="module-item-info">
+        <div class="module-item-title">Week ${t.weekNumber || t.id}</div>
+        <div class="module-item-meta">
+          <span>${t.status || 'Draft'}</span>
+          <span>${formatDate(t.weekStart)}</span>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div class="module-item-value">${t.totalHours || 0}h</div>
+      </div>
+    </div>
+  `).join('');
+
+  if (state.pagination.timesheets.hasMore) {
+    html += `<div style="padding:16px;text-align:center;"><button style="padding:10px 20px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-1);border-radius:8px;cursor:pointer;" onclick="loadMoreTimesheets()">Load more</button></div>`;
+  }
+  list.innerHTML = html;
+}
+
+async function loadMoreTimesheets() {
+  if (state.pagination.timesheets.loading) return;
+  state.pagination.timesheets.loading = true;
+  state.pagination.timesheets.offset += 50;
+  const ts = await apiCall(`/api/mobile/timesheets?limit=50&offset=${state.pagination.timesheets.offset}`);
+  state.pagination.timesheets.loading = false;
+  if (ts && Array.isArray(ts) && ts.length > 0) {
+    state.timesheets.push(...ts);
+    state.pagination.timesheets.hasMore = ts.length >= 50;
+    buildTimesheetsList();
+  }
+}
+
+async function showTimesheetDetail(id) {
+  const ts = await apiCall('/api/mobile/timesheets/' + id);
+  if (!ts) return;
+
+  const html = `
+    <div class="detail-header">
+      <h2>Week ${ts.weekNumber || ts.id}</h2>
+      <div class="detail-status">${ts.status || 'Draft'} · ${formatDate(ts.weekStart)}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Summary</div>
+      <div class="detail-kpi">
+        <div class="detail-kpi-card">
+          <div class="detail-kpi-label">Total Hours</div>
+          <div class="detail-kpi-value">${ts.totalHours || 0}</div>
+        </div>
+      </div>
+    </div>
+
+    ${ts.entries && ts.entries.length > 0 ? `
+      <div class="detail-section">
+        <div class="detail-section-title">Daily Entries</div>
+        <div class="line-items">
+          ${ts.entries.map((entry, idx) => `
+            <div class="line-item">
+              <div>
+                <div class="line-item-desc">Day ${idx + 1}</div>
+                <div class="line-item-meta">${formatDate(entry.date)}</div>
+              </div>
+              <div class="line-item-total">
+                <div class="line-item-price">${entry.hours || 0}h</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+  `;
+
+  document.getElementById('timesheetDetail').innerHTML = html;
+  navigate('timesheet-detail');
+}
+
+// ── Tasks ──────────────────────────────────────────────────
+function buildTasksList() {
+  const list = document.getElementById('tasksList');
+  if (!state.tasks || state.tasks.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">No tasks</div>';
+    return;
+  }
+
+  let html = state.tasks.map(t => `
+    <div class="module-item" onclick="showTaskDetail(${t.id})">
+      <div class="module-item-info">
+        <div class="module-item-title">${t.title || 'Task'}</div>
+        <div class="module-item-meta">
+          <span>${t.status || 'ToDo'}</span>
+          <span>${t.dueDate ? formatDate(t.dueDate) : 'No date'}</span>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div class="module-item-status" style="color:${t.priority === 'High' ? 'var(--error)' : t.priority === 'Urgent' ? 'var(--error)' : 'var(--text-2)'};">${t.priority || 'Normal'}</div>
+      </div>
+    </div>
+  `).join('');
+
+  if (state.pagination.tasks.hasMore) {
+    html += `<div style="padding:16px;text-align:center;"><button style="padding:10px 20px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-1);border-radius:8px;cursor:pointer;" onclick="loadMoreTasks()">Load more</button></div>`;
+  }
+  list.innerHTML = html;
+}
+
+async function loadMoreTasks() {
+  if (state.pagination.tasks.loading) return;
+  state.pagination.tasks.loading = true;
+  state.pagination.tasks.offset += 50;
+  const tks = await apiCall(`/api/mobile/tasks?limit=50&offset=${state.pagination.tasks.offset}`);
+  state.pagination.tasks.loading = false;
+  if (tks && Array.isArray(tks) && tks.length > 0) {
+    state.tasks.push(...tks);
+    state.pagination.tasks.hasMore = tks.length >= 50;
+    buildTasksList();
+  }
+}
+
+async function showTaskDetail(id) {
+  const task = await apiCall('/api/mobile/tasks/' + id);
+  if (!task) return;
+
+  const html = `
+    <div class="detail-header">
+      <h2>${task.title}</h2>
+      <div class="detail-status">${task.status} · ${task.priority}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Details</div>
+      <div style="padding:14px;background:var(--bg-card2);border-radius:var(--radius-md);">
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Description</div>
+          <div style="color:var(--text-1);">${task.description || 'No description'}</div>
+        </div>
+        ${task.dueDate ? `
+          <div style="margin-bottom:12px;">
+            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Due Date</div>
+            <div style="color:var(--text-1);">${formatDate(task.dueDate)}</div>
+          </div>
+        ` : ''}
+        ${task.assignee ? `
+          <div>
+            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Assigned To</div>
+            <div style="color:var(--text-1);">${task.assignee}</div>
+          </div>
+        ` : ''}
       </div>
     </div>
   `;
-  container.appendChild(typing);
-  container.scrollTop = container.scrollHeight;
+
+  document.getElementById('taskDetail').innerHTML = html;
+  navigate('task-detail');
 }
 
-function removeTyping() {
-  const t = document.getElementById('typing-indicator');
-  if (t) t.remove();
+// ── Despatch ───────────────────────────────────────────────
+function buildDespatchList() {
+  const list = document.getElementById('despatchList');
+  if (!state.despatch || state.despatch.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">No despatch</div>';
+    return;
+  }
+
+  let html = state.despatch.map(d => `
+    <div class="module-item" onclick="showDespatchDetail(${d.id})">
+      <div class="module-item-info">
+        <div class="module-item-title">${d.reference || '#' + d.id}</div>
+        <div class="module-item-meta">
+          <span>${d.status || 'Pending'}</span>
+          <span>${formatDate(d.deliveryDate)}</span>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div class="module-item-status">${d.status || 'Pending'}</div>
+      </div>
+    </div>
+  `).join('');
+
+  if (state.pagination.despatch.hasMore) {
+    html += `<div style="padding:16px;text-align:center;"><button style="padding:10px 20px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-1);border-radius:8px;cursor:pointer;" onclick="loadMoreDespatch()">Load more</button></div>`;
+  }
+  list.innerHTML = html;
 }
 
-async function askDesky(userText) {
-  if (state.deskyTyping) return;
-  state.deskyTyping = true;
-  showTyping();
-
-  const historyToSend = [...state.chatHistory].slice(-20);
-
-  try {
-    const resp = await fetch(DESKY_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: userText, history: historyToSend, brand: state.brand })
-    });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const data = await resp.json();
-    const reply = data.reply || "I couldn't retrieve that right now.";
-    state.chatHistory.push({ role: 'user', content: userText });
-    state.chatHistory.push({ role: 'assistant', content: reply });
-    removeTyping();
-    appendMsg('desky', reply);
-  } catch(err) {
-    removeTyping();
-    const offline = !navigator.onLine || (window.MyDeskAndroid && !window.MyDeskAndroid.isOnline?.());
-    appendMsg('desky', offline
-      ? "I'm offline right now. Check your connection and I'll be back in a moment."
-      : "I hit a snag checking my notes. Try again shortly.");
-  } finally {
-    state.deskyTyping = false;
+async function loadMoreDespatch() {
+  if (state.pagination.despatch.loading) return;
+  state.pagination.despatch.loading = true;
+  state.pagination.despatch.offset += 50;
+  const desp = await apiCall(`/api/mobile/despatch?limit=50&offset=${state.pagination.despatch.offset}`);
+  state.pagination.despatch.loading = false;
+  if (desp && Array.isArray(desp) && desp.length > 0) {
+    state.despatch.push(...desp);
+    state.pagination.despatch.hasMore = desp.length >= 50;
+    buildDespatchList();
   }
 }
 
-function sendMessage() {
+async function showDespatchDetail(id) {
+  const desp = await apiCall('/api/mobile/despatch/' + id);
+  if (!desp) return;
+
+  const html = `
+    <div class="detail-header">
+      <h2>${desp.reference || '#' + desp.id}</h2>
+      <div class="detail-status">${desp.status} · ${formatDate(desp.deliveryDate)}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Delivery Info</div>
+      <div class="detail-kpi">
+        <div class="detail-kpi-card">
+          <div class="detail-kpi-label">Recipient</div>
+          <div class="detail-kpi-value" style="font-size:14px;">${desp.recipientName || 'N/A'}</div>
+        </div>
+      </div>
+      <div style="padding:14px;background:var(--bg-card2);border-radius:var(--radius-md);">
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Address</div>
+        <div style="color:var(--text-1);">${desp.recipientAddress || 'N/A'}</div>
+      </div>
+    </div>
+
+    ${desp.items && desp.items.length > 0 ? `
+      <div class="detail-section">
+        <div class="detail-section-title">Items</div>
+        <div class="line-items">
+          ${desp.items.map(item => `
+            <div class="line-item">
+              <div>
+                <div class="line-item-desc">${item.description}</div>
+                <div class="line-item-meta">${item.quantity} units</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+  `;
+
+  document.getElementById('despatchDetail').innerHTML = html;
+  navigate('despatch-detail');
+}
+
+// ── Contacts ───────────────────────────────────────────────
+function buildContactsList() {
+  const list = document.getElementById('contactsList');
+  if (!state.contacts || state.contacts.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">No contacts</div>';
+    return;
+  }
+
+  let html = state.contacts.map(c => `
+    <div class="module-item" onclick="showContactDetail(${c.id})">
+      <div class="module-item-info">
+        <div class="module-item-title">${c.firstName} ${c.lastName}</div>
+        <div class="module-item-meta">
+          <span>${c.role || 'Contact'}</span>
+          <span>${c.email || c.phone || 'No info'}</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  if (state.pagination.contacts.hasMore) {
+    html += `<div style="padding:16px;text-align:center;"><button style="padding:10px 20px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-1);border-radius:8px;cursor:pointer;" onclick="loadMoreContacts()">Load more</button></div>`;
+  }
+  list.innerHTML = html;
+}
+
+async function loadMoreContacts() {
+  if (state.pagination.contacts.loading) return;
+  state.pagination.contacts.loading = true;
+  state.pagination.contacts.offset += 50;
+  const con = await apiCall(`/api/mobile/contacts?limit=50&offset=${state.pagination.contacts.offset}`);
+  state.pagination.contacts.loading = false;
+  if (con && Array.isArray(con) && con.length > 0) {
+    state.contacts.push(...con);
+    state.pagination.contacts.hasMore = con.length >= 50;
+    buildContactsList();
+  }
+}
+
+async function showContactDetail(id) {
+  const contact = await apiCall('/api/mobile/contacts/' + id);
+  if (!contact) return;
+
+  const html = `
+    <div class="detail-header">
+      <h2>${contact.firstName} ${contact.lastName}</h2>
+      <div class="detail-status">${contact.role || 'Contact'}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Contact Information</div>
+      <div style="padding:14px;background:var(--bg-card2);border-radius:var(--radius-md);display:flex;flex-direction:column;gap:12px;">
+        ${contact.email ? `
+          <div>
+            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Email</div>
+            <div style="color:var(--text-1);">${contact.email}</div>
+          </div>
+        ` : ''}
+        ${contact.phone ? `
+          <div>
+            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Phone</div>
+            <div style="color:var(--text-1);">${contact.phone}</div>
+          </div>
+        ` : ''}
+        ${contact.mobile ? `
+          <div>
+            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Mobile</div>
+            <div style="color:var(--text-1);">${contact.mobile}</div>
+          </div>
+        ` : ''}
+        ${contact.address ? `
+          <div>
+            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Address</div>
+            <div style="color:var(--text-1);">${contact.address}</div>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+
+  document.getElementById('contactDetail').innerHTML = html;
+  navigate('contact-detail');
+}
+
+// ── Cash Flow ──────────────────────────────────────────────
+function buildCashflowView() {
+  const content = document.getElementById('cashflowContent');
+  if (!state.cashflow || state.cashflow.length === 0) {
+    content.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">No forecast data</div>';
+    return;
+  }
+
+  const weeks = state.cashflow.slice(0, 12);
+  let html = '<div style="display:flex;flex-direction:column;gap:12px;">';
+
+  weeks.forEach(w => {
+    const balance = w.cashPosition || 0;
+    const isNegative = balance < 0;
+    html += `
+      <div style="padding:12px;background:var(--bg-card);border-radius:var(--radius-md);border:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:12px;font-weight:600;color:var(--text-1);">Week ${w.weekNumber || ''}</div>
+            <div style="font-size:11px;color:var(--text-3);">${formatDate(w.forecastDate)}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:14px;font-weight:700;color:${isNegative ? 'var(--error)' : 'var(--success)'};">${formatCurrency(balance)}</div>
+            <div style="font-size:10px;color:var(--text-3);">
+              📥 ${formatCurrency(w.projectedIncoming || 0)} / 📤 ${formatCurrency(w.projectedOutgoing || 0)}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  html += '</div>';
+  content.innerHTML = html;
+}
+
+// ── Goals/KPIs ────────────────────────────────────────────
+function buildGoalsList() {
+  const list = document.getElementById('goalsList');
+  if (!state.goals || state.goals.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">No goals</div>';
+    return;
+  }
+
+  let html = state.goals.map(g => {
+    const progress = g.targetValue ? Math.min(100, (g.currentValue / g.targetValue) * 100) : 0;
+    return `
+      <div class="module-item">
+        <div class="module-item-info">
+          <div class="module-item-title">${g.title || 'Goal'}</div>
+          <div class="module-item-meta">
+            <span>${g.period || 'Annual'}</span>
+            <span>${g.status || 'Active'}</span>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div class="module-item-value">${Math.round(progress)}%</div>
+          <div style="margin-top:4px;width:60px;height:4px;background:var(--bg-card);border-radius:2px;overflow:hidden;">
+            <div style="width:${progress}%;height:100%;background:var(--brand-primary);"></div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  list.innerHTML = html;
+}
+
+// ── Projects ───────────────────────────────────────────────
+function buildProjectsList() {
+  const list = document.getElementById('projectsList');
+  if (!state.projects || state.projects.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">No projects</div>';
+    return;
+  }
+
+  let html = state.projects.map(p => {
+    const healthColor = p.health === 'Red' ? 'var(--error)' : p.health === 'Amber' ? 'var(--warning)' : 'var(--success)';
+    return `
+      <div class="module-item" onclick="showProjectDetail(${p.id})">
+        <div class="module-item-info">
+          <div class="module-item-title">${p.name || 'Project'}</div>
+          <div class="module-item-meta">
+            <span style="color:${healthColor};">● ${p.health || 'Green'}</span>
+            <span>${p.percent || 0}%</span>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="margin-bottom:4px;width:60px;height:4px;background:var(--bg-card);border-radius:2px;overflow:hidden;">
+            <div style="width:${p.percent || 0}%;height:100%;background:var(--brand-primary);"></div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  list.innerHTML = html;
+}
+
+async function showProjectDetail(id) {
+  const project = await apiCall('/api/mobile/projects/' + id);
+  if (!project) return;
+
+  const healthColor = project.health === 'Red' ? 'var(--error)' : project.health === 'Amber' ? 'var(--warning)' : 'var(--success)';
+
+  const html = `
+    <div class="detail-header">
+      <h2>${project.name}</h2>
+      <div class="detail-status" style="color:${healthColor};">● ${project.health || 'Green'}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Progress</div>
+      <div style="padding:14px;background:var(--bg-card2);border-radius:var(--radius-md);">
+        <div style="margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span style="font-size:12px;color:var(--text-2);">Completion</span>
+            <span style="font-size:14px;font-weight:600;color:var(--text-1);">${project.percent || 0}%</span>
+          </div>
+          <div style="width:100%;height:6px;background:var(--bg-card);border-radius:3px;overflow:hidden;">
+            <div style="width:${project.percent || 0}%;height:100%;background:var(--brand-primary);"></div>
+          </div>
+        </div>
+        ${project.milestone ? `
+          <div style="margin-top:12px;">
+            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Next Milestone</div>
+            <div style="color:var(--text-1);">${project.milestone}</div>
+          </div>
+        ` : ''}
+        ${project.teamMembers ? `
+          <div style="margin-top:12px;">
+            <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">Team</div>
+            <div style="color:var(--text-1);">${project.teamMembers}</div>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+
+  document.getElementById('projectDetail').innerHTML = html;
+  navigate('project-detail');
+}
+
+// ── Files ──────────────────────────────────────────────────
+function buildFilesList() {
+  const list = document.getElementById('fileList');
+  if (!state.files || state.files.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:var(--text-2);padding:32px;">No files</div>';
+    return;
+  }
+
+  list.innerHTML = state.files.map(f => `
+    <div class="file-item">
+      <div class="file-icon">${f.isFolder ? '📁' : '📄'}</div>
+      <div class="file-info">
+        <div class="file-name">${f.name}</div>
+        <div class="file-meta">${f.isFolder ? 'Folder' : formatCurrency(f.size) + ' · ' + formatDate(f.createdAt)}</div>
+      </div>
+      <div class="file-more">›</div>
+    </div>
+  `).join('');
+}
+
+// ── Chat ───────────────────────────────────────────────────
+async function sendChat() {
   const input = document.getElementById('chatInput');
-  const text = input.value.trim();
-  if (!text || state.deskyTyping) return;
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  const container = document.getElementById('chatMessages');
+  container.innerHTML += `
+    <div class="msg user">
+      <div class="msg-avatar user-av">${session.user?.initials || 'You'}</div>
+      <div class="msg-body">
+        <div class="msg-sender">You</div>
+        <div class="msg-bubble">${msg}</div>
+      </div>
+    </div>
+  `;
+
   input.value = '';
-  input.style.height = '';
-  appendMsg('user', text);
-  askDesky(text);
-}
+  autoResize(input);
+  container.scrollTop = container.scrollHeight;
 
-function deskyChatTap(topic) {
-  navigate('home');
-  const text = topic === 'prediction'
-    ? 'Tell me more about your latest prediction'
-    : topic;
-  setTimeout(() => {
-    appendMsg('user', text);
-    askDesky(text);
-    const chat = document.getElementById('chatMessages');
-    if (chat) chat.scrollTop = chat.scrollHeight;
-  }, 100);
-}
+  // Send to chat/mobile endpoint
+  try {
+    const resp = await fetch(API_BASE + '/api/chat/mobile', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + state.patToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: msg,
+        brand: state.brand,
+        history: state.chatHistory
+      })
+    });
 
-function handleKey(e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    const data = await resp.json();
+    container.innerHTML += `
+      <div class="msg">
+        <div class="msg-avatar agent">🤖</div>
+        <div class="msg-body">
+          <div class="msg-sender">Desky</div>
+          <div class="msg-bubble">${data.reply || 'I hit a snag. Try again.'}</div>
+        </div>
+      </div>
+    `;
+    container.scrollTop = container.scrollHeight;
+
+    state.chatHistory.push({ role: 'user', content: msg });
+    state.chatHistory.push({ role: 'assistant', content: data.reply });
+  } catch(err) {
+    container.innerHTML += `
+      <div class="msg">
+        <div class="msg-avatar agent">🤖</div>
+        <div class="msg-body">
+          <div class="msg-sender">Desky</div>
+          <div class="msg-bubble">Connection error. Try again.</div>
+        </div>
+      </div>
+    `;
+  }
 }
 
 function autoResize(el) {
@@ -1705,35 +2559,45 @@ function autoResize(el) {
   el.style.height = Math.min(el.scrollHeight, 100) + 'px';
 }
 
-// ── Voice ──────────────────────────────────────────────────
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChat();
+  }
+}
+
+function sendDeskyChatMessage() {
+  const input = document.getElementById('deskyChatInput');
+  document.getElementById('chatInput').value = input.value;
+  sendChat();
+  input.value = '';
+}
+
+function handleDeskyChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendDeskyChatMessage();
+  }
+}
+
 function startVoice() {
-  try {
-    if (window.MyDeskAndroid || window.webkit?.messageHandlers?.startVoiceRecognition) {
-      nativeCall('startVoiceRecognition'); return;
-    }
-    if (window.SpeechRecognition || window.webkitSpeechRecognition) {
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const r = new SR();
-      const btn = document.getElementById('voiceBtn');
-      btn.classList.add('listening');
-      r.onresult = e => {
-        document.getElementById('chatInput').value = e.results[0][0].transcript;
-        btn.classList.remove('listening');
-      };
-      r.onerror = r.onend = () => btn.classList.remove('listening');
-      r.start();
-    }
-  } catch(e) {}
+  nativeCall('startVoiceRecognition');
 }
 
-// ── Notifications ──────────────────────────────────────────
-function showNotifications() {
-  const msgs = ['Desky: New cashflow alert ready', '3 invoices overdue — follow-up suggested', 'Quote Q-2847 — 19 days since sent'];
-  alert(msgs.join('\n\n'));
-}
+// ── Init ───────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('loginPassword')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+  document.getElementById('loginInput')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('loginPassword')?.focus();
+  });
+  init();
+});
 
-// ── Start ──────────────────────────────────────────────────
-init();
+// ── Expose to native ───────────────────────────────────────
+window.onMicrosoftAuthToken = onMicrosoftAuthToken;
+window.onMicrosoftAuthError = onMicrosoftAuthError;
 </script>
 </body>
 </html>

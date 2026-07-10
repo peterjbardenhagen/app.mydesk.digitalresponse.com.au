@@ -335,6 +335,52 @@ public class UserService
         _logger.LogInformation("Password reset for user {Code}", userCode);
     }
 
+    public async Task<User?> GetUserByEmailOrCodeAsync(string emailOrCode)
+    {
+        var dt = await _db.QueryAsync(
+            "SELECT TOP 1 UserId, Code, Name, Email, IsAdmin, IsManager, DivisionId, UserRole, UserTypeId, Active FROM Users WHERE (Email = @Value OR Code = @Value) AND ISNULL(Deleted,0) = 0",
+            new() { ["Value"] = emailOrCode });
+        if (dt.Rows.Count == 0) return null;
+        var row = dt.Rows[0];
+        return new User
+        {
+            UserId = (int)row["UserId"],
+            Code = row["Code"]?.ToString() ?? "",
+            Name = row["Name"]?.ToString() ?? "",
+            Email = row["Email"]?.ToString(),
+            IsAdmin = row["IsAdmin"] != DBNull.Value && (bool)row["IsAdmin"],
+            IsManager = row["IsManager"] != DBNull.Value && (bool)row["IsManager"],
+            DivisionId = row["DivisionId"] != DBNull.Value ? (int)row["DivisionId"] : null,
+            UserRole = row["UserRole"]?.ToString(),
+            UserTypeId = row["UserTypeId"] != DBNull.Value ? (int)row["UserTypeId"] : 0,
+            Active = row["Active"] != DBNull.Value ? (bool)row["Active"] : true
+        };
+    }
+
+    public async Task CreatePasswordResetTokenAsync(int userId, string tokenHash, DateTime expiresAt)
+    {
+        await _db.ExecuteNonQueryAsync(
+            "INSERT INTO PasswordResetTokens (UserId, Token, ExpiresAt, IsUsed, CreatedAt) VALUES (@UserId, @Token, @ExpiresAt, 0, GETUTCDATE())",
+            new() { ["UserId"] = userId, ["Token"] = tokenHash, ["ExpiresAt"] = expiresAt });
+    }
+
+    public async Task<bool> ResetPasswordByTokenAsync(string tokenHash, string newPassword)
+    {
+        var dt = await _db.QueryAsync(
+            "SELECT UserId FROM PasswordResetTokens WHERE Token = @Token AND ExpiresAt > GETUTCDATE() AND IsUsed = 0",
+            new() { ["Token"] = tokenHash });
+        if (dt.Rows.Count == 0) return false;
+
+        var userId = (int)dt.Rows[0]["UserId"];
+        await _db.ExecuteNonQueryAsync(
+            "UPDATE PasswordResetTokens SET IsUsed = 1 WHERE Token = @Token",
+            new() { ["Token"] = tokenHash });
+        await _db.ExecuteNonQueryAsync(
+            "UPDATE Users SET PW = @PW, DatePasswordChanged = GETDATE() WHERE UserId = @UserId",
+            new() { ["PW"] = HashPassword(newPassword), ["UserId"] = userId });
+        return true;
+    }
+
     public async Task<List<UserType>> GetUserTypesAsync()
     {
         var dt = await _db.QueryAsync("SELECT UserTypeId, UserType FROM UserTypes ORDER BY UserTypeId");

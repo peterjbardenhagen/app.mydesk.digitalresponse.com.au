@@ -1,0 +1,225 @@
+@using MudBlazor
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@implements IAsyncDisposable
+
+<div class="notification-bell-container">
+    <MudBadge Content="@_unreadCount" Overlap="true" Visible="@(_unreadCount > 0)" Color="Color.Error" Max="99">
+        <MudIconButton Icon="@Icons.Material.Rounded.Notifications" OnClick="TogglePanelAsync" Color="@GetIconColor()" />
+    </MudBadge>
+
+    @if (_showPanel)
+    {
+        <MudPaper Class="notification-panel" Elevation="2">
+            @if (_loading)
+            {
+                <div class="pa-4 text-center">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Small" />
+                </div>
+            }
+            else if (_notifications.Count == 0)
+            {
+                <div class="pa-4 text-center">
+                    <MudIcon Icon="@Icons.Material.Rounded.NotificationsNone" Size="Size.Large" Color="Color.Default" />
+                    <MudText Typo="Typo.body2" Class="mt-2">No notifications</MudText>
+                </div>
+            }
+            else
+            {
+                <MudList>
+                    @foreach (var notif in _notifications)
+                    {
+                        <MudListItem OnClick="@(() => OnNotificationClickAsync(notif))" Class="@(notif.IsRead ? "" : "notification-unread")">
+                            <MudStack Row="true" Spacing="2">
+                                @if (!string.IsNullOrEmpty(notif.Icon))
+                                {
+                                    <MudIcon Icon="@($"@Icons.Material.Rounded.{notif.Icon}")" Size="Size.Small" />
+                                }
+                                <div>
+                                    <MudText Typo="Typo.subtitle2">@notif.Title</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Default">@notif.Message</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Tertiary">@GetTimeAgo(notif.CreatedAt)</MudText>
+                                </div>
+                            </MudStack>
+                        </MudListItem>
+                    }
+                </MudList>
+
+                <MudDivider />
+
+                <div class="pa-3 text-center">
+                    @if (_unreadCount > 0)
+                    {
+                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="MarkAllAsReadAsync">
+                            Mark all as read
+                        </MudButton>
+                    }
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Href="/notifications" Target="_blank">
+                        View all
+                    </MudButton>
+                </div>
+            }
+        </MudPaper>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback OnNotificationReceived { get; set; }
+
+    private bool _showPanel = false;
+    private bool _loading = false;
+    private int _unreadCount = 0;
+    private List<NotificationDto> _notifications = new();
+    private System.Threading.Timer? _refreshTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadNotificationsAsync();
+        
+        // Refresh notifications every 30 seconds
+        _refreshTimer = new System.Threading.Timer(
+            async _ => await LoadNotificationsAsync(),
+            null,
+            TimeSpan.FromSeconds(30),
+            TimeSpan.FromSeconds(30));
+    }
+
+    private async Task TogglePanelAsync()
+    {
+        _showPanel = !_showPanel;
+        if (_showPanel)
+        {
+            await LoadNotificationsAsync();
+        }
+    }
+
+    private async Task LoadNotificationsAsync()
+    {
+        try
+        {
+            var response = await Http.GetAsync("/api/notifications");
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                var result = System.Text.Json.JsonSerializer.Deserialize<NotificationResult>(
+                    json,
+                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                _notifications = result?.Notifications ?? new();
+                _unreadCount = result?.UnreadCount ?? 0;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading notifications: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OnNotificationClickAsync(NotificationDto notif)
+    {
+        if (!notif.IsRead)
+        {
+            await Http.PostAsync($"/api/notifications/{notif.NotificationId}/read", null);
+            notif.IsRead = true;
+            _unreadCount--;
+            StateHasChanged();
+        }
+
+        if (!string.IsNullOrEmpty(notif.ActionUrl))
+        {
+            // Navigate to action URL
+        }
+    }
+
+    private async Task MarkAllAsReadAsync()
+    {
+        try
+        {
+            var response = await Http.PostAsync("/api/notifications/read-all", null);
+            if (response.IsSuccessStatusCode)
+            {
+                foreach (var notif in _notifications)
+                    notif.IsRead = true;
+                _unreadCount = 0;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private Color GetIconColor() => _unreadCount > 0 ? Color.Error : Color.Default;
+
+    private string GetTimeAgo(DateTime createdAt)
+    {
+        var diff = DateTime.UtcNow - createdAt;
+        return diff.TotalHours < 1 ? $"{(int)diff.TotalMinutes}m ago"
+             : diff.TotalHours < 24 ? $"{(int)diff.TotalHours}h ago"
+             : $"{(int)diff.TotalDays}d ago";
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        _refreshTimer?.Dispose();
+        await Task.CompletedTask;
+    }
+
+    public class NotificationDto
+    {
+        public int NotificationId { get; set; }
+        public string? Title { get; set; }
+        public string? Message { get; set; }
+        public string? Icon { get; set; }
+        public string? ActionUrl { get; set; }
+        public string? ActionText { get; set; }
+        public string? Type { get; set; }
+        public string? Category { get; set; }
+        public string? EntityType { get; set; }
+        public int? EntityId { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public bool IsRead { get; set; }
+    }
+
+    public class NotificationResult
+    {
+        public List<NotificationDto>? Notifications { get; set; }
+        public int UnreadCount { get; set; }
+    }
+}
+
+<style>
+.notification-bell-container {
+    position: relative;
+}
+
+.notification-panel {
+    position: absolute;
+    top: 40px;
+    right: 0;
+    width: 350px;
+    max-height: 500px;
+    overflow-y: auto;
+    z-index: 1200;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15);
+}
+
+.notification-unread {
+    background-color: rgba(25, 118, 210, 0.05);
+    border-left: 4px solid #1976d2;
+}
+
+.notification-unread:hover {
+    background-color: rgba(25, 118, 210, 0.1);
+}
+
+@media (max-width: 600px) {
+    .notification-panel {
+        width: 90vw;
+        right: -45vw;
+    }
+}
+</style>

@@ -1,230 +1,195 @@
 @page "/profile"
 @attribute [Authorize]
-@inject UserService UserSvc
-@inject AuthService AuthSvc
-@inject PlatformSettingsService PlatformSettingsSvc
+@using MyDesk.Shared.Models
+@using MudBlazor
+@inject HttpClient Http
 @inject ISnackbar Snackbar
-@inject NavigationManager Nav
+@inject IDialogService DialogService
 
 <PageTitle>My Profile - MyDesk</PageTitle>
 
 <div class="tl-page-header">
     <div>
-        <div class="tl-breadcrumb">
-            <a href="/">MyDesk</a><span class="sep">/</span>
-            <span style="color:var(--gray-700);font-weight:500;">My Profile</span>
-        </div>
+        <div class="tl-breadcrumb"><a href="/">MyDesk</a><span class="sep">/</span><span>My Profile</span></div>
         <h1>My Profile</h1>
-        <p class="tl-subtitle">View and manage your account details.</p>
+        <p class="tl-subtitle">Manage your account settings and profile photo.</p>
     </div>
 </div>
 
-@if (_user == null)
-{
-    <MudProgressCircular Indeterminate="true" />
-}
-else
-{
-    <MudGrid Spacing="4">
-        <MudItem xs="12" md="6">
-            <MudPaper Class="pa-6" Elevation="1">
-                <MudText Typo="Typo.h6" Class="mb-4">Account Information</MudText>
-                
-                <MudGrid Spacing="3">
-                    <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_user.Code" Label="User Code" Variant="Variant.Outlined" 
-                                      ReadOnly="true" Disabled="true" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_user.Name" Label="Full Name" Variant="Variant.Outlined" 
-                                      @ref="_nameField" />
-                    </MudItem>
-                    <MudItem xs="12">
-                        <MudTextField @bind-Value="_user.Email" Label="Email" Variant="Variant.Outlined" 
-                                      InputType="InputType.Email" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_user.Phone" Label="Phone" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_user.Mobile" Label="Mobile" Variant="Variant.Outlined" />
-                    </MudItem>
-                </MudGrid>
+<MudGrid Class="mt-4">
+    <MudItem xs="12" sm="6" md="4">
+        <MudPaper Class="pa-4">
+            <div class="text-center">
+                @if (_loading)
+                {
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                }
+                else if (!string.IsNullOrEmpty(_photoUrl))
+                {
+                    <div class="profile-photo-container mb-4">
+                        <img src="@_photoUrl" alt="Profile Photo" class="profile-photo" />
+                        <MudButton Variant="Variant.Filled" Color="Color.Error" Size="Size.Small" OnClick="RemovePhotoAsync" Class="mt-2">
+                            Remove Photo
+                        </MudButton>
+                    </div>
+                }
+                else
+                {
+                    <div class="profile-avatar mb-4">
+                        <MudAvatar Size="Size.Large" Color="Color.Primary">
+                            @GetInitials(_userName)
+                        </MudAvatar>
+                    </div>
+                }
 
-                <div class="d-flex gap-3 mt-6">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" 
-                               StartIcon="@Icons.Material.Rounded.Save" 
-                               OnClick="SaveProfileAsync" Disabled="_saving">
-                        @(_saving ? "Saving..." : "Save Changes")
-                    </MudButton>
-                    <MudButton Variant="Variant.Outlined" Href="/settings">Account Settings</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.PhotoCamera" OnClick="OpenPhotoUploadAsync" Class="mb-2" FullWidth="true">
+                    Upload Photo
+                </MudButton>
+
+                <MudDivider Class="my-4" />
+
+                <div class="text-left">
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Account</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Default" Class="mt-2">
+                        <strong>Name:</strong> @_userName
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Default" Class="mt-1">
+                        <strong>Email:</strong> @_userEmail
+                    </MudText>
                 </div>
-            </MudPaper>
-        </MudItem>
-
-        <MudItem xs="12" md="6">
-            <MudPaper Class="pa-6" Elevation="1">
-                <MudText Typo="Typo.h6" Class="mb-4">Security</MudText>
-                
-                <MudAlert Severity="Severity.Info" Class="mb-4">
-                    To change your password, use the Account Settings page.
-                </MudAlert>
-
-                <div class="d-flex flex-column gap-3">
-                    <MudButton Variant="Variant.Outlined" 
-                               StartIcon="@Icons.Material.Rounded.Lock" 
-                               Href="/settings">Change Password</MudButton>
-                    
-                    <MudDivider Class="my-2" />
-                    
-                    <MudText Typo="Typo.subtitle2" Class="mt-2">Session</MudText>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Error"
-                               StartIcon="@Icons.Material.Rounded.Logout"
-                               OnClick="LogoutAsync">Sign Out</MudButton>
-                </div>
-            </MudPaper>
-        </MudItem>
-
-        <MudItem xs="12">
-            <MudPaper Class="pa-6" Elevation="1">
-                <MudText Typo="Typo.h6" Class="mb-4">Role & Permissions</MudText>
-                
-                <div class="d-flex flex-wrap gap-2">
-                    <MudChip T="string" Color="Color.Primary" Variant="Variant.Filled">
-                        @(_user.UserRole ?? "User")
-                    </MudChip>
-                    @if (_isAdmin)
-                    {
-                        <MudChip T="string" Color="Color.Error" Variant="Variant.Filled">Administrator</MudChip>
-                    }
-                </div>
-
-                <MudText Typo="Typo.body2" Class="mt-4" Style="color:var(--gray-500);">
-                    Your role determines which features and data you can access. 
-                    Contact an administrator to request role changes.
-                </MudText>
-            </MudPaper>
-        </MudItem>
-
-        <MudItem xs="12">
-            <MudPaper Class="pa-6" Elevation="1">
-                <MudText Typo="Typo.h6" Class="mb-4">Outlook Email Assistant</MudText>
-                <MudText Typo="Typo.body2" Class="mb-4" Style="color:var(--gray-500);">
-                    Configure how the AI Email Assistant handles your Outlook inbox.
-                </MudText>
-                <MudGrid Spacing="2">
-                    <MudItem xs="12" sm="4">
-                        <MudCheckBox T="bool" @bind-Value="_autoCategorise" Label="Automatically categorise emails" Color="Color.Primary" />
-                    </MudItem>
-                    <MudItem xs="12" sm="4">
-                        <MudCheckBox T="bool" @bind-Value="_autoDraftReplies" Label="Prepare Draft emails automatically" Color="Color.Primary" />
-                    </MudItem>
-                    <MudItem xs="12" sm="4">
-                        <MudCheckBox T="bool" @bind-Value="_moveToCompanyFolder" Label="Move to Company folder if read and 1 day has elapsed" Color="Color.Primary" />
-                    </MudItem>
-                </MudGrid>
-                <div class="d-flex gap-3 mt-4">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveOutlookSettingsAsync" Disabled="_saving">
-                        Save Outlook Settings
-                    </MudButton>
-                    <MudButton Variant="Variant.Outlined" Href="/emails">Open Emails</MudButton>
-                </div>
-            </MudPaper>
-        </MudItem>
-    </MudGrid>
-}
-
-<style>
-    body.mud-dark-mode .tl-breadcrumb span {
-        color: var(--gray-400) !important;
-    }
-    body.mud-dark-mode .tl-subtitle {
-        color: var(--gray-500) !important;
-    }
-</style>
+            </div>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
 
 @code {
-    private User? _user;
-    private bool _saving;
-    private bool _isAdmin;
-    private MudTextField<string>? _nameField;
-    private bool _autoCategorise = true;
-    private bool _autoDraftReplies;
-    private bool _moveToCompanyFolder = true;
-
-    [CascadingParameter] private Task<AuthenticationState>? AuthStateTask { get; set; }
+    private bool _loading = true;
+    private string? _userName;
+    private string? _userEmail;
+    private string? _photoUrl;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadProfileAsync();
+    }
+
+    private async Task LoadProfileAsync()
+    {
+        _loading = true;
         try
         {
-            var authState = await AuthStateTask!;
-            var userCode = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            _isAdmin = authState.User.IsInRole("Admin") || authState.User.IsInRole("Director");
-            
-            if (!string.IsNullOrEmpty(userCode))
+            var response = await Http.GetAsync("/api/user/profile");
+            if (response.IsSuccessStatusCode)
             {
-                _user = await UserSvc.GetByCodeAsync(userCode);
+                var json = await response.Content.ReadAsStringAsync();
+                var profile = System.Text.Json.JsonSerializer.Deserialize<ProfileData>(
+                    json,
+                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                _userName = profile?.Name;
+                _userEmail = profile?.Email;
+                _photoUrl = profile?.PhotoUrl;
             }
-
-            var ps = PlatformSettingsSvc.Current;
-            _autoCategorise = ps.OutlookAutoCategorise;
-            _autoDraftReplies = ps.OutlookAutoDraftReplies;
-            _moveToCompanyFolder = ps.OutlookMoveToCompanyFolder;
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Failed to load profile: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async Task SaveProfileAsync()
-    {
-        if (_user == null) return;
-        
-        _saving = true;
-        try
-        {
-            await UserSvc.UpdateAsync(_user, null);
-            Snackbar.Add("Profile updated successfully.", Severity.Success);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Save failed: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
         }
         finally
         {
-            _saving = false;
+            _loading = false;
         }
     }
 
-    private async Task LogoutAsync()
+    private async Task OpenPhotoUploadAsync()
     {
-        Nav.NavigateTo("/logout", forceLoad: true);
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<PhotoUploadDialog>("Upload Profile Photo", options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            await LoadProfileAsync();
+            Snackbar.Add("Photo uploaded successfully!", Severity.Success);
+        }
     }
 
-    private async Task SaveOutlookSettingsAsync()
+    private async Task RemovePhotoAsync()
     {
-        _saving = true;
-        try
+        if (await ConfirmRemovalAsync())
         {
-            var ps = PlatformSettingsSvc.Current;
-            ps.OutlookAutoCategorise = _autoCategorise;
-            ps.OutlookAutoDraftReplies = _autoDraftReplies;
-            ps.OutlookMoveToCompanyFolder = _moveToCompanyFolder;
-            await PlatformSettingsSvc.SaveAsync();
-            Snackbar.Add("Outlook settings saved.", Severity.Success);
+            try
+            {
+                var response = await Http.DeleteAsync("/api/user/profile/photo");
+                if (response.IsSuccessStatusCode)
+                {
+                    _photoUrl = null;
+                    Snackbar.Add("Photo removed successfully", Severity.Success);
+                }
+                else
+                {
+                    Snackbar.Add("Error removing photo", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
         }
-        catch (Exception ex)
+    }
+
+    private async Task<bool> ConfirmRemovalAsync()
+    {
+        var parameters = new DialogParameters<MudDialog>
         {
-            Snackbar.Add($"Save failed: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _saving = false;
-        }
+            { x => x.Title, "Remove Photo?" }
+        };
+
+        var dialog = await DialogService.ShowAsync<MudDialog>(
+            "Remove Photo?",
+            new DialogParameters { { "ContentText", "Are you sure you want to remove your profile photo?" } },
+            new DialogOptions { });
+
+        var result = await dialog.Result;
+        return !result.Canceled;
+    }
+
+    private string GetInitials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return "?";
+
+        var parts = name.Split(' ');
+        return parts.Length > 1
+            ? $"{parts[0][0]}{parts[1][0]}"
+            : $"{parts[0][0]}";
+    }
+
+    public class ProfileData
+    {
+        public int UserId { get; set; }
+        public string? Name { get; set; }
+        public string? Email { get; set; }
+        public string? PhotoUrl { get; set; }
+        public bool HasPhoto { get; set; }
     }
 }
 
+<style>
+.profile-photo-container {
+    border-radius: 8px;
+    overflow: hidden;
+}
 
+.profile-photo {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
 
+.profile-avatar {
+    margin-bottom: 1rem;
+}
+</style>
