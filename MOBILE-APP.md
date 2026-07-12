@@ -145,17 +145,21 @@ POST /api/chat/mobile
 ```
 
 ### Building APK
+The project ships with the Gradle wrapper, so no global Gradle install is required:
 ```bash
-cd Mobile/Android/DigitalResponseMyDesk
-./gradlew assembleRelease
-# Output: app/build/outputs/apk/release/app-release.apk
+cd Mobile/Android
+./gradlew :app:assembleRelease
+# Output: DigitalResponseMyDesk/app/build/outputs/apk/release/app-release.apk
 ```
+A Kotlin `shared` module (`Mobile/Android/DigitalResponseMyDesk/shared`) holds the
+network/API layer (ApiService, Models, NetworkModule) shared with other targets.
 
 ### GitHub Actions APK Build
 The repository includes `.github/workflows/android-build.yml` which:
-1. Builds the APK on each push to `claude/deploy-*` branches
-2. Stores APK as artifact for 30 days
-3. Can be downloaded from Actions tab
+1. Builds a **debug APK** on every push/PR that touches `Mobile/Android/**` (branches `main`, `master`, `develop`)
+2. Builds a **signed release APK** when pushed to `main` or triggered via **manual dispatch** (Run workflow → Android APK Build)
+3. Uploads the debug APK as an artifact (30-day retention) and the release APK (90-day retention)
+4. Both APKs are downloadable from the Actions tab
 
 ## Development
 
