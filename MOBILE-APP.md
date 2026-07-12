@@ -145,17 +145,21 @@ POST /api/chat/mobile
 ```
 
 ### Building APK
+The project ships with the Gradle wrapper, so no global Gradle install is required:
 ```bash
-cd Mobile/Android/DigitalResponseMyDesk
-./gradlew assembleRelease
-# Output: app/build/outputs/apk/release/app-release.apk
+cd Mobile/Android
+./gradlew :app:assembleRelease
+# Output: DigitalResponseMyDesk/app/build/outputs/apk/release/app-release.apk
 ```
+A Kotlin `shared` module (`Mobile/Android/DigitalResponseMyDesk/shared`) holds the
+network/API layer (ApiService, Models, NetworkModule) shared with other targets.
 
 ### GitHub Actions APK Build
 The repository includes `.github/workflows/android-build.yml` which:
-1. Builds the APK on each push to `claude/deploy-*` branches
-2. Stores APK as artifact for 30 days
-3. Can be downloaded from Actions tab
+1. Builds a **debug APK** on every push/PR that touches `Mobile/Android/**` (branches `main`, `master`, `develop`)
+2. Builds a **signed release APK** when pushed to `main` or triggered via **manual dispatch** (Run workflow → Android APK Build)
+3. Uploads the debug APK as an artifact (30-day retention) and the release APK (90-day retention)
+4. Both APKs are downloadable from the Actions tab
 
 ## Development
 
@@ -226,6 +230,25 @@ Mobile/Android/DigitalResponseMyDesk/
 - **XSS Protection**: All user data HTML-escaped in app.html templates
 - **CSRF**: App-to-API calls use PAT bearer auth (no cookies)
 - **Token Revocation**: User can revoke tokens from web app
+
+## Demo Mode (Client Demos)
+
+The app ships with a built-in **Demo Mode** so new clients can explore the full MyDeskAI experience with realistic sample data — no backend, login, or network required. This is the fastest way to run a sales demo on a sideloaded APK.
+
+### Starting Demo Mode
+1. Open the app (or tap **Settings → Log Off** to return to the login screen).
+2. On the login screen tap **✨ Explore Demo**.
+3. All 12 modules load with sample Australian business data (invoices, quotes, POs, expenses, timesheets, tasks, despatch, contacts, cash flow, goals, projects, files).
+4. A **Demo Mode** banner appears under the header and the status badge reads **Demo** so it is never confused with live data.
+5. Tap **Exit Demo** in the banner (or **Settings → Log Off**) to return to the login screen.
+
+### What works in Demo Mode
+- Every module list and detail view renders from bundled sample data.
+- The **Desky** chat responds locally with summaries drawn from the sample data (e.g. "How are my invoices looking?", "What is my cash position?").
+- Theme (dark/light) and brand switching work as normal.
+- No requests are made to the API; the demo is fully offline.
+
+The demo preference (`md_demo`) is remembered in localStorage, so reopening the app resumes the demo until the user logs in or exits.
 
 ## Known Limitations
 - Single tenant per PAT (no workspace switching in current build)

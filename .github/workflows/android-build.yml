@@ -42,12 +42,12 @@ jobs:
           retention-days: 30
 
       - name: Decode release keystore
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' }}
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > /tmp/mydesk-release.jks
 
       - name: Build release APK
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' }}
         working-directory: Mobile/Android/DigitalResponseMyDesk
         env:
           KEYSTORE_PATH: /tmp/mydesk-release.jks
@@ -57,7 +57,7 @@ jobs:
         run: gradle assembleRelease --no-daemon
 
       - name: Upload release APK
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' }}
         uses: actions/upload-artifact@v4
         with:
           name: MyDesk-release-${{ github.run_number }}
