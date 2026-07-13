@@ -1,5 +1,6 @@
 @page "/dashboard-preferences"
 @using MyDesk.Web.Services
+@using MyDesk.Web.Models
 @using System.Security.Claims
 @using MudBlazor
 @inject CustomReportService CustomReportService
@@ -212,12 +213,4 @@
         // For now, just show success message
         Snackbar.Add("Dashboard preferences updated successfully", Severity.Success);
     }
-}
-
-public class DashboardDisplayPreferences
-{
-    public bool ShowSummaryCards { get; set; } = true;
-    public bool ShowDetailedMetrics { get; set; } = true;
-    public bool EnableExport { get; set; } = true;
-    public bool ShowComparison { get; set; } = false;
 }

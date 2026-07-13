@@ -69,14 +69,14 @@ else if (Item is AiNoticeSpec notice)
         _         => Severity.Info
     };
 
-    private static List<ChartSeries> BuildSeries(AiChartSpec spec)
+    private static List<MudBlazor.ChartSeries> BuildSeries(AiChartSpec spec)
     {
         // MudChart's bar/line take ChartSeries[]. Pie/Donut use InputData/InputLabels
         // (both bound above so the same component works for either family).
-        var list = new List<ChartSeries>();
+        var list = new List<MudBlazor.ChartSeries>();
         foreach (var s in spec.Series)
         {
-            list.Add(new ChartSeries { Name = s.Name, Data = s.Values });
+            list.Add(new MudBlazor.ChartSeries { Name = s.Name, Data = s.Values });
         }
         return list;
     }

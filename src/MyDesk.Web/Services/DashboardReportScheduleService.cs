@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Hangfire;
 using Microsoft.Extensions.Logging;
+using MyDesk.Shared.Services;
 
 namespace MyDesk.Web.Services;
 
