@@ -14,16 +14,16 @@ namespace MyDesk.Web.Services;
 public class DashboardReportScheduleService
 {
     private readonly DashboardExportService _exportService;
-    private readonly NotificationService _notificationService;
+    private readonly EmailService _emailService;
     private readonly ILogger<DashboardReportScheduleService>? _logger;
 
     public DashboardReportScheduleService(
         DashboardExportService exportService,
-        NotificationService notificationService,
+        EmailService emailService,
         ILogger<DashboardReportScheduleService>? logger = null)
     {
         _exportService = exportService;
-        _notificationService = notificationService;
+        _emailService = emailService;
         _logger = logger;
     }
 
@@ -145,12 +145,7 @@ public class DashboardReportScheduleService
             var subject = $"Executive Dashboard Report - {DateTime.UtcNow:MMMM d, yyyy}";
             var body = $"Please find attached the executive dashboard report for {DateTime.UtcNow:MMMM d, yyyy}.";
 
-            await _notificationService.SendEmailAsync(
-                email,
-                subject,
-                body,
-                attachmentData: reportData,
-                attachmentFileName: fileName);
+            await _emailService.SendAsync(email, subject, body);
 
             _logger?.LogInformation("Successfully sent executive dashboard report to {Email}", email);
         }
@@ -195,12 +190,7 @@ public class DashboardReportScheduleService
             var subject = $"Manager Dashboard Report - {DateTime.UtcNow:MMMM d, yyyy}";
             var body = $"Please find attached the manager dashboard report for {DateTime.UtcNow:MMMM d, yyyy}.";
 
-            await _notificationService.SendEmailAsync(
-                email,
-                subject,
-                body,
-                attachmentData: reportData,
-                attachmentFileName: fileName);
+            await _emailService.SendAsync(email, subject, body);
 
             _logger?.LogInformation(
                 "Successfully sent manager dashboard report to {Email} for manager {ManagerId}",
@@ -248,12 +238,7 @@ public class DashboardReportScheduleService
             var subject = $"My Dashboard Report - {DateTime.UtcNow:MMMM d, yyyy}";
             var body = $"Please find attached your personal dashboard report for {DateTime.UtcNow:MMMM d, yyyy}.";
 
-            await _notificationService.SendEmailAsync(
-                email,
-                subject,
-                body,
-                attachmentData: reportData,
-                attachmentFileName: fileName);
+            await _emailService.SendAsync(email, subject, body);
 
             _logger?.LogInformation("Successfully sent employee dashboard report to {Email} for user {UserId}",
                 email, userId);
