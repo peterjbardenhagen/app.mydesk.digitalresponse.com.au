@@ -37,7 +37,7 @@ public class CustomReportService
             "Creating custom report template: Name={Name}, Type={Type}, TenantId={TenantId}, UserId={UserId}",
             name, dashboardType, tenantId, userId);
 
-        var templateId = await _db.ExecuteScalarAsync(
+        var templateId = await _db.ExecuteScalarAsync<int>(
             @"INSERT INTO CustomReportTemplates (TenantId, UserId, Name, DashboardType, IncludeSummary, IncludeCharts, IncludeDetailed, IncludeAnalysis, IsDefault, CreatedAt)
               VALUES (@TenantId, @UserId, @Name, @DashboardType, @IncludeSummary, @IncludeCharts, @IncludeDetailed, @IncludeAnalysis, @IsDefault, GETUTCDATE())
               SELECT @@IDENTITY",
@@ -58,7 +58,7 @@ public class CustomReportService
 
         return new CustomReportTemplate
         {
-            TemplateId = (int)(decimal)templateId,
+            TemplateId = templateId,
             TenantId = tenantId,
             UserId = userId,
             Name = name,

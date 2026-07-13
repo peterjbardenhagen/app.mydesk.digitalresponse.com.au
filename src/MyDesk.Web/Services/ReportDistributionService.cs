@@ -36,7 +36,7 @@ public class ReportDistributionService
             "Creating report distribution list: Name={Name}, TenantId={TenantId}, UserId={UserId}",
             name, tenantId, userId);
 
-        var listId = await _db.ExecuteScalarAsync(
+        var listId = await _db.ExecuteScalarAsync<int>(
             @"INSERT INTO ReportDistributionLists (TenantId, CreatedBy, Name, Description, IsActive, CreatedAt)
               VALUES (@TenantId, @CreatedBy, @Name, @Description, 1, GETUTCDATE())
               SELECT @@IDENTITY",
@@ -52,7 +52,7 @@ public class ReportDistributionService
 
         return new ReportDistributionList
         {
-            ListId = (int)(decimal)listId,
+            ListId = listId,
             TenantId = tenantId,
             CreatedBy = userId,
             Name = name,
@@ -167,7 +167,7 @@ public class ReportDistributionService
 
         return new ReportRecipient
         {
-            RecipientId = (int)(decimal)recipientId,
+            RecipientId = recipientId,
             ListId = listId,
             Email = email,
             Name = string.IsNullOrEmpty(name) ? email : name,
