@@ -145,7 +145,7 @@ public class DashboardReportScheduleService
             var subject = $"Executive Dashboard Report - {DateTime.UtcNow:MMMM d, yyyy}";
             var body = $"Please find attached the executive dashboard report for {DateTime.UtcNow:MMMM d, yyyy}.";
 
-            await _emailService.SendAsync(email, subject, body);
+            await _emailService.SendAsync(email, subject, body, attachment: reportData, attachmentName: fileName);
 
             _logger?.LogInformation("Successfully sent executive dashboard report to {Email}", email);
         }
@@ -190,7 +190,7 @@ public class DashboardReportScheduleService
             var subject = $"Manager Dashboard Report - {DateTime.UtcNow:MMMM d, yyyy}";
             var body = $"Please find attached the manager dashboard report for {DateTime.UtcNow:MMMM d, yyyy}.";
 
-            await _emailService.SendAsync(email, subject, body);
+            await _emailService.SendAsync(email, subject, body, attachment: reportData, attachmentName: fileName);
 
             _logger?.LogInformation(
                 "Successfully sent manager dashboard report to {Email} for manager {ManagerId}",
@@ -238,7 +238,7 @@ public class DashboardReportScheduleService
             var subject = $"My Dashboard Report - {DateTime.UtcNow:MMMM d, yyyy}";
             var body = $"Please find attached your personal dashboard report for {DateTime.UtcNow:MMMM d, yyyy}.";
 
-            await _emailService.SendAsync(email, subject, body);
+            await _emailService.SendAsync(email, subject, body, attachment: reportData, attachmentName: fileName);
 
             _logger?.LogInformation("Successfully sent employee dashboard report to {Email} for user {UserId}",
                 email, userId);
