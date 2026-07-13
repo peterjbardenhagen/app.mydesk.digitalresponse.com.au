@@ -1,6 +1,7 @@
 @page "/dashboard-preferences"
 @using MyDesk.Web.Services
 @using MyDesk.Web.Models
+@using MyDesk.Web.Components.Dialogs
 @using System.Security.Claims
 @using MudBlazor
 @inject CustomReportService CustomReportService
@@ -8,7 +9,7 @@
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
-<MudContainer MaxWidth="MaxWidth.Lg" Class="py-8">
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-8">
     <MudStack Spacing="6">
         <MudText Typo="Typo.h4" Class="font-bold">Dashboard Preferences</MudText>
 
@@ -31,7 +32,7 @@
 
                     @if (templates?.Count > 0)
                     {
-                        <MudDataGrid Items="@templates" Striped="true" Dense="true">
+                        <MudDataGrid Items="@templates" Striped="true" Dense="true" T="CustomReportTemplate">
                             <PropertyColumn Property="t => t.Name" Title="Template Name" />
                             <PropertyColumn Property="t => t.DashboardType" Title="Dashboard Type" />
                             <TemplateColumn Title="Content">
@@ -78,7 +79,7 @@
                     }
                     else
                     {
-                        <MudAlert Severity="Info">No custom templates created yet. Create one to get started.</MudAlert>
+                        <MudAlert Severity="Severity.Info">No custom templates created yet. Create one to get started.</MudAlert>
                     }
                 </MudStack>
             </MudPaper>

@@ -76,7 +76,7 @@ public class AnalyticsNotificationService
 
         foreach (var userGroup in anomaliesByUser)
         {
-            var userId = userGroup.Key;
+            var userId = userGroup.Key.Value;
             var userAnomalies = userGroup.ToList();
 
             // Get user details

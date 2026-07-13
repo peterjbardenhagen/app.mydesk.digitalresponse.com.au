@@ -252,7 +252,7 @@ public class AnomalyDetectionService
 
         if (totalSpent > 0)
         {
-            foreach (var category in categoryTotals.Where(c => (c.Value / totalSpent) > 0.5))
+            foreach (var category in categoryTotals.Where(c => (c.Value / totalSpent) > (decimal)0.5))
             {
                 anomalies.Add(new ExpenseAnomaly
                 {
