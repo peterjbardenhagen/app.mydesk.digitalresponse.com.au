@@ -156,7 +156,7 @@ public class AnalyticsNotificationService
         }
     }
 
-    private async Task NotifyFinanceTeamAsync(int tenantId, string category, dynamic anomalies)
+    private async Task NotifyFinanceTeamAsync(int tenantId, string category, List<ExpenseAnomaly> anomalies)
     {
         var financeUsers = await _db.QueryAsync(
             @"SELECT u.UserId, u.Email, u.Name
@@ -176,7 +176,7 @@ public class AnalyticsNotificationService
                 new Dictionary<string, object>
                 {
                     ["category"] = category,
-                    ["count"] = ((List<dynamic>)anomalies).Count
+                    ["count"] = anomalies.Count
                 });
         }
     }
