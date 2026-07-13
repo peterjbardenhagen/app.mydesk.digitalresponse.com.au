@@ -478,6 +478,8 @@ builder.Services.AddScoped<DashboardChartService>();
 builder.Services.AddScoped<DashboardReportScheduleService>();
 builder.Services.AddScoped<CustomReportService>();
 builder.Services.AddScoped<ReportDistributionService>();
+builder.Services.AddScoped<AnomalyDetectionService>();
+builder.Services.AddScoped<AnalyticsNotificationService>();
 
 // IAccountingSettingsService → PlatformSettingsService (allows Shared sync services to save tokens)
 builder.Services.AddScoped<MyDesk.Shared.Services.Integrations.IAccountingSettingsService>(
