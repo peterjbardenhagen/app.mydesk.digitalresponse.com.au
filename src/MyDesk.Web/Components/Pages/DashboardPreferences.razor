@@ -1,0 +1,223 @@
+@page "/dashboard-preferences"
+@using MyDesk.Web.Services
+@using System.Security.Claims
+@inject CustomReportService CustomReportService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IDialogService DialogService
+
+<MudContainer MaxWidth="MaxWidth.Lg" Class="py-8">
+    <MudStack Spacing="6">
+        <MudText Typo="Typo.h4" Class="font-bold">Dashboard Preferences</MudText>
+
+        @if (loading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else
+        {
+            <!-- Report Templates Section -->
+            <MudPaper Class="pa-6">
+                <MudStack Spacing="4">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudText Typo="Typo.h6" Class="font-bold">Report Templates</MudText>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="CreateNewTemplate">
+                            <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-2" />
+                            New Template
+                        </MudButton>
+                    </MudStack>
+
+                    @if (templates?.Count > 0)
+                    {
+                        <MudDataGrid Items="@templates" Striped="true" Dense="true">
+                            <PropertyColumn Property="t => t.Name" Title="Template Name" />
+                            <PropertyColumn Property="t => t.DashboardType" Title="Dashboard Type" />
+                            <TemplateColumn Title="Content">
+                                <MudStack Row="true" Spacing="1">
+                                    @if (context.Settings.IncludeSummary)
+                                    {
+                                        <MudChip Size="Size.Small" Variant="Variant.Outlined">Summary</MudChip>
+                                    }
+                                    @if (context.Settings.IncludeCharts)
+                                    {
+                                        <MudChip Size="Size.Small" Variant="Variant.Outlined">Charts</MudChip>
+                                    }
+                                    @if (context.Settings.IncludeDetailed)
+                                    {
+                                        <MudChip Size="Size.Small" Variant="Variant.Outlined">Detailed</MudChip>
+                                    }
+                                    @if (context.Settings.IncludeAnalysis)
+                                    {
+                                        <MudChip Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success">Analysis</MudChip>
+                                    }
+                                </MudStack>
+                            </TemplateColumn>
+                            <TemplateColumn Title="Default" Sortable="false">
+                                @if (context.IsDefault)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                                }
+                                else
+                                {
+                                    <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => SetDefault(context)">
+                                        Set Default
+                                    </MudButton>
+                                }
+                            </TemplateColumn>
+                            <TemplateColumn Title="Actions" Sortable="false">
+                                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => EditTemplate(context)">
+                                    Edit
+                                </MudButton>
+                                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="() => DeleteTemplate(context)">
+                                    Delete
+                                </MudButton>
+                            </TemplateColumn>
+                        </MudDataGrid>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Info">No custom templates created yet. Create one to get started.</MudAlert>
+                    }
+                </MudStack>
+            </MudPaper>
+
+            <!-- Display Preferences Section -->
+            <MudPaper Class="pa-6">
+                <MudStack Spacing="4">
+                    <MudText Typo="Typo.h6" Class="font-bold">Display Preferences</MudText>
+
+                    <MudStack Spacing="3">
+                        <MudSwitch T="bool" Label="Show summary cards on dashboard" @bind-Value="preferences.ShowSummaryCards" />
+                        <MudSwitch T="bool" Label="Show detailed metrics" @bind-Value="preferences.ShowDetailedMetrics" />
+                        <MudSwitch T="bool" Label="Enable data export" @bind-Value="preferences.EnableExport" />
+                        <MudSwitch T="bool" Label="Show comparison charts" @bind-Value="preferences.ShowComparison" />
+                    </MudStack>
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SavePreferences" FullWidth="true">
+                        Save Preferences
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    private List<CustomReportTemplate>? templates;
+    private DashboardDisplayPreferences preferences = new();
+    private bool loading = true;
+    private int tenantId = 1;
+    private int userId = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Get authentication context
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user?.FindFirst("tenant_id") is ClaimsPrincipal claim)
+            {
+                if (int.TryParse(claim.FindFirst("tenant_id")?.Value, out var tid))
+                    tenantId = tid;
+            }
+
+            if (int.TryParse(user?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user?.FindFirst("sub")?.Value, out var uid))
+                userId = uid;
+
+            // Load templates
+            templates = await CustomReportService.GetUserTemplatesAsync(tenantId, userId);
+
+            // Load display preferences from localStorage or use defaults
+            // (In a real app, these would be stored in database)
+            preferences = new DashboardDisplayPreferences
+            {
+                ShowSummaryCards = true,
+                ShowDetailedMetrics = true,
+                EnableExport = true,
+                ShowComparison = false
+            };
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task CreateNewTemplate()
+    {
+        var parameters = new DialogParameters<CreateReportTemplateDialog>
+        {
+            { x => x.TenantId, tenantId },
+            { x => x.UserId, userId }
+        };
+
+        var dialog = await DialogService.ShowAsync<CreateReportTemplateDialog>("Create Report Template", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && templates != null)
+        {
+            templates = await CustomReportService.GetUserTemplatesAsync(tenantId, userId);
+        }
+    }
+
+    private async Task EditTemplate(CustomReportTemplate template)
+    {
+        var parameters = new DialogParameters<CreateReportTemplateDialog>
+        {
+            { x => x.TenantId, tenantId },
+            { x => x.UserId, userId },
+            { x => x.TemplateToEdit, template }
+        };
+
+        var dialog = await DialogService.ShowAsync<CreateReportTemplateDialog>("Edit Report Template", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && templates != null)
+        {
+            templates = await CustomReportService.GetUserTemplatesAsync(tenantId, userId);
+        }
+    }
+
+    private async Task SetDefault(CustomReportTemplate template)
+    {
+        await CustomReportService.SetDefaultTemplateAsync(tenantId, userId, template.TemplateId);
+        if (templates != null)
+        {
+            templates = await CustomReportService.GetUserTemplatesAsync(tenantId, userId);
+        }
+    }
+
+    private async Task DeleteTemplate(CustomReportTemplate template)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Delete Template",
+            $"Are you sure you want to delete the '{template.Name}' template?",
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            await CustomReportService.DeleteTemplateAsync(tenantId, template.TemplateId);
+            if (templates != null)
+            {
+                templates = await CustomReportService.GetUserTemplatesAsync(tenantId, userId);
+            }
+        }
+    }
+
+    private async Task SavePreferences()
+    {
+        // In a real implementation, save preferences to database
+        var snackbar = new SnackbarOptions();
+        // This would call a PreferencesService
+        // await PreferencesService.SaveAsync(userId, tenantId, preferences);
+    }
+}
+
+public class DashboardDisplayPreferences
+{
+    public bool ShowSummaryCards { get; set; } = true;
+    public bool ShowDetailedMetrics { get; set; } = true;
+    public bool EnableExport { get; set; } = true;
+    public bool ShowComparison { get; set; } = false;
+}

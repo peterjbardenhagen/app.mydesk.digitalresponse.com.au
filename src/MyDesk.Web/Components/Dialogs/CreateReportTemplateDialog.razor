@@ -1,0 +1,117 @@
+@using MyDesk.Web.Services
+@inject CustomReportService CustomReportService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="4">
+            <MudTextField
+                T="string"
+                Label="Template Name"
+                Variant="Variant.Outlined"
+                @bind-Value="@templateName"
+                Placeholder="e.g., Monthly Executive Report" />
+
+            <MudSelect T="string"
+                Label="Dashboard Type"
+                Variant="Variant.Outlined"
+                @bind-Value="@dashboardType">
+                <MudSelectItem Value="@("executive")">Executive Dashboard</MudSelectItem>
+                <MudSelectItem Value="@("manager")">Manager Dashboard</MudSelectItem>
+                <MudSelectItem Value="@("employee")">Employee Dashboard</MudSelectItem>
+            </MudSelect>
+
+            <MudText Typo="Typo.subtitle2" Class="font-bold mt-4">Report Content</MudText>
+            <MudStack Spacing="2">
+                <MudCheckBox T="bool" Label="Include Summary" @bind-Checked="@includeSummary" />
+                <MudCheckBox T="bool" Label="Include Charts" @bind-Checked="@includeCharts" />
+                <MudCheckBox T="bool" Label="Include Detailed Metrics" @bind-Checked="@includeDetailed" />
+                <MudCheckBox T="bool" Label="Include Analysis (AI-generated insights)" @bind-Checked="@includeAnalysis" />
+            </MudStack>
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save">
+            @(TemplateToEdit != null ? "Update" : "Create")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public int TenantId { get; set; }
+
+    [Parameter]
+    public int UserId { get; set; }
+
+    [Parameter]
+    public CustomReportTemplate? TemplateToEdit { get; set; }
+
+    private string templateName = "";
+    private string dashboardType = "executive";
+    private bool includeSummary = true;
+    private bool includeCharts = true;
+    private bool includeDetailed = true;
+    private bool includeAnalysis = false;
+
+    protected override void OnInitialized()
+    {
+        if (TemplateToEdit != null)
+        {
+            templateName = TemplateToEdit.Name;
+            dashboardType = TemplateToEdit.DashboardType;
+            includeSummary = TemplateToEdit.Settings.IncludeSummary;
+            includeCharts = TemplateToEdit.Settings.IncludeCharts;
+            includeDetailed = TemplateToEdit.Settings.IncludeDetailed;
+            includeAnalysis = TemplateToEdit.Settings.IncludeAnalysis;
+        }
+    }
+
+    private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(templateName))
+        {
+            Snackbar.Add("Template name is required", Severity.Error);
+            return;
+        }
+
+        var settings = new CustomReportSettings
+        {
+            IncludeSummary = includeSummary,
+            IncludeCharts = includeCharts,
+            IncludeDetailed = includeDetailed,
+            IncludeAnalysis = includeAnalysis
+        };
+
+        try
+        {
+            if (TemplateToEdit != null)
+            {
+                await CustomReportService.UpdateTemplateAsync(
+                    TenantId, TemplateToEdit.TemplateId, templateName, settings);
+                Snackbar.Add("Template updated successfully", Severity.Success);
+            }
+            else
+            {
+                await CustomReportService.CreateTemplateAsync(
+                    TenantId, UserId, templateName, dashboardType, settings);
+                Snackbar.Add("Template created successfully", Severity.Success);
+            }
+
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}
