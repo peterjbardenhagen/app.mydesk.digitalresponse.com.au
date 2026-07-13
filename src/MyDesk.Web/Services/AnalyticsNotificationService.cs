@@ -92,22 +92,22 @@ public class AnalyticsNotificationService
                 var criticalCount = userAnomalies.Count(a => a.Severity == AnomalySeverity.Critical);
                 var highCount = userAnomalies.Count(a => a.Severity == AnomalySeverity.High);
 
-                var subject = criticalCount > 0
-                    ? $"⚠️ Critical Expense Alert - {criticalCount} anomalies detected"
-                    : $"📊 Expense Anomaly Alert - {userAnomalies.Count} issues detected";
-
-                var body = BuildExpenseAnomalyNotification(userName, userAnomalies);
+                var eventType = criticalCount > 0 ? "expense_anomaly_critical" : "expense_anomaly_detected";
 
                 _logger?.LogInformation(
                     "Notifying user {UserId} ({Email}) of {Count} expense anomalies",
                     userId, email, userAnomalies.Count);
 
                 await _notificationService.SendNotificationAsync(
-                    userId,
                     tenantId,
-                    subject,
-                    body,
-                    NotificationType.Alert);
+                    userId,
+                    eventType,
+                    new Dictionary<string, object>
+                    {
+                        ["count"] = userAnomalies.Count,
+                        ["critical_count"] = criticalCount,
+                        ["high_count"] = highCount
+                    });
             }
         }
 
@@ -139,19 +139,19 @@ public class AnalyticsNotificationService
                 var email = row["Email"].ToString() ?? "";
                 var userName = row["Name"].ToString() ?? "";
 
-                var subject = $"🚨 Budget Alert - {criticalBudgets.Count} budgets require attention";
-                var body = BuildBudgetAnomalyNotification(userName, criticalBudgets);
-
                 _logger?.LogInformation(
                     "Notifying finance user {UserId} ({Email}) of {Count} budget anomalies",
                     userId, email, criticalBudgets.Count);
 
                 await _notificationService.SendNotificationAsync(
-                    userId,
                     tenantId,
-                    subject,
-                    body,
-                    NotificationType.Alert);
+                    userId,
+                    "budget_anomaly_detected",
+                    new Dictionary<string, object>
+                    {
+                        ["count"] = criticalBudgets.Count,
+                        ["over_budget"] = criticalBudgets.Count(a => a.PercentUsed >= 100)
+                    });
             }
         }
     }
@@ -162,90 +162,23 @@ public class AnalyticsNotificationService
             @"SELECT u.UserId, u.Email, u.Name
               FROM Users u
               WHERE u.TenantId = @TenantId AND u.Role IN ('Admin', 'Finance')
-              LIMIT 5",
+              ORDER BY u.Role",
             new() { ["TenantId"] = tenantId });
 
         foreach (System.Data.DataRow row in financeUsers.Rows)
         {
             var userId = (int)row["UserId"];
-            var subject = $"Finance Alert: {category}";
-            var body = $"<p>Critical {category.ToLower()} detected requiring immediate attention.</p>";
 
             await _notificationService.SendNotificationAsync(
-                userId,
                 tenantId,
-                subject,
-                body,
-                NotificationType.Alert);
+                userId,
+                "critical_anomaly_detected",
+                new Dictionary<string, object>
+                {
+                    ["category"] = category,
+                    ["count"] = ((List<dynamic>)anomalies).Count
+                });
         }
     }
 
-    private string BuildExpenseAnomalyNotification(string userName, List<ExpenseAnomaly> anomalies)
-    {
-        var body = $@"<div style='font-family:Arial,sans-serif;line-height:1.6;color:#333;'>
-            <p>Hi {userName},</p>
-            <p>We've detected {anomalies.Count} unusual expense pattern(s) in your recent submissions:</p>
-            <ul style='list-style:none;padding:0;'>";
-
-        foreach (var anomaly in anomalies.OrderByDescending(a => a.Severity))
-        {
-            var severityColor = anomaly.Severity switch
-            {
-                AnomalySeverity.Critical => "#d32f2f",
-                AnomalySeverity.High => "#f57c00",
-                AnomalySeverity.Medium => "#fbc02d",
-                _ => "#388e3c"
-            };
-
-            body += $@"
-                <li style='margin-bottom:12px;padding:12px;background:#f5f5f5;border-left:4px solid {severityColor};'>
-                    <strong>{anomaly.AnomalyType}</strong> ({anomaly.Severity})
-                    <br/>{anomaly.Description}
-                    <br/><small style='color:#666;'>Amount: ${anomaly.Amount:F2} | {anomaly.ExpenseDate:MMM d, yyyy}</small>
-                </li>";
-        }
-
-        body += @"
-            </ul>
-            <p>Please review these expenses and contact your manager if you believe these alerts are incorrect.</p>
-            <p style='color:#666;font-size:12px;margin-top:20px;'>This is an automated notification. Do not reply to this email.</p>
-        </div>";
-
-        return body;
-    }
-
-    private string BuildBudgetAnomalyNotification(string userName, List<BudgetAnomaly> anomalies)
-    {
-        var body = $@"<div style='font-family:Arial,sans-serif;line-height:1.6;color:#333;'>
-            <p>Hi {userName},</p>
-            <p>Budget alerts for your review:</p>
-            <table style='width:100%;border-collapse:collapse;'>
-                <tr style='background:#f5f5f5;border-bottom:1px solid #ddd;'>
-                    <th style='padding:10px;text-align:left;'>Category</th>
-                    <th style='padding:10px;text-align:right;'>Budget</th>
-                    <th style='padding:10px;text-align:right;'>Spent</th>
-                    <th style='padding:10px;text-align:right;'>Used</th>
-                    <th style='padding:10px;text-align:center;'>Status</th>
-                </tr>";
-
-        foreach (var anomaly in anomalies.OrderByDescending(a => a.PercentUsed))
-        {
-            var status = anomaly.PercentUsed >= 100 ? "❌ Over Budget" : "⚠️ High Usage";
-            body += $@"
-                <tr style='border-bottom:1px solid #ddd;'>
-                    <td style='padding:10px;'>{anomaly.Category}</td>
-                    <td style='padding:10px;text-align:right;'>${anomaly.BudgetAmount:F2}</td>
-                    <td style='padding:10px;text-align:right;'>${anomaly.SpentAmount:F2}</td>
-                    <td style='padding:10px;text-align:right;'>{anomaly.PercentUsed}%</td>
-                    <td style='padding:10px;text-align:center;'>{status}</td>
-                </tr>";
-        }
-
-        body += @"
-            </table>
-            <p style='color:#666;font-size:12px;margin-top:20px;'>This is an automated notification. Do not reply to this email.</p>
-        </div>";
-
-        return body;
-    }
 }
