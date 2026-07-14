@@ -127,40 +127,41 @@
                         <MudText Typo="Typo.caption" Class="mb-3 mt-2" Style="color:var(--gray-500);">
                             @_dag.Nodes.Count node(s), @_dag.Edges.Count edge(s)
                         </MudText>
-                        <MudTable Items="@_dag.Nodes" Dense="true" Hover="true">
-                            <HeaderContent>
-                                <MudTh>Task</MudTh>
-                                <MudTh>Type</MudTh>
-                                <MudTh>Status</MudTh>
-                                <MudTh>Score</MudTh>
-                                <MudTh>Action</MudTh>
-                            </HeaderContent>
-                            <RowTemplate>
-                                <MudTd DataLabel="Task">
-                                    <MudText Typo="Typo.body2">@context.Goal</MudText>
-                                    <MudText Typo="Typo.caption" Style="color:var(--gray-400);">@context.Id</MudText>
-                                </MudTd>
-                                <MudTd DataLabel="Type">
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Default">@context.Type</MudChip>
-                                </MudTd>
-                                <MudTd DataLabel="Status">
-                                    <MudChip T="string" Size="Size.Small" Color="@StatusColor(context.Status)">@context.Status</MudChip>
-                                </MudTd>
-                                <MudTd DataLabel="Score">@(context.Score?.ToString("F2") ?? "-")</MudTd>
-                                <MudTd DataLabel="Action">
-                                    @if (context.Status == "gated" || context.Status == "pending_approval")
-                                    {
+
+                        @* SVG DAG visualizer *@
+                        <AgentsOsDagViewer Dag="@_dag" OnNodeSelected="@OnDagNodeSelected" />
+
+                        @* Approval gate tasks table *@
+                        @if (_dag.Nodes.Any(n => n.Status == "gated" || n.Status == "pending_approval"))
+                        {
+                            <MudText Typo="Typo.subtitle2" Class="mt-4 mb-2" Style="font-weight:600;">
+                                ⏳ Pending Approvals
+                            </MudText>
+                            <MudTable Items="@_dag.Nodes.Where(n => n.Status == "gated" || n.Status == "pending_approval")" Dense="true" Hover="true">
+                                <HeaderContent>
+                                    <MudTh>Task</MudTh>
+                                    <MudTh>Status</MudTh>
+                                    <MudTh>Action</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd DataLabel="Task">
+                                        <MudText Typo="Typo.body2">@context.Goal</MudText>
+                                    </MudTd>
+                                    <MudTd DataLabel="Status">
+                                        <MudChip T="string" Size="Size.Small" Color="@StatusColor(context.Status)">@context.Status</MudChip>
+                                    </MudTd>
+                                    <MudTd DataLabel="Action">
                                         <MudButton Size="Size.Small" Color="Color.Success"
                                                    Variant="Variant.Text" Disabled="@_approving"
                                                    OnClick="@(() => ApproveTask(context.Id, true))"
-                                                   Class="mr-1">✅</MudButton>
+                                                   Class="mr-1">✅ Approve</MudButton>
                                         <MudButton Size="Size.Small" Color="Color.Error"
                                                    Variant="Variant.Text" Disabled="@_approving"
-                                                   OnClick="@(() => ApproveTask(context.Id, false))">❌</MudButton>
-                                    }
-                                </MudTd>
-                            </RowTemplate>
-                        </MudTable>
+                                                   OnClick="@(() => ApproveTask(context.Id, false))">❌ Reject</MudButton>
+                                    </MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        }
                     }
                     else
                     {
@@ -344,6 +345,13 @@
         }
         catch { }
         _approving = false;
+    }
+
+    /// R4: Callback from DAG visualizer when a node is clicked
+    private void OnDagNodeSelected(string nodeId)
+    {
+        // Could expand to show node detail panel, for now just log
+        Console.WriteLine($"DAG node selected: {nodeId}");
     }
 
     private Color? StatusColor(string? s)

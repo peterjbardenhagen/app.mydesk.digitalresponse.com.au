@@ -1,0 +1,115 @@
+@using MyDesk.Web.Services
+@using MyDesk.Shared.Models.AgentsOS
+@inject AgentsOsService AgentsOS
+@inject NavigationManager Nav
+
+@* ── AgentsOS Dashboard Widget (used in dashboard or as standalone) ── *@
+<MudPaper Elevation="0" Class="pa-4" Style="border-radius:12px; border:1px solid var(--mud-palette-lines-default);">
+    <div class="d-flex align-center justify-space-between mb-3">
+        <MudText Typo="Typo.subtitle1" Style="font-weight:700;">
+            🤖 AgentsOS
+        </MudText>
+        <MudChip T="string" Size="Size.Small" Color="@(_connected ? Color.Success : Color.Warning)">
+            @(_connected ? "Online" : "Offline")
+        </MudChip>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="d-flex justify-center py-4">
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+        </div>
+    }
+    else
+    {
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <div class="stat-box">
+                <MudText Typo="Typo.h5" Style="font-weight:700; color:var(--mud-palette-primary);">@_total</MudText>
+                <MudText Typo="Typo.caption">Total</MudText>
+            </div>
+            <div class="stat-box">
+                <MudText Typo="Typo.h5" Style="font-weight:700; color:var(--mud-palette-info);">@_active</MudText>
+                <MudText Typo="Typo.caption">Active</MudText>
+            </div>
+            <div class="stat-box">
+                <MudText Typo="Typo.h5" Style="font-weight:700; color:var(--mud-palette-success);">@_done</MudText>
+                <MudText Typo="Typo.caption">Done</MudText>
+            </div>
+            <div class="stat-box">
+                <MudText Typo="Typo.h5" Style="font-weight:700; color:var(--mud-palette-warning);">@_pending</MudText>
+                <MudText Typo="Typo.caption">Pending</MudText>
+            </div>
+        </div>
+
+        @if (_recent.Count > 0)
+        {
+            <MudText Typo="Typo.caption" Class="mb-2" Style="font-weight:600; color:var(--gray-500);">RECENT PROJECTS</MudText>
+            @foreach (var p in _recent)
+            {
+                <div class="d-flex align-center justify-space-between py-1 project-row"
+                     style="cursor:pointer; border-bottom:1px solid var(--mud-palette-lines-default);"
+                     @onclick="@(() => GoToAgentsOs())">
+                    <div style="min-width:0; flex:1;">
+                        <MudText Typo="Typo.body2" Style="font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                            @p.Title
+                        </MudText>
+                        <MudText Typo="Typo.caption" Style="color:var(--gray-400);">@p.ProjectId[..Math.Min(12, p.ProjectId.Length)]…</MudText>
+                    </div>
+                    <MudChip T="string" Size="Size.Small" Color="@StatusColor(p.Status)">@p.Status</MudChip>
+                </div>
+            }
+        }
+
+        <MudButton Variant="Variant.Text" Color="Color.Primary" FullWidth="true" Class="mt-2"
+                   OnClick="@(() => GoToAgentsOs())">
+            Open AgentsOS →
+        </MudButton>
+    }
+</MudPaper>
+
+@code {
+    private bool _connected;
+    private bool _loading = true;
+    private int _total;
+    private int _active;
+    private int _done;
+    private int _pending;
+    private List<PdoResponse> _recent = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _connected = await AgentsOS.IsReachableAsync();
+            if (_connected)
+            {
+                var projects = await AgentsOS.ListProjectsAsync() ?? new();
+                _total = projects.Count;
+                _active = projects.Count(p => p.Status is "running" or "executing" or "planned");
+                _done = projects.Count(p => p.Status is "completed" or "done");
+                _pending = projects.Count(p => p.Status is "gated" or "pending_approval");
+                _recent = projects.OrderByDescending(p => p.Title).Take(3).ToList();
+            }
+        }
+        catch { _connected = false; }
+        _loading = false;
+    }
+
+    private void GoToAgentsOs()
+    {
+        Nav.NavigateTo("/agentsos");
+    }
+
+    private Color? StatusColor(string? s)
+    {
+        return s switch
+        {
+            "completed" or "done" => Color.Success,
+            "running" or "executing" or "active" => Color.Info,
+            "planned" => Color.Warning,
+            "gated" or "pending_approval" => Color.Secondary,
+            "failed" or "plan_failed" => Color.Error,
+            _ => Color.Default
+        };
+    }
+}

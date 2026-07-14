@@ -90,6 +90,13 @@ public class DagNodeDto
 
     [JsonPropertyName("score")]
     public double? Score { get; set; }
+
+    // Layout coordinates (set by SVG visualizer, not serialized)
+    [JsonIgnore]
+    public int X { get; set; }
+
+    [JsonIgnore]
+    public int Y { get; set; }
 }
 
 public class DagEdgeDto

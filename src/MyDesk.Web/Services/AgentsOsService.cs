@@ -207,4 +207,21 @@ public class AgentsOsService
             return false;
         }
     }
+
+    /// Archive a project (AgentsOS R4+)
+    public async Task<bool> ArchiveProjectAsync(string projectId)
+    {
+        var baseUrl = BaseUrl;
+        if (string.IsNullOrEmpty(baseUrl)) return false;
+        try
+        {
+            var response = await _http.DeleteAsync($"{baseUrl}/projects/{projectId}");
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "AgentsOS ArchiveProject failed: {ProjectId}", projectId);
+            return false;
+        }
+    }
 }

@@ -1,0 +1,130 @@
+@using MyDesk.Shared.Models.AgentsOS
+
+@* ── DAG Graph Visualizer (SVG-based) ── *@
+<div class="dag-container" style="position:relative; overflow:auto; min-height:300px; background:#f8fafb; border-radius:8px; padding:16px;">
+    @if (Nodes == null || Nodes.Count == 0)
+    {
+        <div class="d-flex justify-center align-center" style="min-height:200px;">
+            <MudText Typo="Typo.body2" Style="color:var(--gray-400);">No DAG data available.</MudText>
+        </div>
+    }
+    else
+    {
+        <svg width="@ViewBoxWidth" height="@ViewBoxHeight"
+             style="display:block; margin:0 auto; max-width:100%; height:auto;">
+            @* ── Edges ── *@
+            @foreach (var edge in Edges)
+            {
+                var fromNode = Nodes.FirstOrDefault(n => n.Id == edge.FromId);
+                var toNode = Nodes.FirstOrDefault(n => n.Id == edge.ToId);
+                if (fromNode == null || toNode == null) continue;
+                var arrowColor = "#94a3b8";
+                <line x1="@fromNode.X" y1="@fromNode.Y"
+                      x2="@toNode.X" y2="@toNode.Y"
+                      stroke="@arrowColor" stroke-width="2" stroke-dasharray="6,3"
+                      marker-end="url(#arrowhead)" />
+            }
+
+            @* ── Nodes ── *@
+            @foreach (var node in Nodes)
+            {
+                var nodeColor = node.Status?.ToLowerInvariant() switch
+                {
+                    "completed" or "done" => "#4CAF50",
+                    "running" or "executing" or "active" => "#2196F3",
+                    "failed" or "plan_failed" => "#F44336",
+                    "gated" or "pending_approval" => "#FF9800",
+                    "planned" => "#9C27B0",
+                    _ => "#607D8B"
+                };
+                var isGated = node.Status == "gated" || node.Status == "pending_approval";
+
+                <g class="dag-node" style="cursor:pointer;" @onclick="@(() => SelectNode(node.Id))">
+                    @* Gate icon for approval tasks *@
+                    @if (isGated)
+                    {
+                        <polygon points="@node.X,@(node.Y - 22) @(node.X + 10),@(node.Y - 12) @(node.X),@(node.Y - 2) @(node.X - 10),@(node.Y - 12)"
+                                 fill="#FF9800" opacity="0.8" />
+                    }
+
+                    @* Node shape *@
+                    <rect x="@(node.X - 18)" y="@(node.Y - 10)"
+                          width="36" height="20" rx="10"
+                          fill="@nodeColor" opacity="0.15" stroke="@nodeColor" stroke-width="1.5" />
+
+                    @* Node label *@
+                    <text x="@node.X" y="@(node.Y + 4)"
+                          text-anchor="middle" font-size="10"
+                          fill="@nodeColor" font-weight="600">@Truncate(node.Goal, 16)</text>
+                </g>
+            }
+
+            @* Arrow marker definition *@
+            <defs>
+                <marker id="arrowhead" markerWidth="8" markerHeight="6"
+                        refX="8" refY="3" orient="auto">
+                    <polygon points="0 0, 8 3, 0 6" fill="#94a3b8" />
+                </marker>
+            </defs>
+        </svg>
+    }
+</div>
+
+@code {
+    [Parameter] public DagResponse? Dag { get; set; }
+
+    private List<DagNodeDto> Nodes { get; set; } = new();
+    private List<DagEdgeDto> Edges { get; set; } = new();
+    private int ViewBoxWidth = 600;
+    private int ViewBoxHeight = 400;
+
+    protected override void OnParametersSet()
+    {
+        if (Dag == null)
+        {
+            Nodes = new();
+            Edges = new();
+            return;
+        }
+
+        Edges = Dag.Edges ?? new();
+
+        // Layout: simple top-to-bottom grid
+        var nodes = Dag.Nodes ?? new();
+        if (nodes.Count == 0) { Nodes = new(); return; }
+
+        var cols = (int)Math.Ceiling(Math.Sqrt(nodes.Count));
+        var spacingX = 120;
+        var spacingY = 80;
+        var marginX = 60;
+        var marginY = 40;
+
+        for (int i = 0; i < nodes.Count; i++)
+        {
+            var col = i % cols;
+            var row = i / cols;
+            nodes[i].X = marginX + col * spacingX;
+            nodes[i].Y = marginY + row * spacingY;
+        }
+
+        Nodes = nodes;
+
+        ViewBoxWidth = Math.Max(400, marginX * 2 + (cols - 1) * spacingX + 40);
+        ViewBoxHeight = Math.Max(300, marginY * 2 + ((nodes.Count - 1) / cols) * spacingY + 40);
+    }
+
+    private static string Truncate(string? s, int max)
+    {
+        if (string.IsNullOrEmpty(s)) return "";
+        return s.Length <= max ? s : s[..(max - 3)] + "...";
+    }
+
+    private void SelectNode(string nodeId)
+    {
+        // Callback to parent with selected node
+        OnNodeSelected.InvokeAsync(nodeId);
+    }
+
+    [Parameter]
+    public EventCallback<string> OnNodeSelected { get; set; }
+}
