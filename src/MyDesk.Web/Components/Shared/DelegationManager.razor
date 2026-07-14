@@ -106,7 +106,7 @@
             { nameof(MudMessageBox.CancelText), "Cancel" }
         };
 
-        var dialog = await DialogService.ShowAsync<MudMessageBox>(parameters: parameters);
+        var dialog = await DialogService.ShowAsync<MudMessageBox>("Confirm Delegation Deletion", parameters);
         var result = await dialog.Result;
 
         if (result is { Canceled: false })

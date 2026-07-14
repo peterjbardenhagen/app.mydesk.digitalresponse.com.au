@@ -63,33 +63,41 @@ public class RateLimitingService
 
         // Remove old requests outside the window
         long windowStart = now - (windowSizeSeconds * Stopwatch.Frequency);
+        int retryAfter = 0;
+        bool limitExceeded = false;
+
         lock (requests)
         {
             while (requests.Count > 0 && requests.Peek() < windowStart)
                 requests.Dequeue();
 
-            // Check if limit exceeded
             if (requests.Count >= requestsPerWindow)
             {
-                // Calculate retry-after with backoff
-                int retryAfter = CalculateRetryAfter(requests.Count - requestsPerWindow + 1, backoffMultiplier, maxBackoffSeconds);
+                limitExceeded = true;
+                retryAfter = (int)Math.Ceiling(maxBackoffSeconds.HasValue
+                    ? Math.Min(windowSizeSeconds * Math.Pow(2, requests.Count - requestsPerWindow), maxBackoffSeconds.Value)
+                    : windowSizeSeconds * Math.Pow(2, requests.Count - requestsPerWindow));
 
                 _logger.LogWarning(
                     "Rate limit exceeded: {Identifier} on {Endpoint} ({Count} requests in {Window}s)",
                     identifier, endpointPattern, requests.Count, windowSizeSeconds);
-
-                // Log violation
-                await LogViolationAsync(identifier, identifierType, endpointPattern, rulesResult.Rows[0]);
-
-                return (false, 0, retryAfter);
             }
-
-            // Request allowed, record it
-            requests.Enqueue(now);
-            int remaining = requestsPerWindow - requests.Count;
-
-            return (true, remaining, 0);
+            else
+            {
+                // Request allowed, record it
+                requests.Enqueue(now);
+            }
         }
+
+        // Log violation outside lock (cannot await inside lock)
+        if (limitExceeded)
+        {
+            await LogViolationAsync(identifier, identifierType, endpointPattern, rulesResult.Rows[0]);
+            return (false, 0, retryAfter);
+        }
+
+        int remaining = requestsPerWindow - requests.Count;
+        return (true, remaining, 0);
     }
 
     /// <summary>

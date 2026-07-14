@@ -138,7 +138,7 @@
 
     private async Task CancelAsync()
     {
-        await MudDialog?.CancelAsync() ?? Task.CompletedTask;
+        MudDialog?.Cancel();
     }
 }
 

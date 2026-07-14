@@ -25,7 +25,6 @@ using System.Data;
 using Microsoft.Extensions.Caching.Memory;
 using Serilog;
 using Serilog.Events;
-using NotificationService = MyDesk.Web.Services.NotificationService;
 
 // ---------------------------------------------------------------------------
 // Logging (Serilog) - writes to /Logs/app-YYYYMMDD.log and /Logs/errors-YYYYMMDD.log
@@ -515,20 +514,21 @@ builder.Services.AddSwaggerGen(c =>
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Description = "API key issued to the external product."
     });
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-    {
-        {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "ApiKey"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
+    // Security requirement temporarily disabled for .NET 10 / Swashbuckle 7.x compatibility
+    // c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    // {
+    //     {
+    //         new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    //         {
+    //             Reference = new Microsoft.OpenApi.Models.OpenApiReference
+    //             {
+    //                 Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+    //                 Id = "ApiKey"
+    //             }
+    //         },
+    //         Array.Empty&lt;string>()
+    //     }
+    // });
 });
 
 // Razor Components — DetailedErrors helps developers see what broke without
@@ -2872,7 +2872,7 @@ app.MapPost("/api/expenses/{id}/submit-for-approval", async (int id, HttpContext
             new() { ["TenantId"] = tenantIdInt });
 
         var approverIds = new List<int>();
-        foreach (var row in approversDt.Rows)
+        foreach (System.Data.DataRow row in approversDt.Rows)
         {
             if (row["UserId"] != DBNull.Value && int.TryParse(row["UserId"].ToString(), out int approverId))
                 approverIds.Add(approverId);
@@ -2945,7 +2945,7 @@ app.MapPost("/api/timesheets/{id}/submit-for-approval", async (int id, HttpConte
             new() { ["TenantId"] = tenantIdInt });
 
         var approverIds = new List<int>();
-        foreach (var row in approversDt.Rows)
+        foreach (System.Data.DataRow row in approversDt.Rows)
         {
             if (row["UserId"] != DBNull.Value && int.TryParse(row["UserId"].ToString(), out int approverId))
                 approverIds.Add(approverId);
@@ -5139,12 +5139,12 @@ app.MapPost("/api/expenses/{expenseId:int}/receipt/upload", async (int expenseId
                 ["Strategy"] = extraction.StrategyUsed,
                 ["Confidence"] = extraction.Confidence,
                 ["AuditPassed"] = extraction.AuditPassed,
-                ["Supplier"] = extraction.SupplierName ?? DBNull.Value,
-                ["DocDate"] = extraction.DocumentDate ?? DBNull.Value,
+                ["Supplier"] = (object?)extraction.SupplierName ?? DBNull.Value,
+                ["DocDate"] = (object?)extraction.DocumentDate ?? DBNull.Value,
                 ["Amount"] = extraction.TotalAmount ?? 0,
                 ["Gst"] = extraction.GstAmount ?? 0,
                 ["Description"] = extraction.LineItems.Count > 0 ? string.Join(", ", extraction.LineItems.Select(x => x.Description)) : DBNull.Value,
-                ["RawText"] = extraction.RawText ?? DBNull.Value,
+                ["RawText"] = (object?)extraction.RawText ?? DBNull.Value,
                 ["RequiresReview"] = extraction.Confidence < 0.80 ? 1 : 0,
                 ["UserId"] = userId
             });

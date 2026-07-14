@@ -134,6 +134,45 @@
 </MudPaper>
 
 @code {
+    private List<Expense> _expenses = new();
+    private string _searchString = "";
+    private MudDataGrid<Expense> _dataGrid = default!;
+    private Func<Expense, bool> QuickFilter => x =>
+    {
+        if (string.IsNullOrWhiteSpace(_searchString)) return true;
+        var s = _searchString.Trim().ToLowerInvariant();
+        return (x.Description?.ToLowerInvariant().Contains(s) ?? false)
+            || (x.SupplierName?.ToLowerInvariant().Contains(s) ?? false)
+            || (x.Category?.ToLowerInvariant().Contains(s) ?? false)
+            || (x.Status?.ToLowerInvariant().Contains(s) ?? false);
+    };
+
+    private async Task OnEditExpense(Expense expense)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Expense", expense }
+        };
+        var dialog = await DialogService.ShowAsync<Shared.EditExpenseDialog>("Edit Expense", parameters,
+            new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true });
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await LoadClaimsAsync();
+        }
+    }
+
+    private async Task OnDeleteExpense(Expense expense)
+    {
+        var confirmed = await DialogService.ShowMessageBox("Delete Expense", $"Delete expense by {expense.SupplierName ?? expense.Description}?", "Delete", cancelText: "Cancel");
+        if (confirmed == true)
+        {
+            await ExpenseService.DeleteExpenseAsync(expense.ExpenseId);
+            Snackbar.Add("Expense deleted.", Severity.Success);
+            await LoadClaimsAsync();
+        }
+    }
+
     private List<ExpenseClaim> _allClaims = new();
     private bool _loading = true;
     private int _tabIndex = 0;

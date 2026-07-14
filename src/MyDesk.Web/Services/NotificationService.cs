@@ -205,7 +205,7 @@ public class NotificationService
             new() { ["TenantId"] = tenantId, ["UserId"] = userId, ["Limit"] = limit });
 
         var notifications = new List<InAppNotification>();
-        foreach (var row in result.Rows)
+        foreach (System.Data.DataRow row in result.Rows)
         {
             notifications.Add(new InAppNotification
             {

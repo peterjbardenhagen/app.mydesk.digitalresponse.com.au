@@ -1,6 +1,8 @@
 @page "/profile"
 @attribute [Authorize]
 @using MyDesk.Shared.Models
+@using MyDesk.Shared.Services
+@using MyDesk.Web.Components.Dialogs
 @using MudBlazor
 @inject HttpClient Http
 @inject ISnackbar Snackbar
@@ -140,11 +142,6 @@
 
     private async Task<bool> ConfirmRemovalAsync()
     {
-        var parameters = new DialogParameters<MudDialog>
-        {
-            { x => x.Title, "Remove Photo?" }
-        };
-
         var dialog = await DialogService.ShowAsync<MudDialog>(
             "Remove Photo?",
             new DialogParameters { { "ContentText", "Are you sure you want to remove your profile photo?" } },

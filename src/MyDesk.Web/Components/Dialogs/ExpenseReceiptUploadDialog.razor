@@ -160,21 +160,21 @@
         }
     }
 
-    private async Task ConfirmAsync()
+    private void ConfirmAsync()
     {
-        await MudDialog?.CloseAsync(DialogResult.Ok(new
+        MudDialog?.Close(DialogResult.Ok(new
         {
             ReceiptId = _extraction?.ReceiptId,
             CorrectedSupplier = _correctedSupplier,
             CorrectedAmount = _correctedAmount,
             CorrectedDate = _correctedDate,
             CorrectedDescription = _correctedDescription
-        })) ?? Task.CompletedTask;
+        }));
     }
 
-    private async Task CancelAsync()
+    private void CancelAsync()
     {
-        await MudDialog?.CancelAsync() ?? Task.CompletedTask;
+        MudDialog?.Cancel();
     }
 
     public class UploadResponse
