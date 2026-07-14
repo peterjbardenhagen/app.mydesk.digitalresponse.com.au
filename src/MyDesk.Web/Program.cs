@@ -25,6 +25,7 @@ using System.Data;
 using Microsoft.Extensions.Caching.Memory;
 using Serilog;
 using Serilog.Events;
+using NotificationService = MyDesk.Web.Services.NotificationService;
 
 // ---------------------------------------------------------------------------
 // Logging (Serilog) - writes to /Logs/app-YYYYMMDD.log and /Logs/errors-YYYYMMDD.log
@@ -387,6 +388,7 @@ builder.Services.AddScoped<BankingService>();
     builder.Services.AddScoped<SalesReportsService>();
 
 builder.Services.AddHttpClient();
+builder.Services.AddHttpClient("AgentsOS", client => { client.Timeout = TimeSpan.FromSeconds(5); });
 
 // ── Hangfire (background + recurring jobs) ─────────────────────────────────
 // Stored in the same SQL DB. Dashboard exposed at /hangfire (admin-only).
@@ -443,6 +445,7 @@ builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.IDocumentExtraction
 builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.DocumentExtractionService>();
 builder.Services.AddScoped<SupplierQuoteParseService>();
 builder.Services.AddScoped<McpIntegrationService>();
+builder.Services.AddScoped<AgentsOsService>();
 builder.Services.AddScoped<PersonalAccessTokenService>();
 
 // Proposal #272: AI Enhancement services
@@ -3350,20 +3353,6 @@ app.MapPost("/api/approval/requests/{requestId}/delegate", async (int requestId,
     return Results.Ok(new { message = "Request delegated successfully", delegatedTo = body.DelegateUserId });
 }).RequireAuthorization();
 
-// ── Helper DTOs ─────────────────────────────────────────────────────────────
-class DelegationRequest
-{
-    public int DelegateUserId { get; set; }
-    public DateTime? StartDate { get; set; }
-    public DateTime? EndDate { get; set; }
-    public string? ModuleType { get; set; }
-}
-
-class DelegateApprovalRequest
-{
-    public int DelegateUserId { get; set; }
-}
-
 // ── Domain-Based Tenant Routing (Phase 1 Week 1) ──────────────────────────────────────
 // Critical for domain-based multi-tenancy and Australian Privacy Act compliance
 
@@ -4770,7 +4759,7 @@ app.MapPost("/api/product-admin/onboarding/{sessionToken}/steps/{step:int}",
         return Results.Ok(new
         {
             stepCompleted = step,
-            nextStep = step < 6 ? step + 1 : null,
+            nextStep = step < 6 ? (int?)(step + 1) : null,
             message = step == 6 ? "Wizard confirmation complete. Ready to create tenant." : $"Step {step} completed"
         });
     }
@@ -4949,7 +4938,7 @@ app.MapGet("/api/user/profile", async (HttpContext ctx, DatabaseService db) =>
     }
     catch (Exception ex)
     {
-        return Results.StatusCode(500, new { error = ex.Message });
+        return Results.Json(new { error = ex.Message }, statusCode: 500);
     }
 })
 .WithName("GetUserProfile")
@@ -4968,13 +4957,15 @@ app.MapPost("/api/user/profile/photo/upload", async (HttpContext ctx, DatabaseSe
     try
     {
         var form = await ctx.Request.ReadFormAsync();
-        var file = form.Files.FirstOrDefault("photo");
+        var file = form.Files.GetFile("photo");
 
         if (file == null || file.Length == 0)
             return Results.BadRequest(new { error = "No photo provided" });
 
         using var stream = file.OpenReadStream();
-        var (isValid, error) = await photoService.ValidateImageAsync(stream, file.ContentType ?? "");
+        var validationResult = await photoService.ValidateImageAsync(stream, file.ContentType ?? "");
+        bool isValid = validationResult.isValid;
+        string? error = validationResult.error;
 
         if (!isValid)
             return Results.BadRequest(new { error });
@@ -4983,10 +4974,10 @@ app.MapPost("/api/user/profile/photo/upload", async (HttpContext ctx, DatabaseSe
         stream.Position = 0;
 
         // Convert to square
-        var (squareImage, dimension, contentType) = await photoService.ConvertToSquareAsync(stream, file.ContentType ?? "image/jpeg");
+        var conversionResult = await photoService.ConvertToSquareAsync(stream, file.ContentType ?? "image/jpeg");
 
         // Save photo
-        var storagePath = await photoService.SaveImageAsync(squareImage, tenantId.ToString(), userId.ToString(), file.FileName);
+        var storagePath = await photoService.SaveImageAsync(conversionResult.squareImage, tenantId.ToString(), userId.ToString(), file.FileName);
 
         // Store in database
         var insertResult = await db.QueryAsync(
@@ -4998,11 +4989,11 @@ app.MapPost("/api/user/profile/photo/upload", async (HttpContext ctx, DatabaseSe
                 ["UserId"] = userId,
                 ["TenantId"] = tenantId,
                 ["FileName"] = file.FileName,
-                ["ContentType"] = contentType,
+                ["ContentType"] = conversionResult.contentType,
                 ["Size"] = file.Length,
                 ["StoragePath"] = storagePath,
-                ["Width"] = dimension,
-                ["Height"] = dimension
+                ["Width"] = conversionResult.dimension,
+                ["Height"] = conversionResult.dimension
             });
 
         int photoId = (int)insertResult.Rows[0]["PhotoId"];
@@ -5022,13 +5013,13 @@ app.MapPost("/api/user/profile/photo/upload", async (HttpContext ctx, DatabaseSe
         {
             photoId,
             photoUrl = storagePath,
-            dimension,
+            conversionResult.dimension,
             message = "Photo uploaded successfully"
         });
     }
     catch (Exception ex)
     {
-        return Results.StatusCode(500, new { error = ex.Message });
+        return Results.Json(new { error = ex.Message }, statusCode: 500);
     }
 })
 .WithName("UploadUserPhoto")
@@ -5080,7 +5071,7 @@ app.MapDelete("/api/user/profile/photo", async (HttpContext ctx, DatabaseService
     }
     catch (Exception ex)
     {
-        return Results.StatusCode(500, new { error = ex.Message });
+        return Results.Json(new { error = ex.Message }, statusCode: 500);
     }
 })
 .WithName("DeleteUserPhoto")
@@ -5109,13 +5100,15 @@ app.MapPost("/api/expenses/{expenseId:int}/receipt/upload", async (int expenseId
             return Results.Forbid();
 
         var form = await ctx.Request.ReadFormAsync();
-        var file = form.Files.FirstOrDefault("receipt");
+        var file = form.Files.GetFile("receipt");
 
         if (file == null || file.Length == 0)
             return Results.BadRequest(new { error = "No receipt file provided" });
 
         using var stream = file.OpenReadStream();
-        var (isValid, error) = await photoService.ValidateImageAsync(stream, file.ContentType ?? "", maxSizeBytes: 10485760);
+        var validationResult = await photoService.ValidateImageAsync(stream, file.ContentType ?? "", maxSizeBytes: 10485760);
+        bool isValid = validationResult.isValid;
+        string? error = validationResult.error;
 
         if (!isValid)
             return Results.BadRequest(new { error });
@@ -5193,7 +5186,7 @@ app.MapPost("/api/expenses/{expenseId:int}/receipt/upload", async (int expenseId
     }
     catch (Exception ex)
     {
-        return Results.StatusCode(500, new { error = ex.Message });
+        return Results.Json(new { error = ex.Message }, statusCode: 500);
     }
 })
 .WithName("UploadExpenseReceipt")
@@ -5247,7 +5240,7 @@ app.MapGet("/api/expenses/{expenseId:int}/receipt", async (int expenseId, HttpCo
             {
                 supplierName = row["CorrectedSupplierName"]?.ToString(),
                 date = row["CorrectedDate"],
-                amount = row["CorrectedAmount"] != DBNull.Value ? Convert.ToDecimal(row["CorrectedAmount"]) : null
+                amount = row["CorrectedAmount"] != DBNull.Value ? (decimal?)Convert.ToDecimal(row["CorrectedAmount"]) : null
             },
             status = (string)row["Status"],
             requiresManualReview = (bool)row["RequiresManualReview"]
@@ -5257,7 +5250,7 @@ app.MapGet("/api/expenses/{expenseId:int}/receipt", async (int expenseId, HttpCo
     }
     catch (Exception ex)
     {
-        return Results.StatusCode(500, new { error = ex.Message });
+        return Results.Json(new { error = ex.Message }, statusCode: 500);
     }
 })
 .WithName("GetExpenseReceipt")
@@ -5311,7 +5304,7 @@ app.MapGet("/api/notifications", async (HttpContext ctx, DatabaseService db) =>
     }
     catch (Exception ex)
     {
-        return Results.StatusCode(500, new { error = ex.Message });
+        return Results.Json(new { error = ex.Message }, statusCode: 500);
     }
 })
 .WithName("GetNotifications")
@@ -5344,7 +5337,7 @@ app.MapPost("/api/notifications/{notificationId:int}/read", async (int notificat
     }
     catch (Exception ex)
     {
-        return Results.StatusCode(500, new { error = ex.Message });
+        return Results.Json(new { error = ex.Message }, statusCode: 500);
     }
 })
 .WithName("MarkNotificationAsRead")
@@ -5375,7 +5368,7 @@ app.MapPost("/api/notifications/read-all", async (HttpContext ctx, DatabaseServi
     }
     catch (Exception ex)
     {
-        return Results.StatusCode(500, new { error = ex.Message });
+        return Results.Json(new { error = ex.Message }, statusCode: 500);
     }
 })
 .WithName("MarkAllNotificationsAsRead")
@@ -5420,7 +5413,7 @@ app.MapGet("/api/notifications/preferences", async (HttpContext ctx, DatabaseSer
     }
     catch (Exception ex)
     {
-        return Results.StatusCode(500, new { error = ex.Message });
+        return Results.Json(new { error = ex.Message }, statusCode: 500);
     }
 })
 .WithName("GetNotificationPreferences")
@@ -5470,12 +5463,14 @@ app.MapPut("/api/notifications/preferences", async (HttpContext ctx, UpdateNotif
     }
     catch (Exception ex)
     {
-        return Results.StatusCode(500, new { error = ex.Message });
+        return Results.Json(new { error = ex.Message }, statusCode: 500);
     }
 })
 .WithName("UpdateNotificationPreferences")
 .WithOpenApi()
 .RequireAuthorization();
+
+app.Run();
 
 /// <summary>Body model for POST /api/auth/reset-password.</summary>
 public class ResetPasswordRequest
@@ -5615,4 +5610,16 @@ class UpdateNotificationPreferencesRequest
     public TimeSpan? QuietHoursEnd { get; set; }
 }
 
-app.Run();
+// ── Helper DTOs ─────────────────────────────────────────────────────────────
+class DelegationRequest
+{
+    public int DelegateUserId { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public string? ModuleType { get; set; }
+}
+
+class DelegateApprovalRequest
+{
+    public int DelegateUserId { get; set; }
+}
