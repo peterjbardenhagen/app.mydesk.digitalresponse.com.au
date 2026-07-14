@@ -1,8 +1,13 @@
-# MyDesk — Low-Fi Wireframe Prototype
+# MyDesk — Low-Fi Wireframe Prototype (Legacy)
+
+**This folder is preserved for reference. The canonical Design directory is now at `../Design/`.**
 
 **Version 1.0 | July 2026**
 
-This directory contains low-fidelity wireframe prototypes for the MyDesk Enterprise AI Brain platform, covering both **web** and **mobile** experiences.
+This directory (legacy) contains low-fidelity wireframe prototypes for the MyDesk Enterprise AI Brain platform, covering both **web** and **mobile** experiences.
+
+> **⚠️ NOTE:** The new `Design/` folder replaces this with a proper Web + Mobile structure.  
+> See `../Design/` for the latest wireframes and `../Design/DESIGN-SDLC.md` for the design-first development process.
 
 ## Contents
 
