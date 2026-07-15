@@ -1,0 +1,84 @@
+@* Mobile-First Responsive Layout Component
+   Phase 6: Mobile-First UI Redesign
+   Provides optimized layout for mobile, tablet, and desktop
+*@
+
+@inherits LayoutComponentBase
+
+<MudLayout>
+    <!-- Mobile App Bar (visible on small screens) -->
+    <MudAppBar Elevation="1" Class="show-mobile">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Style="width: 100%;">
+            <MudText Typo="Typo.h6" Style="flex-grow: 1;">MyDesk</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" />
+        </MudStack>
+    </MudAppBar>
+
+    <MudDrawer @ref="drawer" Variant="DrawerVariant.Temporary" Anchor="Anchor.Start" OpenChanged="@((bool state) => DrawerOpenChanged(state))">
+        <MudNavMenu>
+            <MudNavLink Href="/" Icon="@Icons.Material.Filled.Home" Match="NavLinkMatch.All">Dashboard</MudNavLink>
+            <MudNavLink Href="/expenses" Icon="@Icons.Material.Filled.Receipt">Expenses</MudNavLink>
+            <MudNavLink Href="/approvals" Icon="@Icons.Material.Filled.CheckCircle">Approvals</MudNavLink>
+            <MudNavLink Href="/notifications" Icon="@Icons.Material.Filled.Notifications">Notifications</MudNavLink>
+            <MudDivider Class="my-2" />
+            <MudNavLink Href="/user/profile" Icon="@Icons.Material.Filled.Person">Profile</MudNavLink>
+            <MudNavLink Href="/settings" Icon="@Icons.Material.Filled.Settings">Settings</MudNavLink>
+        </MudNavMenu>
+    </MudDrawer>
+
+    <!-- Desktop AppBar (hidden on small screens) -->
+    <MudAppBar Elevation="1" Class="hide-mobile">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Style="width: 100%;">
+            <MudText Typo="Typo.h6" Class="mr-8">MyDesk</MudText>
+            <MudNavMenu Horizontal="true" Class="ml-auto">
+                <MudNavLink Href="/" Icon="@Icons.Material.Filled.Home" Match="NavLinkMatch.All">Dashboard</MudNavLink>
+                <MudNavLink Href="/expenses" Icon="@Icons.Material.Filled.Receipt">Expenses</MudNavLink>
+                <MudNavLink Href="/approvals" Icon="@Icons.Material.Filled.CheckCircle">Approvals</MudNavLink>
+                <MudNavLink Href="/notifications" Icon="@Icons.Material.Filled.Notifications">Notifications</MudNavLink>
+            </MudNavMenu>
+            <MudSpacer />
+            <MudIconButton Icon="@Icons.Material.Filled.Person" Color="Color.Inherit" />
+            <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit" />
+        </MudStack>
+    </MudAppBar>
+
+    <!-- Main Content -->
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+
+    <!-- Bottom Navigation for Mobile (visible on small screens) -->
+    <div class="show-mobile" style="height: 60px;">
+        <!-- Spacer to account for fixed bottom nav -->
+    </div>
+
+    <nav class="show-mobile mud-elevation-4" style="position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e0e0e0; display: flex; justify-content: space-around; height: 60px; z-index: 100;">
+        <a href="/" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: inherit; font-size: 12px;">
+            <MudIcon Icon="@Icons.Material.Filled.Home" Size="Size.Medium" />
+            <span style="font-size: 11px; margin-top: 2px;">Home</span>
+        </a>
+        <a href="/expenses" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: inherit; font-size: 12px;">
+            <MudIcon Icon="@Icons.Material.Filled.Receipt" Size="Size.Medium" />
+            <span style="font-size: 11px; margin-top: 2px;">Expenses</span>
+        </a>
+        <a href="/approvals" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: inherit; font-size: 12px;">
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Medium" />
+            <span style="font-size: 11px; margin-top: 2px;">Approve</span>
+        </a>
+        <a href="/user/profile" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: inherit; font-size: 12px;">
+            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Medium" />
+            <span style="font-size: 11px; margin-top: 2px;">Profile</span>
+        </a>
+    </nav>
+</MudLayout>
+
+@code {
+    private MudDrawer? drawer;
+
+    private async Task DrawerOpenChanged(bool state)
+    {
+        // Drawer closes automatically on navigation or click outside
+    }
+}

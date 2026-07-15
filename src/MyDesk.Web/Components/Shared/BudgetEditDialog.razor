@@ -1,0 +1,148 @@
+@using MyDesk.Web.Services
+@using System.Data
+@inject BudgetService BudgetService
+@inject DepartmentService DepartmentService
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="isFormValid">
+            <MudStack Spacing="3">
+                <MudSelect @bind-Value="model.DepartmentId" Label="Department"
+                    Variant="Variant.Outlined" Required="true">
+                    @foreach (var dept in departments?.Rows.Cast<DataRow>() ?? new())
+                    {
+                        <MudSelectItem Value="@((int)dept["DepartmentId"])">
+                            @dept["Name"]
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudNumericField @bind-Value="model.FiscalYear" Label="Fiscal Year"
+                    Variant="Variant.Outlined" Required="true" Min="2000" Max="2099" />
+
+                <MudNumericField @bind-Value="model.AllocatedAmount" Label="Allocated Amount ($)"
+                    Variant="Variant.Outlined" Required="true" Min="0" DecimalPlaces="2"
+                    Validation="@(new Func<decimal?, IEnumerable<string>>(ValidateAmount))" />
+
+                <MudText Typo="Typo.subtitle2" Class="mt-3">Budget Controls</MudText>
+
+                <MudCheckBox @bind-Value="model.AllowOverspend"
+                    Label="Allow spending over budget amount" />
+
+                <MudNumericField @bind-Value="model.ThresholdPercent"
+                    Label="Alert Threshold (%)"
+                    Variant="Variant.Outlined" Min="0" Max="100"
+                    HelpText="Alert when spending reaches this percentage" />
+
+                <MudText Typo="Typo.subtitle2" Class="mt-3">Category Budgets (Optional)</MudText>
+
+                <MudGrid>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField @bind-Value="model.CatExpense" Label="Expense Budget"
+                            Variant="Variant.Outlined" Min="0" DecimalPlaces="2" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField @bind-Value="model.CatTravel" Label="Travel Budget"
+                            Variant="Variant.Outlined" Min="0" DecimalPlaces="2" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField @bind-Value="model.CatMeals" Label="Meals Budget"
+                            Variant="Variant.Outlined" Min="0" DecimalPlaces="2" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField @bind-Value="model.CatOther" Label="Other Budget"
+                            Variant="Variant.Outlined" Min="0" DecimalPlaces="2" />
+                    </MudItem>
+                </MudGrid>
+            </MudStack>
+        </MudForm>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Save" Disabled="@(!isFormValid)">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public int TenantId { get; set; }
+    [Parameter] public int? BudgetId { get; set; }
+
+    private MudForm form = null!;
+    private bool isFormValid = false;
+    private DataTable? departments;
+
+    private BudgetModel model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDepartments();
+        model.FiscalYear = DateTime.Now.Year;
+        model.ThresholdPercent = 80;
+
+        if (BudgetId.HasValue)
+        {
+            // TODO: Load existing budget
+        }
+    }
+
+    private async Task LoadDepartments()
+    {
+        try
+        {
+            departments = await DepartmentService.GetDepartmentsAsync(TenantId);
+        }
+        catch { }
+    }
+
+    private IEnumerable<string> ValidateAmount(decimal? amount)
+    {
+        if (!amount.HasValue || amount <= 0)
+            yield return "Budget amount must be greater than 0";
+    }
+
+    private async Task Save()
+    {
+        if (form != null && form.IsValid)
+        {
+            try
+            {
+                if (BudgetId.HasValue)
+                {
+                    // TODO: Update existing budget
+                }
+                else
+                {
+                    await BudgetService.CreateBudgetAsync(
+                        TenantId,
+                        model.DepartmentId,
+                        model.FiscalYear,
+                        model.AllocatedAmount,
+                        model.AllowOverspend,
+                        model.ThresholdPercent);
+                }
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            catch (Exception ex)
+            {
+                // TODO: Show error
+            }
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class BudgetModel
+    {
+        public int DepartmentId { get; set; }
+        public int FiscalYear { get; set; }
+        public decimal AllocatedAmount { get; set; }
+        public bool AllowOverspend { get; set; }
+        public int ThresholdPercent { get; set; } = 80;
+        public decimal CatExpense { get; set; }
+        public decimal CatTravel { get; set; }
+        public decimal CatMeals { get; set; }
+        public decimal CatOther { get; set; }
+    }
+}

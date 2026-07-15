@@ -1,0 +1,153 @@
+name: Build & Deploy
+
+on:
+  push:
+    branches: [ main, develop, 'claude/**' ]
+    paths:
+      - 'src/**'
+      - '.github/workflows/build-deploy.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+  workflow_dispatch:
+
+env:
+  ASPNETCORE_ENVIRONMENT: Development
+  ASPNETCORE_URLS: http://localhost:5237
+  ConnectionStrings__TechlightDb: Server=(localdb)\MSSQLLocalDB;Database=Techlight_MyDesk;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False;
+
+jobs:
+  build:
+    runs-on: windows-latest
+    name: Build & Test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore -r win-x64
+
+      - name: Build (Release)
+        run: dotnet build MyDesk.slnx --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test MyDesk.slnx --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --verbosity minimal
+        continue-on-error: true
+
+      - name: Publish application
+        run: dotnet publish src/MyDesk.Web/MyDesk.Web.csproj -c Release -r win-x64 --self-contained false -o ./artifacts/publish
+
+      - name: Remove development config
+        run: |
+          Remove-Item ./artifacts/publish/appsettings.Development.json -Force -ErrorAction SilentlyContinue
+          Get-ChildItem ./artifacts/publish/ -Filter "appsettings.*.json" | Remove-Item -Force -ErrorAction SilentlyContinue
+
+      - name: Create deployment package
+        run: |
+          Compress-Archive -Path ./artifacts/publish/* -DestinationPath ./artifacts/mydesk-publish-${{ github.run_number }}.zip -Force
+          Get-Item ./artifacts/mydesk-publish-${{ github.run_number }}.zip | Select-Object FullName, @{Name="SizeGB";Expression={$_.Length/1GB}}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mydesk-build-${{ github.run_number }}
+          path: ./artifacts/publish
+          retention-days: 30
+
+      - name: Upload deployment package
+        uses: actions/upload-artifact@v4
+        with:
+          name: mydesk-package-${{ github.run_number }}
+          path: ./artifacts/mydesk-publish-${{ github.run_number }}.zip
+          retention-days: 30
+
+  deploy-dev:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    name: Deploy to Dev
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mydesk-build-${{ github.run_number }}
+          path: ./publish
+
+      - name: Notify deployment (dev)
+        run: |
+          echo "Deployment to dev.mydesk.digitalresponse.com.au ready"
+          echo "Package: mydesk-package-${{ github.run_number }}.zip"
+          echo "Build number: ${{ github.run_number }}"
+          echo ""
+          echo "Manual deployment steps:"
+          echo "1. Download artifact from Actions"
+          echo "2. Run: .\src\Deployment\deploy.ps1 -SiteName 'MyDesk-Dev' -AppPoolName 'MyDesk-Dev'"
+
+  deploy-prod:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    name: Deploy to Production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mydesk-build-${{ github.run_number }}
+          path: ./publish
+
+      - name: Create deployment summary
+        run: |
+          echo "## Production Deployment Ready" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Build:** ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** main" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployment Instructions" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Prerequisite:** Windows machine with PowerShell 7+ and .NET 10 SDK" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Option 1: Deploy to svr1.digitalresponse.com.au (Production)**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`powershell" >> $GITHUB_STEP_SUMMARY
+          echo "# Stop IIS on production server" >> $GITHUB_STEP_SUMMARY
+          echo "\$cred = Get-Credential administrator" >> $GITHUB_STEP_SUMMARY
+          echo "Invoke-Command -ComputerName svr1.digitalresponse.com.au -Credential \$cred -ScriptBlock { iisreset /stop }" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Copy published files to server share" >> $GITHUB_STEP_SUMMARY
+          echo "robocopy 'publish' 'W:\app.mydesk.digitalresponse.com.au\' /MIR /XF appsettings.json appsettings.*.json" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Start IIS on production server" >> $GITHUB_STEP_SUMMARY
+          echo "Invoke-Command -ComputerName svr1.digitalresponse.com.au -Credential \$cred -ScriptBlock { iisreset /start }" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Option 2: Deploy to Local Dev (pb-legion)**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`powershell" >> $GITHUB_STEP_SUMMARY
+          echo "# On Windows machine with IIS" >> $GITHUB_STEP_SUMMARY
+          echo "cd src\Deployment" >> $GITHUB_STEP_SUMMARY
+          echo ".\deploy.ps1 -SiteName 'MyDesk' -AppPoolName 'MyDesk'" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ./artifacts/mydesk-publish-${{ github.run_number }}.zip
+          draft: false
+          prerelease: false

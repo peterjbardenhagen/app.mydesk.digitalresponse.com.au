@@ -1,0 +1,147 @@
+@using MyDesk.Web.Services
+@inject ApprovalDelegationService DelegationService
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="isFormValid">
+            <MudStack Spacing="3">
+                <MudText Typo="Typo.h6">Delegate Approval Authority</MudText>
+
+                <MudSelect @bind-Value="model.ToUserId" Label="Delegate To"
+                    Variant="Variant.Outlined" Required="true">
+                    @foreach (var user in users ?? new())
+                    {
+                        <MudSelectItem Value="@user.UserId">@user.Name</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudSelect @bind-Value="model.ModuleType" Label="Module (Optional)"
+                    Variant="Variant.Outlined" Clearable="true">
+                    <MudSelectItem Value="@("Expense")">Expense</MudSelectItem>
+                    <MudSelectItem Value="@("Timesheet")">Timesheet</MudSelectItem>
+                    <MudSelectItem Value="@("PurchaseOrder")">Purchase Order</MudSelectItem>
+                    <MudSelectItem Value="@("Invoice")">Invoice</MudSelectItem>
+                </MudSelect>
+
+                <MudText Typo="Typo.subtitle2" Class="mt-3">Approval Limits (Optional)</MudText>
+
+                <MudNumericField @bind-Value="model.MinThreshold" Label="Minimum Amount ($)"
+                    Variant="Variant.Outlined" Min="0" />
+
+                <MudNumericField @bind-Value="model.MaxThreshold" Label="Maximum Amount ($)"
+                    Variant="Variant.Outlined" Min="0" />
+
+                <MudText Typo="Typo.subtitle2" Class="mt-3">Duration</MudText>
+
+                <MudDatePicker @bind-Date="model.StartDate" Label="Start Date"
+                    Variant="Variant.Outlined" Required="true" />
+
+                <MudDatePicker @bind-Date="model.EndDate" Label="End Date (Optional)"
+                    Variant="Variant.Outlined" />
+
+                <MudText Typo="Typo.subtitle2" Class="mt-3">Permissions</MudText>
+
+                <MudCheckBox @bind-Value="model.CanApprove" Label="Can Approve" />
+                <MudCheckBox @bind-Value="model.CanReject" Label="Can Reject" />
+                <MudCheckBox @bind-Value="model.CanDelegate" Label="Can Delegate Further" />
+                <MudCheckBox @bind-Value="model.CanComment" Label="Can Add Comments" />
+            </MudStack>
+        </MudForm>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Save" Disabled="@(!isFormValid)">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public int TenantId { get; set; }
+    [Parameter] public int CurrentUserId { get; set; }
+    [Parameter] public int? DelegationId { get; set; }
+
+    private MudForm form = null!;
+    private bool isFormValid = false;
+    private List<UserViewModel>? users;
+
+    private DelegationModel model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        users = new List<UserViewModel>
+        {
+            new() { UserId = 2, Name = "Jane Smith" },
+            new() { UserId = 3, Name = "Bob Johnson" },
+            new() { UserId = 4, Name = "Alice Williams" }
+        };
+
+        model.StartDate = DateTime.Today;
+        model.CanApprove = true;
+        model.CanReject = true;
+        model.CanComment = true;
+
+        if (DelegationId.HasValue)
+        {
+            // TODO: Load existing delegation
+        }
+    }
+
+    private async Task Save()
+    {
+        if (form != null && form.IsValid)
+        {
+            try
+            {
+                if (DelegationId.HasValue)
+                {
+                    // TODO: Update existing delegation
+                }
+                else
+                {
+                    await DelegationService.CreateDelegationAsync(
+                        TenantId,
+                        CurrentUserId,
+                        model.ToUserId,
+                        null,
+                        model.ModuleType,
+                        model.MinThreshold,
+                        model.MaxThreshold,
+                        model.StartDate,
+                        model.EndDate,
+                        model.CanApprove,
+                        model.CanReject,
+                        model.CanDelegate,
+                        model.CanComment);
+                }
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            catch (Exception ex)
+            {
+                // TODO: Show error
+            }
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private class DelegationModel
+    {
+        public int ToUserId { get; set; }
+        public string? ModuleType { get; set; }
+        public decimal? MinThreshold { get; set; }
+        public decimal? MaxThreshold { get; set; }
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public bool CanApprove { get; set; } = true;
+        public bool CanReject { get; set; } = true;
+        public bool CanDelegate { get; set; } = false;
+        public bool CanComment { get; set; } = true;
+    }
+
+    private class UserViewModel
+    {
+        public int UserId { get; set; }
+        public string Name { get; set; } = "";
+    }
+}

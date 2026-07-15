@@ -1,0 +1,203 @@
+@page "/user/notification-preferences"
+@using MyDesk.Web.Services
+@using System.Data
+@inject DatabaseService DatabaseService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>Notification Preferences</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="py-8">
+    <MudStack Spacing="4">
+        <MudStack Row="true" AlignItems="AlignItems.Center">
+            <MudIcon Icon="@Icons.Material.Filled.Notifications" Size="Size.Large" />
+            <MudText Typo="Typo.h4" Class="font-bold">Notification Preferences</MudText>
+        </MudStack>
+
+        <MudText Typo="Typo.body1" Color="Color.Default">
+            Choose how and when you receive notifications about budgets, approvals, and system activities.
+        </MudText>
+
+        @if (isLoading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else
+        {
+            <MudPaper Class="pa-6">
+                <MudStack Spacing="4">
+                    <!-- Email Notifications -->
+                    <MudStack Spacing="2">
+                        <MudCheckBox @bind-Value="enableEmailNotifications"
+                            Label="Email Notifications"
+                            Color="Color.Primary" />
+                        <MudText Typo="Typo.caption" Class="ml-6">
+                            Receive email notifications for budgets, approvals, and other important events
+                        </MudText>
+                    </MudStack>
+
+                    <!-- In-App Notifications -->
+                    <MudStack Spacing="2">
+                        <MudCheckBox @bind-Value="enableInAppNotifications"
+                            Label="In-App Notifications"
+                            Color="Color.Primary" />
+                        <MudText Typo="Typo.caption" Class="ml-6">
+                            Show notifications in the notification center when you're using MyDesk
+                        </MudText>
+                    </MudStack>
+
+                    <MudDivider Class="my-3" />
+
+                    <!-- Budget Alert Settings -->
+                    <MudText Typo="Typo.h6" Class="font-bold">Budget Alerts</MudText>
+
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.subtitle2">
+                            How often to receive budget threshold alerts:
+                        </MudText>
+                        <MudSelect @bind-Value="budgetAlertFrequency"
+                            Label="Budget Alert Frequency"
+                            Variant="Variant.Outlined">
+                            <MudSelectItem Value="@("Immediate")">Immediately when threshold reached</MudSelectItem>
+                            <MudSelectItem Value="@("Daily")">Daily digest at 8:00 AM</MudSelectItem>
+                            <MudSelectItem Value="@("Weekly")">Weekly digest on Mondays</MudSelectItem>
+                        </MudSelect>
+                    </MudStack>
+
+                    <MudDivider Class="my-3" />
+
+                    <!-- Approval Notification Settings -->
+                    <MudText Typo="Typo.h6" Class="font-bold">Approval Notifications</MudText>
+
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.subtitle2">
+                            How often to receive approval notifications:
+                        </MudText>
+                        <MudSelect @bind-Value="approvalAlertFrequency"
+                            Label="Approval Alert Frequency"
+                            Variant="Variant.Outlined">
+                            <MudSelectItem Value="@("Immediate")">Immediately when approval needed</MudSelectItem>
+                            <MudSelectItem Value="@("Daily")">Daily digest at 8:00 AM</MudSelectItem>
+                            <MudSelectItem Value="@("Weekly")">Weekly digest on Mondays</MudSelectItem>
+                        </MudSelect>
+                    </MudStack>
+
+                    <MudStack Spacing="2" Class="mt-4">
+                        <MudCheckBox @bind-Value="enableDigest"
+                            Label="Combine notifications into daily digest"
+                            Color="Color.Primary" />
+                        <MudText Typo="Typo.caption" Class="ml-6">
+                            When enabled, all notifications are sent as a single email each morning
+                        </MudText>
+                    </MudStack>
+
+                    <MudDivider Class="my-3" />
+
+                    <!-- Action Buttons -->
+                    <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
+                        <MudButton Variant="Variant.Outlined" OnClick="Cancel">
+                            Cancel
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SavePreferences">
+                            Save Preferences
+                        </MudButton>
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+
+            <!-- Notification Center Link -->
+            <MudPaper Class="pa-4" Elevation="0" Style="background-color: var(--mud-palette-background-grey);">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" />
+                    <MudText Typo="Typo.body2">
+                        View your notification history in the <MudLink Href="/notifications">Notification Center</MudLink>
+                    </MudText>
+                </MudStack>
+            </MudPaper>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    private bool isLoading = true;
+    private bool enableEmailNotifications = true;
+    private bool enableInAppNotifications = true;
+    private string budgetAlertFrequency = "Immediate";
+    private string approvalAlertFrequency = "Immediate";
+    private bool enableDigest = false;
+    private int tenantId = 1;
+    private int userId = 1;  // TODO: Get from authentication
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPreferences();
+    }
+
+    private async Task LoadPreferences()
+    {
+        try
+        {
+            isLoading = true;
+
+            var prefs = await DatabaseService.QueryAsync(
+                @"SELECT EnableEmailNotifications, EnableInAppNotifications, BudgetAlertFrequency,
+                         ApprovalAlertFrequency, DigestEnabled, EnableSmsNotifications
+                  FROM dbo.NotificationSettings
+                  WHERE TenantId = @TenantId AND UserId = @UserId",
+                new() { ["TenantId"] = tenantId, ["UserId"] = userId });
+
+            if (prefs.Rows.Count > 0)
+            {
+                enableEmailNotifications = (bool)prefs.Rows[0]["EnableEmailNotifications"];
+                enableInAppNotifications = (bool)prefs.Rows[0]["EnableInAppNotifications"];
+                budgetAlertFrequency = prefs.Rows[0]["BudgetAlertFrequency"].ToString() ?? "Immediate";
+                approvalAlertFrequency = prefs.Rows[0]["ApprovalAlertFrequency"].ToString() ?? "Immediate";
+                enableDigest = (bool)prefs.Rows[0]["DigestEnabled"];
+            }
+
+            isLoading = false;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading preferences: {ex.Message}", Severity.Error);
+            isLoading = false;
+        }
+    }
+
+    private async Task SavePreferences()
+    {
+        try
+        {
+            await DatabaseService.ExecuteNonQueryAsync(
+                @"UPDATE dbo.NotificationSettings
+                  SET EnableEmailNotifications = @Email,
+                      EnableInAppNotifications = @InApp,
+                      BudgetAlertFrequency = @BudgetFreq,
+                      ApprovalAlertFrequency = @ApprovalFreq,
+                      DigestEnabled = @Digest,
+                      UpdatedAt = GETUTCDATE()
+                  WHERE TenantId = @TenantId AND UserId = @UserId",
+                new()
+                {
+                    ["Email"] = enableEmailNotifications ? 1 : 0,
+                    ["InApp"] = enableInAppNotifications ? 1 : 0,
+                    ["BudgetFreq"] = budgetAlertFrequency,
+                    ["ApprovalFreq"] = approvalAlertFrequency,
+                    ["Digest"] = enableDigest ? 1 : 0,
+                    ["TenantId"] = tenantId,
+                    ["UserId"] = userId
+                });
+
+            Snackbar.Add("Notification preferences saved successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving preferences: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/");
+    }
+}

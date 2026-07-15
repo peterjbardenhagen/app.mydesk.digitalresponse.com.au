@@ -1,0 +1,77 @@
+@using MyDesk.Web.Models
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <!-- Header -->
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <MudText Typo="Typo.h6" Class="font-bold">Notification Details</MudText>
+                <MudChip T="string" Size="Size.Small" Color="GetStatusColor(Notification.status)" Text="@Notification.status" />
+            </MudStack>
+
+            <MudDivider />
+
+            <!-- Details Grid -->
+            <MudGrid Spacing="2">
+                <MudItem xs="12" sm="6">
+                    <MudTextField Label="Event Type" Value="@Notification.eventType" ReadOnly="true" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudTextField Label="Notification Type" Value="@Notification.notificationType" ReadOnly="true" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField Label="Recipient Email" Value="@Notification.recipientEmail" ReadOnly="true" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField Label="Subject" Value="@Notification.subject" ReadOnly="true" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudTextField Label="Created At" Value="@GetCreatedAt()" ReadOnly="true" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudTextField Label="Sent At" Value="@GetSentAt()" ReadOnly="true" />
+                </MudItem>
+
+                @if (!string.IsNullOrEmpty(Notification.errorMessage))
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Error" Class="mt-3">
+                            <MudText Typo="Typo.caption">@Notification.errorMessage</MudText>
+                        </MudAlert>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="CloseDialog">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    MudDialogInstance? MudDialog { get; set; }
+
+    [Parameter]
+    public NotificationLog Notification { get; set; } = new();
+
+    private void CloseDialog() => MudDialog?.Close(DialogResult.Ok(true));
+
+    private string GetCreatedAt() => Notification.createdAt.ToString("G");
+
+    private string GetSentAt() => Notification.sentAt?.ToString("G") ?? "N/A";
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Pending" => Color.Warning,
+        "Sent" => Color.Success,
+        "Failed" => Color.Error,
+        _ => Color.Default
+    };
+}

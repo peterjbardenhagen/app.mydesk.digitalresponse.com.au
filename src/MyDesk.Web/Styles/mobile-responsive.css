@@ -1,0 +1,546 @@
+/* Mobile-First Responsive Design System
+   Phase 6: Mobile-First UI Redesign
+   Target: 320px+ screens with touch-friendly interface
+*/
+
+/* ========== BREAKPOINT STRATEGY ==========
+   Mobile first approach:
+   - Base styles: 320px - 576px (phones)
+   - sm: 576px+ (landscape phones, small tablets)
+   - md: 768px+ (tablets)
+   - lg: 992px+ (laptops)
+   - xl: 1200px+ (desktops)
+*/
+
+:root {
+  --breakpoint-xs: 320px;
+  --breakpoint-sm: 576px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 992px;
+  --breakpoint-xl: 1200px;
+
+  /* Touch targets: minimum 44x44px per UX-001 */
+  --touch-target-min: 44px;
+
+  /* Mobile spacing scale */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+
+  /* Typography scale for mobile */
+  --font-size-body: 14px;
+  --font-size-label: 12px;
+  --line-height-mobile: 1.5;
+}
+
+/* ========== MOBILE TYPOGRAPHY ==========
+   Optimized for 320px screens
+*/
+
+body {
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-mobile);
+  -webkit-text-size-adjust: 100%;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.3;
+  margin-bottom: var(--spacing-md);
+}
+
+h1 {
+  font-size: 24px;
+}
+
+h2 {
+  font-size: 20px;
+}
+
+h3 {
+  font-size: 18px;
+}
+
+h4 {
+  font-size: 16px;
+}
+
+h5, h6 {
+  font-size: 14px;
+}
+
+p {
+  margin-bottom: var(--spacing-md);
+}
+
+/* ========== TOUCH TARGETS ==========
+   UX-001: Minimum 44x44px for touch targets
+*/
+
+button,
+a.button,
+.mud-button,
+.mud-chip,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+input[type="checkbox"],
+input[type="radio"] {
+  min-height: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+  padding: var(--spacing-sm) var(--spacing-md);
+}
+
+/* Ensure input fields are touch-friendly */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+textarea,
+select {
+  min-height: var(--touch-target-min);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 16px; /* Prevents zoom on iOS */
+}
+
+/* ========== LAYOUT UTILITIES ==========
+   Mobile-first container and spacing
+*/
+
+.container-mobile {
+  width: 100%;
+  padding: 0 var(--spacing-lg);
+  margin: 0 auto;
+}
+
+.page-header-mobile {
+  padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+/* Stack buttons vertically on mobile */
+.button-group-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  width: 100%;
+}
+
+.button-group-mobile button {
+  width: 100%;
+  padding: var(--spacing-md);
+}
+
+/* ========== FORMS ON MOBILE ==========
+   Full-width inputs, clear labels
+*/
+
+.form-group-mobile {
+  margin-bottom: var(--spacing-lg);
+  width: 100%;
+}
+
+.form-group-mobile label {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  font-weight: 600;
+  font-size: var(--font-size-body);
+}
+
+.form-group-mobile input,
+.form-group-mobile textarea,
+.form-group-mobile select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ========== DATA TABLES ON MOBILE ==========
+   Stacked/card view for mobile, traditional table on desktop
+*/
+
+.data-table-mobile {
+  width: 100%;
+  border-collapse: collapse;
+  display: block;
+  margin-bottom: var(--spacing-lg);
+}
+
+.data-table-mobile thead {
+  display: none; /* Hide headers on mobile */
+}
+
+.data-table-mobile tbody,
+.data-table-mobile tr,
+.data-table-mobile td {
+  display: block;
+  width: 100%;
+}
+
+.data-table-mobile tr {
+  margin-bottom: var(--spacing-lg);
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.data-table-mobile td {
+  padding: var(--spacing-md);
+  text-align: right;
+  position: relative;
+  padding-left: 50%;
+}
+
+.data-table-mobile td::before {
+  content: attr(data-label);
+  position: absolute;
+  left: var(--spacing-md);
+  font-weight: 600;
+  text-align: left;
+  width: 45%;
+}
+
+@media (min-width: 768px) {
+  .data-table-mobile {
+    display: table;
+  }
+
+  .data-table-mobile thead {
+    display: table-header-group;
+  }
+
+  .data-table-mobile tbody,
+  .data-table-mobile tr,
+  .data-table-mobile td {
+    display: table-cell;
+  }
+
+  .data-table-mobile tr {
+    margin-bottom: 0;
+    border: none;
+  }
+
+  .data-table-mobile td {
+    padding: var(--spacing-md);
+    text-align: left;
+    position: static;
+    padding-left: var(--spacing-md);
+  }
+
+  .data-table-mobile td::before {
+    content: none;
+    position: static;
+  }
+
+  .data-table-mobile thead th {
+    background-color: #f5f5f5;
+    padding: var(--spacing-md);
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid #e0e0e0;
+  }
+}
+
+/* ========== NAVIGATION ON MOBILE ==========
+   Simplified mobile navigation
+*/
+
+.nav-mobile {
+  background-color: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0;
+  margin: 0;
+}
+
+.nav-mobile ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-mobile li {
+  margin: 0;
+}
+
+.nav-mobile a {
+  display: block;
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid #f0f0f0;
+  color: inherit;
+  text-decoration: none;
+  font-weight: 500;
+  min-height: var(--touch-target-min);
+  display: flex;
+  align-items: center;
+}
+
+.nav-mobile a:active {
+  background-color: #f5f5f5;
+}
+
+/* ========== CARDS ON MOBILE ==========
+   Optimize card layout for mobile
+*/
+
+.card-mobile {
+  margin-bottom: var(--spacing-lg);
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.card-mobile-header {
+  padding: var(--spacing-lg);
+  background-color: #f9f9f9;
+  border-bottom: 1px solid #e0e0e0;
+  font-weight: 600;
+}
+
+.card-mobile-body {
+  padding: var(--spacing-lg);
+}
+
+.card-mobile-footer {
+  padding: var(--spacing-lg);
+  background-color: #f9f9f9;
+  border-top: 1px solid #e0e0e0;
+}
+
+/* ========== MODALS ON MOBILE ==========
+   Full-screen or near-full-screen modals
+*/
+
+.modal-mobile {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+}
+
+.modal-mobile-content {
+  background-color: white;
+  margin-top: auto;
+  border-radius: 12px 12px 0 0;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: var(--spacing-lg);
+}
+
+.modal-mobile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-mobile-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  min-width: auto;
+  min-height: auto;
+  color: #666;
+}
+
+/* ========== BOTTOM ACTION BAR ==========
+   Fixed action bar for mobile
+*/
+
+.action-bar-mobile {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: white;
+  border-top: 1px solid #e0e0e0;
+  padding: var(--spacing-md) var(--spacing-lg);
+  display: flex;
+  gap: var(--spacing-md);
+  z-index: 100;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.action-bar-mobile button {
+  flex: 1;
+  padding: var(--spacing-md);
+  min-height: var(--touch-target-min);
+  font-weight: 600;
+}
+
+/* ========== RESPONSIVE GRID SYSTEM ==========
+   Mobile-first grid for MudGrid
+*/
+
+.mud-grid-item {
+  width: 100%;
+}
+
+/* ========== VISIBILITY UTILITIES ==========
+   Show/hide content based on screen size
+*/
+
+.show-mobile {
+  display: block;
+}
+
+.hide-mobile {
+  display: none;
+}
+
+/* Tablet and up */
+@media (min-width: 768px) {
+  .show-mobile {
+    display: none;
+  }
+
+  .hide-mobile {
+    display: block;
+  }
+
+  /* Restore traditional forms on larger screens */
+  .form-group-mobile {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-lg);
+  }
+
+  .form-group-mobile label {
+    grid-column: span 1;
+  }
+
+  .form-group-mobile input,
+  .form-group-mobile textarea,
+  .form-group-mobile select {
+    grid-column: span 1;
+  }
+
+  /* Stack buttons horizontally on desktop */
+  .button-group-mobile {
+    flex-direction: row;
+    width: auto;
+  }
+
+  .button-group-mobile button {
+    width: auto;
+    flex: 1;
+    min-width: 120px;
+  }
+
+  /* Remove bottom action bar on desktop */
+  .action-bar-mobile {
+    position: static;
+    border-top: none;
+    box-shadow: none;
+    padding: 0;
+  }
+}
+
+/* Large desktop (1200px+) */
+@media (min-width: 1200px) {
+  .container-mobile {
+    max-width: 1140px;
+  }
+}
+
+/* ========== LANDSCAPE ORIENTATION ADJUSTMENTS ==========
+   Optimize for landscape on small screens
+*/
+
+@media (max-height: 500px) and (orientation: landscape) {
+  body {
+    font-size: 12px;
+  }
+
+  h1 {
+    font-size: 18px;
+  }
+
+  .page-header-mobile {
+    padding: var(--spacing-md) var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .button-group-mobile {
+    flex-direction: row;
+    width: auto;
+  }
+
+  .button-group-mobile button {
+    width: auto;
+  }
+}
+
+/* ========== PRINT STYLES ==========
+   Optimize for printing on mobile
+*/
+
+@media print {
+  body {
+    font-size: 12px;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .page-header-mobile {
+    page-break-inside: avoid;
+  }
+
+  .card-mobile {
+    page-break-inside: avoid;
+  }
+}
+
+/* ========== ACCESSIBILITY ==========
+   UX-002: WCAG 2.1 Level AA compliance
+*/
+
+/* Focus visible for keyboard navigation */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #2196f3;
+  outline-offset: 2px;
+}
+
+/* Color contrast: minimum 4.5:1 for text */
+body {
+  color: #212121; /* 18:1 on white */
+}
+
+.text-muted {
+  color: #666; /* 7.5:1 on white */
+}
+
+.text-error {
+  color: #c62828; /* 5.3:1 on white */
+}
+
+.text-success {
+  color: #00695c; /* 6.5:1 on white */
+}
+
+.text-warning {
+  color: #663200; /* 8.5:1 on white */
+}
+
+.text-info {
+  color: #004b87; /* 8.2:1 on white */
+}

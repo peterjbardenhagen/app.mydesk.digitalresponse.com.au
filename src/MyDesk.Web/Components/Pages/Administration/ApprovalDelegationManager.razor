@@ -1,0 +1,237 @@
+@page "/admin/approvals/delegations"
+@using MyDesk.Web.Services
+@using System.Data
+@inject ApprovalDelegationService DelegationService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Approval Delegations</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-8">
+    <MudStack Spacing="4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudText Typo="Typo.h4" Class="font-bold">Approval Delegations</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateDelegation">
+                <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-2" />
+                New Delegation
+            </MudButton>
+        </MudStack>
+
+        <MudPaper Class="pa-4">
+            <MudTabs>
+                <MudTabPanel Text="As Delegator">
+                    @if (myDelegations == null)
+                    {
+                        <MudProgressLinear Indeterminate="true" />
+                    }
+                    else if (myDelegations.Rows.Count == 0)
+                    {
+                        <MudAlert Severity="Severity.Info">You haven't delegated approval authority to anyone.</MudAlert>
+                    }
+                    else
+                    {
+                        <MudDataGrid Items="@GetDelegatorList()" Striped="true" Dense="true" Class="mt-4">
+                            <PropertyColumn Property="d => d.To" Title="Delegated To" />
+                            <PropertyColumn Property="d => d.Module" Title="Module" />
+                            <PropertyColumn Property="d => d.Threshold" Title="Threshold Range" />
+                            <PropertyColumn Property="d => d.StartDate" Title="Start Date" />
+                            <PropertyColumn Property="d => d.EndDate" Title="End Date" />
+                            <PropertyColumn Property="d => d.Permissions" Title="Can" />
+                            <TemplateColumn Title="Actions" Sortable="false">
+                                <CellTemplate>
+                                    <MudStack Row="true" Spacing="1">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                            OnClick="@(() => EditDelegation(context.Item.DelegationId))" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                            OnClick="@(() => RemoveDelegation(context.Item.DelegationId))" />
+                                    </MudStack>
+                                </CellTemplate>
+                            </TemplateColumn>
+                        </MudDataGrid>
+                    }
+                </MudTabPanel>
+
+                <MudTabPanel Text="Received Delegations">
+                    @if (receivedDelegations == null)
+                    {
+                        <MudProgressLinear Indeterminate="true" />
+                    }
+                    else if (receivedDelegations.Rows.Count == 0)
+                    {
+                        <MudAlert Severity="Info">No one has delegated approval authority to you.</MudAlert>
+                    }
+                    else
+                    {
+                        <MudDataGrid Items="@GetDelegateeList()" Striped="true" Dense="true" Class="mt-4">
+                            <PropertyColumn Property="d => d.From" Title="Delegated From" />
+                            <PropertyColumn Property="d => d.Module" Title="Module" />
+                            <PropertyColumn Property="d => d.Threshold" Title="Threshold Range" />
+                            <PropertyColumn Property="d => d.StartDate" Title="Start Date" />
+                            <PropertyColumn Property="d => d.EndDate" Title="End Date" />
+                            <PropertyColumn Property="d => d.Permissions" Title="Can" />
+                        </MudDataGrid>
+                    }
+                </MudTabPanel>
+            </MudTabs>
+        </MudPaper>
+    </MudStack>
+</MudContainer>
+
+@code {
+    private DataTable? myDelegations;
+    private DataTable? receivedDelegations;
+    private int tenantId = 1;
+    private int currentUserId = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDelegations();
+    }
+
+    private async Task LoadDelegations()
+    {
+        try
+        {
+            myDelegations = await DelegationService.GetUserDelegationsAsync(tenantId, currentUserId, true);
+            receivedDelegations = await DelegationService.GetUserDelegationsAsync(tenantId, currentUserId, false);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading delegations: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private List<DelegationViewModel> GetDelegatorList()
+    {
+        if (myDelegations == null) return new();
+
+        var list = new List<DelegationViewModel>();
+        foreach (DataRow row in myDelegations.Rows)
+        {
+            var minThresh = row["MinThreshold"] != DBNull.Value ? decimal.Parse(row["MinThreshold"].ToString() ?? "0") : (decimal?)null;
+            var maxThresh = row["MaxThreshold"] != DBNull.Value ? decimal.Parse(row["MaxThreshold"].ToString() ?? "0") : (decimal?)null;
+
+            var threshold = minThresh.HasValue || maxThresh.HasValue
+                ? $"${minThresh?.ToString("F2") ?? "0"} - ${maxThresh?.ToString("F2") ?? "∞"}"
+                : "No limit";
+
+            var perms = new List<string>();
+            if (row["CanApprove"] != DBNull.Value && (int)row["CanApprove"] == 1) perms.Add("Approve");
+            if (row["CanReject"] != DBNull.Value && (int)row["CanReject"] == 1) perms.Add("Reject");
+            if (row["CanDelegate"] != DBNull.Value && (int)row["CanDelegate"] == 1) perms.Add("Delegate");
+
+            list.Add(new DelegationViewModel
+            {
+                DelegationId = (int)row["DelegationId"],
+                To = row["OtherUserName"]?.ToString() ?? "Unknown",
+                Module = row["ModuleType"]?.ToString() ?? "All",
+                Threshold = threshold,
+                StartDate = ((DateTime?)row["StartDate"])?.ToString("MMM dd, yyyy") ?? "",
+                EndDate = ((DateTime?)row["EndDate"])?.ToString("MMM dd, yyyy") ?? "Indefinite",
+                Permissions = string.Join(", ", perms)
+            });
+        }
+        return list;
+    }
+
+    private List<DelegationViewModel> GetDelegateeList()
+    {
+        if (receivedDelegations == null) return new();
+
+        var list = new List<DelegationViewModel>();
+        foreach (DataRow row in receivedDelegations.Rows)
+        {
+            var minThresh = row["MinThreshold"] != DBNull.Value ? decimal.Parse(row["MinThreshold"].ToString() ?? "0") : (decimal?)null;
+            var maxThresh = row["MaxThreshold"] != DBNull.Value ? decimal.Parse(row["MaxThreshold"].ToString() ?? "0") : (decimal?)null;
+
+            var threshold = minThresh.HasValue || maxThresh.HasValue
+                ? $"${minThresh?.ToString("F2") ?? "0"} - ${maxThresh?.ToString("F2") ?? "∞"}"
+                : "No limit";
+
+            var perms = new List<string>();
+            if (row["CanApprove"] != DBNull.Value && (int)row["CanApprove"] == 1) perms.Add("Approve");
+            if (row["CanReject"] != DBNull.Value && (int)row["CanReject"] == 1) perms.Add("Reject");
+            if (row["CanDelegate"] != DBNull.Value && (int)row["CanDelegate"] == 1) perms.Add("Delegate");
+
+            list.Add(new DelegationViewModel
+            {
+                DelegationId = (int)row["DelegationId"],
+                From = row["OtherUserName"]?.ToString() ?? "Unknown",
+                Module = row["ModuleType"]?.ToString() ?? "All",
+                Threshold = threshold,
+                StartDate = ((DateTime?)row["StartDate"])?.ToString("MMM dd, yyyy") ?? "",
+                EndDate = ((DateTime?)row["EndDate"])?.ToString("MMM dd, yyyy") ?? "Indefinite",
+                Permissions = string.Join(", ", perms)
+            });
+        }
+        return list;
+    }
+
+    private async Task CreateDelegation()
+    {
+        var parameters = new DialogParameters
+        {
+            { "TenantId", tenantId },
+            { "CurrentUserId", currentUserId }
+        };
+        var dialog = await DialogService.ShowAsync<ApprovalDelegationDialog>("Create Delegation", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadDelegations();
+            Snackbar.Add("Delegation created successfully", Severity.Success);
+        }
+    }
+
+    private async Task EditDelegation(int delegationId)
+    {
+        var parameters = new DialogParameters
+        {
+            { "TenantId", tenantId },
+            { "DelegationId", delegationId }
+        };
+        var dialog = await DialogService.ShowAsync<ApprovalDelegationDialog>("Edit Delegation", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadDelegations();
+            Snackbar.Add("Delegation updated successfully", Severity.Success);
+        }
+    }
+
+    private async Task RemoveDelegation(int delegationId)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Remove Delegation",
+            "Are you sure you want to remove this delegation?",
+            "Remove", "Cancel");
+
+        if (confirmed == true)
+        {
+            try
+            {
+                await DelegationService.DeactivateDelegationAsync(tenantId, delegationId);
+                await LoadDelegations();
+                Snackbar.Add("Delegation removed successfully", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error removing delegation: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private class DelegationViewModel
+    {
+        public int DelegationId { get; set; }
+        public string To { get; set; } = "";
+        public string From { get; set; } = "";
+        public string Module { get; set; } = "";
+        public string Threshold { get; set; } = "";
+        public string StartDate { get; set; } = "";
+        public string EndDate { get; set; } = "";
+        public string Permissions { get; set; } = "";
+    }
+}

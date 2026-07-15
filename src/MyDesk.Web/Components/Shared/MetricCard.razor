@@ -1,0 +1,21 @@
+<MudCard Class="pa-4" Style="height:100%;">
+    <MudStack AlignItems="AlignItems.Center" Spacing="2">
+        <MudIcon Icon="@Icon" Size="Size.Large" Color="IconColor" />
+        <MudText Typo="Typo.h5" Class="font-bold">@Value</MudText>
+        <MudText Typo="Typo.body2" Color="Color.TextSecondary" Align="Align.Center">@Title</MudText>
+    </MudStack>
+</MudCard>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Value { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Icon { get; set; } = Icons.Material.Filled.Info;
+
+    [Parameter]
+    public Color IconColor { get; set; } = Color.Default;
+}

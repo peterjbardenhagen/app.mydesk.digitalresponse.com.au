@@ -1,0 +1,277 @@
+@page "/admin/budgets"
+@using MyDesk.Web.Services
+@using System.Data
+@inject BudgetService BudgetService
+@inject DepartmentService DepartmentService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Department Budgets</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-8">
+    <MudStack Spacing="4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudText Typo="Typo.h4" Class="font-bold">Department Budgets</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateBudget">
+                <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-2" />
+                New Budget
+            </MudButton>
+        </MudStack>
+
+        <MudPaper Class="pa-4">
+            <MudStack Row="true" Spacing="2">
+                <MudSelect Value="selectedYear" Label="Fiscal Year"
+                    Variant="Variant.Outlined" Dense="true" Style="min-width: 200px;"
+                    ValueChanged="@(async (int year) => { selectedYear = year; await LoadBudgets(); })">
+                    @foreach (var year in Enumerable.Range(DateTime.Now.Year - 2, 5).Reverse())
+                    {
+                        <MudSelectItem Value="@year">@year</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudSelect Value="selectedDepartmentId" Label="Filter by Department"
+                    Variant="Variant.Outlined" Clearable="true" Dense="true"
+                    Style="min-width: 250px;" ValueChanged="@(async (int? deptId) => { selectedDepartmentId = deptId; await LoadBudgets(); })">
+                    @foreach (var dept in departments?.Rows.Cast<DataRow>() ?? new())
+                    {
+                        <MudSelectItem Value="@((int?)dept["DepartmentId"])">
+                            @dept["Name"]
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+            </MudStack>
+        </MudPaper>
+
+        @if (budgets == null)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (budgets.Rows.Count == 0)
+        {
+            <MudAlert Severity="Info">No budgets found for the selected year.</MudAlert>
+        }
+        else
+        {
+            <MudDataGrid Items="@GetBudgetList()" Striped="true" Hover="true" Dense="true">
+                <PropertyColumn Property="b => b.Department" Title="Department" />
+                <PropertyColumn Property="b => b.AllocatedDisplay" Title="Allocated" />
+                <PropertyColumn Property="b => b.SpentDisplay" Title="Spent" />
+                <PropertyColumn Property="b => b.RemainingDisplay" Title="Remaining" />
+                <TemplateColumn Title="% Used">
+                    <CellTemplate>
+                        <MudStack Spacing="0">
+                            <MudProgressLinear Value="@context.Item.PercentageUsed"
+                                Color="@GetProgressColor(context.Item.PercentageUsed)" Size="Size.Small" />
+                            <MudText Typo="Typo.caption" Align="Align.Center">
+                                @context.Item.PercentageUsed.ToString("F1")%
+                            </MudText>
+                        </MudStack>
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Actions" Sortable="false">
+                    <CellTemplate>
+                        <MudStack Row="true" Spacing="1">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                OnClick="@(() => EditBudget(context.Item.BudgetId))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" />
+                        </MudStack>
+                    </CellTemplate>
+                </TemplateColumn>
+            </MudDataGrid>
+        }
+
+        @if (budgets?.Rows.Count > 0)
+        {
+            <MudPaper Class="pa-4" Elevation="0" Style="background-color: var(--mud-palette-background-grey);">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.h6">Budget Summary</MudText>
+                    <MudGrid>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudPaper Class="pa-3" Elevation="0">
+                                <MudText Typo="Typo.caption">Total Allocated</MudText>
+                                <MudText Typo="Typo.h6">@GetTotalAllocated().ToString("C0")</MudText>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudPaper Class="pa-3" Elevation="0">
+                                <MudText Typo="Typo.caption">Total Spent</MudText>
+                                <MudText Typo="Typo.h6">@GetTotalSpent().ToString("C0")</MudText>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudPaper Class="pa-3" Elevation="0">
+                                <MudText Typo="Typo.caption">Total Remaining</MudText>
+                                <MudText Typo="Typo.h6">@GetTotalRemaining().ToString("C0")</MudText>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudPaper Class="pa-3" Elevation="0">
+                                <MudText Typo="Typo.caption">Average % Used</MudText>
+                                <MudText Typo="Typo.h6">@GetAveragePercentage().ToString("F1")%</MudText>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+                </MudStack>
+            </MudPaper>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    private DataTable? budgets;
+    private DataTable? departments;
+    private int? selectedDepartmentId;
+    private int selectedYear = DateTime.Now.Year;
+    private int tenantId = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDepartments();
+        await LoadBudgets();
+    }
+
+    private async Task LoadDepartments()
+    {
+        try
+        {
+            departments = await DepartmentService.GetDepartmentsAsync(tenantId);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading departments: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadBudgets()
+    {
+        try
+        {
+            budgets = await BudgetService.GetDepartmentBudgetsAsync(tenantId, selectedDepartmentId);
+            // Filter by fiscal year
+            if (budgets != null)
+            {
+                var filteredRows = budgets.Rows.Cast<DataRow>()
+                    .Where(r => (int)r["FiscalYear"] == selectedYear)
+                    .ToList();
+
+                var filteredTable = budgets.Clone();
+                foreach (var row in filteredRows)
+                {
+                    filteredTable.ImportRow(row);
+                }
+                budgets = filteredTable;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading budgets: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private List<BudgetViewModel> GetBudgetList()
+    {
+        if (budgets == null) return new();
+
+        var list = new List<BudgetViewModel>();
+        foreach (DataRow row in budgets.Rows)
+        {
+            var allocated = row["AllocatedAmount"] != DBNull.Value
+                ? (decimal)row["AllocatedAmount"] : 0;
+            var spent = row["SpentAmount"] != DBNull.Value
+                ? (decimal)row["SpentAmount"] : 0;
+            var remaining = allocated - spent;
+
+            var percentageUsed = allocated > 0 ? (spent / allocated) * 100 : 0;
+
+            list.Add(new BudgetViewModel
+            {
+                BudgetId = (int)row["BudgetId"],
+                Department = GetDepartmentName((int)row["DepartmentId"]),
+                Allocated = allocated,
+                AllocatedDisplay = allocated.ToString("C0"),
+                Spent = spent,
+                SpentDisplay = spent.ToString("C0"),
+                Remaining = remaining,
+                RemainingDisplay = remaining.ToString("C0"),
+                PercentageUsed = (double)percentageUsed
+            });
+        }
+        return list;
+    }
+
+    private string GetDepartmentName(int departmentId)
+    {
+        var row = departments?.Rows.Cast<DataRow>()
+            .FirstOrDefault(r => (int)r["DepartmentId"] == departmentId);
+        return row?["Name"]?.ToString() ?? "Unknown";
+    }
+
+    private decimal GetTotalAllocated()
+    {
+        return GetBudgetList().Sum(b => b.Allocated);
+    }
+
+    private decimal GetTotalSpent()
+    {
+        return GetBudgetList().Sum(b => b.Spent);
+    }
+
+    private decimal GetTotalRemaining()
+    {
+        return GetBudgetList().Sum(b => b.Remaining);
+    }
+
+    private double GetAveragePercentage()
+    {
+        var budgetList = GetBudgetList();
+        return budgetList.Count > 0 ? budgetList.Average(b => b.PercentageUsed) : 0;
+    }
+
+    private Color GetProgressColor(double percentage)
+    {
+        return percentage > 80 ? Color.Error : percentage > 60 ? Color.Warning : Color.Success;
+    }
+
+    private async Task CreateBudget()
+    {
+        var parameters = new DialogParameters { { "TenantId", tenantId } };
+        var dialog = await DialogService.ShowAsync<BudgetEditDialog>("Create Budget", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadBudgets();
+            Snackbar.Add("Budget created successfully", Severity.Success);
+        }
+    }
+
+    private async Task EditBudget(int budgetId)
+    {
+        var parameters = new DialogParameters
+        {
+            { "TenantId", tenantId },
+            { "BudgetId", budgetId }
+        };
+        var dialog = await DialogService.ShowAsync<BudgetEditDialog>("Edit Budget", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadBudgets();
+            Snackbar.Add("Budget updated successfully", Severity.Success);
+        }
+    }
+
+    public class BudgetViewModel
+    {
+        public int BudgetId { get; set; }
+        public string Department { get; set; } = "";
+        public decimal Allocated { get; set; }
+        public string AllocatedDisplay { get; set; } = "";
+        public decimal Spent { get; set; }
+        public string SpentDisplay { get; set; } = "";
+        public decimal Remaining { get; set; }
+        public string RemainingDisplay { get; set; } = "";
+        public double PercentageUsed { get; set; }
+    }
+}
