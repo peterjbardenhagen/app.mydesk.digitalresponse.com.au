@@ -84,7 +84,7 @@ public class DashboardChartService
         var chartData = new BarChartDataResult
         {
             Labels = labels,
-            Series = new List<ChartSeries>
+            Series = new List<DashboardChartSeriesData>
             {
                 new()
                 {
@@ -120,7 +120,7 @@ public class DashboardChartService
         var chartData = new BarChartDataResult
         {
             Labels = labels,
-            Series = new List<ChartSeries>
+            Series = new List<DashboardChartSeriesData>
             {
                 new()
                 {
@@ -150,7 +150,7 @@ public class DashboardChartService
         var chartData = new LineChartDataResult
         {
             Labels = labels,
-            Series = new List<ChartSeries>
+            Series = new List<DashboardChartSeriesData>
             {
                 new()
                 {
@@ -205,7 +205,7 @@ public class ChartDataResult
 public class BarChartDataResult
 {
     public List<string> Labels { get; set; } = new();
-    public List<ChartSeries> Series { get; set; } = new();
+    public List<DashboardChartSeriesData> Series { get; set; } = new();
 }
 
 /// <summary>
@@ -214,13 +214,13 @@ public class BarChartDataResult
 public class LineChartDataResult
 {
     public List<string> Labels { get; set; } = new();
-    public List<ChartSeries> Series { get; set; } = new();
+    public List<DashboardChartSeriesData> Series { get; set; } = new();
 }
 
 /// <summary>
 /// Individual chart series data
 /// </summary>
-public class ChartSeries
+public class DashboardChartSeriesData
 {
     public string Name { get; set; }
     public List<double> Data { get; set; } = new();

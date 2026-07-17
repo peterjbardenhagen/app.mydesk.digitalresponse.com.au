@@ -10,11 +10,11 @@ namespace MyDesk.Web.Services;
 /// Uses SignalR for WebSocket communication.
 /// Part of Phase 5: Notifications & Alerts
 /// </summary>
-public class ClientNotificationService
+public class SignalRNotificationService
 {
-    private readonly ILogger<ClientNotificationService>? _logger;
+    private readonly ILogger<SignalRNotificationService>? _logger;
 
-    public ClientNotificationService(ILogger<ClientNotificationService>? logger = null)
+    public SignalRNotificationService(ILogger<SignalRNotificationService>? logger = null)
     {
         _logger = logger;
     }
