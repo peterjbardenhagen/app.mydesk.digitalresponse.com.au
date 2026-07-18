@@ -384,7 +384,7 @@ public class DashboardExportService
 
                     if (includeSummary)
                     {
-                        column.Item().Text("Summary Metrics").FontSize(14).Bold().Margin(0, 10, 0, 5);
+                        column.Item().PaddingTop(10).PaddingBottom(5).Text("Summary Metrics").FontSize(14).Bold();
 
                         column.Item().Table(table =>
                         {
@@ -396,8 +396,8 @@ public class DashboardExportService
 
                             table.Header(header =>
                             {
-                                header.Cell().Text("Metric").Bold().Background("#ecf0f1");
-                                header.Cell().Text("Value").Bold().Background("#ecf0f1");
+                                header.Cell().Background("#ecf0f1").Padding(5).Text("Metric").Bold();
+                                header.Cell().Background("#ecf0f1").Padding(5).Text("Value").Bold();
                             });
 
                             table.Cell().Text("Total Expenses MTD");
@@ -416,7 +416,7 @@ public class DashboardExportService
 
                     if (includeDetailed)
                     {
-                        column.Item().Text("Expenses by Department").FontSize(14).Bold().Margin(0, 15, 0, 5);
+                        column.Item().PaddingTop(15).PaddingBottom(5).Text("Expenses by Department").FontSize(14).Bold();
 
                         if (dashboard.ByDepartment?.Count > 0)
                         {
@@ -431,9 +431,9 @@ public class DashboardExportService
 
                                 table.Header(header =>
                                 {
-                                    header.Cell().Text("Department").Bold().Background("#ecf0f1");
-                                    header.Cell().Text("Amount").Bold().Background("#ecf0f1");
-                                    header.Cell().Text("Count").Bold().Background("#ecf0f1");
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("Department").Bold();
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("Amount").Bold();
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("Count").Bold();
                                 });
 
                                 foreach (var dept in dashboard.ByDepartment)
@@ -445,7 +445,7 @@ public class DashboardExportService
                             });
                         }
 
-                        column.Item().Text("Expenses by Category").FontSize(14).Bold().Margin(0, 15, 0, 5);
+                        column.Item().PaddingTop(15).PaddingBottom(5).Text("Expenses by Category").FontSize(14).Bold();
 
                         if (dashboard.ByCategory?.Count > 0)
                         {
@@ -460,9 +460,9 @@ public class DashboardExportService
 
                                 table.Header(header =>
                                 {
-                                    header.Cell().Text("Category").Bold().Background("#ecf0f1");
-                                    header.Cell().Text("Amount").Bold().Background("#ecf0f1");
-                                    header.Cell().Text("Count").Bold().Background("#ecf0f1");
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("Category").Bold();
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("Amount").Bold();
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("Count").Bold();
                                 });
 
                                 foreach (var cat in dashboard.ByCategory)
@@ -474,7 +474,7 @@ public class DashboardExportService
                             });
                         }
 
-                        column.Item().Text("Budget vs Actual").FontSize(14).Bold().Margin(0, 15, 0, 5);
+                        column.Item().PaddingTop(15).PaddingBottom(5).Text("Budget vs Actual").FontSize(14).Bold();
 
                         if (dashboard.BudgetVsActual?.Count > 0)
                         {
@@ -491,11 +491,11 @@ public class DashboardExportService
 
                                 table.Header(header =>
                                 {
-                                    header.Cell().Text("Department").Bold().Background("#ecf0f1");
-                                    header.Cell().Text("Allocated").Bold().Background("#ecf0f1");
-                                    header.Cell().Text("Spent").Bold().Background("#ecf0f1");
-                                    header.Cell().Text("Available").Bold().Background("#ecf0f1");
-                                    header.Cell().Text("% Used").Bold().Background("#ecf0f1");
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("Department").Bold();
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("Allocated").Bold();
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("Spent").Bold();
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("Available").Bold();
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("% Used").Bold();
                                 });
 
                                 foreach (var budget in dashboard.BudgetVsActual)
@@ -561,7 +561,7 @@ public class DashboardExportService
 
                     if (includeSummary)
                     {
-                        column.Item().Text("Team Summary").FontSize(14).Bold().Margin(0, 10, 0, 5);
+                        column.Item().PaddingTop(10).PaddingBottom(5).Text("Team Summary").FontSize(14).Bold();
 
                         column.Item().Table(table =>
                         {
@@ -573,8 +573,8 @@ public class DashboardExportService
 
                             table.Header(header =>
                             {
-                                header.Cell().Text("Metric").Bold().Background("#ecf0f1");
-                                header.Cell().Text("Value").Bold().Background("#ecf0f1");
+                                header.Cell().Background("#ecf0f1").Padding(5).Text("Metric").Bold();
+                                header.Cell().Background("#ecf0f1").Padding(5).Text("Value").Bold();
                             });
 
                             table.Cell().Text("Team Members");
@@ -593,7 +593,7 @@ public class DashboardExportService
 
                     if (includeDetailed)
                     {
-                        column.Item().Text("Team Spending by Category").FontSize(14).Bold().Margin(0, 15, 0, 5);
+                        column.Item().PaddingTop(15).PaddingBottom(5).Text("Team Spending by Category").FontSize(14).Bold();
 
                         if (dashboard.TeamSpendingByCategory?.Count > 0)
                         {
@@ -607,8 +607,8 @@ public class DashboardExportService
 
                                 table.Header(header =>
                                 {
-                                    header.Cell().Text("Category").Bold().Background("#ecf0f1");
-                                    header.Cell().Text("Amount").Bold().Background("#ecf0f1");
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("Category").Bold();
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("Amount").Bold();
                                 });
 
                                 foreach (var cat in dashboard.TeamSpendingByCategory)
@@ -621,7 +621,7 @@ public class DashboardExportService
 
                         if (dashboard.OverdueItems?.Count > 0)
                         {
-                            column.Item().Text("Overdue Approvals").FontSize(14).Bold().Margin(0, 15, 0, 5);
+                            column.Item().PaddingTop(15).PaddingBottom(5).Text("Overdue Approvals").FontSize(14).Bold();
 
                             column.Item().Table(table =>
                             {
@@ -634,9 +634,9 @@ public class DashboardExportService
 
                                 table.Header(header =>
                                 {
-                                    header.Cell().Text("Employee").Bold().Background("#ecf0f1");
-                                    header.Cell().Text("Amount").Bold().Background("#ecf0f1");
-                                    header.Cell().Text("Days Overdue").Bold().Background("#ecf0f1");
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("Employee").Bold();
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("Amount").Bold();
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("Days Overdue").Bold();
                                 });
 
                                 foreach (var item in dashboard.OverdueItems.Take(50))
@@ -697,7 +697,7 @@ public class DashboardExportService
 
                     if (includeSummary)
                     {
-                        column.Item().Text("Expense Summary").FontSize(14).Bold().Margin(0, 10, 0, 5);
+                        column.Item().PaddingTop(10).PaddingBottom(5).Text("Expense Summary").FontSize(14).Bold();
 
                         column.Item().Table(table =>
                         {
@@ -709,8 +709,8 @@ public class DashboardExportService
 
                             table.Header(header =>
                             {
-                                header.Cell().Text("Metric").Bold().Background("#ecf0f1");
-                                header.Cell().Text("Value").Bold().Background("#ecf0f1");
+                                header.Cell().Background("#ecf0f1").Padding(5).Text("Metric").Bold();
+                                header.Cell().Background("#ecf0f1").Padding(5).Text("Value").Bold();
                             });
 
                             table.Cell().Text("Submitted This Month");
@@ -731,7 +731,7 @@ public class DashboardExportService
                     {
                         if (dashboard.MyExpenses?.Count > 0)
                         {
-                            column.Item().Text("Recent Expenses").FontSize(14).Bold().Margin(0, 15, 0, 5);
+                            column.Item().PaddingTop(15).PaddingBottom(5).Text("Recent Expenses").FontSize(14).Bold();
 
                             column.Item().Table(table =>
                             {
@@ -745,10 +745,10 @@ public class DashboardExportService
 
                                 table.Header(header =>
                                 {
-                                    header.Cell().Text("Description").Bold().Background("#ecf0f1");
-                                    header.Cell().Text("Amount").Bold().Background("#ecf0f1");
-                                    header.Cell().Text("Category").Bold().Background("#ecf0f1");
-                                    header.Cell().Text("Status").Bold().Background("#ecf0f1");
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("Description").Bold();
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("Amount").Bold();
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("Category").Bold();
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("Status").Bold();
                                 });
 
                                 foreach (var expense in dashboard.MyExpenses.Take(50))
@@ -763,7 +763,7 @@ public class DashboardExportService
 
                         if (dashboard.MonthlySummary?.Count > 0)
                         {
-                            column.Item().Text("Monthly Summary").FontSize(14).Bold().Margin(0, 15, 0, 5);
+                            column.Item().PaddingTop(15).PaddingBottom(5).Text("Monthly Summary").FontSize(14).Bold();
 
                             column.Item().Table(table =>
                             {
@@ -775,8 +775,8 @@ public class DashboardExportService
 
                                 table.Header(header =>
                                 {
-                                    header.Cell().Text("Month").Bold().Background("#ecf0f1");
-                                    header.Cell().Text("Amount").Bold().Background("#ecf0f1");
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("Month").Bold();
+                                    header.Cell().Background("#ecf0f1").Padding(5).Text("Amount").Bold();
                                 });
 
                                 foreach (var month in dashboard.MonthlySummary)
