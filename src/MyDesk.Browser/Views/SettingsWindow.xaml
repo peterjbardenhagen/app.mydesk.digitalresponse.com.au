@@ -1,0 +1,234 @@
+<Window x:Class="MyDesk.Browser.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:MyDesk.Browser.Views"
+        xmlns:vm="clr-namespace:MyDesk.Browser.ViewModels"
+        mc:Ignorable="d"
+        Title="MyDesk Browser Settings"
+        Height="550"
+        Width="550"
+        MinHeight="500"
+        MinWidth="500"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        Icon="/Assets/icon.ico"
+        d:DataContext="{d:DesignInstance Type=vm:SettingsViewModel, IsDesignTimeCreatable=True}">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,24">
+            <TextBlock Text="Settings"
+                       FontSize="24"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBlock Text="Configure MyDesk Browser preferences"
+                       FontSize="13"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       Margin="0,4,0,0" />
+        </StackPanel>
+
+        <!-- Settings Content -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+
+                <!-- General Settings -->
+                <GroupBox Header="General"
+                          Style="{DynamicResource SettingsGroupBoxStyle}"
+                          Margin="0,0,0,16">
+                    <StackPanel Margin="8">
+
+                        <StackPanel Margin="0,0,0,12">
+                            <TextBlock Text="Default URL"
+                                       Style="{DynamicResource SettingLabelStyle}" />
+                            <TextBox x:Name="DefaultUrlTextBox"
+                                     Style="{DynamicResource ModernTextBoxStyle}"
+                                     Text="{Binding DefaultUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,4,0,0" />
+                        </StackPanel>
+
+                        <StackPanel Margin="0,0,0,12">
+                            <TextBlock Text="Window Title"
+                                       Style="{DynamicResource SettingLabelStyle}" />
+                            <TextBox x:Name="WindowTitleTextBox"
+                                     Style="{DynamicResource ModernTextBoxStyle}"
+                                     Text="{Binding WindowTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,4,0,0" />
+                        </StackPanel>
+
+                        <StackPanel Margin="0,0,0,12">
+                            <TextBlock Text="Custom User Agent"
+                                       Style="{DynamicResource SettingLabelStyle}" />
+                            <TextBox x:Name="UserAgentTextBox"
+                                     Style="{DynamicResource ModernTextBoxStyle}"
+                                     Text="{Binding UserAgent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,4,0,0"
+                                     Height="60"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto" />
+                        </StackPanel>
+
+                        <CheckBox x:Name="EnableDevToolsCheckBox"
+                                  Content="Enable Developer Tools (F12)"
+                                  IsChecked="{Binding EnableDevTools, Mode=TwoWay}"
+                                  Margin="0,4,0,0"
+                                  Style="{DynamicResource ModernCheckBoxStyle}" />
+
+                        <CheckBox x:Name="AllowExternalLinksCheckBox"
+                                  Content="Open external links in default browser"
+                                  IsChecked="{Binding AllowExternalLinks, Mode=TwoWay}"
+                                  Margin="0,8,0,0"
+                                  Style="{DynamicResource ModernCheckBoxStyle}" />
+
+                        <CheckBox x:Name="ShowToolbarCheckBox"
+                                  Content="Show navigation toolbar"
+                                  IsChecked="{Binding ShowToolbar, Mode=TwoWay}"
+                                  Margin="0,8,0,0"
+                                  Style="{DynamicResource ModernCheckBoxStyle}" />
+
+                        <CheckBox x:Name="AutoGrantPermissionsCheckBox"
+                                  Content="Automatically grant camera/mic/notifications permissions"
+                                  IsChecked="{Binding AutoGrantPermissions, Mode=TwoWay}"
+                                  Margin="0,8,0,0"
+                                  Style="{DynamicResource ModernCheckBoxStyle}" />
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- Window Settings -->
+                <GroupBox Header="Window"
+                          Style="{DynamicResource SettingsGroupBoxStyle}"
+                          Margin="0,0,0,16">
+                    <StackPanel Margin="8">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                            <StackPanel Width="150" Margin="0,0,12,0">
+                                <TextBlock Text="Default Width"
+                                           Style="{DynamicResource SettingLabelStyle}" />
+                                <TextBox x:Name="WidthTextBox"
+                                         Style="{DynamicResource ModernTextBoxStyle}"
+                                         Text="{Binding WindowWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,4,0,0" />
+                            </StackPanel>
+                            <StackPanel Width="150">
+                                <TextBlock Text="Default Height"
+                                           Style="{DynamicResource SettingLabelStyle}" />
+                                <TextBox x:Name="HeightTextBox"
+                                         Style="{DynamicResource ModernTextBoxStyle}"
+                                         Text="{Binding WindowHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,4,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <CheckBox x:Name="StartMaximizedCheckBox"
+                                  Content="Start maximized"
+                                  IsChecked="{Binding StartMaximized, Mode=TwoWay}"
+                                  Margin="0,4,0,0"
+                                  Style="{DynamicResource ModernCheckBoxStyle}" />
+
+                        <CheckBox x:Name="RememberWindowStateCheckBox"
+                                  Content="Remember window position and size"
+                                  IsChecked="{Binding RememberWindowState, Mode=TwoWay}"
+                                  Margin="0,8,0,0"
+                                  Style="{DynamicResource ModernCheckBoxStyle}" />
+
+                        <CheckBox x:Name="HardwareAccelerationCheckBox"
+                                  Content="Enable hardware acceleration (requires restart)"
+                                  IsChecked="{Binding HardwareAcceleration, Mode=TwoWay}"
+                                  Margin="0,8,0,0"
+                                  Style="{DynamicResource ModernCheckBoxStyle}" />
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- Advanced Settings -->
+                <GroupBox Header="Advanced"
+                          Style="{DynamicResource SettingsGroupBoxStyle}"
+                          Margin="0,0,0,16">
+                    <StackPanel Margin="8">
+                        <StackPanel Margin="0,0,0,12">
+                            <TextBlock Text="WebView2 User Data Folder"
+                                       Style="{DynamicResource SettingLabelStyle}" />
+                            <TextBlock x:Name="UserDataFolderText"
+                                       Style="{DynamicResource SettingValueStyle}"
+                                       Margin="0,4,0,0"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <Button Content="Clear WebView2 Cache &amp; Data"
+                                Style="{DynamicResource SecondaryButtonStyle}"
+                                Command="{Binding ClearCacheCommand}"
+                                HorizontalAlignment="Left"
+                                Margin="0,8,0,0" />
+
+                        <Button Content="Open Settings Folder"
+                                Style="{DynamicResource SecondaryButtonStyle}"
+                                Command="{Binding OpenSettingsFolderCommand}"
+                                HorizontalAlignment="Left"
+                                Margin="0,8,0,0" />
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- About -->
+                <GroupBox Header="About"
+                          Style="{DynamicResource SettingsGroupBoxStyle}">
+                    <StackPanel Margin="8">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <Image Source="/Assets/icon.ico" Width="32" Height="32" Margin="0,0,12,0" />
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="MyDesk Browser"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                                <TextBlock Text="Version 1.0.0"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                            </StackPanel>
+                        </StackPanel>
+                        <TextBlock Text="A secure desktop browser for MyDesk and Microsoft 365"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Margin="0,0,0,8"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Text="Built with .NET 10, WPF, and WebView2"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource TextDisabledBrush}"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                </GroupBox>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Status Message -->
+        <TextBlock Grid.Row="2"
+                   Text="{Binding StatusMessage}"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
+                   FontSize="11"
+                   Margin="0,8,0,8"
+                   TextWrapping="Wrap"
+                   Visibility="{Binding StatusMessage, Converter={StaticResource StringToVisibilityConverter}}" />
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Margin="0,16,0,0">
+            <Button Content="Reset to Defaults"
+                    Style="{DynamicResource SecondaryButtonStyle}"
+                    Command="{Binding ResetToDefaultsCommand}"
+                    Width="140"
+                    Margin="0,0,12,0" />
+            <Button Content="Cancel"
+                    Style="{DynamicResource SecondaryButtonStyle}"
+                    Click="BtnCancel_Click"
+                    Width="100"
+                    Margin="0,0,12,0" />
+            <Button Content="Save"
+                    Style="{DynamicResource PrimaryButtonStyle}"
+                    Command="{Binding SaveCommand}"
+                    Width="100" />
+        </StackPanel>
+    </Grid>
+</Window>
