@@ -77,6 +77,9 @@ namespace MyDesk.Browser.ViewModels
         [ObservableProperty]
         private string _userAvatarUrl = string.Empty;
 
+        [ObservableProperty]
+        private bool _isAgentsOnline = false;
+
         /// <summary>
         /// Computed initials from the user's name for the avatar circle.
         /// </summary>
@@ -193,6 +196,13 @@ namespace MyDesk.Browser.ViewModels
                         // Check if the page content suggests we're logged in
                         var hasAppContent = document.querySelector('.mud-layout, .main-layout, #app, [class*=dashboard]') !== null;
 
+                        // AgentsOS status detection
+                        var isAgentsOnline = false;
+                        var agentsAlert = document.querySelector('.mud-alert-severity-success');
+                        if (agentsAlert && window.location.pathname.indexOf('/agentsos') >= 0) {
+                            isAgentsOnline = agentsAlert.textContent.indexOf('reachable') >= 0;
+                        }
+
                         return JSON.stringify({
                             isAuthenticated: (hasCookie || hasAppContent) && !isLoginPage,
                             userName: userName,
@@ -200,7 +210,8 @@ namespace MyDesk.Browser.ViewModels
                             path: window.location.pathname,
                             hasCookie: hasCookie,
                             isLoginPage: isLoginPage,
-                            hasAppContent: hasAppContent
+                            hasAppContent: hasAppContent,
+                            isAgentsOnline: isAgentsOnline
                         });
                     })();
                 ";
@@ -213,8 +224,10 @@ namespace MyDesk.Browser.ViewModels
                     var isAuthed = result.TryGetProperty("isAuthenticated", out var authProp) && authProp.GetBoolean();
                     var name = result.TryGetProperty("userName", out var nameProp) ? nameProp.GetString() ?? "" : "";
                     var email = result.TryGetProperty("userEmail", out var emailProp) ? emailProp.GetString() ?? "" : "";
+                    var agentsOnline = result.TryGetProperty("isAgentsOnline", out var agentsProp) && agentsProp.GetBoolean();
 
                     IsAuthenticated = isAuthed;
+                    IsAgentsOnline = agentsOnline;
                     if (isAuthed && !string.IsNullOrEmpty(name))
                     {
                         UserName = name;

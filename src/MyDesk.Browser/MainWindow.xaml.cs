@@ -235,6 +235,16 @@ namespace MyDesk.Browser
             myDeskItem.Click += AppMenu_Click;
             menu.Items.Add(myDeskItem);
 
+            // AgentsOS
+            var agentsOsItem = new MenuItem { Header = "🤖 AgentsOS", Tag = "agentsos" };
+            agentsOsItem.Click += AppMenu_Click;
+            menu.Items.Add(agentsOsItem);
+
+            // Ask AI
+            var askAiItem = new MenuItem { Header = "🧠 Ask AI", Tag = "askai" };
+            askAiItem.Click += AppMenu_Click;
+            menu.Items.Add(askAiItem);
+
             // Outlook
             var outlookItem = new MenuItem { Header = "📧 Outlook", Tag = "outlook" };
             outlookItem.Click += AppMenu_Click;
@@ -277,6 +287,14 @@ namespace MyDesk.Browser
 
                     case "mydesk":
                         WebView.CoreWebView2?.Navigate("https://app.mydesk.digitalresponse.com.au");
+                        break;
+
+                    case "agentsos":
+                        WebView.CoreWebView2?.Navigate("https://app.mydesk.digitalresponse.com.au/agentsos");
+                        break;
+
+                    case "askai":
+                        WebView.CoreWebView2?.Navigate("https://app.mydesk.digitalresponse.com.au/ask-ai");
                         break;
 
                     case "outlook":

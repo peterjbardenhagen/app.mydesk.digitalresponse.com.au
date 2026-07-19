@@ -42,7 +42,7 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <!-- App Icon + User Profile -->
+                <!-- App Icon + User Profile + AgentsOS -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                     <Image Width="18"
                            Height="18"
@@ -69,6 +69,25 @@
                                    VerticalAlignment="Center"
                                    HorizontalAlignment="Center" />
                     </Border>
+
+                    <!-- AgentsOS status indicator -->
+                    <Ellipse x:Name="AgentsDot"
+                             Width="8"
+                             Height="8"
+                             Margin="6,0,0,0"
+                             ToolTip="AgentsOS"
+                             Visibility="{Binding IsAuthenticated, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse">
+                                <Setter Property="Fill" Value="{DynamicResource TextDisabledBrush}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAgentsOnline}" Value="True">
+                                        <Setter Property="Fill" Value="{DynamicResource SuccessBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
                 </StackPanel>
 
                 <!-- Title / User Info -->
