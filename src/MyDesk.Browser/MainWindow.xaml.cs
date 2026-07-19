@@ -284,7 +284,7 @@ namespace MyDesk.Browser
                         break;
 
                     case "itsupport":
-                        OpenITSupportEmail();
+                        OpenSupportWindow();
                         break;
 
                     case "settings":
@@ -329,6 +329,15 @@ namespace MyDesk.Browser
             {
                 _viewModel.SetError($"Failed to open Outlook: {ex.Message}");
             }
+        }
+
+        private void OpenSupportWindow()
+        {
+            var supportWindow = new Views.SupportWindow(_viewModel.UserName)
+            {
+                Owner = this
+            };
+            supportWindow.ShowDialog();
         }
 
         private void OpenITSupportEmail()
