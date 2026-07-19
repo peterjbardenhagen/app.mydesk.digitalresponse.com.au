@@ -245,6 +245,11 @@ namespace MyDesk.Browser
             askAiItem.Click += AppMenu_Click;
             menu.Items.Add(askAiItem);
 
+            // Share Desktop
+            var shareItem = new MenuItem { Header = "🖥️ Share Desktop", Tag = "sharedesktop" };
+            shareItem.Click += AppMenu_Click;
+            menu.Items.Add(shareItem);
+
             // Outlook
             var outlookItem = new MenuItem { Header = "📧 Outlook", Tag = "outlook" };
             outlookItem.Click += AppMenu_Click;
@@ -295,6 +300,10 @@ namespace MyDesk.Browser
 
                     case "askai":
                         WebView.CoreWebView2?.Navigate("https://app.mydesk.digitalresponse.com.au/ask-ai");
+                        break;
+
+                    case "sharedesktop":
+                        OpenShareDesktopWindow();
                         break;
 
                     case "outlook":
@@ -356,6 +365,20 @@ namespace MyDesk.Browser
                 Owner = this
             };
             supportWindow.ShowDialog();
+        }
+
+        private void OpenShareDesktopWindow()
+        {
+            var ownerWindow = Window.GetWindow(this);
+            var vm = new ViewModels.ShareDesktopViewModel();
+            vm.CurrentUrl = WebView.Source?.ToString()
+                            ?? "https://app.mydesk.digitalresponse.com.au";
+            var shareWindow = new Views.ShareDesktopWindow
+            {
+                Owner = ownerWindow,
+                DataContext = vm
+            };
+            shareWindow.ShowDialog();
         }
 
         private void OpenITSupportEmail()

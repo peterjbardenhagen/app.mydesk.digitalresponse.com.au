@@ -122,6 +122,7 @@
                     CornerRadius="6"
                     Padding="12">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Grid>
 
                     <!-- New Ticket Form -->
                     <StackPanel Visibility="{Binding ShowNewTicket, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -250,6 +251,8 @@
                                        TextWrapping="Wrap" />
                         </Border>
                     </StackPanel>
+
+                    </Grid>
                 </ScrollViewer>
             </Border>
         </Grid>

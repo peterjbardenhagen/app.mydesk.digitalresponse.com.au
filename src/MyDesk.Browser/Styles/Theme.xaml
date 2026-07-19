@@ -92,6 +92,8 @@
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     <local:InvertedBoolConverter x:Key="InvertedBoolConverter" />
     <local:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
+    <local:RadioBoolConverter x:Key="RadioBoolConverter" />
+    <local:StringEqualsVisibilityConverter x:Key="StringEqualsVisibilityConverter" />
 
     <!-- Menu Button Style -->
     <Style x:Key="MenuButtonStyle" TargetType="Button">

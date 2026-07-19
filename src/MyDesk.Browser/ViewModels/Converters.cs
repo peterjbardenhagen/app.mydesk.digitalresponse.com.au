@@ -42,4 +42,46 @@ namespace MyDesk.Browser.ViewModels
             return false;
         }
     }
+
+    /// <summary>
+    /// Converts a radio button's IsChecked bound to a string-parameter comparison.
+    /// When the bound property matches ConverterParameter, IsChecked = true.
+    /// Use with GroupName on the RadioButton for mutual exclusivity.
+    /// </summary>
+    public class RadioBoolConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is string strVal && parameter is string param)
+                return string.Equals(strVal, param, StringComparison.OrdinalIgnoreCase);
+            return false;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool isChecked && isChecked && parameter is string param)
+                return param;
+            return Binding.DoNothing;
+        }
+    }
+
+    /// <summary>
+    /// Shows an element when the string value equals the ConverterParameter.
+    /// </summary>
+    public class StringEqualsVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is string strVal && parameter is string param)
+                return string.Equals(strVal, param, StringComparison.OrdinalIgnoreCase)
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+            return Visibility.Collapsed;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }
