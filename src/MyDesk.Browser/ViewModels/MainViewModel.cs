@@ -14,13 +14,12 @@ namespace MyDesk.Browser.ViewModels
     {
         private readonly ILogger<MainViewModel> _logger;
         private readonly AppSettings _settings;
-        
 
         [ObservableProperty]
-        private string _initialUrl = "https://www.office.com";
+        private string _initialUrl = "https://app.mydesk.digitalresponse.com.au";
 
         [ObservableProperty]
-        private string _currentUrl = "https://www.office.com";
+        private string _currentUrl = "https://app.mydesk.digitalresponse.com.au";
 
         [ObservableProperty]
         private string _windowTitle = "MyDesk Browser";
@@ -64,6 +63,43 @@ namespace MyDesk.Browser.ViewModels
         [ObservableProperty]
         private double _savedTop = 100;
 
+        // ── Auth State ───────────────────────────────────────────────────────
+
+        [ObservableProperty]
+        private bool _isAuthenticated = false;
+
+        [ObservableProperty]
+        private string _userName = string.Empty;
+
+        [ObservableProperty]
+        private string _userEmail = string.Empty;
+
+        [ObservableProperty]
+        private string _userAvatarUrl = string.Empty;
+
+        /// <summary>
+        /// Computed initials from the user's name for the avatar circle.
+        /// </summary>
+        public string UserInitials
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(UserName)) return "?";
+                var parts = UserName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length >= 2)
+                    return $"{parts[0][0]}{parts[^1][0]}".ToUpper();
+                return UserName.Length >= 1 ? UserName[..1].ToUpper() : "?";
+            }
+        }
+
+        partial void OnUserNameChanged(string value)
+        {
+            OnPropertyChanged(nameof(UserInitials));
+        }
+
+        // The WebView2 instance (set by MainWindow after initialization)
+        private WebView2? _webView;
+
         public MainViewModel() : this(null, null) { }
 
         public MainViewModel(ILogger<MainViewModel> logger, AppSettings settings)
@@ -81,15 +117,26 @@ namespace MyDesk.Browser.ViewModels
 
             // Load saved window state
             LoadWindowState();
+
+            // Load saved user info
+            _userName = _settings.LastUserName ?? string.Empty;
+            _userEmail = _settings.LastUserEmail ?? string.Empty;
         }
 
         public string UserDataFolder { get; private set; } = string.Empty;
+
+        /// <summary>
+        /// Called by MainWindow after WebView2 is initialized to store a reference.
+        /// </summary>
+        public void SetWebView(WebView2 webView)
+        {
+            _webView = webView;
+        }
 
         private void InitializeWebViewProperties()
         {
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             UserDataFolder = Path.Combine(appData, "MyDesk", "Browser");
-            // Ensure the folder exists for WebView2 persistence
             if (!Directory.Exists(UserDataFolder))
             {
                 Directory.CreateDirectory(UserDataFolder);
@@ -98,6 +145,158 @@ namespace MyDesk.Browser.ViewModels
 
         // Expose settings for UI consumption
         public AppSettings Settings => _settings;
+
+        /// <summary>
+        /// Called after every page navigation to detect auth state.
+        /// Injects JavaScript to check for auth cookies and user info.
+        /// </summary>
+        public async void CheckAuthState()
+        {
+            if (_webView?.CoreWebView2 == null) return;
+
+            try
+            {
+                // JavaScript to check auth state from the page
+                var script = @"
+                    (function() {
+                        // Check for auth cookie
+                        var hasCookie = document.cookie.indexOf('.AspNetCore') >= 0 || document.cookie.indexOf('Identity') >= 0;
+
+                        // Try to extract user info from common DOM patterns
+                        var userName = '';
+                        var userEmail = '';
+
+                        // Pattern 1: MudBlazor user menu button
+                        var userBtn = document.querySelector('[data-user-name]');
+                        if (userBtn) userName = userBtn.getAttribute('data-user-name');
+
+                        // Pattern 2: Common user display elements
+                        if (!userName) {
+                            var els = document.querySelectorAll('.user-name, .user-display-name, [class*=user][class*=name]');
+                            if (els.length > 0) userName = els[0].textContent.trim();
+                        }
+
+                        // Pattern 3: Meta tag
+                        if (!userName) {
+                            var meta = document.querySelector('meta[name=""user-name""]');
+                            if (meta) userName = meta.getAttribute('content');
+                        }
+
+                        // Email patterns
+                        var emailMeta = document.querySelector('meta[name=""user-email""]');
+                        if (emailMeta) userEmail = emailMeta.getAttribute('content');
+
+                        // Check if we're on a login page
+                        var isLoginPage = window.location.pathname.indexOf('/login') === 0 || 
+                                         window.location.pathname.indexOf('/Account/Login') === 0;
+
+                        // Check if the page content suggests we're logged in
+                        var hasAppContent = document.querySelector('.mud-layout, .main-layout, #app, [class*=dashboard]') !== null;
+
+                        return JSON.stringify({
+                            isAuthenticated: (hasCookie || hasAppContent) && !isLoginPage,
+                            userName: userName,
+                            userEmail: userEmail,
+                            path: window.location.pathname,
+                            hasCookie: hasCookie,
+                            isLoginPage: isLoginPage,
+                            hasAppContent: hasAppContent
+                        });
+                    })();
+                ";
+
+                var jsonResult = await _webView.CoreWebView2.ExecuteScriptAsync(script);
+                var result = JsonSerializer.Deserialize<JsonElement>(jsonResult);
+
+                if (result.ValueKind == JsonValueKind.Object)
+                {
+                    var isAuthed = result.TryGetProperty("isAuthenticated", out var authProp) && authProp.GetBoolean();
+                    var name = result.TryGetProperty("userName", out var nameProp) ? nameProp.GetString() ?? "" : "";
+                    var email = result.TryGetProperty("userEmail", out var emailProp) ? emailProp.GetString() ?? "" : "";
+
+                    IsAuthenticated = isAuthed;
+                    if (isAuthed && !string.IsNullOrEmpty(name))
+                    {
+                        UserName = name;
+                        UserEmail = email;
+                        _settings.LastUserName = name;
+                        _settings.LastUserEmail = email;
+                    }
+                    else if (!isAuthed)
+                    {
+                        UserName = string.Empty;
+                        UserEmail = string.Empty;
+                    }
+
+                    UpdateTitle();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogDebug(ex, "Auth state detection failed (expected on non-MyDesk pages)");
+            }
+        }
+
+        /// <summary>
+        /// Updates the window title to reflect auth state.
+        /// </summary>
+        public void UpdateTitle()
+        {
+            if (IsAuthenticated && !string.IsNullOrEmpty(UserName))
+            {
+                WindowTitle = $"{_settings.WindowTitle} — {UserName}";
+            }
+            else
+            {
+                WindowTitle = _settings.WindowTitle;
+            }
+        }
+
+        /// <summary>
+        /// Logs the user out by clearing cookies and navigating to the logout page.
+        /// </summary>
+        public async void Logout()
+        {
+            if (_webView?.CoreWebView2 == null) return;
+
+            try
+            {
+                // Clear all cookies for the current domain
+                var cookieManager = _webView.CoreWebView2.CookieManager;
+                var cookies = await cookieManager.GetCookiesAsync(_currentUrl);
+                foreach (var cookie in cookies)
+                {
+                    cookieManager.DeleteCookie(cookie);
+                }
+
+                // Clear all cookies for *.digitalresponse.com.au
+                var drCookies = await cookieManager.GetCookiesAsync("https://digitalresponse.com.au");
+                foreach (var cookie in drCookies)
+                {
+                    cookieManager.DeleteCookie(cookie);
+                }
+
+                IsAuthenticated = false;
+                UserName = string.Empty;
+                UserEmail = string.Empty;
+                UpdateTitle();
+
+                // Navigate to logout page
+                _webView.CoreWebView2.Navigate("https://app.mydesk.digitalresponse.com.au/logout");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Logout failed");
+            }
+        }
+
+        /// <summary>
+        /// Navigates to the login page.
+        /// </summary>
+        public void Login()
+        {
+            _webView?.CoreWebView2?.Navigate("https://app.mydesk.digitalresponse.com.au/login");
+        }
 
         public void UpdateNavigationState(CoreWebView2 webView)
         {
@@ -224,5 +423,11 @@ namespace MyDesk.Browser.ViewModels
         public bool StartMaximized { get; set; } = false;
         public bool RememberWindowState { get; set; } = true;
         public bool HardwareAcceleration { get; set; } = true;
+        public bool ShowToolbar { get; set; } = true;
+        public bool AutoGrantPermissions { get; set; } = true;
+
+        // Auth-related persisted settings
+        public string? LastUserName { get; set; }
+        public string? LastUserEmail { get; set; }
     }
 }

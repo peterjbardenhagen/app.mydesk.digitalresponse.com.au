@@ -54,6 +54,12 @@ namespace MyDesk.Browser.ViewModels
         [ObservableProperty]
         private string _statusMessage = string.Empty;
 
+        /// <summary>
+        /// Application version from the assembly.
+        /// </summary>
+        public string Version =>
+            System.Reflection.Assembly.GetExecutingAssembly().GetName()?.Version?.ToString() ?? "1.0.0";
+
         [ObservableProperty]
         private bool _isSaving = false;
 
@@ -103,6 +109,8 @@ namespace MyDesk.Browser.ViewModels
             EnableDevTools = _settings.EnableDevTools;
             AllowExternalLinks = _settings.AllowExternalLinks;
             UserAgent = _settings.UserAgent;
+            ShowToolbar = _settings.ShowToolbar;
+            AutoGrantPermissions = _settings.AutoGrantPermissions;
         }
 
         [RelayCommand]
@@ -123,6 +131,8 @@ namespace MyDesk.Browser.ViewModels
                 _settings.EnableDevTools = EnableDevTools;
                 _settings.AllowExternalLinks = AllowExternalLinks;
                 _settings.UserAgent = UserAgent;
+                _settings.ShowToolbar = ShowToolbar;
+                _settings.AutoGrantPermissions = AutoGrantPermissions;
 
                 Directory.CreateDirectory(Path.GetDirectoryName(_settingsPath));
                 var json = JsonSerializer.Serialize(_settings, new JsonSerializerOptions { WriteIndented = true });

@@ -176,13 +176,13 @@
                           Style="{DynamicResource SettingsGroupBoxStyle}">
                     <StackPanel Margin="8">
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                            <Image Source="/Assets/icon.ico" Width="32" Height="32" Margin="0,0,12,0" />
+                            <Image Source="/Assets/mydesk-mark.svg" Width="32" Height="32" Margin="0,0,12,0" />
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="MyDesk Browser"
                                            FontSize="16"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextPrimaryBrush}" />
-                                <TextBlock Text="Version 1.0.0"
+                                <TextBlock Text="{Binding Version, FallbackValue='Version 1.0.0'}"
                                            FontSize="12"
                                            Foreground="{DynamicResource TextSecondaryBrush}" />
                             </StackPanel>

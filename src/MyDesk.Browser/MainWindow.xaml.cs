@@ -57,9 +57,12 @@ namespace MyDesk.Browser
                 return;
             }
 
+            // Store WebView reference in ViewModel for auth detection
+            _viewModel.SetWebView(WebView);
+
             var webView = WebView.CoreWebView2;
 
-            // Permissions for Teams / Office
+            // Permissions
             webView.PermissionRequested += (s, e) =>
             {
                 e.State = CoreWebView2PermissionState.Allow;
@@ -96,6 +99,9 @@ namespace MyDesk.Browser
         {
             _viewModel.IsLoading = false;
             _viewModel.UpdateNavigationState(WebView.CoreWebView2);
+
+            // Check auth state after every navigation
+            _viewModel.CheckAuthState();
 
             if (!e.IsSuccess)
             {
@@ -200,7 +206,31 @@ namespace MyDesk.Browser
         {
             var menu = new ContextMenu();
 
-            // MyDesk
+            // ── User / Auth Section ──────────────────────────────────────
+            if (_viewModel.IsAuthenticated)
+            {
+                var userItem = new MenuItem
+                {
+                    Header = $"👤 {_viewModel.UserName}",
+                    IsEnabled = false,
+                    FontWeight = FontWeights.SemiBold
+                };
+                menu.Items.Add(userItem);
+
+                var logoutItem = new MenuItem { Header = "🚪 Sign Out", Tag = "logout" };
+                logoutItem.Click += AppMenu_Click;
+                menu.Items.Add(logoutItem);
+            }
+            else
+            {
+                var loginItem = new MenuItem { Header = "🔑 Sign In", Tag = "login" };
+                loginItem.Click += AppMenu_Click;
+                menu.Items.Add(loginItem);
+            }
+
+            menu.Items.Add(new Separator());
+
+            // ── MyDesk ──────────────────────────────────────────────────
             var myDeskItem = new MenuItem { Header = "💻 MyDesk", Tag = "mydesk" };
             myDeskItem.Click += AppMenu_Click;
             menu.Items.Add(myDeskItem);
@@ -218,7 +248,7 @@ namespace MyDesk.Browser
             // Separator
             menu.Items.Add(new Separator());
 
-            // Show main menu options
+            // Settings
             var settingsItem = new MenuItem { Header = "⚙ Settings", Tag = "settings" };
             settingsItem.Click += AppMenu_Click;
             menu.Items.Add(settingsItem);
@@ -237,6 +267,14 @@ namespace MyDesk.Browser
             {
                 switch (tag)
                 {
+                    case "login":
+                        _viewModel.Login();
+                        break;
+
+                    case "logout":
+                        _viewModel.Logout();
+                        break;
+
                     case "mydesk":
                         WebView.CoreWebView2?.Navigate("https://app.mydesk.digitalresponse.com.au");
                         break;
@@ -280,7 +318,6 @@ namespace MyDesk.Browser
                 }
                 else
                 {
-                    // Try generic mailto fallback
                     Process.Start(new ProcessStartInfo
                     {
                         FileName = "outlook:",
@@ -323,7 +360,6 @@ namespace MyDesk.Browser
 
         private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
-            // Preferred behavior: minimize to tray instead of closing
             WindowState = WindowState.Minimized;
         }
 
@@ -345,7 +381,6 @@ namespace MyDesk.Browser
             var settingsWindow = new Views.SettingsWindow
             {
                 Owner = this,
-                // Pass null logger; SettingsViewModel loads its own settings
                 DataContext = new ViewModels.SettingsViewModel(null)
             };
             settingsWindow.ShowDialog();
@@ -353,8 +388,12 @@ namespace MyDesk.Browser
 
         private void BtnProfile_Click(object sender, RoutedEventArgs e)
         {
-            // Open settings/profile view
             BtnSettings_Click(sender, e);
+        }
+
+        private void UserAvatar_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            BtnMenu_Click(sender, e);
         }
     }
 }
