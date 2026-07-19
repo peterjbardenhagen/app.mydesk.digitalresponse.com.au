@@ -3,40 +3,43 @@
                     xmlns:sys="clr-namespace:System;assembly=mscorlib"
                     xmlns:local="clr-namespace:MyDesk.Browser.ViewModels">
 
-    <!-- Techlight Brand Colors -->
-    <Color x:Key="TechlightTeal">#00C8C8</Color>
-    <Color x:Key="TechlightTealLight">#00E0E0</Color>
-    <Color x:Key="TechlightTealDark">#00A0A0</Color>
-    <Color x:Key="TechlightDark">#0D1B2A</Color>
-    <Color x:Key="TechlightDarkLight">#1B2A3A</Color>
-    <Color x:Key="TechlightDarkLighter">#2A3F54</Color>
-    <Color x:Key="TechlightWhite">#FFFFFF</Color>
-    <Color x:Key="TechlightGray">#E8ECEF</Color>
-    <Color x:Key="TechlightGrayDark">#9AA5B1</Color>
-    <Color x:Key="TechlightGrayDarker">#6B7A8A</Color>
-    <Color x:Key="TechlightAccent">#FF6B35</Color>
-    <Color x:Key="TechlightAccentLight">#FF8C5C</Color>
-    <Color x:Key="TechlightSuccess">#10B981</Color>
-    <Color x:Key="TechlightWarning">#F59E0B</Color>
-    <Color x:Key="TechlightError">#EF4444</Color>
+    <!-- MyDesk Brand Colors -->
+    <Color x:Key="MyDeskPrimary">#667eea</Color>
+    <Color x:Key="MyDeskPrimaryLight">#8b9ef0</Color>
+    <Color x:Key="MyDeskPrimaryDark">#4a5fc9</Color>
+    <Color x:Key="MyDeskSecondary">#764ba2</Color>
+    <Color x:Key="MyDeskAccent">#f093fb</Color>
+    <Color x:Key="MyDeskAccentDark">#f5576c</Color>
+    <Color x:Key="MyDeskTeal">#00c8c8</Color>
+    <Color x:Key="MyDeskGold">#cca05a</Color>
+    <Color x:Key="MyDeskDark">#1a1a2e</Color>
+    <Color x:Key="MyDeskDarkLight">#242442</Color>
+    <Color x:Key="MyDeskDarkLighter">#2d2d50</Color>
+    <Color x:Key="MyDeskWhite">#FFFFFF</Color>
+    <Color x:Key="MyDeskGray">#E8ECEF</Color>
+    <Color x:Key="MyDeskGrayDark">#9AA5B1</Color>
+    <Color x:Key="MyDeskGrayDarker">#6B7A8A</Color>
+    <Color x:Key="MyDeskSuccess">#10B981</Color>
+    <Color x:Key="MyDeskWarning">#F59E0B</Color>
+    <Color x:Key="MyDeskError">#EF4444</Color>
 
     <!-- Legacy compatibility aliases -->
-    <Color x:Key="PrimaryColor">#00C8C8</Color>
-    <Color x:Key="PrimaryLightColor">#00E0E0</Color>
-    <Color x:Key="PrimaryDarkColor">#00A0A0</Color>
-    <Color x:Key="AccentColor">#FF6B35</Color>
-    <Color x:Key="BackgroundColor">#0D1B2A</Color>
-    <Color x:Key="SurfaceColor">#1B2A3A</Color>
-    <Color x:Key="BorderColor">#2A3F54</Color>
+    <Color x:Key="PrimaryColor">#667eea</Color>
+    <Color x:Key="PrimaryLightColor">#8b9ef0</Color>
+    <Color x:Key="PrimaryDarkColor">#4a5fc9</Color>
+    <Color x:Key="AccentColor">#f093fb</Color>
+    <Color x:Key="BackgroundColor">#1a1a2e</Color>
+    <Color x:Key="SurfaceColor">#242442</Color>
+    <Color x:Key="BorderColor">#2d2d50</Color>
     <Color x:Key="TextPrimaryColor">#FFFFFF</Color>
     <Color x:Key="TextSecondaryColor">#9AA5B1</Color>
     <Color x:Key="TextDisabledColor">#6B7A8A</Color>
     <Color x:Key="ErrorColor">#EF4444</Color>
     <Color x:Key="WarningColor">#F59E0B</Color>
     <Color x:Key="SuccessColor">#10B981</Color>
-    <Color x:Key="HoverColor">#1A3A4A</Color>
-    <Color x:Key="PressedColor">#00A0A0</Color>
-    <Color x:Key="FocusColor">#00C8C8</Color>
+    <Color x:Key="HoverColor">#2a2a4e</Color>
+    <Color x:Key="PressedColor">#4a5fc9</Color>
+    <Color x:Key="FocusColor">#667eea</Color>
 
     <!-- SolidColorBrushes -->
     <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}" />
@@ -56,34 +59,34 @@
     <SolidColorBrush x:Key="PressedBrush" Color="{StaticResource PressedColor}" />
     <SolidColorBrush x:Key="FocusBrush" Color="{StaticResource FocusColor}" />
 
-    <!-- Techlight Specific Brushes -->
-    <SolidColorBrush x:Key="TechlightTealBrush" Color="{StaticResource TechlightTeal}" />
-    <SolidColorBrush x:Key="TechlightTealLightBrush" Color="{StaticResource TechlightTealLight}" />
-    <SolidColorBrush x:Key="TechlightTealDarkBrush" Color="{StaticResource TechlightTealDark}" />
-    <SolidColorBrush x:Key="TechlightDarkBrush" Color="{StaticResource TechlightDark}" />
-    <SolidColorBrush x:Key="TechlightDarkLightBrush" Color="{StaticResource TechlightDarkLight}" />
-    <SolidColorBrush x:Key="TechlightDarkLighterBrush" Color="{StaticResource TechlightDarkLighter}" />
-    <SolidColorBrush x:Key="TechlightWhiteBrush" Color="{StaticResource TechlightWhite}" />
-    <SolidColorBrush x:Key="TechlightGrayBrush" Color="{StaticResource TechlightGray}" />
-    <SolidColorBrush x:Key="TechlightGrayDarkBrush" Color="{StaticResource TechlightGrayDark}" />
-    <SolidColorBrush x:Key="TechlightGrayDarkerBrush" Color="{StaticResource TechlightGrayDarker}" />
-    <SolidColorBrush x:Key="TechlightAccentBrush" Color="{StaticResource TechlightAccent}" />
-    <SolidColorBrush x:Key="TechlightAccentLightBrush" Color="{StaticResource TechlightAccentLight}" />
+    <!-- MyDesk Specific Brushes -->
+    <SolidColorBrush x:Key="MyDeskPrimaryBrush" Color="{StaticResource MyDeskPrimary}" />
+    <SolidColorBrush x:Key="MyDeskPrimaryLightBrush" Color="{StaticResource MyDeskPrimaryLight}" />
+    <SolidColorBrush x:Key="MyDeskPrimaryDarkBrush" Color="{StaticResource MyDeskPrimaryDark}" />
+    <SolidColorBrush x:Key="MyDeskDarkBrush" Color="{StaticResource MyDeskDark}" />
+    <SolidColorBrush x:Key="MyDeskDarkLightBrush" Color="{StaticResource MyDeskDarkLight}" />
+    <SolidColorBrush x:Key="MyDeskDarkLighterBrush" Color="{StaticResource MyDeskDarkLighter}" />
+    <SolidColorBrush x:Key="MyDeskWhiteBrush" Color="{StaticResource MyDeskWhite}" />
+    <SolidColorBrush x:Key="MyDeskGrayBrush" Color="{StaticResource MyDeskGray}" />
+    <SolidColorBrush x:Key="MyDeskGrayDarkBrush" Color="{StaticResource MyDeskGrayDark}" />
+    <SolidColorBrush x:Key="MyDeskGrayDarkerBrush" Color="{StaticResource MyDeskGrayDarker}" />
+    <SolidColorBrush x:Key="MyDeskAccentBrush" Color="{StaticResource MyDeskAccent}" />
+    <SolidColorBrush x:Key="MyDeskAccentDarkBrush" Color="{StaticResource MyDeskAccentDark}" />
 
     <!-- Window Brushes -->
     <SolidColorBrush x:Key="WindowBackgroundBrush" Color="{StaticResource BackgroundColor}" />
-    <SolidColorBrush x:Key="TitleBarBackgroundBrush" Color="{StaticResource TechlightDark}" />
-    <SolidColorBrush x:Key="TitleBarTextBrush" Color="{StaticResource TechlightWhite}" />
-    <SolidColorBrush x:Key="ToolbarBackgroundBrush" Color="{StaticResource TechlightDarkLight}" />
-    <SolidColorBrush x:Key="WebViewBackgroundBrush" Color="{StaticResource TechlightWhite}" />
-    <SolidColorBrush x:Key="WebViewBackgroundColor" Color="{StaticResource TechlightWhite}" />
-    <SolidColorBrush x:Key="UrlBarBackgroundBrush" Color="{StaticResource TechlightDarkLighter}" />
-    <SolidColorBrush x:Key="LoadingOverlayBrush" Color="#CC0D1B2A" />
-    <SolidColorBrush x:Key="ErrorOverlayBrush" Color="#FF0D1B2A" />
+    <SolidColorBrush x:Key="TitleBarBackgroundBrush" Color="{StaticResource MyDeskDark}" />
+    <SolidColorBrush x:Key="TitleBarTextBrush" Color="{StaticResource MyDeskWhite}" />
+    <SolidColorBrush x:Key="ToolbarBackgroundBrush" Color="{StaticResource MyDeskDarkLight}" />
+    <SolidColorBrush x:Key="WebViewBackgroundBrush" Color="{StaticResource MyDeskWhite}" />
+    <SolidColorBrush x:Key="WebViewBackgroundColor" Color="{StaticResource MyDeskWhite}" />
+    <SolidColorBrush x:Key="UrlBarBackgroundBrush" Color="{StaticResource MyDeskDarkLighter}" />
+    <SolidColorBrush x:Key="LoadingOverlayBrush" Color="#CC1a1a2e" />
+    <SolidColorBrush x:Key="ErrorOverlayBrush" Color="#FF1a1a2e" />
 
     <!-- Text Brush Aliases -->
     <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextPrimaryColor}" />
-    <SolidColorBrush x:Key="ToolbarIconBrush" Color="{StaticResource TechlightWhite}" />
+    <SolidColorBrush x:Key="ToolbarIconBrush" Color="{StaticResource MyDeskWhite}" />
 
     <!-- Converters -->
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
@@ -100,7 +103,7 @@
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FontSize" Value="14" />
         <Setter Property="FontWeight" Value="Medium" />
-        <Setter Property="Foreground" Value="{StaticResource TechlightWhiteBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource MyDeskWhiteBrush}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -147,7 +150,7 @@
     <Style x:Key="MenuHeaderStyle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="11" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Foreground" Value="{StaticResource TechlightGrayDarkerBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource MyDeskGrayDarkerBrush}" />
 
 
         <Setter Property="Margin" Value="16,16,16,8" />

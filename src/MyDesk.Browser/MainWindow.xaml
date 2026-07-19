@@ -44,10 +44,10 @@
 
                 <!-- App Icon -->
                 <Image Grid.Column="0"
-                       Width="16"
-                       Height="16"
+                       Width="18"
+                       Height="18"
                        Margin="8,0,0,0"
-                       Source="/Assets/icon.ico"
+                       Source="/Assets/mydesk-mark.svg"
                        VerticalAlignment="Center" />
 
                 <!-- Title -->
