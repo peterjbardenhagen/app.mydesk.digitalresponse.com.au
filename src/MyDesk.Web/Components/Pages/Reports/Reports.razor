@@ -200,7 +200,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach(var row in _customResult.Rows.Take(100))
+                                    @foreach (var row in _customResult.Rows.Take(100))
                                     {
                                         <tr>
                                             @foreach(var cell in row) { <td>@cell</td> }

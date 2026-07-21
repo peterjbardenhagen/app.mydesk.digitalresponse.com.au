@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00c8c8"/>
+      <stop offset="100%" stop-color="#004E89"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#g)"/>
+  <!-- Head -->
+  <ellipse cx="32" cy="30" rx="13" ry="15" fill="white"/>
+  <!-- Eyes -->
+  <circle cx="27" cy="29" r="3" fill="#004E89"/>
+  <circle cx="37" cy="29" r="3" fill="#004E89"/>
+  <circle cx="27.5" cy="28" r="1" fill="rgba(255,255,255,0.7)"/>
+  <circle cx="37.5" cy="28" r="1" fill="rgba(255,255,255,0.7)"/>
+  <!-- Smile -->
+  <path d="M28 35 Q32 39 36 35" fill="none" stroke="#004E89" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- AI node -->
+  <circle cx="32" cy="20" r="2" fill="#F7B801"/>
+</svg>

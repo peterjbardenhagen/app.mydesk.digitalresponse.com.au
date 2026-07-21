@@ -1,0 +1,256 @@
+@page "/dashboards/employee"
+@using System.Security.Claims
+@using MyDesk.Web.Services
+@using MyDesk.Web.Components.Shared
+@using MyDesk.Web.Components.Dialogs
+@inject AnalyticsService AnalyticsService
+@inject DashboardChartService ChartService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>My Dashboard - MyDesk</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Lg" Class="py-8">
+    <MudStack Spacing="4">
+        <!-- Header -->
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="responsive-header">
+            <MudStack>
+                <MudText Typo="Typo.h4" Class="font-bold">My Dashboard</MudText>
+                <MudText Typo="Typo.body2" Color="Color.TextSecondary">Your expense summary and reimbursement status</MudText>
+            </MudStack>
+            <MudStack Row="true" Spacing="2" Class="responsive-buttons">
+                <MudButton Variant="Variant.Outlined" OnClick="RefreshData" StartIcon="@Icons.Material.Filled.Refresh">
+                    Refresh
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" OnClick="ShowExportDialog" StartIcon="@Icons.Material.Filled.FileDownload">
+                    Export
+                </MudButton>
+            </MudStack>
+        </MudStack>
+
+        @if (isLoading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (dashboard != null)
+        {
+            <!-- Expense Summary - Mobile First Grid -->
+            <MudGrid>
+                <MudItem xs="12" sm="6" md="3">
+                    <MetricCard
+                        Title="Submitted This Month"
+                        Value="@dashboard.SubmittedThisMonth.ToString()"
+                        Icon="@Icons.Material.Filled.UploadFile"
+                        IconColor="Color.Info" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MetricCard
+                        Title="Approved"
+                        Value="@dashboard.ApprovedThisMonth.ToString()"
+                        Icon="@Icons.Material.Filled.CheckCircle"
+                        IconColor="Color.Success" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MetricCard
+                        Title="Pending Review"
+                        Value="@dashboard.PendingApproval.ToString()"
+                        Icon="@Icons.Material.Filled.HourglassBottom"
+                        IconColor="Color.Warning" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MetricCard
+                        Title="Reimbursed"
+                        Value="@dashboard.ReimbursedThisMonth.ToString()"
+                        Icon="@Icons.Material.Filled.MonetizationOn"
+                        IconColor="Color.Success" />
+                </MudItem>
+            </MudGrid>
+
+            <!-- Recent Expenses -->
+            <MudPaper Class="pa-6">
+                <MudText Typo="Typo.h6" Class="font-bold mb-4">Your Recent Expenses</MudText>
+                <div style="overflow-x: auto;">
+                    <MudTable Items="dashboard.MyExpenses" Striped="true" Hover="true" Dense="true">
+                        <HeaderContent>
+                            <MudTh>Description</MudTh>
+                            <MudTh Align="Align.Right">Amount</MudTh>
+                            <MudTh>Category</MudTh>
+                            <MudTh>Status</MudTh>
+                            <MudTh>Actions</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>@context.Description</MudTd>
+                            <MudTd Align="Align.Right">@FormatCurrency(context.Amount)</MudTd>
+                            <MudTd>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Default">@context.Category</MudChip>
+                            </MudTd>
+                            <MudTd>
+                                <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">
+                                    @context.Status
+                                </MudChip>
+                            </MudTd>
+                            <MudTd>
+                                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="() => ViewExpense(context)">
+                                    View
+                                </MudButton>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </div>
+
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="mt-4" StartIcon="@Icons.Material.Filled.Add">
+                    Submit New Expense
+                </MudButton>
+            </MudPaper>
+
+            <!-- Monthly Summary -->
+            <DashboardLineChart
+                Title="Monthly Spending Trend"
+                TenantId="@tenantId"
+                DataSourceAsync="@(() => ChartService.GetMonthlyTrendChartDataAsync(tenantId, userId))" />
+
+            <!-- Helpful Information -->
+            <MudPaper Class="pa-6" Style="background-color: var(--mud-palette-info-lighter);">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.h6" Color="Color.Info" Class="font-bold">💡 Submission Guidelines</MudText>
+                    <MudText Typo="Typo.body2">
+                        <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                            <li>Attach receipt photos for all expenses over $50</li>
+                            <li>Submit within 30 days of the expense</li>
+                            <li>Expenses are typically approved within 2-3 business days</li>
+                            <li>Questions? Contact your manager or the Finance team</li>
+                        </ul>
+                    </MudText>
+                </MudStack>
+            </MudPaper>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Error">
+                Failed to load your dashboard. Please try again.
+            </MudAlert>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    private bool isLoading = true;
+    private EmployeeDashboard? dashboard;
+    private int tenantId = 1;
+    private int userId = 100;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetAuthenticationContext();
+        await LoadDashboard();
+    }
+
+    private async Task GetAuthenticationContext()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user?.Identity?.IsAuthenticated == true)
+        {
+            var tenantClaim = user.FindFirst("tenant_id")?.Value;
+            if (int.TryParse(tenantClaim, out var tid))
+            {
+                tenantId = tid;
+            }
+
+            var userIdClaim = user.FindFirst("sub")?.Value;
+            if (int.TryParse(userIdClaim, out var uid))
+            {
+                userId = uid;
+            }
+        }
+    }
+
+    private async Task LoadDashboard()
+    {
+        try
+        {
+            isLoading = true;
+            dashboard = await AnalyticsService.GetEmployeeDashboardAsync(tenantId, userId);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading dashboard: {ex.Message}", Severity.Error);
+            dashboard = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadDashboard();
+        Snackbar.Add("Dashboard refreshed", Severity.Success);
+    }
+
+    private async Task ViewExpense(ExpenseRecord expense)
+    {
+        Snackbar.Add($"Opening expense #{expense.Id}", Severity.Info);
+        // TODO: Navigate to expense details page
+    }
+
+    private async Task ShowExportDialog()
+    {
+        var dialog = await DialogService.ShowAsync<DashboardExportDialog>(
+            "Export Dashboard",
+            new DialogParameters
+            {
+                { "DashboardType", "employee" }
+            });
+
+        var result = await dialog.Result;
+        if (!result.Canceled)
+        {
+            Snackbar.Add("Dashboard export completed", Severity.Success);
+        }
+    }
+
+    private string FormatCurrency(decimal amount) => amount.ToString("C");
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Approved" => Color.Success,
+        "Pending" => Color.Warning,
+        "Rejected" => Color.Error,
+        _ => Color.Default
+    };
+}
+
+<style>
+.responsive-header {
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.responsive-buttons {
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 599px) {
+    .responsive-header {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .responsive-buttons {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    :deep(.mud-button) {
+        width: 100%;
+    }
+}
+</style>

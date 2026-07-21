@@ -472,6 +472,7 @@ builder.Services.AddScoped<OneDriveService>();
 builder.Services.AddScoped<UserIntelligenceService>();
 builder.Services.AddScoped<PredictiveAnalyticsService>();
 builder.Services.AddScoped<ClientNotificationService>();
+builder.Services.AddScoped<SignalRNotificationService>();
 builder.Services.AddScoped<AnalyticsService>();
 builder.Services.AddScoped<DashboardExportService>();
 builder.Services.AddScoped<DashboardChartService>();

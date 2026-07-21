@@ -1,0 +1,31 @@
+@using MudBlazor
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Edit Expense</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="Expense.Description" Label="Description" For="@(() => Expense.Description)" FullWidth="true" />
+        <MudTextField @bind-Value="Expense.SupplierName" Label="Supplier" For="@(() => Expense.SupplierName)" FullWidth="true" />
+        <MudNumericField @bind-Value="Expense.Amount" Label="Amount" For="@(() => Expense.Amount)" FullWidth="true" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CancelAsync">Cancel</MudButton>
+        <MudButton OnClick="SaveAsync" Variant="Variant.Filled" Color="Color.Primary">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public Expense Expense { get; set; } = new();
+
+    private void CancelAsync() => MudDialog.Cancel();
+
+    private async Task SaveAsync()
+    {
+        Snackbar.Add("Expense updated.", Severity.Success);
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+}

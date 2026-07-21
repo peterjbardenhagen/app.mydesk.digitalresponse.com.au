@@ -1,0 +1,4 @@
+include ':app', ':shared'
+project(':app').projectDir = new File(settingsDir, 'DigitalResponseMyDesk/app')
+project(':shared').projectDir = new File(settingsDir, 'DigitalResponseMyDesk/shared')
+
