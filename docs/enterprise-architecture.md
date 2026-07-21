@@ -415,7 +415,7 @@ Alerts Triggered:
 
 ## References
 
-- **Solution Architecture:** See `SOLUTION-ARCHITECTURE.md`
+- **Solution Architecture:** See `solution-architecture.md`
 - **Product Requirements:** See `PRODUCT-REQUIREMENTS.md`
 - **Product Strategy:** See `PRODUCT-STRATEGY.md`
 - **Implementation Agents:** See `agents.md`

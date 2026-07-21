@@ -79,7 +79,7 @@ Before diving into code, understand the product architecture:
 - **Read time:** 15 minutes
 
 ### 3. **For Understanding the Enterprise Requirements**
-→ Read **[ENTERPRISE-ARCHITECTURE.md](./ENTERPRISE-ARCHITECTURE.md)**
+→ Read **[ENTERPRISE-ARCHITECTURE.md](./docs/ENTERPRISE-ARCHITECTURE.md)**
 - Regulatory compliance requirements (ISO 27001, SOC 2, Sarbanes-Oxley)
 - Security principles and implementation
 - Disaster recovery and performance requirements
@@ -87,7 +87,7 @@ Before diving into code, understand the product architecture:
 - **Read time:** 25 minutes
 
 ### 4. **For Understanding the Technical Design**
-→ Read **[SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md)**
+→ Read **[SOLUTION-ARCHITECTURE.md](./docs/SOLUTION-ARCHITECTURE.md)**
 - System architecture and design patterns
 - Multi-tenancy model and enforcement
 - API design and error handling

@@ -165,4 +165,4 @@ Before committing code with new services:
 
 - See [CLAUDE.md](./CLAUDE.md) - Development environment setup and standards
 - See [agents.md](./agents.md) - Phase-specific implementation agents and responsibilities
-- See [SOLUTION-ARCHITECTURE.md](./SOLUTION-ARCHITECTURE.md) - Service architecture and dependencies
+- See [solution-architecture.md](./solution-architecture.md) - Service architecture and dependencies

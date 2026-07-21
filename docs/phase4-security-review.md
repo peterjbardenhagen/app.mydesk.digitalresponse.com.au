@@ -632,8 +632,8 @@ Recommend scheduled pen testing before production deployment:
 
 ## References
 
-- **ENTERPRISE-ARCHITECTURE.md** - Security requirements and compliance
-- **SOLUTION-ARCHITECTURE.md** - Technical security controls
+- **enterprise-architecture.md** - Security requirements and compliance
+- **solution-architecture.md** - Technical security controls
 - **PHASE-4-IMPLEMENTATION.md** - Feature specifications
 - **CLAUDE.md** - Development security checklist
 - **ISO 27001** - Information security standard

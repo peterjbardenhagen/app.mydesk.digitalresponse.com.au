@@ -1171,7 +1171,7 @@ logger.LogInformation(
 
 ## References
 
-- **Enterprise Architecture:** See `ENTERPRISE-ARCHITECTURE.md`
+- **Enterprise Architecture:** See `enterprise-architecture.md`
 - **Product Requirements:** See `PRODUCT-REQUIREMENTS.md`
 - **Product Strategy:** See `PRODUCT-STRATEGY.md`
 - **Development Guide:** See `CLAUDE.md`

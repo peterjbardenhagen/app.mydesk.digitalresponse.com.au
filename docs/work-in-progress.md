@@ -456,7 +456,7 @@ DELETE /api/approval/delegations/{id}
 ## Related Documents
 - APPROVAL-WORKFLOWS.md - Full specification
 - src/Deployment/Migration/012_approval_workflows.sql - Database schema
-- ROADMAP.md - Project roadmap
+- roadmap.md - Project roadmap
 
 **Branch**: claude/approval-workflows  
 **Next Review**: After API implementation complete

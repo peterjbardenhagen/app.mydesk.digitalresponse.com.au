@@ -588,8 +588,8 @@ Definition of Done:
 
 ## References
 
-- **Enterprise Architecture:** See `ENTERPRISE-ARCHITECTURE.md`
-- **Solution Architecture:** See `SOLUTION-ARCHITECTURE.md`
+- **Enterprise Architecture:** See `enterprise-architecture.md`
+- **Solution Architecture:** See `solution-architecture.md`
 - **Product Strategy:** See `PRODUCT-STRATEGY.md`
 - **Development Guide:** See `CLAUDE.md`
 - **Implementation Agents:** See `agents.md`

@@ -420,7 +420,7 @@ return dashboard;
 ## Related Documentation
 
 - **Product Requirements:** `PRODUCT-REQUIREMENTS.md § Phase 6`
-- **Solution Architecture:** `SOLUTION-ARCHITECTURE.md § Monitoring & Observability`
+- **Solution Architecture:** `solution-architecture.md § Monitoring & Observability`
 - **Development Guide:** `CLAUDE.md § Development Workflow`
 - **Lessons Learned:** `docs/LESSONS_LEARNED.md`
 - **Agents:** `agents.md § 7. Dashboard & Analytics Agent`
