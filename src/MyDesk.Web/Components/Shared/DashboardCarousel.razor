@@ -87,7 +87,7 @@
     [Parameter] public DashboardMetrics? Metrics { get; set; }
     [Parameter] public bool IsDirector { get; set; }
     [Parameter] public string? UserCode { get; set; }
-    [Parameter] public List<ChartSeries> ChartSeries { get; set; } = new();
+    [Parameter] public List<MudBlazor.ChartSeries> ChartSeries { get; set; } = new();
     [Parameter] public string[] XAxisLabels { get; set; } = Array.Empty<string>();
 
     private int CurrentIndex { get; set; } = 0;
@@ -1733,23 +1733,23 @@
         YAxisFormat = "$#,##0",
     };
 
-    private List<ChartSeries> GetRevenueSeries()
+    private List<MudBlazor.ChartSeries> GetRevenueSeries()
     {
-        return new List<ChartSeries>
+        return new List<MudBlazor.ChartSeries>
         {
-            new ChartSeries { Name = "Quotes", Data = Metrics.MonthlyQuotesThisYear.Select(v => (double)v).ToArray() },
-            new ChartSeries { Name = "Invoices", Data = Metrics.MonthlyInvoicesThisYear.Select(v => (double)v).ToArray() },
-            new ChartSeries { Name = "Purchase Orders", Data = Metrics.MonthlyPOsThisYear.Select(v => (double)v).ToArray() },
+            new MudBlazor.ChartSeries { Name = "Quotes", Data = Metrics.MonthlyQuotesThisYear.Select(v => (double)v).ToArray() },
+            new MudBlazor.ChartSeries { Name = "Invoices", Data = Metrics.MonthlyInvoicesThisYear.Select(v => (double)v).ToArray() },
+            new MudBlazor.ChartSeries { Name = "Purchase Orders", Data = Metrics.MonthlyPOsThisYear.Select(v => (double)v).ToArray() },
         };
     }
 
-    private List<ChartSeries> GetComparisonSeries()
+    private List<MudBlazor.ChartSeries> GetComparisonSeries()
     {
         if (Metrics == null) return new();
-        return new List<ChartSeries>
+        return new List<MudBlazor.ChartSeries>
         {
-            new() { Name = "This Year", Data = Metrics.MonthlyInvoicesThisYear.Select(v => (double)v).ToArray() },
-            new() { Name = "Last Year", Data = Metrics.LastYearMonthlyRevenue.Select(v => (double)v).ToArray() },
+            new MudBlazor.ChartSeries { Name = "This Year", Data = Metrics.MonthlyInvoicesThisYear.Select(v => (double)v).ToArray() },
+            new MudBlazor.ChartSeries { Name = "Last Year", Data = Metrics.LastYearMonthlyRevenue.Select(v => (double)v).ToArray() },
         };
     }
 

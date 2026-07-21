@@ -113,7 +113,7 @@
     private YearOnYearDto _yoy = new();
     private QuoteStatusSummaryDto _pendingWon = new();
 
-    private List<ChartSeries> _byMonthSeries = new();
+    private List<MudBlazor.ChartSeries> _byMonthSeries = new();
     private string[] _byMonthLabels = Array.Empty<string>();
 
     private double[] _byRepData = Array.Empty<double>();
@@ -122,11 +122,11 @@
     private double[] _byDivisionData = Array.Empty<double>();
     private string[] _byDivisionLabels = Array.Empty<string>();
 
-    private List<ChartSeries> _yoySeries = new();
+    private List<MudBlazor.ChartSeries> _yoySeries = new();
     private readonly string[] _monthNames =
         { "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec" };
 
-    private List<ChartSeries> _pendingWonSeries = new();
+    private List<MudBlazor.ChartSeries> _pendingWonSeries = new();
     private string[] _pendingWonLabels = Array.Empty<string>();
 
     private readonly ChartOptions _currencyOptions = new()

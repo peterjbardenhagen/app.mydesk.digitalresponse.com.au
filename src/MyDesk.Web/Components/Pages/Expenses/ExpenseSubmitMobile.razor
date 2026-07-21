@@ -1,0 +1,403 @@
+@page "/expenses/submit-mobile"
+@using MyDesk.Web.Components.Common
+@using MudBlazor
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Submit Expense - MyDesk</PageTitle>
+
+<div class="mobile-expense-submit">
+    <!-- Mobile Header -->
+    <div class="mobile-page-header">
+        <h1>Submit Expense</h1>
+        <p class="subtitle">Quick expense claim form</p>
+    </div>
+
+    <MudContainer MaxWidth="MaxWidth.Small" Class="py-4">
+        <!-- Progress Indicator -->
+        <MudStack Class="mb-6">
+            <MudLinearProgress Value="@(currentStep * 25)" Color="Color.Primary" />
+            <MudText Typo="Typo.caption" Align="Align.Center">
+                Step @(currentStep + 1) of 4
+            </MudText>
+        </MudStack>
+
+        <!-- Step 1: Basic Details -->
+        @if (currentStep == 0)
+        {
+            <MudCard Class="mb-4">
+                <MudCardHeader>
+                    <MudText Typo="Typo.h6" Class="font-bold">Expense Details</MudText>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudTextField @bind-Value="expense.Description"
+                            Label="Description"
+                            Placeholder="e.g., Client meeting lunch"
+                            Variant="Variant.Outlined"
+                            Lines="2"
+                            FullWidth="true" />
+
+                        <MudSelect @bind-Value="expense.Category"
+                            Label="Category"
+                            Variant="Variant.Outlined"
+                            FullWidth="true">
+                            <MudSelectItem Value="@("Meals")">Meals & Beverages</MudSelectItem>
+                            <MudSelectItem Value="@("Transport")">Transport</MudSelectItem>
+                            <MudSelectItem Value="@("Accommodation")">Accommodation</MudSelectItem>
+                            <MudSelectItem Value="@("Equipment")">Equipment</MudSelectItem>
+                            <MudSelectItem Value="@("Other")">Other</MudSelectItem>
+                        </MudSelect>
+
+                        <MudTextField @bind-Value="expense.Amount"
+                            Label="Amount"
+                            InputType="InputType.Number"
+                            Variant="Variant.Outlined"
+                            Prefix="$"
+                            FullWidth="true"
+                            Step="0.01m" />
+
+                        <MudDatePicker @bind-Date="expense.Date"
+                            Label="Date"
+                            Variant="Variant.Outlined"
+                            FullWidth="true" />
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        }
+
+        <!-- Step 2: Receipt -->
+        @if (currentStep == 1)
+        {
+            <MudCard Class="mb-4">
+                <MudCardHeader>
+                    <MudText Typo="Typo.h6" Class="font-bold">Receipt</MudText>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <div class="receipt-upload-area" @ondrop="HandleFileDrop" @ondrop:preventDefault="true" @ondragover:preventDefault="true">
+                            <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Size="Size.Large" Class="mb-2" />
+                            <MudText Typo="Typo.body2" Align="Align.Center">
+                                Tap to take photo or upload receipt
+                            </MudText>
+                            <InputFile id="fileInput" OnChange="HandleFileSelected" accept="image/*" style="display: none;" @ref="inputFile" />
+                            <MudButton Variant="Variant.Outlined"
+                                Color="Color.Primary"
+                                FullWidth="true"
+                                Class="mt-3"
+                                OnClick="TriggerFileInput">
+                                Choose File
+                            </MudButton>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(receiptFileName))
+                        {
+                            <MudChip OnClose="ClearReceipt" Color="Color.Success">
+                                @receiptFileName
+                            </MudChip>
+                        }
+
+                        <MudCheckBox T="bool" @bind-Checked="expense.HasReceipt"
+                            Label="I have a receipt for this expense" />
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        }
+
+        <!-- Step 3: Cost Center -->
+        @if (currentStep == 2)
+        {
+            <MudCard Class="mb-4">
+                <MudCardHeader>
+                    <MudText Typo="Typo.h6" Class="font-bold">Cost Center</MudText>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="3">
+                        <MudSelect @bind-Value="expense.CostCenter"
+                            Label="Cost Center"
+                            Variant="Variant.Outlined"
+                            FullWidth="true">
+                            <MudSelectItem Value="@("CC-001")">Marketing - CC-001</MudSelectItem>
+                            <MudSelectItem Value="@("CC-002")">Operations - CC-002</MudSelectItem>
+                            <MudSelectItem Value="@("CC-003")">Sales - CC-003</MudSelectItem>
+                            <MudSelectItem Value="@("CC-004")">IT - CC-004</MudSelectItem>
+                        </MudSelect>
+
+                        <MudSelect @bind-Value="expense.Project"
+                            Label="Project (optional)"
+                            Variant="Variant.Outlined"
+                            FullWidth="true">
+                            <MudSelectItem Value="@("")">None</MudSelectItem>
+                            <MudSelectItem Value="@("Project A")">Project A</MudSelectItem>
+                            <MudSelectItem Value="@("Project B")">Project B</MudSelectItem>
+                            <MudSelectItem Value="@("Project C")">Project C</MudSelectItem>
+                        </MudSelect>
+
+                        <MudTextField @bind-Value="expense.Notes"
+                            Label="Notes (optional)"
+                            Placeholder="Any additional details"
+                            Variant="Variant.Outlined"
+                            Lines="2"
+                            FullWidth="true" />
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        }
+
+        <!-- Step 4: Review -->
+        @if (currentStep == 3)
+        {
+            <MudCard Class="mb-4">
+                <MudCardHeader>
+                    <MudText Typo="Typo.h6" Class="font-bold">Review & Submit</MudText>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Spacing="2">
+                        <div class="review-item">
+                            <span class="label">Description:</span>
+                            <span class="value">@expense.Description</span>
+                        </div>
+                        <div class="review-item">
+                            <span class="label">Category:</span>
+                            <span class="value">@expense.Category</span>
+                        </div>
+                        <div class="review-item">
+                            <span class="label">Amount:</span>
+                            <span class="value">$@expense.Amount.ToString("F2")</span>
+                        </div>
+                        <div class="review-item">
+                            <span class="label">Date:</span>
+                            <span class="value">@expense.Date?.ToString("dd MMM yyyy")</span>
+                        </div>
+                        <div class="review-item">
+                            <span class="label">Cost Center:</span>
+                            <span class="value">@expense.CostCenter</span>
+                        </div>
+                        @if (!string.IsNullOrEmpty(receiptFileName))
+                        {
+                            <div class="review-item">
+                                <span class="label">Receipt:</span>
+                                <span class="value">✓ @receiptFileName</span>
+                            </div>
+                        }
+                    </MudStack>
+
+                    <MudAlert Severity="Severity.Info" Class="mt-4">
+                        By submitting, this expense will be sent for approval and cannot be edited until reviewed.
+                    </MudAlert>
+                </MudCardContent>
+            </MudCard>
+        }
+
+        <!-- Navigation Buttons -->
+        <MudStack Row="true" Spacing="2" Class="mt-6 mb-8">
+            <MudButton Variant="Variant.Outlined"
+                FullWidth="true"
+                Disabled="@(currentStep == 0)"
+                OnClick="PreviousStep">
+                Back
+            </MudButton>
+
+            @if (currentStep < 3)
+            {
+                <MudButton Variant="Variant.Filled"
+                    Color="Color.Primary"
+                    FullWidth="true"
+                    OnClick="NextStep">
+                    Next
+                </MudButton>
+            }
+            else
+            {
+                <MudButton Variant="Variant.Filled"
+                    Color="Color.Success"
+                    FullWidth="true"
+                    OnClick="SubmitExpense"
+                    Disabled="@isSubmitting">
+                    @if (isSubmitting)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Submit
+                </MudButton>
+            }
+        </MudStack>
+    </MudContainer>
+</div>
+
+<style>
+.mobile-expense-submit {
+    padding-bottom: 80px; /* Account for bottom nav on mobile */
+}
+
+.mobile-page-header {
+    padding: 16px;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+    color: white;
+}
+
+.mobile-page-header h1 {
+    margin: 0 0 4px 0;
+    font-size: 24px;
+}
+
+.mobile-page-header .subtitle {
+    margin: 0;
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.receipt-upload-area {
+    border: 2px dashed #2196f3;
+    border-radius: 8px;
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.receipt-upload-area:hover {
+    background-color: #f5f5f5;
+}
+
+.review-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.review-item:last-child {
+    border-bottom: none;
+}
+
+.review-item .label {
+    font-weight: 600;
+    color: #666;
+}
+
+.review-item .value {
+    text-align: right;
+    flex: 1;
+    margin-left: 16px;
+    color: #212121;
+}
+
+@media (min-width: 768px) {
+    .mobile-expense-submit {
+        padding-bottom: 0;
+    }
+
+    .mobile-page-header {
+        display: none;
+    }
+}
+</style>
+
+@code {
+    private int currentStep = 0;
+    private bool isSubmitting = false;
+    private InputFile? inputFile;
+    private string receiptFileName = "";
+
+    private ExpenseModel expense = new();
+
+    private void NextStep()
+    {
+        if (ValidateStep(currentStep))
+        {
+            if (currentStep < 3)
+                currentStep++;
+        }
+    }
+
+    private void PreviousStep()
+    {
+        if (currentStep > 0)
+            currentStep--;
+    }
+
+    private bool ValidateStep(int step)
+    {
+        return step switch
+        {
+            0 => !string.IsNullOrEmpty(expense.Description) && expense.Amount > 0,
+            1 => expense.HasReceipt || !string.IsNullOrEmpty(receiptFileName),
+            2 => !string.IsNullOrEmpty(expense.CostCenter),
+            3 => true,
+            _ => false
+        };
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var file = e.File;
+            receiptFileName = file.Name;
+            Snackbar.Add($"Receipt uploaded: {file.Name}", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error uploading receipt: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task HandleFileDrop(DragEventArgs e)
+    {
+        // Implementation for drag-and-drop would go here
+    }
+
+    private void ClearReceipt()
+    {
+        receiptFileName = "";
+        Snackbar.Add("Receipt removed", Severity.Info);
+    }
+
+    private async Task TriggerFileInput()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("clickElement", "fileInput");
+        }
+        catch
+        {
+            // Fallback if JS interop fails
+        }
+    }
+
+    private async Task SubmitExpense()
+    {
+        isSubmitting = true;
+        try
+        {
+            // Simulate API call
+            await Task.Delay(1500);
+            Snackbar.Add("Expense submitted successfully!", Severity.Success);
+            await Task.Delay(500);
+            Navigation.NavigateTo("/expenses");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private class ExpenseModel
+    {
+        public string Description { get; set; } = "";
+        public string Category { get; set; } = "Meals";
+        public decimal Amount { get; set; }
+        public DateTime? Date { get; set; } = DateTime.Today;
+        public string CostCenter { get; set; } = "";
+        public string Project { get; set; } = "";
+        public string Notes { get; set; } = "";
+        public bool HasReceipt { get; set; } = true;
+    }
+}

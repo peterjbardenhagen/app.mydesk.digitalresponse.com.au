@@ -98,3 +98,11 @@ window.downloadFile = function(filename, content) {
     link.click();
     document.body.removeChild(link);
 };
+
+// Helper to click an element by ID
+window.clickElement = function(elementId) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.click();
+    }
+};
