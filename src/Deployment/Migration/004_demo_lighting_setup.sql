@@ -61,7 +61,7 @@ END
 -- ══════════════════════════════════════════════════════════════════════════════
 
 -- BCrypt hash of 'demo123' (workFactor 12)
-DECLARE @DemoUserHash NVARCHAR(200) = '$2a$12$N9qo8uLOickgx2ZMRZoMyeIjZAgcg7b3XeKeUxWdeS86E36gZvQOo';
+DECLARE @DemoUserHash NVARCHAR(200) = '$2a$12$y32Raf7PDM6Onovla0U/ee2LZF6AeSMvK57A1SB0K8JeqLvdblHUG';
 
 IF NOT EXISTS (SELECT 1 FROM Users WHERE UPPER(Code) = 'DEMO')
 BEGIN

@@ -1,0 +1,192 @@
+@page "/profile"
+@attribute [Authorize]
+@using MyDesk.Shared.Models
+@using MyDesk.Shared.Services
+@using MyDesk.Web.Components.Dialogs
+@using MudBlazor
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>My Profile - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb"><a href="/">MyDesk</a><span class="sep">/</span><span>My Profile</span></div>
+        <h1>My Profile</h1>
+        <p class="tl-subtitle">Manage your account settings and profile photo.</p>
+    </div>
+</div>
+
+<MudGrid Class="mt-4">
+    <MudItem xs="12" sm="6" md="4">
+        <MudPaper Class="pa-4">
+            <div class="text-center">
+                @if (_loading)
+                {
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                }
+                else if (!string.IsNullOrEmpty(_photoUrl))
+                {
+                    <div class="profile-photo-container mb-4">
+                        <img src="@_photoUrl" alt="Profile Photo" class="profile-photo" />
+                        <MudButton Variant="Variant.Filled" Color="Color.Error" Size="Size.Small" OnClick="RemovePhotoAsync" Class="mt-2">
+                            Remove Photo
+                        </MudButton>
+                    </div>
+                }
+                else
+                {
+                    <div class="profile-avatar mb-4">
+                        <MudAvatar Size="Size.Large" Color="Color.Primary">
+                            @GetInitials(_userName)
+                        </MudAvatar>
+                    </div>
+                }
+
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.PhotoCamera" OnClick="OpenPhotoUploadAsync" Class="mb-2" FullWidth="true">
+                    Upload Photo
+                </MudButton>
+
+                <MudDivider Class="my-4" />
+
+                <div class="text-left">
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Account</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Default" Class="mt-2">
+                        <strong>Name:</strong> @_userName
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Default" Class="mt-1">
+                        <strong>Email:</strong> @_userEmail
+                    </MudText>
+                </div>
+            </div>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private bool _loading = true;
+    private string? _userName;
+    private string? _userEmail;
+    private string? _photoUrl;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProfileAsync();
+    }
+
+    private async Task LoadProfileAsync()
+    {
+        _loading = true;
+        try
+        {
+            var response = await Http.GetAsync("/api/user/profile");
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                var profile = System.Text.Json.JsonSerializer.Deserialize<ProfileData>(
+                    json,
+                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                _userName = profile?.Name;
+                _userEmail = profile?.Email;
+                _photoUrl = profile?.PhotoUrl;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OpenPhotoUploadAsync()
+    {
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<PhotoUploadDialog>("Upload Profile Photo", options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            await LoadProfileAsync();
+            Snackbar.Add("Photo uploaded successfully!", Severity.Success);
+        }
+    }
+
+    private async Task RemovePhotoAsync()
+    {
+        if (await ConfirmRemovalAsync())
+        {
+            try
+            {
+                var response = await Http.DeleteAsync("/api/user/profile/photo");
+                if (response.IsSuccessStatusCode)
+                {
+                    _photoUrl = null;
+                    Snackbar.Add("Photo removed successfully", Severity.Success);
+                }
+                else
+                {
+                    Snackbar.Add("Error removing photo", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task<bool> ConfirmRemovalAsync()
+    {
+        var dialog = await DialogService.ShowAsync<MudDialog>(
+            "Remove Photo?",
+            new DialogParameters { { "ContentText", "Are you sure you want to remove your profile photo?" } },
+            new DialogOptions { });
+
+        var result = await dialog.Result;
+        return !result.Canceled;
+    }
+
+    private string GetInitials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return "?";
+
+        var parts = name.Split(' ');
+        return parts.Length > 1
+            ? $"{parts[0][0]}{parts[1][0]}"
+            : $"{parts[0][0]}";
+    }
+
+    public class ProfileData
+    {
+        public int UserId { get; set; }
+        public string? Name { get; set; }
+        public string? Email { get; set; }
+        public string? PhotoUrl { get; set; }
+        public bool HasPhoto { get; set; }
+    }
+}
+
+<style>
+.profile-photo-container {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.profile-photo {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.profile-avatar {
+    margin-bottom: 1rem;
+}
+</style>

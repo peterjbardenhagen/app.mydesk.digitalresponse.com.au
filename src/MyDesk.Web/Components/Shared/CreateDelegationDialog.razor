@@ -1,0 +1,111 @@
+@using MyDesk.Shared.Services
+@using MudBlazor
+@inject WorkflowApprovalService ApprovalSvc
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Rounded.PersonAdd" Class="mr-2" />
+            Create Approval Delegation
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudText Typo="Typo.body2" Class="mb-3">
+                    Temporarily delegate your approval authority to another user. This is useful when you're away from the office.
+                </MudText>
+            </MudItem>
+            <MudItem xs="12">
+                <MudNumericField @bind-Value="_delegateUserId"
+                                 Label="Delegate User ID"
+                                 Variant="Variant.Outlined"
+                                 Hint="Enter the user ID to delegate to"
+                                 FullWidth="true"
+                                 Min="1"
+                                 Required="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudDatePicker @bind-Date="_startDate"
+                               Label="Start Date"
+                               Variant="Variant.Outlined"
+                               PickerVariant="PickerVariant.Dialog"
+                               FullWidth="true"
+                               Required="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudDatePicker @bind-Date="_endDate"
+                               Label="End Date"
+                               Variant="Variant.Outlined"
+                               PickerVariant="PickerVariant.Dialog"
+                               FullWidth="true"
+                               Required="true" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudSelect @bind-Value="_moduleType"
+                           Label="Module (Optional)"
+                           Variant="Variant.Outlined"
+                           AnchorOrigin="Origin.BottomCenter"
+                           FullWidth="true">
+                    <MudSelectItem T="string?" Value="@((string?)null)">All Modules</MudSelectItem>
+                    <MudSelectItem Value="@("Expense")">Expense Approvals Only</MudSelectItem>
+                    <MudSelectItem Value="@("Timesheet")">Timesheet Approvals Only</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12">
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    The delegate will handle your approval responsibilities during the specified date range.
+                </MudAlert>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="CreateAsync" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!IsValid || _saving)">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Create Delegation
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudDialogInstance MudDialog { get; set; } = default!;
+
+    private int _delegateUserId = 0;
+    private DateTime? _startDate = DateTime.Today;
+    private DateTime? _endDate = DateTime.Today.AddDays(7);
+    private string? _moduleType = null;
+    private bool _saving = false;
+
+    private bool IsValid => _delegateUserId > 0 && _startDate.HasValue && _endDate.HasValue && _endDate >= _startDate;
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async Task CreateAsync()
+    {
+        if (!IsValid) return;
+
+        _saving = true;
+        try
+        {
+            await ApprovalSvc.CreateDelegationAsync(_delegateUserId, _startDate!.Value, _endDate!.Value, _moduleType);
+            Snackbar.Add("Delegation created successfully", Severity.Success);
+            MudDialog.Close();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to create delegation: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

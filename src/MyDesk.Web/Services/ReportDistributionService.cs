@@ -41,7 +41,7 @@ public class ReportDistributionService
             @"INSERT INTO ReportDistributionLists (TenantId, CreatedBy, Name, Description, IsActive, CreatedAt)
               VALUES (@TenantId, @CreatedBy, @Name, @Description, 1, GETUTCDATE())
               SELECT @@IDENTITY",
-            new()
+            new Dictionary<string, object?>()
             {
                 ["TenantId"] = tenantId,
                 ["CreatedBy"] = userId,
@@ -73,7 +73,7 @@ public class ReportDistributionService
             @"SELECT ListId, TenantId, CreatedBy, Name, Description, IsActive, CreatedAt
               FROM ReportDistributionLists
               WHERE TenantId = @TenantId AND ListId = @ListId",
-            new() { ["TenantId"] = tenantId, ["ListId"] = listId });
+            new Dictionary<string, object?>() { ["TenantId"] = tenantId, ["ListId"] = listId });
 
         if (dt.Rows.Count == 0) return null;
 
@@ -95,7 +95,7 @@ public class ReportDistributionService
             @"SELECT RecipientId, ListId, Email, Name, IsActive
               FROM ReportDistributionRecipients
               WHERE ListId = @ListId AND IsActive = 1",
-            new() { ["ListId"] = listId });
+            new Dictionary<string, object?>() { ["ListId"] = listId });
 
         foreach (System.Data.DataRow recipientRow in recipientDt.Rows)
         {
@@ -122,7 +122,7 @@ public class ReportDistributionService
               FROM ReportDistributionLists
               WHERE TenantId = @TenantId AND IsActive = 1
               ORDER BY CreatedAt DESC",
-            new() { ["TenantId"] = tenantId });
+            new Dictionary<string, object?>() { ["TenantId"] = tenantId });
 
         var lists = new List<ReportDistributionList>();
         foreach (System.Data.DataRow row in dt.Rows)
@@ -159,7 +159,7 @@ public class ReportDistributionService
             @"INSERT INTO ReportDistributionRecipients (ListId, Email, Name, IsActive)
               VALUES (@ListId, @Email, @Name, 1)
               SELECT @@IDENTITY",
-            new()
+            new Dictionary<string, object?>()
             {
                 ["ListId"] = listId,
                 ["Email"] = email,
@@ -189,7 +189,7 @@ public class ReportDistributionService
             @"UPDATE ReportDistributionRecipients
               SET IsActive = 0
               WHERE ListId = @ListId AND RecipientId = @RecipientId",
-            new() { ["ListId"] = listId, ["RecipientId"] = recipientId });
+            new Dictionary<string, object?>() { ["ListId"] = listId, ["RecipientId"] = recipientId });
 
         return rowsAffected > 0;
     }
@@ -211,7 +211,7 @@ public class ReportDistributionService
             @"UPDATE ReportDistributionLists
               SET Name = @Name, Description = @Description
               WHERE TenantId = @TenantId AND ListId = @ListId",
-            new()
+            new Dictionary<string, object?>()
             {
                 ["TenantId"] = tenantId,
                 ["ListId"] = listId,
@@ -235,7 +235,7 @@ public class ReportDistributionService
             @"UPDATE ReportDistributionLists
               SET IsActive = 0
               WHERE TenantId = @TenantId AND ListId = @ListId",
-            new() { ["TenantId"] = tenantId, ["ListId"] = listId });
+            new Dictionary<string, object?>() { ["TenantId"] = tenantId, ["ListId"] = listId });
 
         return rowsAffected > 0;
     }
@@ -253,7 +253,7 @@ public class ReportDistributionList
     public string Description { get; set; } = "";
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
-    public List<ReportRecipient> Recipients { get; set; } = new();
+    public List<ReportRecipient> Recipients { get; set; } = new Dictionary<string, object?>();
 }
 
 /// <summary>

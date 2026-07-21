@@ -103,15 +103,6 @@ Before diving into code, understand the product architecture:
 - Agent collaboration matrix
 - **Read time:** 20 minutes (relevant sections only)
 
-### 6. **For Avoiding Common Build Failures**
-→ Read **[LESSONS_LEARNED.md](./docs/LESSONS_LEARNED.md)** - CRITICAL
-- Common CI/CD failures and their solutions
-- Service registration best practices
-- Razor component usage patterns
-- JavaScript interop patterns
-- Prevention checklist before committing
-- **Read time:** 15 minutes (skim before committing)
-
 ---
 
 ## Project Structure

@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  MyDesk Outlook Add-in
+  ─────────────────────
+  Always points at Production: https://app.mydesk.digitalresponse.com.au
+  Sideload this manifest via Outlook → Get Add-ins → My add-ins → Add a custom add-in.
+-->
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xsi:type="MailApp">
+
+  <Id>a7f3d9c2-6c1e-4b7f-9d24-mydesk-outlook</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>Digital Response</ProviderName>
+  <DefaultLocale>en-AU</DefaultLocale>
+  <DisplayName DefaultValue="MyDesk" />
+  <Description DefaultValue="Log change requests, save emails to contacts, and generate legal folio reports — powered by MyDesk." />
+  <IconUrl DefaultValue="https://app.mydesk.digitalresponse.com.au/outlook-addin/icons/icon-64.png" />
+  <HighResolutionIconUrl DefaultValue="https://app.mydesk.digitalresponse.com.au/outlook-addin/icons/icon-80.png" />
+  <SupportUrl DefaultValue="https://app.mydesk.digitalresponse.com.au/" />
+
+  <AppDomains>
+    <AppDomain>https://app.mydesk.digitalresponse.com.au</AppDomain>
+  </AppDomains>
+
+  <Hosts>
+    <Host Name="Mailbox" />
+  </Hosts>
+
+  <Requirements>
+    <Sets>
+      <Set Name="Mailbox" MinVersion="1.5" />
+    </Sets>
+  </Requirements>
+
+  <FormSettings>
+    <Form xsi:type="ItemRead">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="https://app.mydesk.digitalresponse.com.au/outlook-addin/taskpane.html" />
+        <RequestedHeight>350</RequestedHeight>
+      </DesktopSettings>
+    </Form>
+  </FormSettings>
+
+  <Permissions>ReadWriteMailbox</Permissions>
+
+  <Rule xsi:type="RuleCollection" Mode="Or">
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read" />
+  </Rule>
+
+  <DisableEntityHighlighting>false</DisableEntityHighlighting>
+
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Requirements>
+      <bt:Sets DefaultMinVersion="1.5">
+        <bt:Set Name="Mailbox" />
+      </bt:Sets>
+    </Requirements>
+
+    <Hosts>
+      <Host xsi:type="MailHost">
+        <DesktopFormFactor>
+          <FunctionFile resid="Commands.Url" />
+
+          <!-- Ribbon button when reading a message -->
+          <ExtensionPoint xsi:type="MessageReadCommandSurface">
+            <OfficeTab id="TabDefault">
+              <Group id="msgReadGroup">
+                <Label resid="Group.Label" />
+                <Control xsi:type="Button" id="msgReadOpenPaneButton">
+                  <Label resid="TaskPaneButton.Label" />
+                  <Supertip>
+                    <Title resid="TaskPaneButton.Label" />
+                    <Description resid="TaskPaneButton.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16" />
+                    <bt:Image size="32" resid="Icon.32" />
+                    <bt:Image size="80" resid="Icon.80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="Taskpane.Url" />
+                    <SupportsPinning>true</SupportsPinning>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Icon.16" DefaultValue="https://app.mydesk.digitalresponse.com.au/outlook-addin/icons/icon-16.png" />
+        <bt:Image id="Icon.32" DefaultValue="https://app.mydesk.digitalresponse.com.au/outlook-addin/icons/icon-32.png" />
+        <bt:Image id="Icon.80" DefaultValue="https://app.mydesk.digitalresponse.com.au/outlook-addin/icons/icon-80.png" />
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="Commands.Url" DefaultValue="https://app.mydesk.digitalresponse.com.au/outlook-addin/commands.html" />
+        <bt:Url id="Taskpane.Url" DefaultValue="https://app.mydesk.digitalresponse.com.au/outlook-addin/taskpane.html" />
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="Group.Label" DefaultValue="MyDesk" />
+        <bt:String id="TaskPaneButton.Label" DefaultValue="Open MyDesk" />
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="TaskPaneButton.Tooltip" DefaultValue="Log a change request, save this email to a contact, or generate a legal folio report." />
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>

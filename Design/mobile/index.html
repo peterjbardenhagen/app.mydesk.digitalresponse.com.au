@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyDesk — Mobile Wireframe Prototype</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter',-apple-system,system-ui,sans-serif; background:#f5f7fa; color:#1a1a1a; }
+  .container { max-width:1200px; margin:0 auto; padding:40px 24px; }
+  h1 { font-size:28px; margin-bottom:8px; }
+  .subtitle { color:#666; margin-bottom:32px; font-size:14px; }
+  .gallery { display:flex; flex-wrap:wrap; gap:24px; justify-content:center; }
+  .phone { width:340px; background:#fff; border-radius:28px; box-shadow:0 4px 24px rgba(0,0,0,0.12); overflow:hidden; padding:0; position:relative; }
+  .phone-notch { text-align:center; padding:8px 0 0; font-size:8px; color:#999; }
+  .phone-label { text-align:center; font-size:12px; font-weight:600; color:#555; padding:8px 0; }
+  .phone-screen { min-height:620px; }
+  .top-bar { display:flex; justify-content:space-between; align-items:center; padding:12px 16px 8px; background:#fff; }
+  .top-bar .brand { font-size:16px; font-weight:700; color:#00c8c8; }
+  .top-bar .icons { display:flex; gap:8px; font-size:14px; }
+  .badge { position:relative; }
+  .badge-dot { position:absolute; top:-2px; right:-4px; width:14px; height:14px; background:#F44336; color:#fff; border-radius:50%; font-size:8px; display:flex; align-items:center; justify-content:center; }
+  .kpi-row { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:8px 16px; }
+  .kpi { background:#f8fafb; padding:10px; border-radius:10px; text-align:center; }
+  .kpi .val { font-size:18px; font-weight:700; color:#004E89; }
+  .kpi .lbl { font-size:9px; color:#888; }
+  .section-title { font-size:13px; font-weight:600; padding:12px 16px 6px; color:#333; }
+  .card-list { padding:0 16px; }
+  .card-item { display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:#f8fafb; border-radius:10px; margin-bottom:6px; font-size:12px; }
+  .card-item .left { display:flex; align-items:center; gap:8px; }
+  .card-item .left .icon { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:12px; }
+  .chip { font-size:9px; padding:2px 8px; border-radius:12px; font-weight:600; }
+  .chip-green { background:#e8f5e9; color:#2e7d32; }
+  .chip-orange { background:#fff3e0; color:#e65100; }
+  .chip-blue { background:#e3f2fd; color:#1565c0; }
+  .bottom-nav { display:flex; justify-content:space-around; padding:8px 0; border-top:1px solid #eee; background:#fff; margin-top:12px; }
+  .nav-item { text-align:center; font-size:9px; color:#999; }
+  .nav-item.active { color:#00c8c8; }
+  .nav-item .nav-icon { font-size:16px; display:block; margin-bottom:2px; }
+  .list-item { display:flex; align-items:center; gap:8px; padding:10px 0; border-bottom:1px solid #f0f0f0; font-size:12px; }
+  .list-item .amt { margin-left:auto; font-weight:600; }
+  .btn-full { background:#00c8c8; color:#fff; border:none; padding:10px; border-radius:10px; font-size:13px; font-weight:600; width:calc(100% - 32px); margin:8px 16px; text-align:center; }
+  .btn-outline { background:transparent; border:1px solid #ddd; padding:8px 14px; border-radius:8px; font-size:11px; color:#555; }
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:0 16px; }
+  .status-bar { height:24px; background:#f8fafb; display:flex; align-items:center; padding:0 16px; font-size:10px; color:#999; justify-content:space-between; }
+  .dag-node { display:flex; align-items:center; gap:4px; padding:4px 0; font-size:10px; }
+  .dag-dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+  .dag-dot.green { background:#4CAF50; }
+  .dag-dot.blue { background:#2196F3; }
+  .dag-dot.amber { background:#FF9800; }
+  .dag-dot.gray { background:#90A4AE; }
+  .flex { display:flex; align-items:center; gap:6px; }
+  .mt-1 { margin-top:4px; }
+  .mb-1 { margin-bottom:4px; }
+  .p-2 { padding:8px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📱 MyDesk — Mobile Wireframe Prototype</h1>
+  <p class="subtitle">Low-fidelity phone mockups for the MyDesk Enterprise AI Brain companion app. Each phone frame shows a different screen.</p>
+
+  <div class="gallery">
+
+    <!-- 1. LOGIN -->
+    <div>
+      <div class="phone-label">1. Login / Splash</div>
+      <div class="phone">
+        <div class="phone-notch">●</div>
+        <div class="phone-screen" style="padding:40px 24px;">
+          <div style="text-align:center; margin-bottom:40px;">
+            <div style="font-size:36px; font-weight:700; color:#00c8c8;">⬡</div>
+            <div style="font-size:20px; font-weight:700; color:#1a1a1a;">MyDesk</div>
+            <div style="font-size:11px; color:#888;">Enterprise AI Brain</div>
+          </div>
+          <div style="background:#f0f0f0; border-radius:8px; height:42px; margin-bottom:12px; display:flex; align-items:center; padding:0 14px; font-size:12px; color:#888;">Username / Employee Code</div>
+          <div style="background:#f0f0f0; border-radius:8px; height:42px; margin-bottom:24px; display:flex; align-items:center; padding:0 14px; font-size:12px; color:#888;">Password</div>
+          <div style="background:#00c8c8; color:#fff; text-align:center; padding:14px; border-radius:10px; font-size:14px; font-weight:600;">Sign In</div>
+          <div style="text-align:center; margin-top:16px; font-size:11px; color:#888;">Forgot password?</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. DASHBOARD -->
+    <div>
+      <div class="phone-label">2. Dashboard</div>
+      <div class="phone">
+        <div class="phone-notch">●</div>
+        <div class="top-bar">
+          <span class="brand">⬡ MyDesk</span>
+          <div class="icons"><span class="badge">🔔<span class="badge-dot">3</span></span><span>👤</span></div>
+        </div>
+        <div class="kpi-row">
+          <div class="kpi"><div class="val">$187K</div><div class="lbl">Pipeline</div></div>
+          <div class="kpi"><div class="val">12</div><div class="lbl">Projects</div></div>
+          <div class="kpi"><div class="val">4</div><div class="lbl">Approvals</div></div>
+          <div class="kpi"><div class="val">92%</div><div class="lbl">On-Time</div></div>
+        </div>
+        <div class="section-title">Quick Actions</div>
+        <div class="grid-2">
+          <div style="background:#e3f2fd; padding:10px; border-radius:10px; text-align:center; font-size:11px; font-weight:600; color:#1565c0;">📸 Expense</div>
+          <div style="background:#e8f5e9; padding:10px; border-radius:10px; text-align:center; font-size:11px; font-weight:600; color:#2e7d32;">⏱️ Timesheet</div>
+          <div style="background:#fff3e0; padding:10px; border-radius:10px; text-align:center; font-size:11px; font-weight:600; color:#e65100;">✅ Approvals</div>
+          <div style="background:#f3e5f5; padding:10px; border-radius:10px; text-align:center; font-size:11px; font-weight:600; color:#7b1fa2;">🤖 Agents</div>
+        </div>
+        <div class="section-title">AgentsOS Status</div>
+        <div class="card-list">
+          <div class="dag-node"><span class="dag-dot blue"></span> Site Survey <span style="margin-left:auto; font-size:9px; color:#2196F3;">running</span></div>
+          <div class="dag-node"><span class="dag-dot amber"></span> Contract Review <span style="margin-left:auto; font-size:9px; color:#FF9800;">gated</span></div>
+          <div class="dag-node"><span class="dag-dot gray"></span> Installation <span style="margin-left:auto; font-size:9px; color:#90A4AE;">waiting</span></div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item active"><span class="nav-icon">🏠</span>Home</div>
+          <div class="nav-item"><span class="nav-icon">🏢</span>CRM</div>
+          <div class="nav-item"><span class="nav-icon">💳</span>Finance</div>
+          <div class="nav-item"><span class="nav-icon">🤖</span>Agents</div>
+          <div class="nav-item"><span class="nav-icon">⚙️</span>Settings</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. NOTIFICATIONS -->
+    <div>
+      <div class="phone-label">3. Notifications</div>
+      <div class="phone">
+        <div class="phone-notch">●</div>
+        <div class="top-bar"><span class="brand">⬡ Notifications</span><div class="icons">🔔</div></div>
+        <div class="card-list" style="padding-top:8px;">
+          <div class="card-item" style="background:#e3f2fd;"><div class="left">📋</div> Quote DL-001 approved <span style="font-size:10px;color:#888;">2m ago</span></div>
+          <div class="card-item" style="background:#fff3e0;"><div class="left">💳</div> Expense $450 needs approval <span style="font-size:10px;color:#888;">15m ago</span></div>
+          <div class="card-item"><div class="left">⏱️</div> Timesheet #56 submitted <span style="font-size:10px;color:#888;">1h ago</span></div>
+          <div class="card-item"><div class="left">🤖</div> Site Survey complete <span style="font-size:10px;color:#888;">2h ago</span></div>
+          <div class="card-item"><div class="left">📊</div> Monthly report ready <span style="font-size:10px;color:#888;">3h ago</span></div>
+          <div class="card-item"><div class="left">🏢</div> New company registered <span style="font-size:10px;color:#888;">5h ago</span></div>
+        </div>
+        <div style="text-align:center; padding:16px; font-size:11px; color:#888;">Mark all as read</div>
+        <div class="bottom-nav">
+          <div class="nav-item"><span class="nav-icon">🏠</span>Home</div>
+          <div class="nav-item active"><span class="nav-icon">🔔</span>Alerts</div>
+          <div class="nav-item"><span class="nav-icon">💳</span>Finance</div>
+          <div class="nav-item"><span class="nav-icon">🤖</span>Agents</div>
+          <div class="nav-item"><span class="nav-icon">⚙️</span>Settings</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. COMPANIES (CRM) -->
+    <div>
+      <div class="phone-label">4. Companies (CRM)</div>
+      <div class="phone">
+        <div class="phone-notch">●</div>
+        <div class="top-bar"><span class="brand">⬡ Companies</span><div class="icons">🔍</div></div>
+        <div style="padding:8px 16px;"><div style="background:#f0f0f0; border-radius:8px; height:36px; display:flex; align-items:center; padding:0 12px; font-size:12px; color:#888;">🔍 Search companies...</div></div>
+        <div class="card-list">
+          <div class="card-item"><div class="left"><span style="font-weight:600;">Solar Systems</span></div><span class="chip chip-green">Active</span></div>
+          <div class="card-item"><div class="left"><span style="font-weight:600;">Bright LED Solutions</span></div><span class="chip chip-green">Active</span></div>
+          <div class="card-item"><div class="left"><span style="font-weight:600;">Smart Lighting Co</span></div><span class="chip chip-blue">Pending</span></div>
+          <div class="card-item"><div class="left"><span style="font-weight:600;">[DEMO] Acme Eng.</span></div><span class="chip chip-green">Active</span></div>
+          <div class="card-item"><div class="left"><span style="font-weight:600;">Eco Energy Group</span></div><span class="chip chip-orange">Draft</span></div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item"><span class="nav-icon">🏠</span>Home</div>
+          <div class="nav-item active"><span class="nav-icon">🏢</span>CRM</div>
+          <div class="nav-item"><span class="nav-icon">💳</span>Finance</div>
+          <div class="nav-item"><span class="nav-icon">🤖</span>Agents</div>
+          <div class="nav-item"><span class="nav-icon">⚙️</span>Settings</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. EXPENSES -->
+    <div>
+      <div class="phone-label">5. Expenses</div>
+      <div class="phone">
+        <div class="phone-notch">●</div>
+        <div class="top-bar"><span class="brand">⬡ Expenses</span><div class="icons">➕</div></div>
+        <div style="display:flex; gap:4px; padding:8px 16px; overflow-x:auto;">
+          <span class="chip chip-blue" style="font-size:10px; padding:4px 10px;">All</span>
+          <span style="font-size:10px; background:#f0f0f0; padding:4px 10px; border-radius:12px;">Draft</span>
+          <span style="font-size:10px; background:#f0f0f0; padding:4px 10px; border-radius:12px;">Submitted</span>
+          <span style="font-size:10px; background:#f0f0f0; padding:4px 10px; border-radius:12px;">Approved</span>
+        </div>
+        <div class="card-list">
+          <div class="card-item"><div class="left">✈️ Conference Travel</div><div style="font-weight:600;">$1,250</div><span class="chip chip-blue">Submit</span></div>
+          <div class="card-item"><div class="left">🍽️ Client Lunch</div><div style="font-weight:600;">$185</div><span class="chip chip-green">Approved</span></div>
+          <div class="card-item"><div class="left">📚 Training Materials</div><div style="font-weight:600;">$450</div><span class="chip chip-blue">Submit</span></div>
+          <div class="card-item"><div class="left">🚗 Fuel Reimb.</div><div style="font-weight:600;">$89</div><span class="chip chip-orange">Draft</span></div>
+        </div>
+        <div style="padding:0 16px; display:flex; gap:8px;">
+          <div class="btn-outline" style="text-align:center; flex:1;">📸 Capture</div>
+          <div class="btn-outline" style="text-align:center; flex:1;">📎 Upload</div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item"><span class="nav-icon">🏠</span>Home</div>
+          <div class="nav-item"><span class="nav-icon">🏢</span>CRM</div>
+          <div class="nav-item active"><span class="nav-icon">💳</span>Finance</div>
+          <div class="nav-item"><span class="nav-icon">🤖</span>Agents</div>
+          <div class="nav-item"><span class="nav-icon">⚙️</span>Settings</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. APPROVALS -->
+    <div>
+      <div class="phone-label">6. Approvals Queue</div>
+      <div class="phone">
+        <div class="phone-notch">●</div>
+        <div class="top-bar"><span class="brand">⬡ Approvals</span><span class="chip chip-orange">3 pending</span></div>
+        <div class="card-list" style="padding-top:8px;">
+          <div class="card-item" style="flex-direction:column; align-items:stretch;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="font-weight:600;">Expense #1042</span><span>$450.00</span></div>
+            <div style="display:flex; gap:8px;"><div style="flex:1; background:#4CAF50; color:#fff; text-align:center; padding:6px; border-radius:6px; font-size:11px;">✅ Approve</div><div style="flex:1; background:#F44336; color:#fff; text-align:center; padding:6px; border-radius:6px; font-size:11px;">❌ Reject</div></div>
+          </div>
+          <div class="card-item" style="flex-direction:column; align-items:stretch;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="font-weight:600;">Timesheet #56</span><span>40h</span></div>
+            <div style="display:flex; gap:8px;"><div style="flex:1; background:#4CAF50; color:#fff; text-align:center; padding:6px; border-radius:6px; font-size:11px;">✅ Approve</div><div style="flex:1; background:#F44336; color:#fff; text-align:center; padding:6px; border-radius:6px; font-size:11px;">❌ Reject</div></div>
+          </div>
+          <div class="card-item" style="flex-direction:column; align-items:stretch;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="font-weight:600;">Quote DL-001</span><span>$18,750</span></div>
+            <div style="display:flex; gap:8px;"><div style="flex:1; background:#4CAF50; color:#fff; text-align:center; padding:6px; border-radius:6px; font-size:11px;">✅ Approve</div><div style="flex:1; background:#F44336; color:#fff; text-align:center; padding:6px; border-radius:6px; font-size:11px;">❌ Reject</div></div>
+          </div>
+        </div>
+        <div class="btn-full">✅ Approve All</div>
+        <div class="bottom-nav">
+          <div class="nav-item"><span class="nav-icon">🏠</span>Home</div>
+          <div class="nav-item"><span class="nav-icon">🏢</span>CRM</div>
+          <div class="nav-item active"><span class="nav-icon">💳</span>Finance</div>
+          <div class="nav-item"><span class="nav-icon">🤖</span>Agents</div>
+          <div class="nav-item"><span class="nav-icon">⚙️</span>Settings</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. AGENTSOS DAG -->
+    <div>
+      <div class="phone-label">7. AgentsOS DAG</div>
+      <div class="phone">
+        <div class="phone-notch">●</div>
+        <div class="top-bar"><span class="brand">⬡ AgentsOS</span><span class="chip chip-green" style="font-size:9px;">Online</span></div>
+        <div class="section-title">Active Project: Solar Farm</div>
+        <div style="padding:0 16px;">
+          <div style="background:#f8fafb; border-radius:12px; padding:16px; min-height:200px;">
+            <div style="display:flex; flex-direction:column; gap:16px; align-items:center;">
+              <div style="text-align:center;"><div style="width:32px;height:32px;border-radius:50%;background:#2196F3;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;margin:0 auto 4px;">S</div><div style="font-size:9px;">Survey</div><div style="font-size:8px;color:#2196F3;">done</div></div>
+              <div style="width:2px;height:16px;background:#ddd;"></div>
+              <div style="text-align:center;"><div style="width:32px;height:32px;border-radius:50%;background:#FF9800;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;margin:0 auto 4px;">⚠️</div><div style="font-size:9px;">Contract</div><div style="font-size:8px;color:#FF9800;">gated</div></div>
+              <div style="width:2px;height:16px;background:#ddd;"></div>
+              <div style="text-align:center;"><div style="width:32px;height:32px;border-radius:50%;background:#90A4AE;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;margin:0 auto 4px;">P</div><div style="font-size:9px;">Procure</div><div style="font-size:8px;color:#90A4AE;">waiting</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item"><span class="nav-icon">🏠</span>Home</div>
+          <div class="nav-item"><span class="nav-icon">🏢</span>CRM</div>
+          <div class="nav-item"><span class="nav-icon">💳</span>Finance</div>
+          <div class="nav-item active"><span class="nav-icon">🤖</span>Agents</div>
+          <div class="nav-item"><span class="nav-icon">⚙️</span>Settings</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8. TIMESHEETS -->
+    <div>
+      <div class="phone-label">8. Timesheets</div>
+      <div class="phone">
+        <div class="phone-notch">●</div>
+        <div class="top-bar"><span class="brand">⬡ Timesheets</span><div class="icons">📅</div></div>
+        <div style="padding:8px 16px; display:flex; justify-content:space-between;">
+          <span style="font-size:12px;font-weight:600;">Week 28</span>
+          <span style="font-size:11px;color:#888;">Jul 13–19</span>
+        </div>
+        <div class="card-list">
+          <div class="card-item"><span>Mon</span><span>8.0h</span><span class="chip chip-green">✓</span></div>
+          <div class="card-item"><span>Tue</span><span>7.5h</span><span class="chip chip-green">✓</span></div>
+          <div class="card-item"><span>Wed</span><span>8.0h</span><span class="chip chip-green">✓</span></div>
+          <div class="card-item"><span>Thu</span><span>—</span><span class="chip chip-blue">Enter</span></div>
+          <div class="card-item"><span>Fri</span><span>—</span><span class="chip chip-blue">Enter</span></div>
+          <div class="card-item" style="font-weight:600; background:#e8f5e9;"><span>Total</span><span>23.5h</span><span></span></div>
+        </div>
+        <div class="btn-full">📤 Submit Timesheet</div>
+        <div class="bottom-nav">
+          <div class="nav-item"><span class="nav-icon">🏠</span>Home</div>
+          <div class="nav-item"><span class="nav-icon">🏢</span>CRM</div>
+          <div class="nav-item active"><span class="nav-icon">💳</span>Finance</div>
+          <div class="nav-item"><span class="nav-icon">🤖</span>Agents</div>
+          <div class="nav-item"><span class="nav-icon">⚙️</span>Settings</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9. QUOTES -->
+    <div>
+      <div class="phone-label">9. Quotes</div>
+      <div class="phone">
+        <div class="phone-notch">●</div>
+        <div class="top-bar"><span class="brand">⬡ Quotes</span><div class="icons">➕</div></div>
+        <div class="card-list" style="padding-top:8px;">
+          <div class="card-item"><div><strong>DL-QUOTE-001</strong><div style="font-size:10px;color:#888;">Solar Systems</div></div><div style="text-align:right;"><div>$18,750</div><span class="chip chip-green">Approved</span></div></div>
+          <div class="card-item"><div><strong>DL-QUOTE-002</strong><div style="font-size:10px;color:#888;">Bright LED</div></div><div style="text-align:right;"><div>$49,500</div><span class="chip chip-orange">Draft</span></div></div>
+          <div class="card-item"><div><strong>[DEMO] Office Refit</strong><div style="font-size:10px;color:#888;">Acme Engineering</div></div><div style="text-align:right;"><div>$22,400</div><span class="chip chip-blue">Pending</span></div></div>
+        </div>
+        <div style="padding:16px; background:#f8fafb; margin:0 16px; border-radius:10px; display:flex; justify-content:space-between; font-size:11px;">
+          <span>Pipeline: $187K</span>
+          <span style="color:#00c8c8;">67% conversion</span>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item"><span class="nav-icon">🏠</span>Home</div>
+          <div class="nav-item active"><span class="nav-icon">🏢</span>CRM</div>
+          <div class="nav-item"><span class="nav-icon">💳</span>Finance</div>
+          <div class="nav-item"><span class="nav-icon">🤖</span>Agents</div>
+          <div class="nav-item"><span class="nav-icon">⚙️</span>Settings</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10. INVOICES -->
+    <div>
+      <div class="phone-label">10. Invoices</div>
+      <div class="phone">
+        <div class="phone-notch">●</div>
+        <div class="top-bar"><span class="brand">⬡ Invoices</span><div class="icons">📥</div></div>
+        <div class="card-list" style="padding-top:8px;">
+          <div class="card-item"><div><strong>INV-001</strong><div style="font-size:10px;color:#888;">Solar Systems</div></div><div style="text-align:right;"><div>$18,750</div><span class="chip chip-green">Paid</span></div></div>
+          <div class="card-item"><div><strong>INV-002</strong><div style="font-size:10px;color:#888;">Bright LED</div></div><div style="text-align:right;"><div>$49,500</div><span class="chip chip-blue">Pending</span></div></div>
+          <div class="card-item"><div><strong>INV-003</strong><div style="font-size:10px;color:#888;">Acme Engineering</div></div><div style="text-align:right;"><div>$22,400</div><span class="chip chip-orange">Overdue</span></div></div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item"><span class="nav-icon">🏠</span>Home</div>
+          <div class="nav-item active"><span class="nav-icon">🏢</span>CRM</div>
+          <div class="nav-item"><span class="nav-icon">💳</span>Finance</div>
+          <div class="nav-item"><span class="nav-icon">🤖</span>Agents</div>
+          <div class="nav-item"><span class="nav-icon">⚙️</span>Settings</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 11. PROFILE -->
+    <div>
+      <div class="phone-label">11. Profile & Settings</div>
+      <div class="phone">
+        <div class="phone-notch">●</div>
+        <div class="top-bar"><span class="brand">⬡ Settings</span><div class="icons"></div></div>
+        <div style="text-align:center; padding:20px 16px;">
+          <div style="width:60px;height:60px;border-radius:50%;background:#00c8c8;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;">D</div>
+          <div style="font-weight:600;">Demo User</div>
+          <div style="font-size:11px;color:#888;">demo@demo.lighting</div>
+        </div>
+        <div class="card-list">
+          <div class="card-item"><span>🔔 Notifications</span><span>On</span></div>
+          <div class="card-item"><span>🔒 Biometric Auth</span><span>Enabled</span></div>
+          <div class="card-item"><span>🌙 Dark Mode</span><span>Auto</span></div>
+          <div class="card-item"><span>🌐 Server</span><span>app.mydesk.dr</span></div>
+          <div class="card-item"><span>📱 App Version</span><span>1.0.0</span></div>
+        </div>
+        <div style="text-align:center; padding:16px; font-size:11px; color:#F44336;">Sign Out</div>
+        <div class="bottom-nav">
+          <div class="nav-item"><span class="nav-icon">🏠</span>Home</div>
+          <div class="nav-item"><span class="nav-icon">🏢</span>CRM</div>
+          <div class="nav-item"><span class="nav-icon">💳</span>Finance</div>
+          <div class="nav-item"><span class="nav-icon">🤖</span>Agents</div>
+          <div class="nav-item active"><span class="nav-icon">⚙️</span>Settings</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="text-align:center; margin-top:48px; padding:24px; border-top:1px solid #e0e0e0;">
+    <p style="font-size:13px; color:#999;">MyDesk Mobile Wireframe Prototype — v1.0 · July 2026</p>
+    <p style="font-size:12px; color:#bbb;">11 screens covering all mobile modules</p>
+  </div>
+</div>
+</body>
+</html>

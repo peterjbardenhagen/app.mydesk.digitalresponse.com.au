@@ -10,14 +10,13 @@ using MyDesk.Shared.Services.Integrations;
 using MyDesk.Shared.Models;
 using MyDesk.Web.Components;
 using MyDesk.Web.Services;
-using NotificationService = MyDesk.Web.Services.NotificationService;
-using ClientNotificationService = MyDesk.Web.Services.ClientNotificationService;
 using MyDesk.Web.Scheduling;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
 using System.Security.Claims;
 using System.Text;
@@ -370,12 +369,12 @@ builder.Services.AddScoped<BankingService>();
     builder.Services.AddScoped<FavouritesService>();
     builder.Services.AddScoped<AIFunctionExecutor>();
     builder.Services.AddScoped<FinancialExtractionService>();
-    // builder.Services.AddScoped<WorkflowApprovalService>();
-    // builder.Services.AddScoped<PhotoProcessingService>();
-    // builder.Services.AddScoped<NotificationService>();
+    builder.Services.AddScoped<WorkflowApprovalService>();
+    builder.Services.AddScoped<PhotoProcessingService>();
+    builder.Services.AddScoped<NotificationService>();
 
     // ── Security Services (Phase 1 Week 4) ──────────────────────────────────
-    // builder.Services.AddScoped<RateLimitingService>();
+    builder.Services.AddScoped<RateLimitingService>();
 
     // ── Ports from legacy MyDesk (in-memory services) ──────────────────────
     builder.Services.AddScoped<RfqService>();
@@ -387,24 +386,8 @@ builder.Services.AddScoped<BankingService>();
     builder.Services.AddScoped<ApprovalService>();
     builder.Services.AddScoped<SalesReportsService>();
 
-    // ── Phase 5: Notifications & Alerts (2026) ──────────────────────────────
-    // Registered before Phase 4 so BudgetService can depend on BudgetAlertService
-    builder.Services.AddScoped<NotificationAuditService>();
-    builder.Services.AddScoped<NotificationService>();
-    builder.Services.AddScoped<ApprovalNotificationService>();
-    builder.Services.AddScoped<BudgetAlertService>();
-    builder.Services.AddScoped<NotificationRetryService>();
-    builder.Services.AddSingleton<NotificationBackgroundJobService>();
-
-    // ── Phase 4: Teams & Departments (2026) ────────────────────────────────
-    builder.Services.AddScoped<DepartmentService>();
-    builder.Services.AddScoped<TeamService>();
-    builder.Services.AddScoped<BudgetService>();
-    builder.Services.AddScoped<ApprovalDelegationService>();
-    builder.Services.AddScoped<ApprovalEscalationService>();
-    builder.Services.AddScoped<BulkUserImportService>();
-
 builder.Services.AddHttpClient();
+builder.Services.AddHttpClient("AgentsOS", client => { client.Timeout = TimeSpan.FromSeconds(5); });
 
 // ── Hangfire (background + recurring jobs) ─────────────────────────────────
 // Stored in the same SQL DB. Dashboard exposed at /hangfire (admin-only).
@@ -461,6 +444,7 @@ builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.IDocumentExtraction
 builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.DocumentExtractionService>();
 builder.Services.AddScoped<SupplierQuoteParseService>();
 builder.Services.AddScoped<McpIntegrationService>();
+builder.Services.AddScoped<AgentsOsService>();
 builder.Services.AddScoped<PersonalAccessTokenService>();
 
 // Proposal #272: AI Enhancement services
@@ -471,15 +455,7 @@ builder.Services.AddScoped<TelegramBotService>();
 builder.Services.AddScoped<OneDriveService>();
 builder.Services.AddScoped<UserIntelligenceService>();
 builder.Services.AddScoped<PredictiveAnalyticsService>();
-builder.Services.AddScoped<ClientNotificationService>();
-builder.Services.AddScoped<AnalyticsService>();
-builder.Services.AddScoped<DashboardExportService>();
-builder.Services.AddScoped<DashboardChartService>();
-builder.Services.AddScoped<DashboardReportScheduleService>();
-builder.Services.AddScoped<CustomReportService>();
-builder.Services.AddScoped<ReportDistributionService>();
-builder.Services.AddScoped<AnomalyDetectionService>();
-builder.Services.AddScoped<AnalyticsNotificationService>();
+builder.Services.AddScoped<SignalRNotificationService>();
 
 // IAccountingSettingsService → PlatformSettingsService (allows Shared sync services to save tokens)
 builder.Services.AddScoped<MyDesk.Shared.Services.Integrations.IAccountingSettingsService>(
@@ -538,20 +514,21 @@ builder.Services.AddSwaggerGen(c =>
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Description = "API key issued to the external product."
     });
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-    {
-        {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "ApiKey"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
+    // Security requirement temporarily disabled for .NET 10 / Swashbuckle 7.x compatibility
+    // c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    // {
+    //     {
+    //         new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    //         {
+    //             Reference = new Microsoft.OpenApi.Models.OpenApiReference
+    //             {
+    //                 Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+    //                 Id = "ApiKey"
+    //             }
+    //         },
+    //         Array.Empty&lt;string>()
+    //     }
+    // });
 });
 
 // Razor Components — DetailedErrors helps developers see what broke without
@@ -817,8 +794,8 @@ app.Use(async (ctx, next) =>
 
 app.UseRateLimiter();
 
-// Phase 1 Week 4: Database-backed rate limiting middleware - DISABLED
-// app.UseMiddleware<MyDesk.Web.Middleware.RateLimitingMiddleware>();
+// Phase 1 Week 4: Database-backed rate limiting middleware
+app.UseMiddleware<MyDesk.Web.Middleware.RateLimitingMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -855,10 +832,6 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions
 {
     Authorization = new[] { new MyDesk.Web.Scheduling.HangfireAdminAuthorizationFilter() }
 });
-
-// ── Initialize recurring notification jobs ──────────────────────────────────
-var jobService = app.Services.GetRequiredService<NotificationBackgroundJobService>();
-jobService.RegisterRecurringJobs();
 
 // ── Blazor Server sign-in endpoint (one-time-token pattern) ─────────────────
 // Blazor components cannot set cookies (response already started over SignalR).
@@ -1266,7 +1239,44 @@ app.MapPost("/api/email/purchase-order/{id:int}",
     return ok ? Results.Ok(new { sent = true }) : Results.Problem("Email send failed — check SMTP config.");
 }).RequireAuthorization();
 
-// ── Telegram Bot webhook (Proposal #272) ─────────────────────────────────────
+// ── Telegram Bot webhooks (Proposal #272) ──────────────────────────────────────
+// Production webhook: POST /api/telegram/webhook/prod
+app.MapPost("/api/telegram/webhook/prod", async (HttpRequest request, TelegramBotService tg) =>
+{
+    try
+    {
+        using var reader = new StreamReader(request.Body);
+        var body = await reader.ReadToEndAsync();
+        var doc = System.Text.Json.JsonDocument.Parse(body);
+        await tg.HandleUpdateAsync("prod", doc.RootElement);
+        return Results.Ok();
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Telegram webhook error (prod)");
+        return Results.Ok(); // Always 200 to Telegram
+    }
+});
+
+// Development webhook: POST /api/telegram/webhook/dev
+app.MapPost("/api/telegram/webhook/dev", async (HttpRequest request, TelegramBotService tg) =>
+{
+    try
+    {
+        using var reader = new StreamReader(request.Body);
+        var body = await reader.ReadToEndAsync();
+        var doc = System.Text.Json.JsonDocument.Parse(body);
+        await tg.HandleUpdateAsync("dev", doc.RootElement);
+        return Results.Ok();
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Telegram webhook error (dev)");
+        return Results.Ok(); // Always 200 to Telegram
+    }
+});
+
+// Generic webhook (defaults to prod for backward compatibility)
 app.MapPost("/api/telegram/webhook", async (HttpRequest request, TelegramBotService tg) =>
 {
     try
@@ -1274,14 +1284,56 @@ app.MapPost("/api/telegram/webhook", async (HttpRequest request, TelegramBotServ
         using var reader = new StreamReader(request.Body);
         var body = await reader.ReadToEndAsync();
         var doc = System.Text.Json.JsonDocument.Parse(body);
-        await tg.HandleUpdateAsync(doc.RootElement);
+        await tg.HandleUpdateAsync("prod", doc.RootElement);
         return Results.Ok();
     }
     catch (Exception ex)
     {
-        Log.Error(ex, "Telegram webhook error");
+        Log.Error(ex, "Telegram webhook error (default/prod)");
         return Results.Ok(); // Always 200 to Telegram
     }
+});
+
+// ── Telegram Bot Management endpoints ──────────────────────────────────────────
+app.MapGet("/api/admin/telegram/bots", [Authorize(Roles = "Admin,Director")] async (TelegramBotService tg) =>
+{
+    var environments = tg.GetConfiguredEnvironments().Select(env => new
+    {
+        environment = env,
+        configured = tg.IsConfigured(env),
+        config = tg.GetBotConfig(env)
+    });
+    return Results.Ok(environments);
+});
+
+app.MapPost("/api/admin/telegram/webhook/set/{environment}", [Authorize(Roles = "Admin,Director")] async (string environment, TelegramBotService tg, HttpContext ctx) =>
+{
+    var url = ctx.Request.Query["url"].ToString();
+    var success = await tg.SetWebhookAsync(environment, string.IsNullOrEmpty(url) ? null : url);
+    return success ? Results.Ok(new { success = true, environment }) : Results.BadRequest(new { success = false, environment });
+});
+
+app.MapPost("/api/admin/telegram/webhook/delete/{environment}", [Authorize(Roles = "Admin,Director")] async (string environment, TelegramBotService tg) =>
+{
+    var success = await tg.DeleteWebhookAsync(environment);
+    return success ? Results.Ok(new { success = true, environment }) : Results.BadRequest(new { success = false, environment });
+});
+
+app.MapGet("/api/admin/telegram/webhook/info/{environment}", [Authorize(Roles = "Admin,Director")] async (string environment, TelegramBotService tg) =>
+{
+    var info = await tg.GetWebhookInfoAsync(environment);
+    return info.HasValue ? Results.Ok(info.Value) : Results.NotFound(new { error = "Webhook info not found", environment });
+});
+
+app.MapPost("/api/admin/telegram/broadcast/{environment}", [Authorize(Roles = "Admin,Director")] async (string environment, HttpContext ctx, TelegramBotService tg) =>
+{
+    var body = await new StreamReader(ctx.Request.Body).ReadToEndAsync();
+    var doc = JsonDocument.Parse(body);
+    var message = doc.RootElement.GetProperty("message").GetString();
+    if (string.IsNullOrEmpty(message)) return Results.BadRequest(new { error = "Message required" });
+    
+    await tg.BroadcastAsync(environment, message!);
+    return Results.Ok(new { success = true, environment });
 });
 
 // ── Desky Mobile Chat API ─────────────────────────────────────────────────────
@@ -2457,7 +2509,7 @@ app.MapDelete("/api/tokens/{tokenId:guid}", async (Guid tokenId, HttpContext ctx
     return ok ? Results.Ok() : Results.NotFound();
 }).RequireAuthorization();
 
-// ── Log Viewer API endpoints ─────────────────────────────────────────────────
+// ── Log Viewer API endpoints
 app.MapGet("/api/logs", (HttpContext ctx) =>
 {
     if (!ctx.User.IsInRole("Admin") && !ctx.User.IsInRole("Director"))
@@ -2745,8 +2797,7 @@ app.MapGet("/quotes/{id:int}/action/{action}", async (int id, string action, Quo
 // ─────────────────────────────────────────────────────────────────────────────
 // APPROVAL WORKFLOWS API
 // ─────────────────────────────────────────────────────────────────────────────
-// TEMPORARILY DISABLED FOR DIAGNOSTICS
-/*
+
 // ── Get Approval Workflows ──────────────────────────────────────────────────
 app.MapGet("/api/approval/workflows", async (HttpContext ctx, DatabaseService db) =>
 {
@@ -2821,7 +2872,7 @@ app.MapPost("/api/expenses/{id}/submit-for-approval", async (int id, HttpContext
             new() { ["TenantId"] = tenantIdInt });
 
         var approverIds = new List<int>();
-        foreach (var row in approversDt.Rows)
+        foreach (System.Data.DataRow row in approversDt.Rows)
         {
             if (row["UserId"] != DBNull.Value && int.TryParse(row["UserId"].ToString(), out int approverId))
                 approverIds.Add(approverId);
@@ -2894,7 +2945,7 @@ app.MapPost("/api/timesheets/{id}/submit-for-approval", async (int id, HttpConte
             new() { ["TenantId"] = tenantIdInt });
 
         var approverIds = new List<int>();
-        foreach (var row in approversDt.Rows)
+        foreach (System.Data.DataRow row in approversDt.Rows)
         {
             if (row["UserId"] != DBNull.Value && int.TryParse(row["UserId"].ToString(), out int approverId))
                 approverIds.Add(approverId);
@@ -3336,7 +3387,7 @@ app.MapGet("/api/tenant/resolve-domain", async (string emailDomain, DatabaseServ
     });
 })
 .WithName("ResolveDomain")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .AllowAnonymous();  // Allow before authentication for login flow
 
 // GET /api/tenant/verify-domain-status - Check verification status
@@ -3367,7 +3418,7 @@ app.MapGet("/api/tenant/verify-domain-status", async (string domain, DatabaseSer
     });
 })
 .WithName("VerifyDomainStatus")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .AllowAnonymous();
 
 // POST /api/tenant/add-domain - Admin: Add new domain for their tenant (requires auth)
@@ -3432,7 +3483,7 @@ app.MapPost("/api/tenant/add-domain", async (HttpContext ctx, AddDomainRequest b
     }
 })
 .WithName("AddDomain")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // POST /api/tenant/verify-domain - Verify domain ownership via DNS TXT record
@@ -3498,7 +3549,7 @@ app.MapPost("/api/tenant/verify-domain", async (HttpContext ctx, VerifyDomainReq
     }
 })
 .WithName("VerifyDomain")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .AllowAnonymous();  // Allow domain verification without auth for initial setup
 
 // GET /api/tenant/domains - Admin: List all domains for current tenant
@@ -3528,7 +3579,7 @@ app.MapGet("/api/tenant/domains", async (HttpContext ctx, DatabaseService db) =>
     return Results.Ok(new { domains, count = domains.Count });
 })
 .WithName("ListDomains")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // DELETE /api/tenant/domains/{id} - Admin: Remove domain from tenant
@@ -3570,7 +3621,7 @@ app.MapDelete("/api/tenant/domains/{id:int}", async (int id, HttpContext ctx, Da
     }
 })
 .WithName("RemoveDomain")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // ── Approval Permissions Management (Phase 1 Week 2) ──────────────────────────────────────
@@ -3643,7 +3694,7 @@ app.MapPost("/api/approval/permissions", async (HttpContext ctx, CreateApprovalP
     }
 })
 .WithName("CreateApprovalPermission")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // GET /api/approval/permissions - Admin: List permissions for tenant
@@ -3689,7 +3740,7 @@ app.MapGet("/api/approval/permissions", async (HttpContext ctx, DatabaseService 
     return Results.Ok(new { permissions, count = permissions.Count });
 })
 .WithName("ListApprovalPermissions")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // PUT /api/approval/permissions/{id} - Admin: Update permission
@@ -3766,7 +3817,7 @@ app.MapPut("/api/approval/permissions/{id:int}", async (int id, HttpContext ctx,
     }
 })
 .WithName("UpdateApprovalPermission")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // DELETE /api/approval/permissions/{id} - Admin: Revoke permission
@@ -3814,7 +3865,7 @@ app.MapDelete("/api/approval/permissions/{id:int}", async (int id, HttpContext c
     }
 })
 .WithName("RevokeApprovalPermission")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // POST /api/approval/check-permission - Check if current user has approval authority
@@ -3871,7 +3922,7 @@ app.MapPost("/api/approval/check-permission", async (HttpContext ctx, CheckAppro
     });
 })
 .WithName("CheckApprovalPermission")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // ── Compliance Audit Logging (Phase 1 Week 3) ────────────────────────────────────────
@@ -3930,7 +3981,7 @@ app.MapGet("/api/compliance/audit-log", async (HttpContext ctx, DatabaseService 
     });
 })
 .WithName("GetAuditLog")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // GET /api/compliance/audit-log/entity/{entityType}/{entityId} - View audit history for specific entity
@@ -3974,7 +4025,7 @@ app.MapGet("/api/compliance/audit-log/entity/{entityType}/{entityId:int}", async
     return Results.Ok(new { entity = $"{entityType}#{entityId}", history });
 })
 .WithName("GetEntityAuditHistory")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // GET /api/compliance/security-events - View security events (admin only)
@@ -4026,7 +4077,7 @@ app.MapGet("/api/compliance/security-events", async (HttpContext ctx, DatabaseSe
     return Results.Ok(new { events, count = events.Count });
 })
 .WithName("GetSecurityEvents")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // POST /api/compliance/security-events - Admin: Record security event
@@ -4070,7 +4121,7 @@ app.MapPost("/api/compliance/security-events", async (HttpContext ctx, RecordSec
     }
 })
 .WithName("RecordSecurityEvent")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // PUT /api/compliance/security-events/{id} - Admin: Investigate security event
@@ -4112,7 +4163,7 @@ app.MapPut("/api/compliance/security-events/{id:int}", async (int id, HttpContex
     }
 })
 .WithName("InvestigateSecurityEvent")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // ── Rate Limiting Management (Phase 1 Week 4) ────────────────────────────────────────
@@ -4167,7 +4218,7 @@ app.MapGet("/api/security/rate-limiting/violations", async (HttpContext ctx, Dat
     });
 })
 .WithName("GetRateLimitViolations")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // PUT /api/security/rate-limiting/violations/{id}/unblock - Admin: Unblock IP/User
@@ -4201,7 +4252,7 @@ app.MapPut("/api/security/rate-limiting/violations/{id:int}/unblock", async (int
     }
 })
 .WithName("UnblockRateLimitViolation")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // ── Product Admin Module (Phase 2 Weeks 5-6) ────────────────────────────────────────
@@ -4267,7 +4318,7 @@ app.MapGet("/api/product-admin/clients", async (HttpContext ctx, DatabaseService
     });
 })
 .WithName("ListClients")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // GET /api/product-admin/clients/{tenantId}/billing - View client billing configuration
@@ -4298,7 +4349,7 @@ app.MapGet("/api/product-admin/clients/{tenantId:int}/billing", async (int tenan
     });
 })
 .WithName("GetClientBillingConfig")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // POST /api/product-admin/clients/{tenantId}/billing - Update client billing configuration
@@ -4397,7 +4448,7 @@ app.MapPost("/api/product-admin/clients/{tenantId:int}/billing", async (int tena
     }
 })
 .WithName("UpdateBillingConfig")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // GET /api/product-admin/invoices - List all invoices (with optional filtering)
@@ -4464,7 +4515,7 @@ app.MapGet("/api/product-admin/invoices", async (HttpContext ctx, DatabaseServic
     });
 })
 .WithName("ListInvoices")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // GET /api/product-admin/invoices/{invoiceId} - Get invoice details
@@ -4507,7 +4558,7 @@ app.MapGet("/api/product-admin/invoices/{invoiceId:int}", async (int invoiceId, 
     });
 })
 .WithName("GetInvoiceDetails")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // PUT /api/product-admin/invoices/{invoiceId}/mark-paid - Mark invoice as paid
@@ -4542,7 +4593,7 @@ app.MapPut("/api/product-admin/invoices/{invoiceId:int}/mark-paid", async (int i
     }
 })
 .WithName("MarkInvoicePaid")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // ── Client Onboarding Wizard (Phase 2 Weeks 7-8) ────────────────────────────────────────
@@ -4590,7 +4641,7 @@ app.MapPost("/api/product-admin/onboarding/start", async (HttpContext ctx, Start
     }
 })
 .WithName("StartOnboarding")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // GET /api/product-admin/onboarding/{sessionToken} - Get wizard session state
@@ -4625,7 +4676,7 @@ app.MapGet("/api/product-admin/onboarding/{sessionToken}", async (string session
     });
 })
 .WithName("GetOnboardingSession")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // POST /api/product-admin/onboarding/{sessionToken}/steps/{step} - Submit step data
@@ -4708,7 +4759,7 @@ app.MapPost("/api/product-admin/onboarding/{sessionToken}/steps/{step:int}",
         return Results.Ok(new
         {
             stepCompleted = step,
-            nextStep = step < 6 ? step + 1 : null,
+            nextStep = step < 6 ? (int?)(step + 1) : null,
             message = step == 6 ? "Wizard confirmation complete. Ready to create tenant." : $"Step {step} completed"
         });
     }
@@ -4718,7 +4769,7 @@ app.MapPost("/api/product-admin/onboarding/{sessionToken}/steps/{step:int}",
     }
 })
 .WithName("SubmitOnboardingStep")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // POST /api/product-admin/onboarding/{sessionToken}/complete - Complete wizard and create tenant
@@ -4837,7 +4888,7 @@ app.MapPost("/api/product-admin/onboarding/{sessionToken}/complete", async (stri
     }
 })
 .WithName("CompleteOnboarding")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // ── User Profile Photos (New Feature) ────────────────────────────────────────
@@ -4887,16 +4938,14 @@ app.MapGet("/api/user/profile", async (HttpContext ctx, DatabaseService db) =>
     }
     catch (Exception ex)
     {
-        return Results.Problem(detail: ex.Message, statusCode: 500);
+        return Results.Json(new { error = ex.Message }, statusCode: 500);
     }
 })
 .WithName("GetUserProfile")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // POST /api/user/profile/photo/upload - Upload and crop photo
-// TEMPORARILY DISABLED - Diagnostic: PhotoProcessingService issue
-/* DISABLED
 app.MapPost("/api/user/profile/photo/upload", async (HttpContext ctx, DatabaseService db, PhotoProcessingService photoService) =>
 {
     var userId = int.TryParse(ctx.User.FindFirst("UserId")?.Value, out var uid) ? uid : 0;
@@ -4908,13 +4957,15 @@ app.MapPost("/api/user/profile/photo/upload", async (HttpContext ctx, DatabaseSe
     try
     {
         var form = await ctx.Request.ReadFormAsync();
-        var file = form.Files.FirstOrDefault("photo");
+        var file = form.Files.GetFile("photo");
 
         if (file == null || file.Length == 0)
             return Results.BadRequest(new { error = "No photo provided" });
 
         using var stream = file.OpenReadStream();
-        var (isValid, error) = await photoService.ValidateImageAsync(stream, file.ContentType ?? "");
+        var validationResult = await photoService.ValidateImageAsync(stream, file.ContentType ?? "");
+        bool isValid = validationResult.isValid;
+        string? error = validationResult.error;
 
         if (!isValid)
             return Results.BadRequest(new { error });
@@ -4923,10 +4974,10 @@ app.MapPost("/api/user/profile/photo/upload", async (HttpContext ctx, DatabaseSe
         stream.Position = 0;
 
         // Convert to square
-        var (squareImage, dimension, contentType) = await photoService.ConvertToSquareAsync(stream, file.ContentType ?? "image/jpeg");
+        var conversionResult = await photoService.ConvertToSquareAsync(stream, file.ContentType ?? "image/jpeg");
 
         // Save photo
-        var storagePath = await photoService.SaveImageAsync(squareImage, tenantId.ToString(), userId.ToString(), file.FileName);
+        var storagePath = await photoService.SaveImageAsync(conversionResult.squareImage, tenantId.ToString(), userId.ToString(), file.FileName);
 
         // Store in database
         var insertResult = await db.QueryAsync(
@@ -4938,11 +4989,11 @@ app.MapPost("/api/user/profile/photo/upload", async (HttpContext ctx, DatabaseSe
                 ["UserId"] = userId,
                 ["TenantId"] = tenantId,
                 ["FileName"] = file.FileName,
-                ["ContentType"] = contentType,
+                ["ContentType"] = conversionResult.contentType,
                 ["Size"] = file.Length,
                 ["StoragePath"] = storagePath,
-                ["Width"] = dimension,
-                ["Height"] = dimension
+                ["Width"] = conversionResult.dimension,
+                ["Height"] = conversionResult.dimension
             });
 
         int photoId = (int)insertResult.Rows[0]["PhotoId"];
@@ -4962,20 +5013,19 @@ app.MapPost("/api/user/profile/photo/upload", async (HttpContext ctx, DatabaseSe
         {
             photoId,
             photoUrl = storagePath,
-            dimension,
+            conversionResult.dimension,
             message = "Photo uploaded successfully"
         });
     }
     catch (Exception ex)
     {
-        return Results.Problem(detail: ex.Message, statusCode: 500);
+        return Results.Json(new { error = ex.Message }, statusCode: 500);
     }
 })
 .WithName("UploadUserPhoto")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization()
 .DisableAntiforgery();
-*/
 
 // DELETE /api/user/profile/photo - Remove current photo
 app.MapDelete("/api/user/profile/photo", async (HttpContext ctx, DatabaseService db) =>
@@ -5021,18 +5071,16 @@ app.MapDelete("/api/user/profile/photo", async (HttpContext ctx, DatabaseService
     }
     catch (Exception ex)
     {
-        return Results.Problem(detail: ex.Message, statusCode: 500);
+        return Results.Json(new { error = ex.Message }, statusCode: 500);
     }
 })
 .WithName("DeleteUserPhoto")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // ── Expense Receipt Photos (New Feature) ──────────────────────────────────────
 
 // POST /api/expenses/{expenseId}/receipt/upload - Upload receipt photo
-// TEMPORARILY DISABLED - Diagnostic: PhotoProcessingService issue
-/* DISABLED
 app.MapPost("/api/expenses/{expenseId:int}/receipt/upload", async (int expenseId, HttpContext ctx, DatabaseService db, PhotoProcessingService photoService, MyDesk.Shared.Services.Extraction.DocumentExtractionService extractionService) =>
 {
     var userId = int.TryParse(ctx.User.FindFirst("UserId")?.Value, out var uid) ? uid : 0;
@@ -5052,13 +5100,15 @@ app.MapPost("/api/expenses/{expenseId:int}/receipt/upload", async (int expenseId
             return Results.Forbid();
 
         var form = await ctx.Request.ReadFormAsync();
-        var file = form.Files.FirstOrDefault("receipt");
+        var file = form.Files.GetFile("receipt");
 
         if (file == null || file.Length == 0)
             return Results.BadRequest(new { error = "No receipt file provided" });
 
         using var stream = file.OpenReadStream();
-        var (isValid, error) = await photoService.ValidateImageAsync(stream, file.ContentType ?? "", maxSizeBytes: 10485760);
+        var validationResult = await photoService.ValidateImageAsync(stream, file.ContentType ?? "", maxSizeBytes: 10485760);
+        bool isValid = validationResult.isValid;
+        string? error = validationResult.error;
 
         if (!isValid)
             return Results.BadRequest(new { error });
@@ -5089,12 +5139,12 @@ app.MapPost("/api/expenses/{expenseId:int}/receipt/upload", async (int expenseId
                 ["Strategy"] = extraction.StrategyUsed,
                 ["Confidence"] = extraction.Confidence,
                 ["AuditPassed"] = extraction.AuditPassed,
-                ["Supplier"] = extraction.SupplierName ?? DBNull.Value,
-                ["DocDate"] = extraction.DocumentDate ?? DBNull.Value,
+                ["Supplier"] = (object?)extraction.SupplierName ?? DBNull.Value,
+                ["DocDate"] = (object?)extraction.DocumentDate ?? DBNull.Value,
                 ["Amount"] = extraction.TotalAmount ?? 0,
                 ["Gst"] = extraction.GstAmount ?? 0,
                 ["Description"] = extraction.LineItems.Count > 0 ? string.Join(", ", extraction.LineItems.Select(x => x.Description)) : DBNull.Value,
-                ["RawText"] = extraction.RawText ?? DBNull.Value,
+                ["RawText"] = (object?)extraction.RawText ?? DBNull.Value,
                 ["RequiresReview"] = extraction.Confidence < 0.80 ? 1 : 0,
                 ["UserId"] = userId
             });
@@ -5136,14 +5186,13 @@ app.MapPost("/api/expenses/{expenseId:int}/receipt/upload", async (int expenseId
     }
     catch (Exception ex)
     {
-        return Results.Problem(detail: ex.Message, statusCode: 500);
+        return Results.Json(new { error = ex.Message }, statusCode: 500);
     }
 })
 .WithName("UploadExpenseReceipt")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization()
 .DisableAntiforgery();
-*/
 
 // GET /api/expenses/{expenseId}/receipt - Get receipt data
 app.MapGet("/api/expenses/{expenseId:int}/receipt", async (int expenseId, HttpContext ctx, DatabaseService db) =>
@@ -5191,7 +5240,7 @@ app.MapGet("/api/expenses/{expenseId:int}/receipt", async (int expenseId, HttpCo
             {
                 supplierName = row["CorrectedSupplierName"]?.ToString(),
                 date = row["CorrectedDate"],
-                amount = (decimal?)(row["CorrectedAmount"] != DBNull.Value ? Convert.ToDecimal(row["CorrectedAmount"]) : null)
+                amount = row["CorrectedAmount"] != DBNull.Value ? (decimal?)Convert.ToDecimal(row["CorrectedAmount"]) : null
             },
             status = (string)row["Status"],
             requiresManualReview = (bool)row["RequiresManualReview"]
@@ -5201,11 +5250,11 @@ app.MapGet("/api/expenses/{expenseId:int}/receipt", async (int expenseId, HttpCo
     }
     catch (Exception ex)
     {
-        return Results.Problem(detail: ex.Message, statusCode: 500);
+        return Results.Json(new { error = ex.Message }, statusCode: 500);
     }
 })
 .WithName("GetExpenseReceipt")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // ── Notifications System (Phase 3) ────────────────────────────────────────────
@@ -5255,11 +5304,11 @@ app.MapGet("/api/notifications", async (HttpContext ctx, DatabaseService db) =>
     }
     catch (Exception ex)
     {
-        return Results.Problem(detail: ex.Message, statusCode: 500);
+        return Results.Json(new { error = ex.Message }, statusCode: 500);
     }
 })
 .WithName("GetNotifications")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // POST /api/notifications/{notificationId}/read - Mark as read
@@ -5288,11 +5337,11 @@ app.MapPost("/api/notifications/{notificationId:int}/read", async (int notificat
     }
     catch (Exception ex)
     {
-        return Results.Problem(detail: ex.Message, statusCode: 500);
+        return Results.Json(new { error = ex.Message }, statusCode: 500);
     }
 })
 .WithName("MarkNotificationAsRead")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // POST /api/notifications/read-all - Mark all as read
@@ -5319,11 +5368,11 @@ app.MapPost("/api/notifications/read-all", async (HttpContext ctx, DatabaseServi
     }
     catch (Exception ex)
     {
-        return Results.Problem(detail: ex.Message, statusCode: 500);
+        return Results.Json(new { error = ex.Message }, statusCode: 500);
     }
 })
 .WithName("MarkAllNotificationsAsRead")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // GET /api/notifications/preferences - Get notification preferences
@@ -5364,11 +5413,11 @@ app.MapGet("/api/notifications/preferences", async (HttpContext ctx, DatabaseSer
     }
     catch (Exception ex)
     {
-        return Results.Problem(detail: ex.Message, statusCode: 500);
+        return Results.Json(new { error = ex.Message }, statusCode: 500);
     }
 })
 .WithName("GetNotificationPreferences")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
 
 // PUT /api/notifications/preferences - Update preferences
@@ -5414,34 +5463,26 @@ app.MapPut("/api/notifications/preferences", async (HttpContext ctx, UpdateNotif
     }
     catch (Exception ex)
     {
-        return Results.Problem(detail: ex.Message, statusCode: 500);
+        return Results.Json(new { error = ex.Message }, statusCode: 500);
     }
 })
 .WithName("UpdateNotificationPreferences")
-// .WithOpenApi()  // DISABLED - method not available
+.WithOpenApi()
 .RequireAuthorization();
-
-// Phase 4 API endpoints and DTOs temporarily disabled for debugging CI
-// TODO: Re-enable after resolving build issues
-// All services (DepartmentService, TeamService, BudgetService, ApprovalDelegationService,
-// ApprovalEscalationService, BulkUserImportService) and database schema (Migration 022)
-// are in place and ready for endpoint activation.
 
 app.Run();
 
-// =============================================================================
-// REQUEST/RESPONSE CLASSES (After app.Run() to ensure all top-level statements
-// are defined first)
-// =============================================================================
-
+/// <summary>Body model for POST /api/auth/reset-password.</summary>
 public class ResetPasswordRequest
 {
     public string Token { get; set; } = string.Empty;
     public string NewPassword { get; set; } = string.Empty;
 }
 
+/// <summary>Body model for POST /api/auth/mobile/login.</summary>
 public record MobileLoginRequest(string Login, string Password);
 
+/// <summary>Body model for POST /api/chat/desky.</summary>
 public record DeskyChatRequest(
     string Message,
     string? Brand = null,
@@ -5449,17 +5490,20 @@ public record DeskyChatRequest(
 
 public record DeskyChatMessage(string Role, string Content);
 
+/// <summary>Body model for POST /api/email/* endpoints.</summary>
 public record EmailRequest(
     string To,
     string? Subject    = null,
     string? Message    = null,
     bool    AttachPdf  = true);
 
+/// <summary>Body model for POST /api/tokens.</summary>
 public record PatCreateRequest(
     string  Name,
     string? Scopes     = null,
     int?    ExpiryDays = null);
 
+// Domain-based routing DTOs
 class AddDomainRequest
 {
     public string Domain { get; set; } = "";
@@ -5471,6 +5515,7 @@ class VerifyDomainRequest
     public string VerificationToken { get; set; } = "";
 }
 
+// Approval permissions DTOs
 class CreateApprovalPermissionRequest
 {
     public string? RoleId { get; set; }
@@ -5499,6 +5544,7 @@ class CheckApprovalPermissionRequest
     public decimal? Amount { get; set; }
 }
 
+// Compliance audit logging DTOs
 class RecordSecurityEventRequest
 {
     public string EventType { get; set; } = "";
@@ -5515,6 +5561,7 @@ class InvestigateSecurityEventRequest
     public bool IsResolved { get; set; } = false;
 }
 
+// Product Admin DTOs
 class UpdateBillingConfigRequest
 {
     public string BillingModel { get; set; } = "MONTHLY_ADVANCE";
@@ -5532,6 +5579,7 @@ class MarkInvoicePaidRequest
     public string? PaymentReference { get; set; }
 }
 
+// Onboarding wizard DTOs
 class StartOnboardingRequest
 {
     public string AdminName { get; set; } = "";
@@ -5562,6 +5610,7 @@ class UpdateNotificationPreferencesRequest
     public TimeSpan? QuietHoursEnd { get; set; }
 }
 
+// ── Helper DTOs ─────────────────────────────────────────────────────────────
 class DelegationRequest
 {
     public int DelegateUserId { get; set; }

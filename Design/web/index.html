@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyDesk — Web Wireframe Prototype</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Inter', -apple-system, system-ui, sans-serif; background:#f5f7fa; color:#1a1a1a; }
+  .container { max-width:1200px; margin:0 auto; padding:40px 24px; }
+  h1 { font-size:28px; margin-bottom:8px; }
+  .subtitle { color:#666; margin-bottom:32px; font-size:14px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:24px; }
+  .card { background:#fff; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,0.08); overflow:hidden; transition:transform .2s, box-shadow .2s; }
+  .card:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,0.12); }
+  .card-header { padding:16px 20px 0; display:flex; align-items:center; gap:8px; }
+  .card-header h3 { font-size:15px; font-weight:600; }
+  .badge { font-size:11px; background:#e8f5e9; color:#2e7d32; padding:2px 10px; border-radius:20px; font-weight:500; }
+  .preview { padding:16px 20px 20px; cursor:pointer; }
+  .preview img { width:100%; border-radius:8px; border:1px solid #eee; display:block; }
+  .nav { display:flex; gap:8px; margin-bottom:32px; flex-wrap:wrap; }
+  .nav a { text-decoration:none; color:#004E89; font-size:14px; font-weight:500; padding:6px 16px; border-radius:20px; background:#fff; border:1px solid #e0e0e0; transition:all .2s; }
+  .nav a:hover { background:#004E89; color:#fff; border-color:#004E89; }
+  .mockup-container { margin-top:32px; }
+  .mockup { background:#fff; border-radius:14px; box-shadow:0 2px 12px rgba(0,0,0,0.08); overflow:hidden; margin-bottom:24px; }
+  .mockup-header { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; background:#fafafa; border-bottom:1px solid #eee; }
+  .mockup-title { font-size:13px; font-weight:600; color:#333; }
+  .mockup-body { padding:20px; }
+  .tag { display:inline-block; font-size:11px; background:#e3f2fd; color:#1565c0; padding:2px 8px; border-radius:4px; margin:2px; }
+  .tag-green { background:#e8f5e9; color:#2e7d32; }
+  .tag-orange { background:#fff3e0; color:#e65100; }
+  .row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid #f0f0f0; }
+  .row-label { font-size:13px; color:#555; min-width:100px; }
+  .row-value { font-size:14px; font-weight:500; }
+  .bar { height:6px; border-radius:3px; background:#e0e0e0; flex:1; max-width:200px; }
+  .bar-fill { height:100%; border-radius:3px; background:#00c8c8; }
+  .sidebar { width:220px; background:#0a1628; color:#fff; padding:20px; border-radius:12px; }
+  .sidebar-item { display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:8px; font-size:13px; color:#94a3b8; }
+  .sidebar-item.active { background:rgba(0,200,200,0.15); color:#00c8c8; }
+  .sidebar-item i { width:20px; text-align:center; }
+  .mockup-layout { display:flex; gap:16px; }
+  .mockup-content { flex:1; }
+  .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px; }
+  .kpi { background:#f8fafb; padding:12px; border-radius:10px; text-align:center; }
+  .kpi-value { font-size:20px; font-weight:700; color:#004E89; }
+  .kpi-label { font-size:11px; color:#666; margin-top:2px; }
+  .table { width:100%; border-collapse:collapse; font-size:13px; }
+  .table th { text-align:left; padding:8px 10px; color:#666; font-weight:500; border-bottom:2px solid #eee; }
+  .table td { padding:8px 10px; border-bottom:1px solid #f0f0f0; }
+  .status { font-size:11px; padding:2px 8px; border-radius:20px; font-weight:500; }
+  .status-approved { background:#e8f5e9; color:#2e7d32; }
+  .status-draft { background:#fff3e0; color:#e65100; }
+  .status-pending { background:#e3f2fd; color:#1565c0; }
+  .btn { font-size:12px; padding:6px 14px; border-radius:8px; border:none; cursor:default; font-weight:500; }
+  .btn-primary { background:#00c8c8; color:#fff; }
+  .btn-outline { background:transparent; border:1px solid #e0e0e0; color:#555; }
+  hr { border:none; border-top:1px solid #eee; margin:12px 0; }
+  .flex { display:flex; }
+  .flex-between { display:flex; justify-content:space-between; align-items:center; }
+  .gap-2 { gap:8px; }
+  .mt-2 { margin-top:8px; }
+  .mt-4 { margin-top:16px; }
+  .mb-2 { margin-bottom:8px; }
+  .mb-4 { margin-bottom:16px; }
+  .popup { position:relative; }
+  .popup-badge { position:absolute; top:-4px; right:-4px; background:#F44336; color:#fff; font-size:9px; width:16px; height:16px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📱 MyDesk — Web Wireframe Prototype</h1>
+  <p class="subtitle">Low-fidelity interactive mockups for the MyDesk Enterprise AI Brain platform. Click a card to preview the full layout.</p>
+
+  <div class="nav" id="nav">
+    <a href="#dashboard">Dashboard</a>
+    <a href="#companies">Companies</a>
+    <a href="#quotes">Quotes</a>
+    <a href="#expenses">Expenses</a>
+    <a href="#agentsos">AgentsOS DAG</a>
+    <a href="#mobile">📱 Mobile</a>
+  </div>
+
+  <!-- ─── DASHBOARD ─── -->
+  <div class="mockup" id="dashboard">
+    <div class="mockup-header">
+      <span class="mockup-title">🏠 Dashboard — Demo Lighting</span>
+      <span class="tag tag-green">Primary landing page</span>
+    </div>
+    <div class="mockup-body">
+      <div class="mockup-layout">
+        <div class="sidebar">
+          <div style="font-weight:700; font-size:16px; margin-bottom:20px;">⬡ MyDesk</div>
+          <div class="sidebar-item active"><i>🏠</i> Dashboard</div>
+          <div class="sidebar-item"><i>🏢</i> Companies</div>
+          <div class="sidebar-item"><i>📄</i> Quotes</div>
+          <div class="sidebar-item"><i>📊</i> Invoices</div>
+          <div class="sidebar-item"><i>💳</i> Expenses</div>
+          <div class="sidebar-item"><i>⏱️</i> Timesheets</div>
+          <div class="sidebar-item"><i>🤖</i> AgentsOS</div>
+          <hr>
+          <div class="sidebar-item"><i>⚙️</i> Settings</div>
+        </div>
+        <div class="mockup-content">
+          <div class="flex-between mb-4">
+            <div>
+              <div style="font-size:18px; font-weight:700;">Good morning, Demo 👋</div>
+              <div style="font-size:12px; color:#666;">Monday, 14 Jul 2026 · Demo Lighting</div>
+            </div>
+            <div class="flex gap-2">
+              <div class="popup"><span class="btn btn-outline">🔔</span><span class="popup-badge">3</span></div>
+              <div class="btn btn-outline">👤 Demo</div>
+            </div>
+          </div>
+
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-value">$187K</div><div class="kpi-label">Pipeline Value</div></div>
+            <div class="kpi"><div class="kpi-value">12</div><div class="kpi-label">Active Projects</div></div>
+            <div class="kpi"><div class="kpi-value">4</div><div class="kpi-label">Pending Approvals</div></div>
+            <div class="kpi"><div class="kpi-value">92%</div><div class="kpi-label">On-Time Rate</div></div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div style="background:#f8fafb; padding:12px; border-radius:10px;">
+              <div style="font-size:12px; font-weight:600; margin-bottom:8px;">📋 AgentsOS</div>
+              <div class="row"><span class="row-label">Running</span><span class="row-value" style="color:#2196F3;">2 projects</span></div>
+              <div class="row"><span class="row-label">Completed</span><span class="row-value" style="color:#4CAF50;">8 projects</span></div>
+              <div class="row"><span class="row-label">Pending gate</span><span class="row-value" style="color:#FF9800;">1 approval</span></div>
+            </div>
+            <div style="background:#f8fafb; padding:12px; border-radius:10px;">
+              <div style="font-size:12px; font-weight:600; margin-bottom:8px;">📅 Upcoming Tasks</div>
+              <div style="font-size:12px; padding:4px 0;">✅ Site Survey — Due Wed</div>
+              <div style="font-size:12px; padding:4px 0;">✅ Approval: Quote DL-001</div>
+              <div style="font-size:12px; padding:4px 0;">⏳ Invoice INV-002 review</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── COMPANIES / CRM ─── -->
+  <div class="mockup" id="companies">
+    <div class="mockup-header">
+      <span class="mockup-title">🏢 Companies — CRM</span>
+      <span class="tag tag-green">Master-detail list</span>
+    </div>
+    <div class="mockup-body">
+      <div class="flex-between mb-4">
+        <div style="display:flex; gap:8px;">
+          <input style="padding:8px 14px; border:1px solid #e0e0e0; border-radius:8px; font-size:13px; width:240px;" placeholder="🔍 Search companies..." disabled>
+          <span class="btn btn-primary">+ New Company</span>
+        </div>
+        <div class="tag">8 companies</div>
+      </div>
+      <table class="table">
+        <tr><th>Name</th><th>ABN</th><th>Phone</th><th>Status</th><th></th></tr>
+        <tr><td><strong>Solar Systems Pty Ltd</strong></td><td>12 345 678 901</td><td>03 9000 1234</td><td><span class="status status-approved">Active</span></td><td><span class="btn btn-outline">👁️</span></td></tr>
+        <tr><td><strong>Bright LED Solutions</strong></td><td>98 765 432 101</td><td>03 9000 5678</td><td><span class="status status-approved">Active</span></td><td><span class="btn btn-outline">👁️</span></td></tr>
+        <tr><td><strong>Smart Lighting Co</strong></td><td>55 555 555 555</td><td>07 3000 9999</td><td><span class="status status-pending">Pending</span></td><td><span class="btn btn-outline">👁️</span></td></tr>
+        <tr><td><strong>[DEMO] Acme Engineering</strong></td><td>11 111 111 111</td><td>02 9000 1111</td><td><span class="status status-approved">Active</span></td><td><span class="btn btn-outline">👁️</span></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─── QUOTES ─── -->
+  <div class="mockup" id="quotes">
+    <div class="mockup-header">
+      <span class="mockup-title">📄 Quotes — Sales Pipeline</span>
+      <span class="tag tag-green">CRM module</span>
+    </div>
+    <div class="mockup-body">
+      <div class="flex-between mb-4">
+        <div class="flex gap-2">
+          <span class="btn btn-primary">+ New Quote</span>
+          <span class="btn btn-outline">📂 Export</span>
+        </div>
+        <div class="tag">4 quotes · $187K total</div>
+      </div>
+      <table class="table">
+        <tr><th>Reference</th><th>Company</th><th>Amount</th><th>Status</th><th>Date</th><th></th></tr>
+        <tr><td><strong>DL-QUOTE-001</strong></td><td>Solar Systems</td><td>$18,750</td><td><span class="status status-approved">Approved</span></td><td>14 Jul</td><td><span class="btn btn-outline">📋</span></td></tr>
+        <tr><td><strong>DL-QUOTE-002</strong></td><td>Bright LED</td><td>$49,500</td><td><span class="status status-pending">Draft</span></td><td>10 Jul</td><td><span class="btn btn-outline">📋</span></td></tr>
+        <tr><td><strong>[DEMO] Office Refit</strong></td><td>Acme Engineering</td><td>$22,400</td><td><span class="status status-draft">Pending</span></td><td>8 Jul</td><td><span class="btn btn-outline">📋</span></td></tr>
+      </table>
+      <div class="flex-between mt-4" style="background:#f8fafb; padding:10px 14px; border-radius:8px;">
+        <span style="font-size:12px; color:#666;">📈 Pipeline: $187,250 total · 67% conversion rate</span>
+        <div class="bar" style="max-width:180px;"><div class="bar-fill" style="width:67%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── EXPENSES ─── -->
+  <div class="mockup" id="expenses">
+    <div class="mockup-header">
+      <span class="mockup-title">💳 Expenses — With Receipt Capture</span>
+      <span class="tag tag-orange">Requires approval</span>
+    </div>
+    <div class="mockup-body">
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <span class="btn btn-outline" style="background:#e8f5e9;">All</span>
+        <span class="btn btn-outline">Draft</span>
+        <span class="btn btn-outline">Submitted</span>
+        <span class="btn btn-outline">Approved</span>
+        <span class="btn btn-outline">Rejected</span>
+      </div>
+      <table class="table">
+        <tr><th>Description</th><th>Amount</th><th>Date</th><th>Status</th><th>Receipt</th><th></th></tr>
+        <tr><td>Conference Travel — Melbourne</td><td>$1,250.00</td><td>12 Jul</td><td><span class="status status-pending">Submitted</span></td><td>📎 PDF</td><td><span class="btn btn-outline">✅❌</span></td></tr>
+        <tr><td>Client Lunch — Solar Systems</td><td>$185.50</td><td>10 Jul</td><td><span class="status status-approved">Approved</span></td><td>📎 JPG</td><td><span class="btn btn-outline"></span></td></tr>
+        <tr><td>Training Materials</td><td>$450.00</td><td>8 Jul</td><td><span class="status status-pending">Submitted</span></td><td>📎 PDF</td><td><span class="btn btn-outline">✅❌</span></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─── AGENTSOS DAG ─── -->
+  <div class="mockup" id="agentsos">
+    <div class="mockup-header">
+      <span class="mockup-title">🤖 AgentsOS — DAG Workflow</span>
+      <span class="tag">AI orchestrator</span>
+    </div>
+    <div class="mockup-body">
+      <div class="flex-between mb-4">
+        <div style="display:flex; gap:8px;">
+          <span class="btn btn-primary">📋 Plan</span>
+          <span class="btn btn-outline" style="color:#4CAF50;">▶️ Execute</span>
+        </div>
+        <span class="tag tag-green">✅ AgentsOS Online</span>
+      </div>
+
+      <div style="border:1px solid #e0e0e0; border-radius:10px; padding:16px; background:#f8fafb; min-height:180px;">
+        <div style="display:flex; justify-content:center; gap:40px; margin-bottom:20px; position:relative;">
+          <div style="text-align:center;">
+            <div style="background:#2196F3; width:36px; height:36px; border-radius:50%; margin:0 auto 4px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px;">S</div>
+            <div style="font-size:10px;">Site Survey</div>
+            <div style="font-size:9px; color:#2196F3;">running</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="background:#FF9800; width:36px; height:36px; border-radius:50%; margin:0 auto 4px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px;">⚠️</div>
+            <div style="font-size:10px;">Contract Review</div>
+            <div style="font-size:9px; color:#FF9800;">gated</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="background:#9C27B0; width:36px; height:36px; border-radius:50%; margin:0 auto 4px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px;">P</div>
+            <div style="font-size:10px;">Procurement</div>
+            <div style="font-size:9px; color:#9C27B0;">planned</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="background:#607D8B; width:36px; height:36px; border-radius:50%; margin:0 auto 4px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px;">I</div>
+            <div style="font-size:10px;">Installation</div>
+            <div style="font-size:9px; color:#607D8B;">waiting</div>
+          </div>
+        </div>
+        <div style="text-align:center; font-size:11px; color:#94a3b8;">
+          ← Site Survey complete → Contract Review (gated) → Procurement → Installation
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <div style="font-size:12px; font-weight:600; margin-bottom:8px;">⏳ Pending Approvals</div>
+        <div class="row"><span class="row-label">Contract Review</span><span style="font-size:12px;">Solar Systems panel install — AI recommends approve</span><span class="btn btn-outline" style="color:#4CAF50;">✅</span><span class="btn btn-outline" style="color:#F44336;">❌</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MOBILE ─── -->
+  <div class="mockup" id="mobile">
+    <div class="mockup-header">
+      <span class="mockup-title">📱 Mobile App — Android Native</span>
+      <span class="tag">Mobile prototype</span>
+    </div>
+    <div class="mockup-body" style="display:flex; gap:24px; justify-content:center; flex-wrap:wrap;">
+      <!-- Phone frame 1: Login -->
+      <div style="width:240px; border:2px solid #ddd; border-radius:24px; padding:12px; background:#fff; box-shadow:0 4px 20px rgba(0,0,0,0.1);">
+        <div style="text-align:center; margin-bottom:20px; margin-top:10px;">
+          <div style="width:12px; height:12px; background:#333; border-radius:50%; margin:0 auto;"></div>
+        </div>
+        <div style="text-align:center; margin-bottom:16px;">
+          <div style="font-size:20px; font-weight:700; color:#00c8c8;">⬡ MyDesk</div>
+          <div style="font-size:10px; color:#666;">Enterprise AI Brain</div>
+        </div>
+        <input style="width:100%; padding:10px; border:1px solid #e0e0e0; border-radius:8px; font-size:13px; margin-bottom:8px;" placeholder="Username / Code" disabled>
+        <input style="width:100%; padding:10px; border:1px solid #e0e0e0; border-radius:8px; font-size:13px; margin-bottom:12px;" placeholder="Password" disabled>
+        <div style="background:#00c8c8; color:#fff; text-align:center; padding:10px; border-radius:8px; font-size:13px; font-weight:600;">Sign In</div>
+      </div>
+
+      <!-- Phone frame 2: Dashboard -->
+      <div style="width:240px; border:2px solid #ddd; border-radius:24px; padding:12px; background:#f8fafb; box-shadow:0 4px 20px rgba(0,0,0,0.1);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; margin-top:10px;">
+          <div style="font-size:14px; font-weight:700;">⬡ MyDesk</div>
+          <div style="display:flex; gap:4px;">
+            <span>🔔</span>
+            <span>👤</span>
+          </div>
+        </div>
+        <div class="kpi-grid" style="grid-template-columns:1fr 1fr;">
+          <div class="kpi" style="padding:8px;"><div class="kpi-value" style="font-size:16px;">$187K</div><div class="kpi-label">Pipeline</div></div>
+          <div class="kpi" style="padding:8px;"><div class="kpi-value" style="font-size:16px;">4</div><div class="kpi-label">Approvals</div></div>
+        </div>
+        <div style="margin-top:8px;">
+          <div class="row" style="font-size:11px; padding:6px 0;"><span>📋 Solar Project — Plan ready</span></div>
+          <div class="row" style="font-size:11px; padding:6px 0;"><span>💳 Expense Sarah $450 — approve?</span></div>
+        </div>
+        <!-- Bottom nav -->
+        <div style="display:flex; justify-content:space-around; margin-top:12px; padding-top:8px; border-top:1px solid #eee;">
+          <span style="font-size:10px; color:#00c8c8;">🏠</span>
+          <span style="font-size:10px; color:#999;">📄</span>
+          <span style="font-size:10px; color:#999;">💳</span>
+          <span style="font-size:10px; color:#999;">⚙️</span>
+        </div>
+      </div>
+
+      <!-- Phone frame 3: Approval -->
+      <div style="width:240px; border:2px solid #ddd; border-radius:24px; padding:12px; background:#fff; box-shadow:0 4px 20px rgba(0,0,0,0.1);">
+        <div style="margin-top:10px; margin-bottom:12px;">
+          <span style="font-size:14px; font-weight:600;">✅ Approvals</span>
+          <span class="tag" style="float:right;">3 pending</span>
+        </div>
+        <div class="row" style="font-size:11px;"><span style="font-weight:600;">Expense #1042</span><span>$450.00</span><span class="status status-pending">Submit</span></div>
+        <div class="row" style="font-size:11px;"><span style="font-weight:600;">Timesheet #56</span><span>40h</span><span class="status status-pending">Submit</span></div>
+        <div class="row" style="font-size:11px;"><span style="font-weight:600;">Quote DL-001</span><span>$18,750</span><span class="status status-draft">Gated</span></div>
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <div style="flex:1; background:#4CAF50; color:#fff; text-align:center; padding:8px; border-radius:6px; font-size:12px;">✅ Approve All</div>
+          <div style="flex:1; background:#F44336; color:#fff; text-align:center; padding:8px; border-radius:6px; font-size:12px;">❌ Reject</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center; margin-top:48px; padding:24px; border-top:1px solid #e0e0e0;">
+    <p style="font-size:13px; color:#999;">MyDesk Web Wireframe Prototype — v1.0 · July 2026</p>
+    <p style="font-size:12px; color:#bbb;">Designed for Digital Response · Powered by AgentsOS</p>
+  </div>
+</div>
+
+<script>
+// Smooth scroll for nav links
+document.querySelectorAll('.nav a').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(a.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior:'smooth', block:'start' });
+  });
+});
+</script>
+</body>
+</html>

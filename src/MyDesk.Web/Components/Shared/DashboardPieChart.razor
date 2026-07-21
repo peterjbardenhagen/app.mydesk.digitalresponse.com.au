@@ -10,8 +10,8 @@
         {
             <div style="min-height: 300px;">
                 <MudChart ChartType="ChartType.Pie"
-                          InputData="chartData.Series"
-                          InputLabels="chartData.Labels"
+                          InputData="chartData.Series?.FirstOrDefault()?.ToArray()"
+                          InputLabels="chartData.Labels?.ToArray()"
                           @bind-SelectedIndex="selectedIndex"
                           style="height: 300px;" />
             </div>

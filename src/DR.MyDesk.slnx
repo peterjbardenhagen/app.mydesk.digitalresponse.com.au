@@ -2,5 +2,6 @@
   <Folder Name="/src/">
     <Project Path="MyDesk.Shared/MyDesk.Shared.csproj" />
     <Project Path="MyDesk.Web/MyDesk.Web.csproj" />
+    <Project Path="MyDesk.Browser/MyDesk.Browser.csproj" />
   </Folder>
 </Solution>

@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
-using MyDesk.Shared.Services;
 
 namespace MyDesk.Web.Services;
 
@@ -15,16 +13,11 @@ namespace MyDesk.Web.Services;
 public class NotificationService
 {
     private readonly DatabaseService _db;
-    private readonly NotificationAuditService? _audit;
     private readonly ILogger<NotificationService>? _logger;
 
-    public NotificationService(
-        DatabaseService db,
-        NotificationAuditService? audit = null,
-        ILogger<NotificationService>? logger = null)
+    public NotificationService(DatabaseService db, ILogger<NotificationService>? logger = null)
     {
         _db = db;
-        _audit = audit;
         _logger = logger;
     }
 
@@ -142,11 +135,6 @@ public class NotificationService
                     });
 
                 _logger?.LogInformation("Queued email notification {NotificationId}", notificationLogId);
-
-                // Audit log email notification
-                await _audit?.LogNotificationSentAsync(
-                    tenantId, notificationLogId, recipientUserId, eventType, "Email",
-                    recipientEmail, entityType, entityId, triggeredByUserId);
             }
 
             // Send in-app notification
@@ -171,11 +159,6 @@ public class NotificationService
                 await IncrementUnreadCountAsync(tenantId, recipientUserId);
 
                 _logger?.LogInformation("Created in-app notification for user {UserId}", recipientUserId);
-
-                // Audit log in-app notification
-                await _audit?.LogNotificationSentAsync(
-                    tenantId, notificationLogId, recipientUserId, eventType, "InApp",
-                    recipientEmail, entityType, entityId, triggeredByUserId);
             }
 
             return notificationLogId;
@@ -222,7 +205,7 @@ public class NotificationService
             new() { ["TenantId"] = tenantId, ["UserId"] = userId, ["Limit"] = limit });
 
         var notifications = new List<InAppNotification>();
-        foreach (DataRow row in result.Rows)
+        foreach (System.Data.DataRow row in result.Rows)
         {
             notifications.Add(new InAppNotification
             {
@@ -254,24 +237,11 @@ public class NotificationService
     /// <summary>
     /// Mark notification as read.
     /// </summary>
-    public async Task MarkAsReadAsync(int notificationId, int tenantId = 0, int userId = 0)
+    public async Task MarkAsReadAsync(int notificationId)
     {
-        try
-        {
-            await _db.ExecuteNonQueryAsync(
-                @"UPDATE dbo.InAppNotifications SET IsRead = 1, ReadAt = GETUTCDATE() WHERE NotificationId = @NotificationId",
-                new() { ["NotificationId"] = notificationId });
-
-            // Audit log notification read
-            if (tenantId > 0 && userId > 0)
-            {
-                await _audit?.LogNotificationReadAsync(tenantId, notificationId, userId);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "Error marking notification as read");
-        }
+        await _db.ExecuteNonQueryAsync(
+            @"UPDATE dbo.InAppNotifications SET IsRead = 1, ReadAt = GETUTCDATE() WHERE NotificationId = @NotificationId",
+            new() { ["NotificationId"] = notificationId });
     }
 
     /// <summary>

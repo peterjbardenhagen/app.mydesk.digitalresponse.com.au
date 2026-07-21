@@ -1,0 +1,81 @@
+@using MyDesk.Web.Services
+@using MyDesk.Shared.Models.AgentsOS
+@inject AgentsOsService AgentsOS
+
+<MudPaper Class="pa-4" Elevation="1" Style="height:100%; border-radius:12px;">
+    <div class="d-flex align-center justify-space-between mb-3">
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Rounded.Psychology" Class="mr-2" />
+            AgentsOS
+        </MudText>
+        <MudButton Size="Size.Small" Variant="Variant.Outlined" Href="/agentsos"
+                   StartIcon="@Icons.Material.Rounded.OpenInNew">Open</MudButton>
+    </div>
+
+    @if (!_initialized)
+    {
+        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+    }
+    else
+    {
+        <div class="d-flex align-center mb-2">
+            <MudChip T="string" Size="Size.Small" Color="@(_connected ? Color.Success : Color.Error)">
+                @(_connected ? "Connected" : "Offline")
+            </MudChip>
+            <MudText Typo="Typo.caption" Class="ml-2" Style="color:var(--gray-500);">
+                @_projectCount project(s)
+            </MudText>
+        </div>
+
+        @if (_connected && _recentProjects != null && _recentProjects.Count > 0)
+        {
+            <MudText Typo="Typo.caption" Class="mb-2" Style="color:var(--gray-500);">
+                Latest projects
+            </MudText>
+            <MudList T="string" Dense="true">
+                @foreach (var p in _recentProjects.Take(3))
+                {
+                    <MudListItem T="string" Href="/agentsos"
+                                 Icon="@Icons.Material.Rounded.Folder">
+                        <MudText Typo="Typo.body2" Style="line-height:1.3;">
+                            @p.Title
+                            <MudText Typo="Typo.caption" Style="color:var(--gray-500);">
+                                @p.Status · @(p.Epics?.Count ?? 0) epic(s)
+                            </MudText>
+                        </MudText>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+        else if (_connected)
+        {
+            <MudText Typo="Typo.body2" Style="color:var(--gray-500);">No projects yet.</MudText>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Style="color:var(--gray-500);">AgentsOS not reachable.</MudText>
+        }
+    }
+</MudPaper>
+
+@code {
+    private bool _initialized;
+    private bool _connected;
+    private int _projectCount;
+    private List<PdoResponse>? _recentProjects;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _connected = await AgentsOS.IsReachableAsync();
+            if (_connected)
+            {
+                _recentProjects = (await AgentsOS.ListProjectsAsync()) ?? new();
+                _projectCount = _recentProjects.Count;
+            }
+        }
+        catch { _connected = false; }
+        _initialized = true;
+    }
+}

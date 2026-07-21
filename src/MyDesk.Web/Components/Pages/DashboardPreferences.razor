@@ -35,28 +35,28 @@
                         <MudDataGrid Items="@templates" Striped="true" Dense="true">
                             <PropertyColumn Property="t => t.Name" Title="Template Name" />
                             <PropertyColumn Property="t => t.DashboardType" Title="Dashboard Type" />
-                            <TemplateColumn Title="Content">
+                            <TemplateColumn Title="Content" Context="row">
                                 <MudStack Row="true" Spacing="1">
-                                    @if (((CustomReportTemplate)context).Settings.IncludeSummary)
+                                    @if (((CustomReportTemplate)row).Settings.IncludeSummary)
                                     {
                                         <MudChip Size="Size.Small" Variant="Variant.Outlined">Summary</MudChip>
                                     }
-                                    @if (((CustomReportTemplate)context).Settings.IncludeCharts)
+                                    @if (((CustomReportTemplate)row).Settings.IncludeCharts)
                                     {
                                         <MudChip Size="Size.Small" Variant="Variant.Outlined">Charts</MudChip>
                                     }
-                                    @if (((CustomReportTemplate)context).Settings.IncludeDetailed)
+                                    @if (((CustomReportTemplate)row).Settings.IncludeDetailed)
                                     {
                                         <MudChip Size="Size.Small" Variant="Variant.Outlined">Detailed</MudChip>
                                     }
-                                    @if (((CustomReportTemplate)context).Settings.IncludeAnalysis)
+                                    @if (((CustomReportTemplate)row).Settings.IncludeAnalysis)
                                     {
                                         <MudChip Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success">Analysis</MudChip>
                                     }
                                 </MudStack>
                             </TemplateColumn>
-                            <TemplateColumn Title="Default" Sortable="false">
-                                @if (((CustomReportTemplate)context).IsDefault)
+                            <TemplateColumn Title="Default" Sortable="false" Context="row">
+                                @if (((CustomReportTemplate)row).IsDefault)
                                 {
                                     <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
                                 }

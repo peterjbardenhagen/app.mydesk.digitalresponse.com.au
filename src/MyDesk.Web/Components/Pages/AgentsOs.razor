@@ -1,0 +1,380 @@
+@page "/agentsos"
+@using MyDesk.Web.Services
+@using MyDesk.Shared.Models.AgentsOS
+@inject AgentsOsService AgentsOS
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<PageTitle>AgentsOS — MyDesk</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+    <MudText Typo="Typo.h4" GutterBottom="true" Style="font-weight:700;">
+        🤖 AgentsOS
+    </MudText>
+    <MudText Typo="Typo.body1" Class="mb-6" Style="color:var(--gray-500); max-width:640px;">
+        Orchestrate AI agents across your workspace.
+    </MudText>
+
+    @if (_connected)
+    {
+        <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Class="mb-4" Dense="true">✅ AgentsOS reachable</MudAlert>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mb-4" Dense="true">⚠️ AgentsOS not reachable — data may be stale</MudAlert>
+    }
+
+    @* ── Submit brief ── *@
+    <MudPaper Elevation="1" Class="pa-4 mb-4" Style="border-radius:12px;">
+        <MudText Typo="Typo.h6" Style="font-weight:700;" GutterBottom="true">Submit New Brief</MudText>
+        <MudTextField @bind-Value="_title" Label="Project Title" Variant="Variant.Outlined" Disabled="@_busy" Class="mb-3" />
+        <MudTextField @bind-Value="_brief" Label="Brief Description" Lines="3" Variant="Variant.Outlined" Disabled="@_busy" Class="mb-3" />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_submitDisabled" OnClick="SubmitBrief" FullWidth="true">
+            @if (_busy) { <span>Submitting...</span> } else { <span>🚀 Submit</span> }
+        </MudButton>
+        @if (_msg != null)
+        {
+            <MudAlert Severity="@_msgSeverity" Variant="Variant.Outlined" Class="mt-3" Dense="true">@_msg</MudAlert>
+        }
+    </MudPaper>
+
+    @* ── Projects table ── *@
+    <MudPaper Elevation="1" Class="pa-4 mb-4" Style="border-radius:12px;">
+        <MudText Typo="Typo.h6" Style="font-weight:700;" GutterBottom="true">Projects</MudText>
+        @if (_loading)
+        {
+            <MudProgressCircular Indeterminate="true" />
+        }
+        else if (_projects.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Style="color:var(--gray-500);">No projects yet.</MudText>
+        }
+        else
+        {
+            <MudTable Items="@_projects" Dense="true" Hover="true" Class="mt-2">
+                <HeaderContent>
+                    <MudTh>Project</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Epics</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Project">
+                        <MudText Typo="Typo.body2" Style="font-weight:600;">@context.Title</MudText>
+                        <MudText Typo="Typo.caption" Style="color:var(--gray-400);">@context.ProjectId</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Status">
+                        <MudChip T="string" Size="Size.Small" Color="@StatusColor(context.Status)">@context.Status</MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Epics">@(context.Epics?.Count ?? 0)</MudTd>
+                    <MudTd DataLabel="">
+                        <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small"
+                                       OnClick="@(() => SelectProject(context))" Title="View" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudPaper>
+
+    @* ── Project detail with tabs ── *@
+    @if (_selected != null)
+    {
+        <MudPaper Elevation="1" Class="pa-4 mb-4" Style="border-radius:12px;">
+            <div class="d-flex align-center justify-space-between mb-3">
+                <div>
+                    <MudText Typo="Typo.h6" Style="font-weight:700;">@_selected.Title</MudText>
+                    <MudText Typo="Typo.caption" Style="color:var(--gray-500);">
+                        @_selected.ProjectId · @_selected.Status
+                    </MudText>
+                </div>
+                <div>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Info" Disabled="@_busy"
+                               OnClick="PlanProject" Class="mr-2" Size="Size.Small">📋 Plan</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Success" Disabled="@_execDisabled"
+                               OnClick="ExecuteProject" Size="Size.Small">▶️ Execute</MudButton>
+                </div>
+            </div>
+
+            @if (_orchResult != null)
+            {
+                <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Class="mb-3" Dense="true">
+                    @_orchResult.Status — @_orchResult.Epics epic(s), @_orchResult.TasksSubmitted task(s)
+                </MudAlert>
+            }
+
+            <MudTabs>
+                <MudTabPanel Text="📋 Goals">
+                    @if (_selected.Goals != null && _selected.Goals.Count > 0)
+                    {
+                        <MudTable Items="@_selected.Goals" Dense="true" Hover="true" Class="mt-2">
+                            <HeaderContent><MudTh>Goal</MudTh></HeaderContent>
+                            <RowTemplate><MudTd DataLabel="Goal">@context</MudTd></RowTemplate>
+                        </MudTable>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Class="mt-2" Style="color:var(--gray-500);">No goals defined yet.</MudText>
+                    }
+                </MudTabPanel>
+
+                <MudTabPanel Text="🕸️ DAG">
+                    @if (_dagLoading)
+                    {
+                        <MudProgressCircular Indeterminate="true" Class="mt-4" />
+                    }
+                    else if (_dag != null && _dag.Nodes.Count > 0)
+                    {
+                        <MudText Typo="Typo.caption" Class="mb-3 mt-2" Style="color:var(--gray-500);">
+                            @_dag.Nodes.Count node(s), @_dag.Edges.Count edge(s)
+                        </MudText>
+
+                        @* SVG DAG visualizer *@
+                        <AgentsOsDagViewer Dag="@_dag" OnNodeSelected="@OnDagNodeSelected" />
+
+                        @* Approval gate tasks table *@
+                        @if (_dag.Nodes.Any(n => n.Status == "gated" || n.Status == "pending_approval"))
+                        {
+                            <MudText Typo="Typo.subtitle2" Class="mt-4 mb-2" Style="font-weight:600;">
+                                ⏳ Pending Approvals
+                            </MudText>
+                            <MudTable Items="@_dag.Nodes.Where(n => n.Status == "gated" || n.Status == "pending_approval")" Dense="true" Hover="true">
+                                <HeaderContent>
+                                    <MudTh>Task</MudTh>
+                                    <MudTh>Status</MudTh>
+                                    <MudTh>Action</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd DataLabel="Task">
+                                        <MudText Typo="Typo.body2">@context.Goal</MudText>
+                                    </MudTd>
+                                    <MudTd DataLabel="Status">
+                                        <MudChip T="string" Size="Size.Small" Color="@StatusColor(context.Status)">@context.Status</MudChip>
+                                    </MudTd>
+                                    <MudTd DataLabel="Action">
+                                        <MudButton Size="Size.Small" Color="Color.Success"
+                                                   Variant="Variant.Text" Disabled="@_approving"
+                                                   OnClick="@(() => ApproveTask(context.Id, true))"
+                                                   Class="mr-1">✅ Approve</MudButton>
+                                        <MudButton Size="Size.Small" Color="Color.Error"
+                                                   Variant="Variant.Text" Disabled="@_approving"
+                                                   OnClick="@(() => ApproveTask(context.Id, false))">❌ Reject</MudButton>
+                                    </MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        }
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Class="mt-2" Style="color:var(--gray-500);">No DAG available.</MudText>
+                    }
+                </MudTabPanel>
+
+                <MudTabPanel Text="📜 Ledger">
+                    @if (_ledgerLoading)
+                    {
+                        <MudProgressCircular Indeterminate="true" Class="mt-4" />
+                    }
+                    else if (_ledger != null && _ledger.Entries.Count > 0)
+                    {
+                        <MudText Typo="Typo.caption" Class="mb-3 mt-2" Style="color:var(--gray-500);">
+                            @_ledger.Count entries
+                        </MudText>
+                        <MudTable Items="@_ledger.Entries" Dense="true" Hover="true">
+                            <HeaderContent>
+                                <MudTh>Actor</MudTh>
+                                <MudTh>Action</MudTh>
+                                <MudTh>Command</MudTh>
+                                <MudTh>Result</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Actor">
+                                    <MudText Typo="Typo.body2">@context.Actor</MudText>
+                                    <MudText Typo="Typo.caption" Style="color:var(--gray-400);">@context.TaskId</MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Action">@context.Action</MudTd>
+                                <MudTd DataLabel="Command"><code>@context.Command</code></MudTd>
+                                <MudTd DataLabel="Result">
+                                    <MudText Typo="Typo.body2" Style="max-width:300px; white-space:normal;">@context.Result</MudText>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Class="mt-2" Style="color:var(--gray-500);">No ledger entries yet.</MudText>
+                    }
+                </MudTabPanel>
+            </MudTabs>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private bool _connected;
+    private bool _busy;
+    private bool _loading = true;
+    private string _title = "";
+    private string _brief = "";
+    private string? _msg;
+    private Severity _msgSeverity = Severity.Normal;
+    private List<PdoResponse> _projects = new();
+    private PdoResponse? _selected;
+    private OrchestratorResult? _orchResult;
+    private DagResponse? _dag;
+    private bool _dagLoading;
+    private LedgerResponse? _ledger;
+    private bool _ledgerLoading;
+    private bool _approving;
+
+    private bool _submitDisabled
+    {
+        get { return _busy || string.IsNullOrWhiteSpace(_title); }
+    }
+
+    private bool _execDisabled
+    {
+        get
+        {
+            if (_busy) return true;
+            if (_selected == null) return true;
+            return _selected.Status != "planned";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _connected = await AgentsOS.IsReachableAsync(); } catch { _connected = false; }
+        await LoadProjects();
+    }
+
+    private async Task LoadProjects()
+    {
+        _loading = true;
+        try { _projects = (await AgentsOS.ListProjectsAsync()) ?? new(); } catch { _projects = new(); }
+        _loading = false;
+    }
+
+    private async Task SelectProject(PdoResponse p)
+    {
+        _selected = p;
+        _orchResult = null;
+        _dag = null;
+        _ledger = null;
+        _dagLoading = true;
+        _ledgerLoading = true;
+        try { _dag = await AgentsOS.GetProjectDagAsync(p.ProjectId); } catch { }
+        _dagLoading = false;
+        try { _ledger = await AgentsOS.GetProjectLedgerAsync(p.ProjectId); } catch { }
+        _ledgerLoading = false;
+    }
+
+    private async Task SubmitBrief()
+    {
+        if (_busy || string.IsNullOrWhiteSpace(_title)) return;
+        _busy = true;
+        _msg = null;
+        try
+        {
+            var r = await AgentsOS.CreateProjectAsync(_title, _brief);
+            if (r != null && r.Status == "created")
+            {
+                _msg = "Created: " + r.ProjectId;
+                _msgSeverity = Severity.Success;
+                _title = "";
+                _brief = "";
+                await LoadProjects();
+                if (r.Data != null) await SelectProject(r.Data);
+            }
+            else
+            {
+                _msg = "Failed — check logs";
+                _msgSeverity = Severity.Error;
+            }
+        }
+        catch
+        {
+            _msg = "Exception submitting brief";
+            _msgSeverity = Severity.Error;
+        }
+        _busy = false;
+    }
+
+    private async Task PlanProject()
+    {
+        if (_selected == null) return;
+        _busy = true;
+        _orchResult = null;
+        try
+        {
+            _orchResult = await AgentsOS.PlanProjectAsync(_selected.ProjectId);
+            await LoadProjects();
+            if (_selected != null) await SelectProject(_selected);
+        }
+        catch { }
+        _busy = false;
+    }
+
+    private async Task ExecuteProject()
+    {
+        if (_selected == null) return;
+        _busy = true;
+        _orchResult = null;
+        try
+        {
+            _orchResult = await AgentsOS.ExecuteProjectAsync(_selected.ProjectId);
+            await LoadProjects();
+            if (_selected != null) await SelectProject(_selected);
+        }
+        catch { }
+        _busy = false;
+    }
+
+    /// R3: Human-in-the-loop approval for gated DAG tasks
+    private async Task ApproveTask(string taskId, bool approved)
+    {
+        if (_selected == null || _approving) return;
+        _approving = true;
+        try
+        {
+            var r = await AgentsOS.ApproveTaskAsync(_selected.ProjectId, taskId, approved);
+            // Refresh DAG after approval
+            if (_selected != null)
+            {
+                _dag = await AgentsOS.GetProjectDagAsync(_selected.ProjectId);
+            }
+        }
+        catch { }
+        _approving = false;
+    }
+
+    /// R4: Callback from DAG visualizer when a node is clicked
+    private void OnDagNodeSelected(string nodeId)
+    {
+        // Could expand to show node detail panel, for now just log
+        Console.WriteLine($"DAG node selected: {nodeId}");
+    }
+
+    private Color? StatusColor(string? s)
+    {
+        switch (s)
+        {
+            case "completed":
+            case "done":
+                return Color.Success;
+            case "running":
+            case "executing":
+            case "active":
+                return Color.Info;
+            case "failed":
+            case "plan_failed":
+                return Color.Error;
+            case "planned":
+                return Color.Warning;
+            case "gated":
+            case "pending_approval":
+                return Color.Secondary;
+            default:
+                return Color.Default;
+        }
+    }
+}

@@ -1,0 +1,152 @@
+@using MyDesk.Shared.Services
+@using MudBlazor
+@inject WorkflowApprovalService ApprovalSvc
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            @if (IsApproval)
+            {
+                <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Class="mr-2" />
+                <span>Approve Request</span>
+            }
+            else
+            {
+                <MudIcon Icon="@Icons.Material.Rounded.Cancel" Color="Color.Error" Class="mr-2" />
+                <span>Reject Request</span>
+            }
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Request Details</MudText>
+                <MudText Typo="Typo.body2">Module: <strong>@ModuleType</strong></MudText>
+                <MudText Typo="Typo.body2">ID: <strong>@ModuleId</strong></MudText>
+            </MudItem>
+            <MudItem xs="12">
+                <MudDivider Class="my-3" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_comments"
+                              Label="Comments"
+                              Placeholder="Add comments or notes for this decision..."
+                              HelperText="Optional field to document your decision"
+                              Variant="Variant.Outlined"
+                              Lines="4"
+                              FullWidth="true" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudCheckBox T="bool" @bind-Checked="_confirmationChecked" Label="I confirm this decision" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="DelegateAsync" Variant="Variant.Outlined" Color="Color.Warning" Disabled="@_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Delegate
+        </MudButton>
+        @if (IsApproval)
+        {
+            <MudButton OnClick="ApproveAsync" Variant="Variant.Filled" Color="Color.Success"
+                       Disabled="!_confirmationChecked || _saving">
+                @if (_saving)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                }
+                Approve
+            </MudButton>
+        }
+        else
+        {
+            <MudButton OnClick="RejectAsync" Variant="Variant.Filled" Color="Color.Error"
+                       Disabled="!_confirmationChecked || _saving">
+                @if (_saving)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                }
+                Reject
+            </MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public int RequestId { get; set; }
+    [Parameter] public string ModuleType { get; set; } = "";
+    [Parameter] public int ModuleId { get; set; }
+    [Parameter] public bool IsApproval { get; set; }
+
+    private string _comments = "";
+    private bool _confirmationChecked = false;
+    private bool _saving = false;
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async Task ApproveAsync()
+    {
+        _saving = true;
+        try
+        {
+            await ApprovalSvc.ApproveAsync(RequestId, _comments.Length > 0 ? _comments : null);
+            Snackbar.Add($"Request approved successfully", Severity.Success);
+            MudDialog.Close();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Approval failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task RejectAsync()
+    {
+        _saving = true;
+        try
+        {
+            await ApprovalSvc.RejectAsync(RequestId, _comments.Length > 0 ? _comments : "No reason provided");
+            Snackbar.Add($"Request rejected successfully", Severity.Info);
+            MudDialog.Close();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Rejection failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task DelegateAsync()
+    {
+        _saving = true;
+        try
+        {
+            // For now, delegate to user 0 as a placeholder - in production this would be a dropdown
+            await ApprovalSvc.DelegateApprovalAsync(RequestId, 1);
+            Snackbar.Add($"Request delegated to another approver", Severity.Success);
+            MudDialog.Close();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Delegation failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}
