@@ -1,0 +1,171 @@
+@page "/dashboard"
+@inject NavigationManager Navigation
+@inject IWeatherService WeatherService
+@inject IJSRuntime JS
+@inject ApprovalService ApprovalSvc
+@using MyDesk.Web.Services.Weather
+
+<PageTitle>Dashboard - MyDesk</PageTitle>
+
+<div class="tl-page-header">
+    <div>
+        <div class="tl-breadcrumb">
+            <a href="/">MyDesk</a><span class="sep">/</span>
+            <span>Dashboard</span>
+        </div>
+        <h1>Dashboard</h1>
+        <p class="tl-subtitle">Overview of your business metrics and activities.</p>
+    </div>
+</div>
+
+<div class="tl-dashboard-overview">
+    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-4">
+        Dashboard overview page. The main dashboard with full metrics is available at <MudLink Href="/">Home</MudLink>.
+    </MudAlert>
+
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" md="6">
+            <AgentsOsDashboardWidget />
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <FollowUpsCard />
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Elevation="1" Style="height:100%;">
+                <div class="d-flex align-center justify-space-between mb-3">
+                    <MudText Typo="Typo.h6">
+                        <MudIcon Icon="@Icons.Material.Rounded.HourglassBottom" Class="mr-2" />
+                        Approvals stalled &gt; 1 day
+                    </MudText>
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Href="/approvals/pending"
+                               StartIcon="@Icons.Material.Rounded.OpenInNew">View all</MudButton>
+                </div>
+                @if (_stalled.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Style="color:var(--gray-500);">
+                        Nothing stalled — every approval-in-flight progressed in the last 24 hours.
+                    </MudText>
+                }
+                else
+                {
+                    <MudList T="string" Dense="true">
+                        @foreach (var s in _stalled)
+                        {
+                            <MudListItem T="string" Icon="@Icons.Material.Rounded.Warning"
+                                         IconColor="Color.Warning"
+                                         Href="@(s.EntityType == "Quote" ? $"/quotes/{s.EntityId}" : $"/purchase-orders/{s.EntityId}")">
+                                <MudText Typo="Typo.body2">
+                                    <strong>@s.EntityType #@s.EntityId</strong>
+                                    — last approved by @s.LastApprover
+                                    on @s.LastAt.ToString("dd MMM HH:mm")
+                                    (waiting on @(s.NextApprover ?? "—"))
+                                </MudText>
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <div class="tl-weather-widget">
+        <div class="tl-weather-header">
+            <h2>5-Day Weather Forecast</h2>
+            <MudSelect TValue="string" Label="City" @bind-Value="SelectedCity" Variant="Variant.Outlined" Dense="true" Class="mt-2">
+                @foreach (var city in Cities)
+                {
+                    <MudSelectItem Value="@city">@city</MudSelectItem>
+                }
+            </MudSelect>
+        </div>
+
+        @if (IsLoading)
+        {
+            <div class="tl-weather-loading">
+                <MudProgress Indeterminate="true" />
+                <p>Loading weather data...</p>
+            </div>
+        }
+        else if (WeatherData == null)
+        {
+            <div class="tl-weather-error">
+                <MudIcon Icon="@Icons.Material.Rounded.Warning" Size="Size.Large" />
+                <p>Unable to load weather data. Please try again later.</p>
+            </div>
+        }
+        else
+        {
+            <div class="tl-weather-current">
+                <div class="tl-weather-current-city">@WeatherData.City</div>
+                <div class="tl-weather-current-temp">@WeatherData.Temperature°C</div>
+                <div class="tl-weather-current-desc">@WeatherData.Description</div>
+                <div class="tl-weather-current-details">
+                    <span>Humidity: @WeatherData.Humidity%</span>
+                    <span>Wind: @WeatherData.WindSpeed m/s</span>
+                </div>
+                <img src="@("https://openweathermap.org/img/wn/" + WeatherData.Icon + "@2x.png")" alt="@WeatherData.Description" class="tl-weather-icon" />
+            </div>
+
+            <div class="tl-weather-forecast">
+                @for (var i = 0; i < ForecastData.Length; i++)
+                {
+                    var day = ForecastData[i];
+                    <div class="tl-forecast-day">
+                        <div class="tl-forecast-date">@DateTime.Now.AddDays(i).ToString("ddd")</div>
+                        <img src="@("https://openweathermap.org/img/wn/" + day.Icon + "@2x.png")" alt="@day.Description" class="tl-forecast-icon" />
+                        <div class="tl-forecast-temp">@day.Temperature°C</div>
+                        <div class="tl-forecast-desc">@day.Description</div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private bool IsLoading = true;
+    private WeatherData? WeatherData;
+    private WeatherData[] ForecastData = Array.Empty<WeatherData>();
+    private string SelectedCity = "Melbourne";
+    private List<string> Cities = new() { "Melbourne", "Sydney", "Hong Kong", "London", "New York", "Paris" };
+
+    private record StalledRow(string EntityType, int EntityId, string LastApprover, DateTime LastAt, string? NextApprover);
+    private List<StalledRow> _stalled = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _stalled = ApprovalSvc.StalledApprovals(24)
+            .Select(t => new StalledRow(t.EntityType, t.EntityId, t.LastApprover, t.LastAt, t.NextApprover))
+            .OrderBy(s => s.LastAt)
+            .ToList();
+        await LoadWeatherData();
+    }
+
+    private async Task LoadWeatherData()
+    {
+        try
+        {
+            IsLoading = true;
+            WeatherData = await WeatherService.GetWeatherAsync(SelectedCity);
+            ForecastData = await WeatherService.GetForecastAsync(SelectedCity, 5);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading weather data: {ex.Message}");
+            WeatherData = null;
+            ForecastData = Array.Empty<WeatherData>();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task OnCityChanged(string city)
+    {
+        SelectedCity = city;
+        await LoadWeatherData();
+    }
+}
+
+

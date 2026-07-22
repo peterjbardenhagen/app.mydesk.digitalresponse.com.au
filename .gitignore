@@ -45,7 +45,10 @@ test-results/
 # Publish artifacts
 artifacts/
 publish/
-*.zip# Build artifacts
+publish/
 src/mydesk-teams-*.zip
 Mobile/Android/gradle-dist/
 src/Temp/
+temp2/
+Logs/
+src/mydesk-teams-dev-*.zip
