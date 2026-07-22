@@ -32,7 +32,7 @@
                 <MudSelect Value="selectedDepartmentId" Label="Filter by Department"
                     Variant="Variant.Outlined" Clearable="true" Dense="true"
                     Style="min-width: 250px;" ValueChanged="@(async (int? deptId) => { selectedDepartmentId = deptId; await LoadBudgets(); })">
-                    @foreach (var dept in departments?.Rows.Cast<DataRow>() ?? Array.Empty<DataRow>())
+                    @foreach (var dept in departments?.Rows.Cast<DataRow>() ?? new())
                     {
                         <MudSelectItem Value="@((int?)dept["DepartmentId"])">
                             @dept["Name"]

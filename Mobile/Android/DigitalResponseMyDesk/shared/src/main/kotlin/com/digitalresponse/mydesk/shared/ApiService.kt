@@ -1,7 +1,7 @@
 package com.digitalresponse.mydesk.shared
 
-import com.digitalresponse.mydesk.shared.models.AIChatMessage
-import com.digitalresponse.mydesk.shared.models.Tenant
+import com.digitalresponse.mydesk.shared.AIChatMessage
+import com.digitalresponse.mydesk.shared.Tenant
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header

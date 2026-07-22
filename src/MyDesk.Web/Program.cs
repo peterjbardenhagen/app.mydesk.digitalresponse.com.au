@@ -16,7 +16,6 @@ using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
 using System.Security.Claims;
 using System.Text;
@@ -387,7 +386,6 @@ builder.Services.AddScoped<BankingService>();
     builder.Services.AddScoped<SalesReportsService>();
 
 builder.Services.AddHttpClient();
-builder.Services.AddHttpClient("AgentsOS", client => { client.Timeout = TimeSpan.FromSeconds(5); });
 
 // ── Hangfire (background + recurring jobs) ─────────────────────────────────
 // Stored in the same SQL DB. Dashboard exposed at /hangfire (admin-only).
@@ -444,7 +442,6 @@ builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.IDocumentExtraction
 builder.Services.AddScoped<MyDesk.Shared.Services.Extraction.DocumentExtractionService>();
 builder.Services.AddScoped<SupplierQuoteParseService>();
 builder.Services.AddScoped<McpIntegrationService>();
-builder.Services.AddScoped<AgentsOsService>();
 builder.Services.AddScoped<PersonalAccessTokenService>();
 
 // Proposal #272: AI Enhancement services
@@ -455,7 +452,16 @@ builder.Services.AddScoped<TelegramBotService>();
 builder.Services.AddScoped<OneDriveService>();
 builder.Services.AddScoped<UserIntelligenceService>();
 builder.Services.AddScoped<PredictiveAnalyticsService>();
+builder.Services.AddScoped<ClientNotificationService>();
 builder.Services.AddScoped<SignalRNotificationService>();
+builder.Services.AddScoped<AnalyticsService>();
+builder.Services.AddScoped<DashboardExportService>();
+builder.Services.AddScoped<DashboardChartService>();
+builder.Services.AddScoped<DashboardReportScheduleService>();
+builder.Services.AddScoped<CustomReportService>();
+builder.Services.AddScoped<ReportDistributionService>();
+builder.Services.AddScoped<AnomalyDetectionService>();
+builder.Services.AddScoped<AnalyticsNotificationService>();
 
 // IAccountingSettingsService → PlatformSettingsService (allows Shared sync services to save tokens)
 builder.Services.AddScoped<MyDesk.Shared.Services.Integrations.IAccountingSettingsService>(
@@ -514,21 +520,20 @@ builder.Services.AddSwaggerGen(c =>
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Description = "API key issued to the external product."
     });
-    // Security requirement temporarily disabled for .NET 10 / Swashbuckle 7.x compatibility
-    // c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-    // {
-    //     {
-    //         new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-    //         {
-    //             Reference = new Microsoft.OpenApi.Models.OpenApiReference
-    //             {
-    //                 Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-    //                 Id = "ApiKey"
-    //             }
-    //         },
-    //         Array.Empty&lt;string>()
-    //     }
-    // });
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "ApiKey"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
 });
 
 // Razor Components — DetailedErrors helps developers see what broke without
@@ -1239,44 +1244,7 @@ app.MapPost("/api/email/purchase-order/{id:int}",
     return ok ? Results.Ok(new { sent = true }) : Results.Problem("Email send failed — check SMTP config.");
 }).RequireAuthorization();
 
-// ── Telegram Bot webhooks (Proposal #272) ──────────────────────────────────────
-// Production webhook: POST /api/telegram/webhook/prod
-app.MapPost("/api/telegram/webhook/prod", async (HttpRequest request, TelegramBotService tg) =>
-{
-    try
-    {
-        using var reader = new StreamReader(request.Body);
-        var body = await reader.ReadToEndAsync();
-        var doc = System.Text.Json.JsonDocument.Parse(body);
-        await tg.HandleUpdateAsync("prod", doc.RootElement);
-        return Results.Ok();
-    }
-    catch (Exception ex)
-    {
-        Log.Error(ex, "Telegram webhook error (prod)");
-        return Results.Ok(); // Always 200 to Telegram
-    }
-});
-
-// Development webhook: POST /api/telegram/webhook/dev
-app.MapPost("/api/telegram/webhook/dev", async (HttpRequest request, TelegramBotService tg) =>
-{
-    try
-    {
-        using var reader = new StreamReader(request.Body);
-        var body = await reader.ReadToEndAsync();
-        var doc = System.Text.Json.JsonDocument.Parse(body);
-        await tg.HandleUpdateAsync("dev", doc.RootElement);
-        return Results.Ok();
-    }
-    catch (Exception ex)
-    {
-        Log.Error(ex, "Telegram webhook error (dev)");
-        return Results.Ok(); // Always 200 to Telegram
-    }
-});
-
-// Generic webhook (defaults to prod for backward compatibility)
+// ── Telegram Bot webhook (Proposal #272) ─────────────────────────────────────
 app.MapPost("/api/telegram/webhook", async (HttpRequest request, TelegramBotService tg) =>
 {
     try
@@ -1284,56 +1252,14 @@ app.MapPost("/api/telegram/webhook", async (HttpRequest request, TelegramBotServ
         using var reader = new StreamReader(request.Body);
         var body = await reader.ReadToEndAsync();
         var doc = System.Text.Json.JsonDocument.Parse(body);
-        await tg.HandleUpdateAsync("prod", doc.RootElement);
+        await tg.HandleUpdateAsync(doc.RootElement);
         return Results.Ok();
     }
     catch (Exception ex)
     {
-        Log.Error(ex, "Telegram webhook error (default/prod)");
+        Log.Error(ex, "Telegram webhook error");
         return Results.Ok(); // Always 200 to Telegram
     }
-});
-
-// ── Telegram Bot Management endpoints ──────────────────────────────────────────
-app.MapGet("/api/admin/telegram/bots", [Authorize(Roles = "Admin,Director")] async (TelegramBotService tg) =>
-{
-    var environments = tg.GetConfiguredEnvironments().Select(env => new
-    {
-        environment = env,
-        configured = tg.IsConfigured(env),
-        config = tg.GetBotConfig(env)
-    });
-    return Results.Ok(environments);
-});
-
-app.MapPost("/api/admin/telegram/webhook/set/{environment}", [Authorize(Roles = "Admin,Director")] async (string environment, TelegramBotService tg, HttpContext ctx) =>
-{
-    var url = ctx.Request.Query["url"].ToString();
-    var success = await tg.SetWebhookAsync(environment, string.IsNullOrEmpty(url) ? null : url);
-    return success ? Results.Ok(new { success = true, environment }) : Results.BadRequest(new { success = false, environment });
-});
-
-app.MapPost("/api/admin/telegram/webhook/delete/{environment}", [Authorize(Roles = "Admin,Director")] async (string environment, TelegramBotService tg) =>
-{
-    var success = await tg.DeleteWebhookAsync(environment);
-    return success ? Results.Ok(new { success = true, environment }) : Results.BadRequest(new { success = false, environment });
-});
-
-app.MapGet("/api/admin/telegram/webhook/info/{environment}", [Authorize(Roles = "Admin,Director")] async (string environment, TelegramBotService tg) =>
-{
-    var info = await tg.GetWebhookInfoAsync(environment);
-    return info.HasValue ? Results.Ok(info.Value) : Results.NotFound(new { error = "Webhook info not found", environment });
-});
-
-app.MapPost("/api/admin/telegram/broadcast/{environment}", [Authorize(Roles = "Admin,Director")] async (string environment, HttpContext ctx, TelegramBotService tg) =>
-{
-    var body = await new StreamReader(ctx.Request.Body).ReadToEndAsync();
-    var doc = JsonDocument.Parse(body);
-    var message = doc.RootElement.GetProperty("message").GetString();
-    if (string.IsNullOrEmpty(message)) return Results.BadRequest(new { error = "Message required" });
-    
-    await tg.BroadcastAsync(environment, message!);
-    return Results.Ok(new { success = true, environment });
 });
 
 // ── Desky Mobile Chat API ─────────────────────────────────────────────────────
@@ -2509,7 +2435,7 @@ app.MapDelete("/api/tokens/{tokenId:guid}", async (Guid tokenId, HttpContext ctx
     return ok ? Results.Ok() : Results.NotFound();
 }).RequireAuthorization();
 
-// ── Log Viewer API endpoints
+// ── Log Viewer API endpoints ─────────────────────────────────────────────────
 app.MapGet("/api/logs", (HttpContext ctx) =>
 {
     if (!ctx.User.IsInRole("Admin") && !ctx.User.IsInRole("Director"))
@@ -2872,7 +2798,7 @@ app.MapPost("/api/expenses/{id}/submit-for-approval", async (int id, HttpContext
             new() { ["TenantId"] = tenantIdInt });
 
         var approverIds = new List<int>();
-        foreach (System.Data.DataRow row in approversDt.Rows)
+        foreach (var row in approversDt.Rows)
         {
             if (row["UserId"] != DBNull.Value && int.TryParse(row["UserId"].ToString(), out int approverId))
                 approverIds.Add(approverId);
@@ -2945,7 +2871,7 @@ app.MapPost("/api/timesheets/{id}/submit-for-approval", async (int id, HttpConte
             new() { ["TenantId"] = tenantIdInt });
 
         var approverIds = new List<int>();
-        foreach (System.Data.DataRow row in approversDt.Rows)
+        foreach (var row in approversDt.Rows)
         {
             if (row["UserId"] != DBNull.Value && int.TryParse(row["UserId"].ToString(), out int approverId))
                 approverIds.Add(approverId);
@@ -4759,7 +4685,7 @@ app.MapPost("/api/product-admin/onboarding/{sessionToken}/steps/{step:int}",
         return Results.Ok(new
         {
             stepCompleted = step,
-            nextStep = step < 6 ? (int?)(step + 1) : null,
+            nextStep = step < 6 ? step + 1 : null,
             message = step == 6 ? "Wizard confirmation complete. Ready to create tenant." : $"Step {step} completed"
         });
     }
@@ -4938,7 +4864,7 @@ app.MapGet("/api/user/profile", async (HttpContext ctx, DatabaseService db) =>
     }
     catch (Exception ex)
     {
-        return Results.Json(new { error = ex.Message }, statusCode: 500);
+        return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 })
 .WithName("GetUserProfile")
@@ -4957,15 +4883,13 @@ app.MapPost("/api/user/profile/photo/upload", async (HttpContext ctx, DatabaseSe
     try
     {
         var form = await ctx.Request.ReadFormAsync();
-        var file = form.Files.GetFile("photo");
+        var file = form.Files.FirstOrDefault("photo");
 
         if (file == null || file.Length == 0)
             return Results.BadRequest(new { error = "No photo provided" });
 
         using var stream = file.OpenReadStream();
-        var validationResult = await photoService.ValidateImageAsync(stream, file.ContentType ?? "");
-        bool isValid = validationResult.isValid;
-        string? error = validationResult.error;
+        var (isValid, error) = await photoService.ValidateImageAsync(stream, file.ContentType ?? "");
 
         if (!isValid)
             return Results.BadRequest(new { error });
@@ -4974,10 +4898,10 @@ app.MapPost("/api/user/profile/photo/upload", async (HttpContext ctx, DatabaseSe
         stream.Position = 0;
 
         // Convert to square
-        var conversionResult = await photoService.ConvertToSquareAsync(stream, file.ContentType ?? "image/jpeg");
+        var (squareImage, dimension, contentType) = await photoService.ConvertToSquareAsync(stream, file.ContentType ?? "image/jpeg");
 
         // Save photo
-        var storagePath = await photoService.SaveImageAsync(conversionResult.squareImage, tenantId.ToString(), userId.ToString(), file.FileName);
+        var storagePath = await photoService.SaveImageAsync(squareImage, tenantId.ToString(), userId.ToString(), file.FileName);
 
         // Store in database
         var insertResult = await db.QueryAsync(
@@ -4989,11 +4913,11 @@ app.MapPost("/api/user/profile/photo/upload", async (HttpContext ctx, DatabaseSe
                 ["UserId"] = userId,
                 ["TenantId"] = tenantId,
                 ["FileName"] = file.FileName,
-                ["ContentType"] = conversionResult.contentType,
+                ["ContentType"] = contentType,
                 ["Size"] = file.Length,
                 ["StoragePath"] = storagePath,
-                ["Width"] = conversionResult.dimension,
-                ["Height"] = conversionResult.dimension
+                ["Width"] = dimension,
+                ["Height"] = dimension
             });
 
         int photoId = (int)insertResult.Rows[0]["PhotoId"];
@@ -5013,13 +4937,13 @@ app.MapPost("/api/user/profile/photo/upload", async (HttpContext ctx, DatabaseSe
         {
             photoId,
             photoUrl = storagePath,
-            conversionResult.dimension,
+            dimension,
             message = "Photo uploaded successfully"
         });
     }
     catch (Exception ex)
     {
-        return Results.Json(new { error = ex.Message }, statusCode: 500);
+        return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 })
 .WithName("UploadUserPhoto")
@@ -5071,7 +4995,7 @@ app.MapDelete("/api/user/profile/photo", async (HttpContext ctx, DatabaseService
     }
     catch (Exception ex)
     {
-        return Results.Json(new { error = ex.Message }, statusCode: 500);
+        return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 })
 .WithName("DeleteUserPhoto")
@@ -5100,15 +5024,13 @@ app.MapPost("/api/expenses/{expenseId:int}/receipt/upload", async (int expenseId
             return Results.Forbid();
 
         var form = await ctx.Request.ReadFormAsync();
-        var file = form.Files.GetFile("receipt");
+        var file = form.Files.FirstOrDefault("receipt");
 
         if (file == null || file.Length == 0)
             return Results.BadRequest(new { error = "No receipt file provided" });
 
         using var stream = file.OpenReadStream();
-        var validationResult = await photoService.ValidateImageAsync(stream, file.ContentType ?? "", maxSizeBytes: 10485760);
-        bool isValid = validationResult.isValid;
-        string? error = validationResult.error;
+        var (isValid, error) = await photoService.ValidateImageAsync(stream, file.ContentType ?? "", maxSizeBytes: 10485760);
 
         if (!isValid)
             return Results.BadRequest(new { error });
@@ -5139,12 +5061,12 @@ app.MapPost("/api/expenses/{expenseId:int}/receipt/upload", async (int expenseId
                 ["Strategy"] = extraction.StrategyUsed,
                 ["Confidence"] = extraction.Confidence,
                 ["AuditPassed"] = extraction.AuditPassed,
-                ["Supplier"] = (object?)extraction.SupplierName ?? DBNull.Value,
-                ["DocDate"] = (object?)extraction.DocumentDate ?? DBNull.Value,
+                ["Supplier"] = extraction.SupplierName ?? DBNull.Value,
+                ["DocDate"] = extraction.DocumentDate ?? DBNull.Value,
                 ["Amount"] = extraction.TotalAmount ?? 0,
                 ["Gst"] = extraction.GstAmount ?? 0,
                 ["Description"] = extraction.LineItems.Count > 0 ? string.Join(", ", extraction.LineItems.Select(x => x.Description)) : DBNull.Value,
-                ["RawText"] = (object?)extraction.RawText ?? DBNull.Value,
+                ["RawText"] = extraction.RawText ?? DBNull.Value,
                 ["RequiresReview"] = extraction.Confidence < 0.80 ? 1 : 0,
                 ["UserId"] = userId
             });
@@ -5186,7 +5108,7 @@ app.MapPost("/api/expenses/{expenseId:int}/receipt/upload", async (int expenseId
     }
     catch (Exception ex)
     {
-        return Results.Json(new { error = ex.Message }, statusCode: 500);
+        return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 })
 .WithName("UploadExpenseReceipt")
@@ -5240,7 +5162,7 @@ app.MapGet("/api/expenses/{expenseId:int}/receipt", async (int expenseId, HttpCo
             {
                 supplierName = row["CorrectedSupplierName"]?.ToString(),
                 date = row["CorrectedDate"],
-                amount = row["CorrectedAmount"] != DBNull.Value ? (decimal?)Convert.ToDecimal(row["CorrectedAmount"]) : null
+                amount = (decimal?)(row["CorrectedAmount"] != DBNull.Value ? Convert.ToDecimal(row["CorrectedAmount"]) : null)
             },
             status = (string)row["Status"],
             requiresManualReview = (bool)row["RequiresManualReview"]
@@ -5250,7 +5172,7 @@ app.MapGet("/api/expenses/{expenseId:int}/receipt", async (int expenseId, HttpCo
     }
     catch (Exception ex)
     {
-        return Results.Json(new { error = ex.Message }, statusCode: 500);
+        return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 })
 .WithName("GetExpenseReceipt")
@@ -5304,7 +5226,7 @@ app.MapGet("/api/notifications", async (HttpContext ctx, DatabaseService db) =>
     }
     catch (Exception ex)
     {
-        return Results.Json(new { error = ex.Message }, statusCode: 500);
+        return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 })
 .WithName("GetNotifications")
@@ -5337,7 +5259,7 @@ app.MapPost("/api/notifications/{notificationId:int}/read", async (int notificat
     }
     catch (Exception ex)
     {
-        return Results.Json(new { error = ex.Message }, statusCode: 500);
+        return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 })
 .WithName("MarkNotificationAsRead")
@@ -5368,7 +5290,7 @@ app.MapPost("/api/notifications/read-all", async (HttpContext ctx, DatabaseServi
     }
     catch (Exception ex)
     {
-        return Results.Json(new { error = ex.Message }, statusCode: 500);
+        return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 })
 .WithName("MarkAllNotificationsAsRead")
@@ -5413,7 +5335,7 @@ app.MapGet("/api/notifications/preferences", async (HttpContext ctx, DatabaseSer
     }
     catch (Exception ex)
     {
-        return Results.Json(new { error = ex.Message }, statusCode: 500);
+        return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 })
 .WithName("GetNotificationPreferences")
@@ -5463,16 +5385,26 @@ app.MapPut("/api/notifications/preferences", async (HttpContext ctx, UpdateNotif
     }
     catch (Exception ex)
     {
-        return Results.Json(new { error = ex.Message }, statusCode: 500);
+        return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 })
 .WithName("UpdateNotificationPreferences")
 .WithOpenApi()
 .RequireAuthorization();
 
+// Phase 4 API endpoints and DTOs temporarily disabled for debugging CI
+// TODO: Re-enable after resolving build issues
+// All services (DepartmentService, TeamService, BudgetService, ApprovalDelegationService,
+// ApprovalEscalationService, BulkUserImportService) and database schema (Migration 022)
+// are in place and ready for endpoint activation.
+
 app.Run();
 
-/// <summary>Body model for POST /api/auth/reset-password.</summary>
+// =============================================================================
+// REQUEST/RESPONSE CLASSES (After app.Run() to ensure all top-level statements
+// are defined first)
+// =============================================================================
+
 public class ResetPasswordRequest
 {
     public string Token { get; set; } = string.Empty;
@@ -5610,7 +5542,6 @@ class UpdateNotificationPreferencesRequest
     public TimeSpan? QuietHoursEnd { get; set; }
 }
 
-// ── Helper DTOs ─────────────────────────────────────────────────────────────
 class DelegationRequest
 {
     public int DelegateUserId { get; set; }

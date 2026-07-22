@@ -42,7 +42,7 @@ public class CustomReportService
             @"INSERT INTO CustomReportTemplates (TenantId, UserId, Name, DashboardType, IncludeSummary, IncludeCharts, IncludeDetailed, IncludeAnalysis, IsDefault, CreatedAt)
               VALUES (@TenantId, @UserId, @Name, @DashboardType, @IncludeSummary, @IncludeCharts, @IncludeDetailed, @IncludeAnalysis, @IsDefault, GETUTCDATE())
               SELECT @@IDENTITY",
-            new Dictionary<string, object?>()
+            new()
             {
                 ["TenantId"] = tenantId,
                 ["UserId"] = userId,
@@ -79,7 +79,7 @@ public class CustomReportService
             @"SELECT TemplateId, TenantId, UserId, Name, DashboardType, IncludeSummary, IncludeCharts, IncludeDetailed, IncludeAnalysis, IsDefault, CreatedAt
               FROM CustomReportTemplates
               WHERE TenantId = @TenantId AND TemplateId = @TemplateId",
-            new Dictionary<string, object?>() { ["TenantId"] = tenantId, ["TemplateId"] = templateId });
+            new() { ["TenantId"] = tenantId, ["TemplateId"] = templateId });
 
         if (dt.Rows.Count == 0) return null;
 
@@ -97,7 +97,7 @@ public class CustomReportService
               FROM CustomReportTemplates
               WHERE TenantId = @TenantId AND UserId = @UserId
               ORDER BY IsDefault DESC, CreatedAt DESC",
-            new Dictionary<string, object?>() { ["TenantId"] = tenantId, ["UserId"] = userId });
+            new() { ["TenantId"] = tenantId, ["UserId"] = userId });
 
         var templates = new List<CustomReportTemplate>();
         foreach (System.Data.DataRow row in dt.Rows)
@@ -125,7 +125,7 @@ public class CustomReportService
               SET Name = @Name, IncludeSummary = @IncludeSummary, IncludeCharts = @IncludeCharts,
                   IncludeDetailed = @IncludeDetailed, IncludeAnalysis = @IncludeAnalysis
               WHERE TenantId = @TenantId AND TemplateId = @TemplateId",
-            new Dictionary<string, object?>()
+            new()
             {
                 ["TenantId"] = tenantId,
                 ["TemplateId"] = templateId,
@@ -152,13 +152,13 @@ public class CustomReportService
             @"UPDATE CustomReportTemplates
               SET IsDefault = 0
               WHERE TenantId = @TenantId AND UserId = @UserId",
-            new Dictionary<string, object?>() { ["TenantId"] = tenantId, ["UserId"] = userId });
+            new() { ["TenantId"] = tenantId, ["UserId"] = userId });
 
         var rowsAffected = await _db.ExecuteNonQueryAsync(
             @"UPDATE CustomReportTemplates
               SET IsDefault = 1
               WHERE TenantId = @TenantId AND TemplateId = @TemplateId AND UserId = @UserId",
-            new Dictionary<string, object?>() { ["TenantId"] = tenantId, ["TemplateId"] = templateId, ["UserId"] = userId });
+            new() { ["TenantId"] = tenantId, ["TemplateId"] = templateId, ["UserId"] = userId });
 
         return rowsAffected > 0;
     }
@@ -175,7 +175,7 @@ public class CustomReportService
         var rowsAffected = await _db.ExecuteNonQueryAsync(
             @"DELETE FROM CustomReportTemplates
               WHERE TenantId = @TenantId AND TemplateId = @TemplateId",
-            new Dictionary<string, object?>() { ["TenantId"] = tenantId, ["TemplateId"] = templateId });
+            new() { ["TenantId"] = tenantId, ["TemplateId"] = templateId });
 
         return rowsAffected > 0;
     }
@@ -212,7 +212,7 @@ public class CustomReportTemplate
     public int UserId { get; set; }
     public string Name { get; set; } = "";
     public string DashboardType { get; set; } = "executive";
-    public CustomReportSettings Settings { get; set; } = new Dictionary<string, object?>();
+    public CustomReportSettings Settings { get; set; } = new();
     public bool IsDefault { get; set; }
     public DateTime CreatedAt { get; set; }
 }
@@ -235,5 +235,5 @@ public class CreateCustomReportRequest
 {
     public string Name { get; set; } = "";
     public string DashboardType { get; set; } = "executive";
-    public CustomReportSettings Settings { get; set; } = new Dictionary<string, object?>();
+    public CustomReportSettings Settings { get; set; } = new();
 }

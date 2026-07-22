@@ -2,8 +2,8 @@ package com.digitalresponse.mydesk.shared
 
 import android.content.Context
 import com.digitalresponse.mydesk.shared.ApiService
-import com.digitalresponse.mydesk.shared.models.AIChatMessage
-import com.digitalresponse.mydesk.shared.models.Tenant
+import com.digitalresponse.mydesk.shared.AIChatMessage
+import com.digitalresponse.mydesk.shared.Tenant
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.Interceptor

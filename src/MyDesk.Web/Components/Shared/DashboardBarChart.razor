@@ -11,7 +11,7 @@
             <div style="min-height: 300px;">
                 <MudChart ChartType="ChartType.Bar"
                           ChartSeries="@ConvertSeriesToChartSeries(chartData.Series)"
-                          XAxisLabels="@chartData.Labels?.ToArray()"
+                          XAxisLabels="@chartData.Labels"
                           style="height: 300px;width:100%;" />
             </div>
 
@@ -65,7 +65,7 @@
         }
     }
 
-    private List<MudBlazor.ChartSeries> ConvertSeriesToChartSeries(List<DashboardChartSeriesData> series)
+    private List<MudBlazor.ChartSeries> ConvertSeriesToChartSeries(List<MyDesk.Web.Services.ChartSeries> series)
     {
         return series.Select(s => new MudBlazor.ChartSeries
         {
