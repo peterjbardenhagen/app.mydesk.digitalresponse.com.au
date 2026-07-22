@@ -81,10 +81,6 @@ namespace MyDesk.Browser
                 e.Handled = true;
             };
 
-            webView.NavigationCompleted += WebView_NavigationCompleted;
-            webView.SourceChanged += WebView_SourceChanged;
-            webView.ContentLoading += WebView_ContentLoading;
-
             _viewModel.UpdateNavigationState(webView);
             _viewModel.ClearError();
         }
