@@ -95,7 +95,7 @@ namespace MyDesk.Browser
             _viewModel.HasError = false;
         }
 
-        private void WebView_NavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)
+        private void WebView_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
         {
             _viewModel.IsLoading = false;
             _viewModel.UpdateNavigationState(WebView.CoreWebView2);
@@ -109,12 +109,12 @@ namespace MyDesk.Browser
             }
         }
 
-        private void WebView_SourceChanged(object sender, CoreWebView2SourceChangedEventArgs e)
+        private void WebView_SourceChanged(object? sender, CoreWebView2SourceChangedEventArgs e)
         {
             _viewModel.UpdateNavigationState(WebView.CoreWebView2);
         }
 
-        private void WebView_ContentLoading(object sender, CoreWebView2ContentLoadingEventArgs e)
+        private void WebView_ContentLoading(object? sender, CoreWebView2ContentLoadingEventArgs e)
         {
             _viewModel.IsLoading = true;
         }
@@ -318,7 +318,7 @@ namespace MyDesk.Browser
                         var settingsWindow = new Views.SettingsWindow
                         {
                             Owner = this,
-                            DataContext = new ViewModels.SettingsViewModel(null)
+                            DataContext = new ViewModels.SettingsViewModel(null!)
                         };
                         settingsWindow.ShowDialog();
                         break;
@@ -418,7 +418,7 @@ namespace MyDesk.Browser
             _viewModel.SaveWindowState(this);
         }
 
-        private void MainWindow_StateChanged(object sender, EventArgs e)
+        private void MainWindow_StateChanged(object? sender, EventArgs e)
         {
             if (WindowState == WindowState.Minimized)
             {
@@ -431,7 +431,7 @@ namespace MyDesk.Browser
             var settingsWindow = new Views.SettingsWindow
             {
                 Owner = this,
-                DataContext = new ViewModels.SettingsViewModel(null)
+                DataContext = new ViewModels.SettingsViewModel(null!)
             };
             settingsWindow.ShowDialog();
         }

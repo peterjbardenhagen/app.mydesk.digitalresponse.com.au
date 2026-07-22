@@ -11,7 +11,7 @@ namespace MyDesk.Browser.ViewModels
 {
     public partial class SettingsViewModel : ObservableObject
     {
-        private readonly ILogger<SettingsViewModel> _logger;
+        private readonly ILogger<SettingsViewModel>? _logger;
         private readonly AppSettings _settings;
         private readonly string _settingsPath;
 
@@ -63,11 +63,11 @@ namespace MyDesk.Browser.ViewModels
         [ObservableProperty]
         private bool _isSaving = false;
 
-        public SettingsViewModel() : this(null)
+        public SettingsViewModel() : this(null!)
         {
         }
 
-        public SettingsViewModel(ILogger<SettingsViewModel> logger)
+        public SettingsViewModel(ILogger<SettingsViewModel>? logger)
         {
             _logger = logger;
             _settingsPath = Path.Combine(
@@ -134,7 +134,7 @@ namespace MyDesk.Browser.ViewModels
                 _settings.ShowToolbar = ShowToolbar;
                 _settings.AutoGrantPermissions = AutoGrantPermissions;
 
-                Directory.CreateDirectory(Path.GetDirectoryName(_settingsPath));
+                Directory.CreateDirectory(Path.GetDirectoryName(_settingsPath)!);
                 var json = JsonSerializer.Serialize(_settings, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(_settingsPath, json);
 

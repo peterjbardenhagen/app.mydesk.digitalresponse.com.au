@@ -12,7 +12,7 @@ namespace MyDesk.Browser.ViewModels
 {
     public partial class MainViewModel : ObservableObject, IDisposable
     {
-        private readonly ILogger<MainViewModel> _logger;
+        private readonly ILogger<MainViewModel>? _logger;
         private readonly AppSettings _settings;
 
         [ObservableProperty]
@@ -105,7 +105,7 @@ namespace MyDesk.Browser.ViewModels
 
         public MainViewModel() : this(null, null) { }
 
-        public MainViewModel(ILogger<MainViewModel> logger, AppSettings settings)
+        public MainViewModel(ILogger<MainViewModel>? logger, AppSettings? settings)
         {
             _logger = logger;
             _settings = settings ?? new AppSettings();
@@ -276,7 +276,7 @@ namespace MyDesk.Browser.ViewModels
             {
                 // Clear all cookies for the current domain
                 var cookieManager = _webView.CoreWebView2.CookieManager;
-                var cookies = await cookieManager.GetCookiesAsync(_currentUrl);
+                var cookies = await cookieManager.GetCookiesAsync(CurrentUrl);
                 foreach (var cookie in cookies)
                 {
                     cookieManager.DeleteCookie(cookie);
@@ -355,7 +355,7 @@ namespace MyDesk.Browser.ViewModels
                     "MyDesk",
                     "Browser",
                     "appsettings.json");
-                Directory.CreateDirectory(Path.GetDirectoryName(settingsPath));
+                Directory.CreateDirectory(Path.GetDirectoryName(settingsPath)!);
                 _settings.WindowWidth = (int)SavedWidth;
                 _settings.WindowHeight = (int)SavedHeight;
                 _settings.WindowLeft = (int)SavedLeft;
