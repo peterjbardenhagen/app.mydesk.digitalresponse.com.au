@@ -54,7 +54,7 @@
     "@hookform/resolvers": "^3.3.4",
     "sentry-expo": "^7.0.1",
     "date-fns": "^2.30.0",
-    "uuid": "^9.0.1"
+    "uuid": "^14.0.1"
   },
   "devDependencies": {
     "@babel/core": "^7.23.5",
