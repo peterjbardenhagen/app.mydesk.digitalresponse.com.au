@@ -42,7 +42,7 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0-preview.3.25172.1" />
     <!-- Pin Newtonsoft.Json to a safe version — overrides vulnerable 11.0.1 pulled in transitively. -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.6" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
     <!-- REST API + OpenAPI (Swashbuckle 6.x — 7.x switches to preview Microsoft.OpenApi 2.0). -->
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.3.2" />
     <!-- Hangfire (background + recurring jobs, dashboard at /hangfire). Cronos for cron parsing. -->
