@@ -1854,7 +1854,7 @@ app.MapPost("/api/mobile/expenses", async (HttpContext ctx, DatabaseService db) 
 {
     if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
     var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
-    var userId = ctx.User.FindFirst("sub")?.Value;
+    var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
     if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(userId))
         return Results.BadRequest(new { error = "Missing context" });
 
@@ -1949,7 +1949,7 @@ app.MapPost("/api/mobile/timesheets", async (HttpContext ctx, DatabaseService db
 {
     if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
     var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
-    var userId = ctx.User.FindFirst("sub")?.Value;
+    var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
     if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(userId))
         return Results.BadRequest(new { error = "Missing context" });
 
@@ -2044,7 +2044,7 @@ app.MapPost("/api/mobile/tasks", async (HttpContext ctx, DatabaseService db) =>
 {
     if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
     var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
-    var userId = ctx.User.FindFirst("sub")?.Value;
+    var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
     if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(userId))
         return Results.BadRequest(new { error = "Missing context" });
 
@@ -2185,7 +2185,7 @@ app.MapPut("/api/mobile/despatch/{id:int}/deliver", async (int id, HttpContext c
 {
     if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
     var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
-    var userId = ctx.User.FindFirst("sub")?.Value;
+    var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
     if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(userId))
         return Results.BadRequest(new { error = "Missing context" });
 
@@ -2757,7 +2757,7 @@ app.MapPost("/api/expenses/{id}/submit-for-approval", async (int id, HttpContext
 {
     if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
     var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
-    var userId = int.TryParse(ctx.User.FindFirst("user_id")?.Value ?? "", out var uid) ? uid : 0;
+    var userId = int.TryParse(ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "", out var uid) ? uid : 0;
     if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
 
     var expenseDt = await db.QueryAsync(
@@ -2831,7 +2831,7 @@ app.MapPost("/api/timesheets/{id}/submit-for-approval", async (int id, HttpConte
 {
     if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
     var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
-    var userId = int.TryParse(ctx.User.FindFirst("user_id")?.Value ?? "", out var uid) ? uid : 0;
+    var userId = int.TryParse(ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "", out var uid) ? uid : 0;
     if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
 
     var timesheetDt = await db.QueryAsync(
@@ -2902,7 +2902,7 @@ app.MapGet("/api/approval/pending", async (HttpContext ctx, DatabaseService db) 
 {
     if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
     var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
-    var userId = int.TryParse(ctx.User.FindFirst("user_id")?.Value ?? "", out var uid) ? uid : 0;
+    var userId = int.TryParse(ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "", out var uid) ? uid : 0;
     if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
 
     var dt = await db.QueryAsync(
@@ -2937,7 +2937,7 @@ app.MapPost("/api/approval/requests/{requestId}/approve", async (int requestId, 
 {
     if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
     var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
-    var userId = int.TryParse(ctx.User.FindFirst("user_id")?.Value ?? "", out var uid) ? uid : 0;
+    var userId = int.TryParse(ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "", out var uid) ? uid : 0;
     if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
 
     var requestDt = await db.QueryAsync(
@@ -3059,7 +3059,7 @@ app.MapPost("/api/approval/requests/{requestId}/reject", async (int requestId, H
 {
     if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
     var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
-    var userId = int.TryParse(ctx.User.FindFirst("user_id")?.Value ?? "", out var uid) ? uid : 0;
+    var userId = int.TryParse(ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "", out var uid) ? uid : 0;
     if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
 
     var requestDt = await db.QueryAsync(
@@ -3164,7 +3164,7 @@ app.MapPost("/api/approval/delegations", async (HttpContext ctx, DatabaseService
 {
     if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
     var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
-    var userId = int.TryParse(ctx.User.FindFirst("user_id")?.Value ?? "", out var uid) ? uid : 0;
+    var userId = int.TryParse(ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "", out var uid) ? uid : 0;
     if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
 
     var body = await ctx.Request.ReadFromJsonAsync<DelegationRequest>();
@@ -3195,7 +3195,7 @@ app.MapGet("/api/approval/delegations", async (HttpContext ctx, DatabaseService 
 {
     if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
     var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
-    var userId = int.TryParse(ctx.User.FindFirst("user_id")?.Value ?? "", out var uid) ? uid : 0;
+    var userId = int.TryParse(ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "", out var uid) ? uid : 0;
     if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
 
     var dt = await db.QueryAsync(
@@ -3227,7 +3227,7 @@ app.MapDelete("/api/approval/delegations/{delegationId:int}", async (int delegat
 {
     if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
     var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
-    var userId = int.TryParse(ctx.User.FindFirst("user_id")?.Value ?? "", out var uid) ? uid : 0;
+    var userId = int.TryParse(ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "", out var uid) ? uid : 0;
     if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
 
     var dt = await db.QueryAsync(
@@ -3251,7 +3251,7 @@ app.MapPost("/api/approval/requests/{requestId}/delegate", async (int requestId,
 {
     if (!(ctx.User.Identity?.IsAuthenticated ?? false)) return Results.Unauthorized();
     var tenantId = ctx.User.FindFirst("tenant_id")?.Value;
-    var userId = int.TryParse(ctx.User.FindFirst("user_id")?.Value ?? "", out var uid) ? uid : 0;
+    var userId = int.TryParse(ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "", out var uid) ? uid : 0;
     if (string.IsNullOrWhiteSpace(tenantId) || userId == 0) return Results.BadRequest(new { error = "Invalid context" });
 
     var body = await ctx.Request.ReadFromJsonAsync<DelegateApprovalRequest>();

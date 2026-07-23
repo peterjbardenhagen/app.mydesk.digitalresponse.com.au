@@ -153,7 +153,7 @@ namespace MyDesk.Browser.ViewModels
         /// Called after every page navigation to detect auth state.
         /// Injects JavaScript to check for auth cookies and user info.
         /// </summary>
-        public async void CheckAuthState()
+        public async Task CheckAuthStateAsync()
         {
             if (_webView?.CoreWebView2 == null) return;
 
@@ -268,7 +268,7 @@ namespace MyDesk.Browser.ViewModels
         /// <summary>
         /// Logs the user out by clearing cookies and navigating to the logout page.
         /// </summary>
-        public async void Logout()
+        public async Task LogoutAsync()
         {
             if (_webView?.CoreWebView2 == null) return;
 

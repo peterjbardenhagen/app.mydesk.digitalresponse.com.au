@@ -91,13 +91,12 @@ namespace MyDesk.Browser
             _viewModel.HasError = false;
         }
 
-        private void WebView_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
+        private async void WebView_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
         {
             _viewModel.IsLoading = false;
             _viewModel.UpdateNavigationState(WebView.CoreWebView2);
 
-            // Check auth state after every navigation
-            _viewModel.CheckAuthState();
+            await _viewModel.CheckAuthStateAsync();
 
             if (!e.IsSuccess)
             {
@@ -283,7 +282,7 @@ namespace MyDesk.Browser
                         break;
 
                     case "logout":
-                        _viewModel.Logout();
+                        _ = _viewModel.LogoutAsync();
                         break;
 
                     case "mydesk":

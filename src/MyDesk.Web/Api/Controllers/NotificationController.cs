@@ -42,7 +42,7 @@ public class NotificationController : ControllerBase
         {
             _logger.LogInformation("Getting unread notifications for tenant {TenantId}", tenantId);
 
-            var userId = int.TryParse(User.FindFirst("sub")?.Value ?? "0", out var id) ? id : 0;
+            var userId = int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0", out var id) ? id : 0;
             var (notifications, unreadCount) = await _notification.GetUnreadNotificationsAsync(
                 tenantId, userId, limit);
 
@@ -91,7 +91,7 @@ public class NotificationController : ControllerBase
         {
             _logger.LogInformation("Marking all notifications as read for tenant {TenantId}", tenantId);
 
-            var userId = int.TryParse(User.FindFirst("sub")?.Value ?? "0", out var id) ? id : 0;
+            var userId = int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0", out var id) ? id : 0;
 
             await _notification.MarkAllAsReadAsync(tenantId, userId);
 

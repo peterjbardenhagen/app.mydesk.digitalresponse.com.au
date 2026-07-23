@@ -200,7 +200,7 @@ public class CustomReportController : ControllerBase
 
     private int GetUserId()
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
         return int.Parse(userIdClaim?.Value ?? "0");
     }
 }

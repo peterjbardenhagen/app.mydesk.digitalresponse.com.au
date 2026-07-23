@@ -1,5 +1,6 @@
 using System.Data;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using MyDesk.Shared.Models;
 using MyDesk.Shared.Services.Extraction;
 
@@ -12,10 +13,12 @@ namespace MyDesk.Shared.Services;
 public class FinancialExtractionService
 {
     private readonly DatabaseService _db;
+    private readonly ILogger<FinancialExtractionService> _logger;
 
-    public FinancialExtractionService(DatabaseService db)
+    public FinancialExtractionService(DatabaseService db, ILogger<FinancialExtractionService> logger)
     {
         _db = db;
+        _logger = logger;
     }
 
     /// <summary>
@@ -82,9 +85,9 @@ public class FinancialExtractionService
 
             await _db.ExecuteAsync(sql);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Log if needed, but don't throw to allow app to start
+            _logger.LogError(ex, "Failed to ensure financial extraction tables exist");
         }
     }
 
