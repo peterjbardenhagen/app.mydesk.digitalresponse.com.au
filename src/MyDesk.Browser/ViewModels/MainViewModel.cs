@@ -419,12 +419,12 @@ namespace MyDesk.Browser.ViewModels
                         if (!string.IsNullOrEmpty(persisted.LastUserName))
                         {
                             _settings.LastUserName = persisted.LastUserName;
-                            _userName = persisted.LastUserName;
+                            UserName = persisted.LastUserName;
                         }
                         if (!string.IsNullOrEmpty(persisted.LastUserEmail))
                         {
                             _settings.LastUserEmail = persisted.LastUserEmail;
-                            _userEmail = persisted.LastUserEmail;
+                            UserEmail = persisted.LastUserEmail;
                         }
 
                         // Push restored user info into the title bar and initials.

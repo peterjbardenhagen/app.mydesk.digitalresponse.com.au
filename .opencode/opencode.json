@@ -1,0 +1,15 @@
+{
+  \
+name\: \mydesk-opencode\,
+  \version\: \1.0.0\,
+  \description\: \OpenCode
+configuration
+for
+MyDesk
+development\,
+  \skills\: [\bencium-controlled-ux-designer\, \cavecrew\, \firecrawl-deep-research\],
+  \defaults\: {
+    \reasoning\: \high\,
+    \output_format\: \markdown\
+  }
+}
