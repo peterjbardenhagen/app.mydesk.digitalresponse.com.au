@@ -402,16 +402,29 @@ namespace MyDesk.Browser.ViewModels
                 if (File.Exists(settingsPath))
                 {
                     var json = File.ReadAllText(settingsPath);
-                    var settings = JsonSerializer.Deserialize<AppSettings>(json);
-                    if (settings != null)
+                    var persisted = JsonSerializer.Deserialize<AppSettings>(json);
+                    if (persisted != null)
                     {
-                        SavedWidth = settings.WindowWidth > 0 ? settings.WindowWidth : 1400;
-                        SavedHeight = settings.WindowHeight > 0 ? settings.WindowHeight : 900;
-                        SavedLeft = settings.WindowLeft;
-                        SavedTop = settings.WindowTop;
-                        if (Enum.TryParse<WindowState>(settings.WindowState, out var parsedState))
+                        SavedWidth = persisted.WindowWidth > 0 ? persisted.WindowWidth : 1400;
+                        SavedHeight = persisted.WindowHeight > 0 ? persisted.WindowHeight : 900;
+                        SavedLeft = persisted.WindowLeft;
+                        SavedTop = persisted.WindowTop;
+                        if (Enum.TryParse<WindowState>(persisted.WindowState, out var parsedState))
                         {
                             SavedWindowState = parsedState;
+                        }
+
+                        // Restore saved user info so the UI shows the previous
+                        // session's identity immediately, even before auth re-check.
+                        if (!string.IsNullOrEmpty(persisted.LastUserName))
+                        {
+                            _settings.LastUserName = persisted.LastUserName;
+                            _userName = persisted.LastUserName;
+                        }
+                        if (!string.IsNullOrEmpty(persisted.LastUserEmail))
+                        {
+                            _settings.LastUserEmail = persisted.LastUserEmail;
+                            _userEmail = persisted.LastUserEmail;
                         }
                     }
                 }
