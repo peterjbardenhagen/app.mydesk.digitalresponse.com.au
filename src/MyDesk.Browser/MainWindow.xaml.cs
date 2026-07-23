@@ -406,7 +406,7 @@ namespace MyDesk.Browser
 
         private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
-            WindowState = WindowState.Minimized;
+            Close();
         }
 
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
