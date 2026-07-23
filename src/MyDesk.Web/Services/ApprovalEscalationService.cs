@@ -3,26 +3,25 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using MyDesk.Shared.Services;
 
 namespace MyDesk.Web.Services;
 
-/// <summary>
-/// Escalation Worker: Routes approval requests to delegated approvers or escalates to next authority level
-/// Part of Orchestrator-Worker Agentic Pattern (Phase 4)
-/// </summary>
 public class ApprovalEscalationService
 {
     private readonly DatabaseService _db;
     private readonly ApprovalDelegationService _delegation;
     private readonly NotificationService? _notification;
+    private readonly ILogger<ApprovalEscalationService> _logger;
 
     public ApprovalEscalationService(DatabaseService db, ApprovalDelegationService delegation,
-        NotificationService? notification = null)
+        ILogger<ApprovalEscalationService> logger, NotificationService? notification = null)
     {
         _db = db;
         _delegation = delegation;
         _notification = notification;
+        _logger = logger;
     }
 
     /// <summary>

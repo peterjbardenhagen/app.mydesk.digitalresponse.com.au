@@ -1,4 +1,4 @@
-using System.Data;
+using Microsoft.Extensions.Logging;
 using MyDesk.Shared.Models;
 
 namespace MyDesk.Shared.Services;
@@ -8,12 +8,14 @@ public class QuoteService
     private readonly DatabaseService _db;
     private readonly ActivityService _activityService;
     private readonly ApprovalService? _approvals;
+    private readonly ILogger<QuoteService> _logger;
 
-    public QuoteService(DatabaseService db, ActivityService activityService, ApprovalService? approvals = null)
+    public QuoteService(DatabaseService db, ActivityService activityService, ILogger<QuoteService> logger, ApprovalService? approvals = null)
     {
         _db = db;
         _activityService = activityService;
         _approvals = approvals;
+        _logger = logger;
     }
 
     public async Task<List<Quote>> GetQuotesAsync(DateTime? dateFrom, DateTime? dateTo, string? customerName, int? contactId, int statusId, string? keyword)

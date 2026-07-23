@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using MyDesk.Shared.Models;
 
 namespace MyDesk.Shared.Services;
@@ -5,10 +6,12 @@ namespace MyDesk.Shared.Services;
 public class DRMService
 {
     private readonly DatabaseService _db;
+    private readonly ILogger<DRMService> _logger;
 
-    public DRMService(DatabaseService db)
+    public DRMService(DatabaseService db, ILogger<DRMService> logger)
     {
         _db = db;
+        _logger = logger;
     }
 
     public async Task EnsureTablesAsync()

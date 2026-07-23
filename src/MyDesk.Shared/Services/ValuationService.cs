@@ -1,17 +1,18 @@
+using Microsoft.Extensions.Logging;
 using MyDesk.Shared.Models;
 
 namespace MyDesk.Shared.Services;
 
-/// <summary>
-/// Computes and persists business-valuation snapshots. Pulls inputs from MYOB
-/// (when integration available), the bank feed and manual entries.
-/// Restricted to Director / Administrator roles at the page level.
-/// </summary>
 public class ValuationService
 {
     private readonly DatabaseService _db;
+    private readonly ILogger<ValuationService> _logger;
 
-    public ValuationService(DatabaseService db) => _db = db;
+    public ValuationService(DatabaseService db, ILogger<ValuationService> logger)
+    {
+        _db = db;
+        _logger = logger;
+    }
 
     public async Task<List<ValuationSnapshot>> GetSnapshotsAsync(int take = 12) =>
         (await _db.QueryAsync<ValuationSnapshot>(

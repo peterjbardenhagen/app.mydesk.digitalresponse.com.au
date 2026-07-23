@@ -1,23 +1,22 @@
 using System;
 using System.Data;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using MyDesk.Shared.Models;
 
 namespace MyDesk.Shared.Services;
 
-/// <summary>
-/// Handles end-of-month accounting processes including bank reconciliation, 
-/// expense categorisation, and automated statement processing.
-/// </summary>
 public class EndOfMonthAccountingService
 {
     private readonly DatabaseService _db;
     private readonly BankReconciliationService _bankReconciliation;
+    private readonly ILogger<EndOfMonthAccountingService> _logger;
 
-    public EndOfMonthAccountingService(DatabaseService db, BankReconciliationService bankReconciliation)
+    public EndOfMonthAccountingService(DatabaseService db, BankReconciliationService bankReconciliation, ILogger<EndOfMonthAccountingService> logger)
     {
         _db = db;
         _bankReconciliation = bankReconciliation;
+        _logger = logger;
     }
 
     public async Task<EndOfMonthSummary> GetSummaryAsync(int companyId, DateTime month)

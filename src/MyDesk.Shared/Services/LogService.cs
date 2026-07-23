@@ -1,4 +1,5 @@
 using System.Data;
+using Microsoft.Extensions.Logging;
 using MyDesk.Shared.Models;
 
 namespace MyDesk.Shared.Services;
@@ -6,10 +7,12 @@ namespace MyDesk.Shared.Services;
 public class LogService
 {
     private readonly DatabaseService _db;
+    private readonly ILogger<LogService> _logger;
 
-    public LogService(DatabaseService db)
+    public LogService(DatabaseService db, ILogger<LogService> logger)
     {
         _db = db;
+        _logger = logger;
     }
 
     public async Task EnsureTableAsync()

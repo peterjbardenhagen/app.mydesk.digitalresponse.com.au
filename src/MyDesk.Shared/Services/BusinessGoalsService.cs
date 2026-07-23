@@ -1,16 +1,18 @@
+using Microsoft.Extensions.Logging;
 using MyDesk.Shared.Models;
 
 namespace MyDesk.Shared.Services;
 
-/// <summary>
-/// Manages strategic Business Goals + KPIs + Roadmap docs + AI coaching check-ins.
-/// Restricted to Director / Administrator roles at the page level (page-level @attribute [Authorize]).
-/// </summary>
 public class BusinessGoalsService
 {
     private readonly DatabaseService _db;
+    private readonly ILogger<BusinessGoalsService> _logger;
 
-    public BusinessGoalsService(DatabaseService db) => _db = db;
+    public BusinessGoalsService(DatabaseService db, ILogger<BusinessGoalsService> logger)
+    {
+        _db = db;
+        _logger = logger;
+    }
 
     public async Task<List<BusinessGoal>> GetGoalsAsync(string? status = null)
     {

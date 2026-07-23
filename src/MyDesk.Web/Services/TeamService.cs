@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using MyDesk.Shared.Services;
 
 namespace MyDesk.Web.Services;
@@ -10,10 +11,12 @@ namespace MyDesk.Web.Services;
 public class TeamService
 {
     private readonly DatabaseService _db;
+    private readonly ILogger<TeamService> _logger;
 
-    public TeamService(DatabaseService db)
+    public TeamService(DatabaseService db, ILogger<TeamService> logger)
     {
         _db = db;
+        _logger = logger;
     }
 
     public async Task<DataTable> GetTeamsAsync(int tenantId, int? departmentId = null)

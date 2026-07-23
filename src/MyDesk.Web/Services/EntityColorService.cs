@@ -1,19 +1,20 @@
-using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using MudBlazor;
 using static MudBlazor.Icons.Material.Rounded;
 
 namespace MyDesk.Web.Services;
 
-/// <summary>
-/// Centralized entity color/icon/label mapping from entitycolors.json.
-/// Use this everywhere to keep color coding consistent across the UI.
-/// </summary>
 public class EntityColorService
 {
     private readonly Dictionary<string, EntityStyle> _styles = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ILogger<EntityColorService> _logger;
+    private readonly IWebHostEnvironment _env;
 
-    public EntityColorService(IWebHostEnvironment env)
+    public EntityColorService(IWebHostEnvironment env, ILogger<EntityColorService> logger)
     {
+        _env = env;
+        _logger = logger;
+
         var path = Path.Combine(env.ContentRootPath, "Config", "entitycolors.json");
         if (!File.Exists(path)) { SeedDefaults(); return; }
 

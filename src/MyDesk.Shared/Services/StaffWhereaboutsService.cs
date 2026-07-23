@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using MyDesk.Shared.Models;
 
 namespace MyDesk.Shared.Services;
@@ -5,10 +6,12 @@ namespace MyDesk.Shared.Services;
 public class StaffWhereaboutsService
 {
     private readonly DatabaseService _db;
+    private readonly ILogger<StaffWhereaboutsService> _logger;
 
-    public StaffWhereaboutsService(DatabaseService db)
+    public StaffWhereaboutsService(DatabaseService db, ILogger<StaffWhereaboutsService> logger)
     {
         _db = db;
+        _logger = logger;
     }
 
     public async Task EnsureTableAsync()

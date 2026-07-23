@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using MyDesk.Shared.Services;
 
 namespace MyDesk.Web.Services;
@@ -13,10 +14,12 @@ namespace MyDesk.Web.Services;
 public class BulkUserImportService
 {
     private readonly DatabaseService _db;
+    private readonly ILogger<BulkUserImportService> _logger;
 
-    public BulkUserImportService(DatabaseService db)
+    public BulkUserImportService(DatabaseService db, ILogger<BulkUserImportService> logger)
     {
         _db = db;
+        _logger = logger;
     }
 
     public async Task<BulkImportResult> ImportUsersAsync(int tenantId, int importedById, Stream csvStream, string filename)

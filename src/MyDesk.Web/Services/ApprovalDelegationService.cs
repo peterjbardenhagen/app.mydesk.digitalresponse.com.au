@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using MyDesk.Shared.Services;
 
 namespace MyDesk.Web.Services;
@@ -10,10 +11,12 @@ namespace MyDesk.Web.Services;
 public class ApprovalDelegationService
 {
     private readonly DatabaseService _db;
+    private readonly ILogger<ApprovalDelegationService> _logger;
 
-    public ApprovalDelegationService(DatabaseService db)
+    public ApprovalDelegationService(DatabaseService db, ILogger<ApprovalDelegationService> logger)
     {
         _db = db;
+        _logger = logger;
     }
 
     public async Task<int> CreateDelegationAsync(int tenantId, int fromUserId, int toUserId,
