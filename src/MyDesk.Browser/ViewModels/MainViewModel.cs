@@ -292,6 +292,9 @@ namespace MyDesk.Browser.ViewModels
                 IsAuthenticated = false;
                 UserName = string.Empty;
                 UserEmail = string.Empty;
+                _settings.LastUserName = null;
+                _settings.LastUserEmail = null;
+                PersistSettings();
                 UpdateTitle();
 
                 // Navigate to logout page
@@ -336,6 +339,30 @@ namespace MyDesk.Browser.ViewModels
             ErrorMessage = string.Empty;
         }
 
+        /// <summary>
+        /// Persists the current AppSettings to disk (without window state).
+        /// Used to save auth-related settings on logout so stale data doesn't
+        /// reappear on next launch.
+        /// </summary>
+        private void PersistSettings()
+        {
+            try
+            {
+                var settingsPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "MyDesk",
+                    "Browser",
+                    "appsettings.json");
+                Directory.CreateDirectory(Path.GetDirectoryName(settingsPath)!);
+                var json = JsonSerializer.Serialize(_settings, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(settingsPath, json);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to persist settings");
+            }
+        }
+
         public void SaveWindowState(Window window)
         {
             try
@@ -350,19 +377,12 @@ namespace MyDesk.Browser.ViewModels
                 }
 
                 // Persist settings
-                var settingsPath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "MyDesk",
-                    "Browser",
-                    "appsettings.json");
-                Directory.CreateDirectory(Path.GetDirectoryName(settingsPath)!);
                 _settings.WindowWidth = (int)SavedWidth;
                 _settings.WindowHeight = (int)SavedHeight;
                 _settings.WindowLeft = (int)SavedLeft;
                 _settings.WindowTop = (int)SavedTop;
                 _settings.WindowState = SavedWindowState.ToString();
-                var json = JsonSerializer.Serialize(_settings, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(settingsPath, json);
+                PersistSettings();
             }
             catch (Exception ex)
             {
