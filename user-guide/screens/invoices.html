@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Invoices — MyDesk</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f9fafb; padding: 24px; }
+  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .top h2 { font-size: 20px; color: #101828; }
+  .btn { padding: 8px 16px; background: #00a8b0; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; }
+  table { width: 100%; background: #fff; border-radius: 10px; border-collapse: collapse; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border: 1px solid #eaecf0; }
+  th, td { text-align: left; padding: 12px 16px; font-size: 13px; border-bottom: 1px solid #f2f4f7; }
+  th { color: #667085; font-weight: 600; background: #f9fafb; }
+  .status { padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .paid { background: #e8f7ee; color: #12b76a; }
+  .overdue { background: #fef3dd; color: #d92d20; }
+  .draft { background: #f2f4f7; color: #667085; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h2>Invoices</h2>
+  <button class="btn">+ Create Invoice</button>
+</div>
+<table>
+  <thead><tr><th>Invoice #</th><th>Customer</th><th>Date</th><th>Due Date</th><th>Amount</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>INV-2001</td><td>Acme Corp</td><td>01 Jul 2026</td><td>01 Aug 2026</td><td>$5,600.00</td><td><span class="status paid">Paid</span></td></tr>
+    <tr><td>INV-2002</td><td>Beta Ltd</td><td>05 Jul 2026</td><td>04 Aug 2026</td><td>$3,200.00</td><td><span class="status overdue">Overdue</span></td></tr>
+    <tr><td>INV-2003</td><td>Gamma Inc</td><td>10 Jul 2026</td><td>09 Aug 2026</td><td>$8,100.00</td><td><span class="status draft">Draft</span></td></tr>
+  </tbody>
+</table>
+</body>
+</html>

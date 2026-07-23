@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Submit Expense — MyDesk</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f9fafb; padding: 24px; }
+  .container { max-width: 680px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border: 1px solid #eaecf0; }
+  h2 { font-size: 18px; color: #101828; margin-bottom: 20px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; color: #344054; margin-bottom: 6px; }
+  .field input, .field select, .field textarea { width: 100%; padding: 10px 12px; border: 1px solid #d0d5dd; border-radius: 8px; font-size: 14px; }
+  .field textarea { resize: vertical; min-height: 80px; }
+  .upload { border: 2px dashed #d0d5dd; border-radius: 10px; padding: 24px; text-align: center; color: #667085; font-size: 13px; }
+  .actions { display: flex; gap: 12px; margin-top: 20px; }
+  .btn { padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; }
+  .btn.primary { background: #00a8b0; color: #fff; }
+  .btn.secondary { background: #fff; color: #344054; border: 1px solid #d0d5dd; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h2>New Expense</h2>
+  <div class="row">
+    <div class="field"><label>Date</label><input type="date" value="2026-07-23"></div>
+    <div class="field"><label>Category</label><select><option>Travel</option><option>Meals</option><option>Transport</option><option>Other</option></select></div>
+  </div>
+  <div class="field"><label>Description</label><input placeholder="e.g. Client dinner at Acme"></div>
+  <div class="field"><label>Amount (AUD)</label><input type="number" placeholder="0.00" value="185.00"></div>
+  <div class="field"><label>Receipt</label><div class="upload">📷 Drop receipt image here or click to browse</div></div>
+  <div class="field"><label>Notes</label><textarea placeholder="Optional notes..."></textarea></div>
+  <div class="actions">
+    <button class="btn primary">Save & Submit</button>
+    <button class="btn secondary">Save Draft</button>
+    <button class="btn secondary">Cancel</button>
+  </div>
+</div>
+</body>
+</html>

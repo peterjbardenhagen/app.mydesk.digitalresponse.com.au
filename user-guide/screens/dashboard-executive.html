@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard — Executive</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f9fafb; padding: 24px; }
+  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .top h2 { font-size: 20px; color: #101828; }
+  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border: 1px solid #eaecf0; }
+  .card .label { font-size: 12px; color: #667085; margin-bottom: 4px; }
+  .card .value { font-size: 20px; font-weight: 700; color: #101828; }
+  .card .sub { font-size: 12px; color: #12b76a; margin-top: 4px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .panel { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border: 1px solid #eaecf0; }
+  .panel h3 { font-size: 14px; color: #101828; margin-bottom: 12px; }
+  .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f2f4f7; font-size: 13px; color: #344054; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h2>Executive Dashboard</h2>
+</div>
+<div class="cards">
+  <div class="card"><div class="label">Total MTD</div><div class="value">$125,450</div><div class="sub">↑ 12% vs last month</div></div>
+  <div class="card"><div class="label">Budget Util</div><div class="value">87%</div><div class="sub">$175,000 allocated</div></div>
+  <div class="card"><div class="label">Pending</div><div class="value">23</div></div>
+  <div class="card"><div class="label">Overdue</div><div class="value">5</div></div>
+</div>
+<div class="grid">
+  <div class="panel">
+    <h3>Department Breakdown</h3>
+    <div class="row"><span>Engineering</span><span>$45,200</span></div>
+    <div class="row"><span>Sales</span><span>$38,100</span></div>
+    <div class="row"><span>Marketing</span><span>$25,300</span></div>
+    <div class="row"><span>Operations</span><span>$16,850</span></div>
+  </div>
+  <div class="panel">
+    <h3>Category Breakdown</h3>
+    <div class="row"><span>Travel</span><span>$32,000</span></div>
+    <div class="row"><span>Meals</span><span>$28,000</span></div>
+    <div class="row"><span>Other</span><span>$65,450</span></div>
+  </div>
+</div>
+</body>
+</html>

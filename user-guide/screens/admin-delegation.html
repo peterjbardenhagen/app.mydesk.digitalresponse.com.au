@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Approval Delegation — MyDesk</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f9fafb; padding: 24px; }
+  .top { margin-bottom: 20px; }
+  .top h2 { font-size: 20px; color: #101828; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tab { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; background: #fff; border: 1px solid #eaecf0; color: #667085; }
+  .tab.active { background: #00a8b0; color: #fff; border-color: #00a8b0; }
+  table { width: 100%; background: #fff; border-radius: 10px; border-collapse: collapse; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border: 1px solid #eaecf0; }
+  th, td { text-align: left; padding: 12px 16px; font-size: 13px; border-bottom: 1px solid #f2f4f7; }
+  th { color: #667085; font-weight: 600; background: #f9fafb; }
+  .badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .active { background: #e8f7ee; color: #12b76a; }
+  .inactive { background: #f2f4f7; color: #667085; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h2>Approval Delegation</h2>
+  <button class="btn" style="float:right;margin-top:-28px;">+ Create Delegation</button>
+</div>
+<div class="tabs">
+  <div class="tab active">My Delegations</div>
+  <div class="tab">Received</div>
+  <div class="tab">History</div>
+</div>
+<table>
+  <thead><tr><th>From</th><th>To</th><th>Module</th><th>Amount Range</th><th>Start</th><th>End</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>Peter Bardenhagen</td><td>Sarah Chen</td><td>Expenses</td><td>$500 – $5,000</td><td>01 Jul</td><td>31 Jul</td><td><span class="badge active">Active</span></td></tr>
+    <tr><td>John Bardenhagen</td><td>Mike Johnson</td><td>Timesheets</td><td>$0 – $10,000</td><td>15 Jul</td><td>15 Aug</td><td><span class="badge inactive">Expired</span></td></tr>
+  </tbody>
+</table>
+</body>
+</html>

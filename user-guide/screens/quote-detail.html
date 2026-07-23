@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Quote Detail — MyDesk</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f9fafb; padding: 24px; }
+  .container { max-width: 900px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border: 1px solid #eaecf0; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+  .header h2 { font-size: 18px; color: #101828; }
+  .status { padding: 4px 12px; border-radius: 10px; font-size: 12px; font-weight: 600; background: #e0f2fe; color: #0369a1; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .field label { display: block; font-size: 12px; color: #667085; margin-bottom: 4px; }
+  .field .val { font-size: 14px; color: #101828; font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  th, td { text-align: left; padding: 10px 12px; font-size: 13px; border-bottom: 1px solid #f2f4f7; }
+  th { color: #667085; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div><h2>Quote QT-1042</h2><div style="font-size:12px;color:#667085;">Created 01 Jul 2026</div></div>
+    <div class="status">Pending Manager Approval</div>
+  </div>
+  <div class="grid">
+    <div class="field"><label>Customer</label><div class="val">Acme Corp</div></div>
+    <div class="field"><label>Contact</label><div class="val">John Smith</div></div>
+    <div class="field"><label>Valid Until</label><div class="val">01 Aug 2026</div></div>
+    <div class="field"><label>Total</label><div class="val">$12,450.00</div></div>
+  </div>
+  <h3 style="font-size:14px;color:#101828;margin-bottom:8px;">Line Items</h3>
+  <table>
+    <thead><tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead>
+    <tbody>
+      <tr><td>Software License — Annual</td><td>1</td><td>$8,400.00</td><td>$8,400.00</td></tr>
+      <tr><td>Implementation Services</td><td>10</td><td>$350.00</td><td>$3,500.00</td></tr>
+      <tr><td>Support — 3 Months</td><td>1</td><td>$550.00</td><td>$550.00</td></tr>
+    </tbody>
+  </table>
+</div>
+</body>
+</html>

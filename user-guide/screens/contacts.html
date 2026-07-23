@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Contacts — MyDesk</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f9fafb; padding: 24px; }
+  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .top h2 { font-size: 20px; color: #101828; }
+  .btn { padding: 8px 16px; background: #00a8b0; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; }
+  table { width: 100%; background: #fff; border-radius: 10px; border-collapse: collapse; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border: 1px solid #eaecf0; }
+  th, td { text-align: left; padding: 12px 16px; font-size: 13px; border-bottom: 1px solid #f2f4f7; }
+  th { color: #667085; font-weight: 600; background: #f9fafb; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h2>Contacts</h2>
+  <button class="btn">+ New Contact</button>
+</div>
+<table>
+  <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Company</th><th>Role</th></tr></thead>
+  <tbody>
+    <tr><td>John Smith</td><td>john@acme.com.au</td><td>+61 400 000 001</td><td>Acme Corp</td><td>Decision Maker</td></tr>
+    <tr><td>Lisa Wong</td><td>lisa@beta.com.au</td><td>+61 400 000 002</td><td>Beta Ltd</td><td>Influencer</td></tr>
+    <tr><td>David Brown</td><td>david@gamma.com.au</td><td>+61 400 000 003</td><td>Gamma Inc</td><td>Technical</td></tr>
+  </tbody>
+</table>
+</body>
+</html>

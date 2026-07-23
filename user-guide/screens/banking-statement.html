@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bank Statement — MyDesk</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f9fafb; padding: 24px; }
+  .top { margin-bottom: 20px; }
+  .top h2 { font-size: 20px; color: #101828; }
+  table { width: 100%; background: #fff; border-radius: 10px; border-collapse: collapse; border: 1px solid #eaecf0; }
+  th, td { text-align: left; padding: 12px 16px; font-size: 13px; border-bottom: 1px solid #f2f4f7; }
+  th { color: #667085; font-weight: 600; background: #f9fafb; }
+  .badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .matched { background: #e8f7ee; color: #12b76a; }
+  .unmatched { background: #fef3dd; color: #d92d20; }
+</style>
+</head>
+<body>
+<div class="top"><h2>Bank Statement — CBA **** 4521</h2></div>
+<table>
+  <thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Type</th><th>Invoice</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>12 Jul</td><td>Payment from Acme</td><td>$12,400.00</td><td>Credit</td><td>INV-2001</td><td><span class="badge matched">Matched</span></td></tr>
+    <tr><td>11 Jul</td><td>Office Lease</td><td>$3,200.00</td><td>Debit</td><td>—</td><td><span class="badge unmatched">Unmatched</span></td></tr>
+    <tr><td>10 Jul</td><td>Software Sub</td><td>$450.00</td><td>Debit</td><td>INV-2002</td><td><span class="badge matched">Matched</span></td></tr>
+    <tr><td>09 Jul</td><td>Fuel — Fleet</td><td>$210.50</td><td>Debit</td><td>—</td><td><span class="badge unmatched">Unmatched</span></td></tr>
+  </tbody>
+</table>
+</body>
+</html>

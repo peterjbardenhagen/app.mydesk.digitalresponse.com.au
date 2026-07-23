@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Timesheets — MyDesk</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f9fafb; padding: 24px; }
+  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .top h2 { font-size: 20px; color: #101828; }
+  .btn { padding: 8px 16px; background: #00a8b0; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; }
+  .week-bar { background: #fff; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #eaecf0; }
+  .week-bar .days { display: flex; gap: 12px; }
+  .day { text-align: center; }
+  .day .d { font-size: 11px; color: #667085; }
+  .day .n { font-size: 14px; font-weight: 600; color: #101828; margin-top: 2px; }
+  table { width: 100%; background: #fff; border-radius: 10px; border-collapse: collapse; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border: 1px solid #eaecf0; }
+  th, td { text-align: left; padding: 12px 16px; font-size: 13px; border-bottom: 1px solid #f2f4f7; }
+  th { color: #667085; font-weight: 600; background: #f9fafb; }
+  input { width: 80px; padding: 6px; border: 1px solid #d0d5dd; border-radius: 6px; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h2>Timesheets</h2>
+  <button class="btn">Submit Week</button>
+</div>
+<div class="week-bar">
+  <div><strong>Week 29 — 14 Jul to 18 Jul 2026</strong></div>
+  <div class="days">
+    <div class="day"><div class="d">Mon</div><div class="n">14</div></div>
+    <div class="day"><div class="d">Tue</div><div class="n">15</div></div>
+    <div class="day"><div class="d">Wed</div><div class="n">16</div></div>
+    <div class="day"><div class="d">Thu</div><div class="n">17</div></div>
+    <div class="day"><div class="d">Fri</div><div class="n">18</div></div>
+  </div>
+</div>
+<table>
+  <thead><tr><th>Project</th><th>Task</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Total</th></tr></thead>
+  <tbody>
+    <tr><td>Website Redesign</td><td>Frontend Dev</td><td><input value="8"></td><td><input value="8"></td><td><input value="7.5"></td><td><input value="8"></td><td><input value="6"></td><td>37.5</td></tr>
+    <tr><td>Mobile App</td><td>UI Design</td><td><input value="2"></td><td><input value="0"></td><td><input value="3"></td><td><input value="0"></td><td><input value="0"></td><td>5.0</td></tr>
+  </tbody>
+</table>
+</body>
+</html>

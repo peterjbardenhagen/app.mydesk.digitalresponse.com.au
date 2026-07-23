@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Reports — MyDesk</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f9fafb; padding: 24px; }
+  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .top h2 { font-size: 20px; color: #101828; }
+  .btn { padding: 8px 16px; background: #00a8b0; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .card { background: #fff; border-radius: 10px; padding: 20px; border: 1px solid #eaecf0; text-align: center; }
+  .card .icon { font-size: 28px; margin-bottom: 8px; }
+  .card h3 { font-size: 14px; color: #101828; margin-bottom: 4px; }
+  .card p { font-size: 12px; color: #667085; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h2>Reports</h2>
+  <button class="btn">Schedule Report</button>
+</div>
+<div class="grid">
+  <div class="card"><div class="icon">📊</div><h3>Sales Report</h3><p>Revenue, quotes, and conversion trends.</p></div>
+  <div class="card"><div class="icon">💰</div><h3>Expense Report</h3><p>Team spending and reimbursement status.</p></div>
+  <div class="card"><div class="icon">📋</div><h3>Inventory Report</h3><p>Stock levels and product performance.</p></div>
+  <div class="card"><div class="icon">👥</div><h3>CRM Report</h3><p>Contacts, companies, and pipeline.</p></div>
+  <div class="card"><div class="icon">⏱️</div><h3>Timesheet Report</h3><p>Hours logged by project and user.</p></div>
+  <div class="card"><div class="icon">📑</div><h3>Custom Report</h3><p>Build your own report template.</p></div>
+</div>
+</body>
+</html>

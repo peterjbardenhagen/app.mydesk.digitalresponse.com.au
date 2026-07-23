@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Expenses — MyDesk</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f9fafb; padding: 24px; }
+  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .top h2 { font-size: 20px; color: #101828; }
+  .btn { padding: 8px 16px; background: #00a8b0; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .filters { display: flex; gap: 8px; margin-bottom: 16px; }
+  .filters input { padding: 8px 12px; border: 1px solid #d0d5dd; border-radius: 8px; font-size: 13px; min-width: 200px; }
+  table { width: 100%; background: #fff; border-radius: 10px; border-collapse: collapse; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border: 1px solid #eaecf0; }
+  th, td { text-align: left; padding: 12px 16px; font-size: 13px; border-bottom: 1px solid #f2f4f7; }
+  th { color: #667085; font-weight: 600; background: #f9fafb; }
+  td { color: #344054; }
+  .status { padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .approved { background: #e8f7ee; color: #12b76a; }
+  .pending { background: #fef3dd; color: #b9500c; }
+  .draft { background: #f2f4f7; color: #667085; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h2>Expenses</h2>
+  <button class="btn">+ New Expense</button>
+</div>
+<div class="filters">
+  <input placeholder="Search expenses...">
+  <input placeholder="Filter by status">
+  <input type="date">
+</div>
+<table>
+  <thead><tr><th>Reference</th><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>EXP-20260708-001</td><td>08 Jul 2026</td><td>Acme Hotel</td><td>Travel</td><td>$185.00</td><td><span class="status approved">Approved</span></td></tr>
+    <tr><td>EXP-20260707-002</td><td>07 Jul 2026</td><td>Uber Ride</td><td>Transport</td><td>$45.00</td><td><span class="status pending">Pending</span></td></tr>
+    <tr><td>EXP-20260706-003</td><td>06 Jul 2026</td><td>Client Lunch</td><td>Meals</td><td>$92.00</td><td><span class="status approved">Approved</span></td></tr>
+    <tr><td>EXP-20260705-004</td><td>05 Jul 2026</td><td>Office Supplies</td><td>Other</td><td>$34.50</td><td><span class="status draft">Draft</span></td></tr>
+  </tbody>
+</table>
+</body>
+</html>

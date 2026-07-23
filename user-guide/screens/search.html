@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Search — MyDesk</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f9fafb; padding: 24px; }
+  .container { max-width: 800px; margin: 0 auto; }
+  .search-bar { display: flex; gap: 8px; margin-bottom: 20px; }
+  .search-bar input { flex: 1; padding: 12px; border: 1px solid #d0d5dd; border-radius: 8px; font-size: 14px; }
+  .search-bar button { padding: 12px 20px; background: #00a8b0; color: #fff; border: none; border-radius: 8px; font-weight: 600; }
+  .section { margin-bottom: 20px; }
+  .section h3 { font-size: 14px; color: #667085; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .result { background: #fff; border-radius: 10px; padding: 14px; border: 1px solid #eaecf0; margin-bottom: 8px; display: flex; justify-content: space-between; }
+  .result .title { font-size: 14px; font-weight: 600; color: #101828; }
+  .result .meta { font-size: 12px; color: #667085; margin-top: 4px; }
+  .result .type { font-size: 11px; font-weight: 600; color: #00a8b0; text-transform: uppercase; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="search-bar">
+    <input placeholder="Search invoices, quotes, contacts..." value="Acme">
+    <button>Search</button>
+  </div>
+  <div class="section">
+    <h3>Invoices</h3>
+    <div class="result"><div><div class="title">INV-2001</div><div class="meta">Acme Corp · $5,600.00 · 01 Jul 2026</div></div><div class="type">Invoice</div></div>
+    <div class="result"><div><div class="title">INV-1998</div><div class="meta">Acme Corp · $3,200.00 · 15 Jun 2026</div></div><div class="type">Invoice</div></div>
+  </div>
+  <div class="section">
+    <h3>Quotes</h3>
+    <div class="result"><div><div class="title">QT-1042</div><div class="meta">Acme Corp · $12,450.00 · 01 Jul 2026</div></div><div class="type">Quote</div></div>
+  </div>
+  <div class="section">
+    <h3>Contacts</h3>
+    <div class="result"><div><div class="title">John Smith</div><div class="meta">Acme Corp · Decision Maker</div></div><div class="type">Contact</div></div>
+  </div>
+</div>
+</body>
+</html>

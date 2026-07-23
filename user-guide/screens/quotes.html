@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Quotes — MyDesk</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f9fafb; padding: 24px; }
+  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .top h2 { font-size: 20px; color: #101828; }
+  .btn { padding: 8px 16px; background: #00a8b0; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; }
+  table { width: 100%; background: #fff; border-radius: 10px; border-collapse: collapse; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border: 1px solid #eaecf0; }
+  th, td { text-align: left; padding: 12px 16px; font-size: 13px; border-bottom: 1px solid #f2f4f7; }
+  th { color: #667085; font-weight: 600; background: #f9fafb; }
+  .status { padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .draft { background: #f2f4f7; color: #667085; }
+  .sent { background: #e0f2fe; color: #0369a1; }
+  .won { background: #e8f7ee; color: #12b76a; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h2>Quotes</h2>
+  <button class="btn">+ New Quote</button>
+</div>
+<table>
+  <thead><tr><th>Quote #</th><th>Customer</th><th>Date</th><th>Amount</th><th>Status</th><th>Margin</th></tr></thead>
+  <tbody>
+    <tr><td>QT-1042</td><td>Acme Corp</td><td>01 Jul 2026</td><td>$12,450.00</td><td><span class="status won">Manager Approved</span></td><td>32%</td></tr>
+    <tr><td>QT-1043</td><td>Beta Ltd</td><td>03 Jul 2026</td><td>$4,200.00</td><td><span class="status sent">Pending Manager Approval</span></td><td>28%</td></tr>
+    <tr><td>QT-1044</td><td>Gamma Inc</td><td>05 Jul 2026</td><td>$8,900.00</td><td><span class="status draft">Draft</span></td><td>—</td></tr>
+  </tbody>
+</table>
+</body>
+</html>

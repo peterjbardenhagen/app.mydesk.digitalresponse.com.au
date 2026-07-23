@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Departments — MyDesk</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f9fafb; padding: 24px; }
+  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .top h2 { font-size: 20px; color: #101828; }
+  .btn { padding: 8px 16px; background: #00a8b0; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .card { background: #fff; border-radius: 10px; padding: 20px; border: 1px solid #eaecf0; }
+  .card h3 { font-size: 14px; color: #101828; margin-bottom: 4px; }
+  .card p { font-size: 12px; color: #667085; margin-bottom: 8px; }
+  .meta { font-size: 12px; color: #667085; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h2>Departments</h2>
+  <button class="btn">+ Add Department</button>
+</div>
+<div class="grid">
+  <div class="card">
+    <h3>Engineering</h3>
+    <p>Software development and infrastructure.</p>
+    <div class="meta">Manager: Sarah Chen · 24 members · Budget: $450,000</div>
+  </div>
+  <div class="card">
+    <h3>Sales</h3>
+    <p>Revenue generation and account management.</p>
+    <div class="meta">Manager: James Wilson · 18 members · Budget: $320,000</div>
+  </div>
+  <div class="card">
+    <h3>Marketing</h3>
+    <p>Brand, campaigns, and demand generation.</p>
+    <div class="meta">Manager: Emily Davis · 12 members · Budget: $180,000</div>
+  </div>
+  <div class="card">
+    <h3>Finance</h3>
+    <p>Accounting, payroll, and compliance.</p>
+    <div class="meta">Manager: John Bardenhagen · 8 members · Budget: $120,000</div>
+  </div>
+</div>
+</body>
+</html>

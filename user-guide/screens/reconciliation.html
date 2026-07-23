@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Reconciliation — MyDesk</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f9fafb; padding: 24px; }
+  .top { margin-bottom: 20px; }
+  .top h2 { font-size: 20px; color: #101828; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px; border: 1px solid #eaecf0; }
+  .card .label { font-size: 12px; color: #667085; }
+  .card .value { font-size: 20px; font-weight: 700; color: #101828; }
+  table { width: 100%; background: #fff; border-radius: 10px; border-collapse: collapse; border: 1px solid #eaecf0; }
+  th, td { text-align: left; padding: 12px 16px; font-size: 13px; border-bottom: 1px solid #f2f4f7; }
+  th { color: #667085; font-weight: 600; background: #f9fafb; }
+  .badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .matched { background: #e8f7ee; color: #12b76a; }
+  .unmatched { background: #fef3dd; color: #d92d20; }
+</style>
+</head>
+<body>
+<div class="top"><h2>Reconciliation</h2></div>
+<div class="stats">
+  <div class="card"><div class="label">Total Items</div><div class="value">1,245</div></div>
+  <div class="card"><div class="label">Matched</div><div class="value">1,178</div></div>
+  <div class="card"><div class="label">Unmatched</div><div class="value">67</div></div>
+  <div class="card"><div class="label">Match Rate</div><div class="value">94.4%</div></div>
+</div>
+<table>
+  <thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Bank</th><th>Invoice</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>12 Jul</td><td>Payment from Acme</td><td>$12,400.00</td><td>CBA **** 4521</td><td>INV-2001</td><td><span class="badge matched">Matched</span></td></tr>
+    <tr><td>11 Jul</td><td>Office Lease</td><td>$3,200.00</td><td>CBA **** 4521</td><td>—</td><td><span class="badge unmatched">Unmatched</span></td></tr>
+    <tr><td>10 Jul</td><td>Software Sub</td><td>$450.00</td><td>ANZ **** 8832</td><td>INV-2002</td><td><span class="badge matched">Matched</span></td></tr>
+  </tbody>
+</table>
+</body>
+</html>

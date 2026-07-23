@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard — Employee</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f9fafb; padding: 24px; }
+  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .top h2 { font-size: 20px; color: #101828; }
+  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border: 1px solid #eaecf0; }
+  .card .label { font-size: 12px; color: #667085; margin-bottom: 4px; }
+  .card .value { font-size: 20px; font-weight: 700; color: #101828; }
+  .card .sub { font-size: 12px; color: #12b76a; margin-top: 4px; }
+  .panel { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border: 1px solid #eaecf0; margin-bottom: 16px; }
+  .panel h3 { font-size: 14px; color: #101828; margin-bottom: 12px; }
+  .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f2f4f7; font-size: 13px; color: #344054; }
+  .row:last-child { border-bottom: none; }
+  .badge { padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .badge.approved { background: #e8f7ee; color: #12b76a; }
+  .badge.pending { background: #fef3dd; color: #f79009; }
+  .nav { display: flex; gap: 16px; margin-bottom: 20px; font-size: 13px; color: #667085; }
+  .nav a { color: #00a8b0; text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h2>My Dashboard</h2>
+  <div style="width:32px;height:32px;background:#00a8b0;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;">PB</div>
+</div>
+<div class="cards">
+  <div class="card"><div class="label">Submitted</div><div class="value">$3,240</div><div class="sub">12 expenses</div></div>
+  <div class="card"><div class="label">Approved</div><div class="value">$2,890</div><div class="sub">11 expenses</div></div>
+  <div class="card"><div class="label">Pending</div><div class="value">$350</div><div class="sub">1 expense</div></div>
+  <div class="card"><div class="label">Reimbursed</div><div class="value">$2,500</div></div>
+</div>
+<div class="panel">
+  <h3>Recent Expenses</h3>
+  <div class="row"><span>Jul 8 — Acme Hotel</span><span>$185.00 <span class="badge approved">Approved</span></span></div>
+  <div class="row"><span>Jul 7 — Uber Ride</span><span>$45.00 <span class="badge pending">Pending</span></span></div>
+  <div class="row"><span>Jul 6 — Client Lunch</span><span>$92.00 <span class="badge approved">Approved</span></span></div>
+</div>
+<div class="nav">
+  <a href="#">Dashboard</a> · <a href="#">Expenses</a> · <a href="#">Timesheets</a> · <a href="#">Approvals</a> · <a href="#">Profile</a>
+</div>
+</body>
+</html>

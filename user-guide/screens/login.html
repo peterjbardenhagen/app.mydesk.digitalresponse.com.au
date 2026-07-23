@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — MyDesk</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f9fafb; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  .mockup { width: 100%; max-width: 420px; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); overflow: hidden; }
+  .header { background: linear-gradient(135deg, #00a8b0, #008b8b); padding: 32px; text-align: center; color: #fff; }
+  .header h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+  .header p { font-size: 14px; opacity: 0.9; }
+  .body { padding: 32px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; color: #344054; margin-bottom: 6px; }
+  .field input { width: 100%; padding: 10px 12px; border: 1px solid #d0d5dd; border-radius: 8px; font-size: 14px; }
+  .field input:focus { outline: none; border-color: #00a8b0; }
+  .btn { width: 100%; padding: 12px; background: #00a8b0; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .btn:hover { background: #008b8b; }
+  .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #667085; }
+  .footer a { color: #00a8b0; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="mockup">
+  <div class="header">
+    <h1>MyDesk</h1>
+    <p>Sign in to your workspace</p>
+  </div>
+  <div class="body">
+    <div class="field">
+      <label>Email</label>
+      <input type="email" placeholder="you@company.com.au" value="peter@digitalresponse.com.au">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" placeholder="••••••••" value="password123">
+    </div>
+    <button class="btn">Sign In</button>
+    <div class="footer">
+      <a href="#">Forgot password?</a> · <a href="#">Sign up</a>
+    </div>
+  </div>
+</div>
+</body>
+</html>

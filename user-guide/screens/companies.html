@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Companies — MyDesk</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f9fafb; padding: 24px; }
+  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .top h2 { font-size: 20px; color: #101828; }
+  .btn { padding: 8px 16px; background: #00a8b0; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; }
+  table { width: 100%; background: #fff; border-radius: 10px; border-collapse: collapse; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border: 1px solid #eaecf0; }
+  th, td { text-align: left; padding: 12px 16px; font-size: 13px; border-bottom: 1px solid #f2f4f7; }
+  th { color: #667085; font-weight: 600; background: #f9fafb; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h2>Companies</h2>
+  <button class="btn">+ New Company</button>
+</div>
+<table>
+  <thead><tr><th>Company</th><th>ABN</th><th>Email</th><th>Phone</th><th>City</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>Acme Corp</td><td>12 345 678 901</td><td>hello@acme.com.au</td><td>+61 2 9000 1000</td><td>Sydney</td><td>Active</td></tr>
+    <tr><td>Beta Ltd</td><td>98 765 432 109</td><td>info@beta.com.au</td><td>+61 3 7000 2000</td><td>Melbourne</td><td>Active</td></tr>
+    <tr><td>Gamma Inc</td><td>11 222 333 444</td><td>contact@gamma.com.au</td><td>+61 7 5000 3000</td><td>Brisbane</td><td>Inactive</td></tr>
+  </tbody>
+</table>
+</body>
+</html>

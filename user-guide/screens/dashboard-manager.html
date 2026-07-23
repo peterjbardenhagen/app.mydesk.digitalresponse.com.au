@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard — Manager</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f9fafb; padding: 24px; }
+  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .top h2 { font-size: 20px; color: #101828; }
+  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border: 1px solid #eaecf0; }
+  .card .label { font-size: 12px; color: #667085; margin-bottom: 4px; }
+  .card .value { font-size: 20px; font-weight: 700; color: #101828; }
+  .card .sub { font-size: 12px; color: #12b76a; margin-top: 4px; }
+  .panel { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border: 1px solid #eaecf0; margin-bottom: 16px; }
+  .panel h3 { font-size: 14px; color: #101828; margin-bottom: 12px; }
+  .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f2f4f7; font-size: 13px; color: #344054; }
+  .row:last-child { border-bottom: none; }
+  .badge { padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .approved { background: #e8f7ee; color: #12b76a; }
+  .pending { background: #fef3dd; color: #b9500c; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h2>Manager Dashboard — Platform Engineering</h2>
+</div>
+<div class="cards">
+  <div class="card"><div class="label">Team Expenses</div><div class="value">$32,150</div><div class="sub">This month</div></div>
+  <div class="card"><div class="label">Pending Approvals</div><div class="value">5</div></div>
+  <div class="card"><div class="label">Budget Remaining</div><div class="value">$45,200</div><div class="sub">58% left</div></div>
+  <div class="card"><div class="label">Avg Reimbursement</div><div class="value">2.1 days</div></div>
+</div>
+<div class="panel">
+  <h3>Team Members Spending</h3>
+  <div class="row"><span>John Smith</span><span>$4,250 <span class="badge pending">2 pending</span></span></div>
+  <div class="row"><span>Sarah Chen</span><span>$3,890 <span class="badge approved">approved</span></span></div>
+  <div class="row"><span>Mike Johnson</span><span>$2,145 <span class="badge pending">1 pending</span></span></div>
+</div>
+</body>
+</html>

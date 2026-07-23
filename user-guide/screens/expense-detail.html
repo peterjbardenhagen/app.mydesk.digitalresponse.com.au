@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Expense Detail — MyDesk</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f9fafb; padding: 24px; }
+  .container { max-width: 800px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border: 1px solid #eaecf0; }
+  h2 { font-size: 18px; color: #101828; margin-bottom: 4px; }
+  .ref { font-size: 12px; color: #667085; margin-bottom: 20px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .field label { display: block; font-size: 12px; color: #667085; margin-bottom: 4px; }
+  .field .val { font-size: 14px; color: #101828; font-weight: 600; }
+  .status { padding: 4px 12px; border-radius: 10px; font-size: 12px; font-weight: 600; background: #e8f7ee; color: #12b76a; }
+  .timeline { margin-top: 20px; }
+  .timeline h3 { font-size: 14px; color: #101828; margin-bottom: 12px; }
+  .event { display: flex; gap: 12px; margin-bottom: 12px; }
+  .event .dot { width: 10px; height: 10px; border-radius: 50%; background: #00a8b0; margin-top: 6px; flex-shrink: 0; }
+  .event .info { font-size: 13px; color: #344054; }
+  .event .time { font-size: 11px; color: #98a2b3; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+    <div><h2>Expense Detail</h2><div class="ref">EXP-20260708-001</div></div>
+    <div class="status">Approved</div>
+  </div>
+  <div class="grid">
+    <div class="field"><label>Date</label><div class="val">08 Jul 2026</div></div>
+    <div class="field"><label>Category</label><div class="val">Travel</div></div>
+    <div class="field"><label>Amount</label><div class="val">$185.00 AUD</div></div>
+    <div class="field"><label>Submitted By</label><div class="val">Peter Bardenhagen</div></div>
+  </div>
+  <div class="field"><label>Description</label><div class="val">Acme Hotel — Sydney stay</div></div>
+  <div class="timeline">
+    <h3>Approval History</h3>
+    <div class="event"><div class="dot"></div><div><div class="info">Approved by John Bardenhagen</div><div class="time">08 Jul 2026 — 14:32</div></div></div>
+    <div class="event"><div class="dot"></div><div><div class="info">Submitted for approval</div><div class="time">08 Jul 2026 — 09:15</div></div></div>
+  </div>
+</div>
+</body>
+</html>

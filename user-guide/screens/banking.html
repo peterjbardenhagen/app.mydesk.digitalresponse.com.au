@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Banking — MyDesk</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f9fafb; padding: 24px; }
+  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .top h2 { font-size: 20px; color: #101828; }
+  .btn { padding: 8px 16px; background: #00a8b0; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px; border: 1px solid #eaecf0; }
+  .card .label { font-size: 12px; color: #667085; }
+  .card .value { font-size: 20px; font-weight: 700; color: #101828; }
+  table { width: 100%; background: #fff; border-radius: 10px; border-collapse: collapse; border: 1px solid #eaecf0; }
+  th, td { text-align: left; padding: 12px 16px; font-size: 13px; border-bottom: 1px solid #f2f4f7; }
+  th { color: #667085; font-weight: 600; background: #f9fafb; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h2>Banking</h2>
+  <button class="btn">Upload Statement</button>
+</div>
+<div class="stats">
+  <div class="card"><div class="label">Balance</div><div class="value">$84,320</div></div>
+  <div class="card"><div class="label">Inflow</div><div class="value">$42,100</div></div>
+  <div class="card"><div class="label">Outflow</div><div class="value">$28,450</div></div>
+  <div class="card"><div class="label">Matched</div><div class="value">94%</div></div>
+</div>
+<table>
+  <thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Type</th><th>Match Status</th></tr></thead>
+  <tbody>
+    <tr><td>12 Jul 2026</td><td>Payment from Acme Corp</td><td>$12,400</td><td>Credit</td><td>Matched</td></tr>
+    <tr><td>11 Jul 2026</td><td>Office Lease</td><td>$3,200</td><td>Debit</td><td>Unmatched</td></tr>
+    <tr><td>10 Jul 2026</td><td>Software Subscription</td><td>$450</td><td>Debit</td><td>Matched</td></tr>
+  </tbody>
+</table>
+</body>
+</html>

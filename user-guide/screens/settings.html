@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Settings — MyDesk</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f9fafb; padding: 24px; }
+  .container { max-width: 680px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border: 1px solid #eaecf0; }
+  h2 { font-size: 18px; color: #101828; margin-bottom: 20px; }
+  .section { margin-bottom: 24px; }
+  .section h3 { font-size: 14px; color: #101828; margin-bottom: 12px; }
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f2f4f7; font-size: 13px; color: #344054; }
+  .row:last-child { border-bottom: none; }
+  .toggle { width: 36px; height: 20px; background: #00a8b0; border-radius: 10px; position: relative; }
+  .toggle::after { content: ''; position: absolute; top: 2px; left: 18px; width: 16px; height: 16px; background: #fff; border-radius: 50%; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h2>Settings</h2>
+  <div class="section">
+    <h3>Appearance</h3>
+    <div class="row"><span>Dark mode</span><div class="toggle" style="background:#d0d5dd;"></div></div>
+    <div class="row"><span>Compact mode</span><div class="toggle" style="background:#d0d5dd;"></div></div>
+    <div class="row"><span>Show toolbar</span><div class="toggle"></div></div>
+  </div>
+  <div class="section">
+    <h3>Language & Region</h3>
+    <div class="row"><span>Language</span><span>English (AU)</span></div>
+    <div class="row"><span>Currency</span><span>AUD ($)</span></div>
+    <div class="row"><span>Date format</span><span>DD/MM/YYYY</span></div>
+    <div class="row"><span>Timezone</span><span>AEST (UTC+10)</span></div>
+  </div>
+  <div class="section">
+    <h3>Danger Zone</h3>
+    <div class="row"><span>Export all data</span><button class="btn" style="background:#fff;color:#d92d20;border:1px solid #d0d5dd;">Export</button></div>
+    <div class="row"><span>Delete account</span><button class="btn" style="background:#fff;color:#d92d20;border:1px solid #d0d5dd;">Delete</button></div>
+  </div>
+</div>
+</body>
+</html>
