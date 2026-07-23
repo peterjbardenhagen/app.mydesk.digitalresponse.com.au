@@ -33,7 +33,7 @@ public class LogService
         await _db.ExecuteNonQueryAsync(sql);
     }
 
-    public async Task<List<LogEntry>> GetLogsAsync(LogType logType, LogLevel logLevel, string? searchTerm)
+    public async Task<List<LogEntry>> GetLogsAsync(LogType logType, MyDesk.Shared.Models.LogLevel logLevel, string? searchTerm)
     {
         var sql = @"
             SELECT TOP 500 LogId, Timestamp, Level, Source, Message, Exception
@@ -49,15 +49,15 @@ public class LogService
         }
 
         // Filter by log level
-        if (logLevel == LogLevel.Error)
+        if (logLevel == MyDesk.Shared.Models.LogLevel.Error)
         {
             sql += " AND Level IN ('Error', 'Critical')";
         }
-        else if (logLevel == LogLevel.Warning)
+        else if (logLevel == MyDesk.Shared.Models.LogLevel.Warning)
         {
             sql += " AND Level IN ('Error', 'Critical', 'Warning')";
         }
-        else if (logLevel == LogLevel.Info)
+        else if (logLevel == MyDesk.Shared.Models.LogLevel.Info)
         {
             sql += " AND Level IN ('Error', 'Critical', 'Warning', 'Info')";
         }
