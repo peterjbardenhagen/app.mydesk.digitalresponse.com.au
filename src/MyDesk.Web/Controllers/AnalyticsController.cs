@@ -1,4 +1,5 @@
 using System;
+using System.Security.Claims;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -29,7 +30,12 @@ public class AnalyticsController : ControllerBase
     [HttpGet("executive-dashboard")]
     public async Task<IActionResult> GetExecutiveDashboard([FromQuery] int tenantId)
     {
-        // TODO: Validate user has CFO/Admin role for this tenant
+        // Validate user has CFO/Admin role for this tenant
+        var userRoles = User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
+        if (!userRoles.Contains("CFO") && !userRoles.Contains("Admin"))
+        {
+            return Forbid();
+        }
         var dashboard = await _analyticsService.GetExecutiveDashboardAsync(tenantId);
         return Ok(dashboard);
     }
@@ -40,7 +46,13 @@ public class AnalyticsController : ControllerBase
     [HttpGet("manager-dashboard")]
     public async Task<IActionResult> GetManagerDashboard([FromQuery] int tenantId, [FromQuery] int managerId)
     {
-        // TODO: Validate user is this manager or has admin role
+        // Validate user is this manager or has admin role
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var userRoles = User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
+        if (!userRoles.Contains("Admin") && !userId.Equals(managerId.ToString()))
+        {
+            return Forbid();
+        }
         var dashboard = await _analyticsService.GetManagerDashboardAsync(tenantId, managerId);
         return Ok(dashboard);
     }
@@ -51,7 +63,13 @@ public class AnalyticsController : ControllerBase
     [HttpGet("employee-dashboard")]
     public async Task<IActionResult> GetEmployeeDashboard([FromQuery] int tenantId, [FromQuery] int userId)
     {
-        // TODO: Validate user is this employee or has admin role
+        // Validate user is this employee or has admin role
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var userRoles = User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
+        if (!userRoles.Contains("Admin") && !userId.Equals(userIdClaim))
+        {
+            return Forbid();
+        }
         var dashboard = await _analyticsService.GetEmployeeDashboardAsync(tenantId, userId);
         return Ok(dashboard);
     }

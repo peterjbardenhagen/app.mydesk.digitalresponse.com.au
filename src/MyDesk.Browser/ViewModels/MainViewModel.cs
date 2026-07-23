@@ -426,6 +426,10 @@ namespace MyDesk.Browser.ViewModels
                             _settings.LastUserEmail = persisted.LastUserEmail;
                             _userEmail = persisted.LastUserEmail;
                         }
+
+                        // Push restored user info into the title bar and initials.
+                        UpdateTitle();
+                        OnPropertyChanged(nameof(UserInitials));
                     }
                 }
             }
