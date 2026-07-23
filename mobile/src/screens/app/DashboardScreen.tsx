@@ -4,10 +4,11 @@
  * Part of Phase 7: Mobile Applications - Task 76 (Personal Dashboard)
  */
 
-import React, { useEffect } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import React, { useEffect, useMemo } from 'react';
+import { View, StyleSheet, ScrollView, RefreshControl, Dimensions } from 'react-native';
 import { Text as PaperText, Card, ProgressBar } from 'react-native-paper';
 import { useDispatch, useSelector } from 'react-redux';
+import { LineChart, PieChart } from 'recharts-native';
 
 import { AppDispatch, RootState } from '@store/store';
 import { fetchExpenses } from '@store/slices/expensesSlice';
