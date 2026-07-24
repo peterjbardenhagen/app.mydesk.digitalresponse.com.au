@@ -35,8 +35,16 @@ namespace MyDesk.Browser
             try
             {
                 _viewModel.ApplyWindowState(this);
-                var env = await CoreWebView2Environment.CreateAsync(null, _viewModel.UserDataFolder);
+
+                // Use the environment created in App.xaml.cs, or create a new one
+                var env = System.Windows.Application.Current.Properties["WebView2Environment"] as CoreWebView2Environment;
+                env ??= await CoreWebView2Environment.CreateAsync(null, _viewModel.UserDataFolder);
+
+                // Ensure the WebView2 is fully initialized before configuring it
+                await WebView.EnsureCoreWebView2Async(env);
+
                 InitializeWebView();
+
                 // Navigate to the initial URL after WebView is ready
                 if (!string.IsNullOrEmpty(_viewModel.InitialUrl))
                 {
