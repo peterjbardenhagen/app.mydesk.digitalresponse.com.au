@@ -62,9 +62,9 @@ namespace MyDesk.Browser.Services
         /// <summary>
         /// Creates a share and sends the link via email.
         /// </summary>
-        public DesktopShare ShareViaEmail(string sharedUrl, string recipientEmail, bool macBound = false)
+        public DesktopShare ShareViaEmail(string sharedUrl, string recipientEmail, bool macBound = false, int expiryHours = 1)
         {
-            var share = CreateShare(sharedUrl, recipientEmail, macBound);
+            var share = CreateShare(sharedUrl, recipientEmail, macBound, expiryHours);
             SendShareLink(share);
             return share;
         }

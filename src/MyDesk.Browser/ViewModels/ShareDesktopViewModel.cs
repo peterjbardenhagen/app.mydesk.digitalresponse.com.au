@@ -73,7 +73,7 @@ namespace MyDesk.Browser.ViewModels
             {
                 if (ShareMethod == "email")
                 {
-                    var share = _shareService.ShareViaEmail(CurrentUrl, RecipientEmail.Trim(), IsMacBound);
+                    var share = _shareService.ShareViaEmail(CurrentUrl, RecipientEmail.Trim(), IsMacBound, ExpiryHours);
                     LastShare = share;
                     Shares.Insert(0, share);
                     StatusMessage = $"Share link created and sent to {RecipientEmail}!";
@@ -81,7 +81,7 @@ namespace MyDesk.Browser.ViewModels
                 }
                 else
                 {
-                    var share = _shareService.CreateShare(CurrentUrl, "clipboard", IsMacBound);
+                    var share = _shareService.CreateShare(CurrentUrl, "clipboard", IsMacBound, ExpiryHours);
                     _shareService.CopyShareLink(share);
                     LastShare = share;
                     Shares.Insert(0, share);
