@@ -250,8 +250,10 @@ namespace MyDesk.Browser
             outlookItem.Click += AppMenu_Click;
             menu.Items.Add(outlookItem);
 
-            // IT Support
-            var itItem = new MenuItem { Header = "🛠 IT Support", Tag = "itsupport" };
+            // IT Support — show open ticket count badge
+            var openCount = _viewModel.OpenTicketCount;
+            var badge = openCount > 0 ? $" ({openCount})" : "";
+            var itItem = new MenuItem { Header = $"🛠 IT Support{badge}", Tag = "itsupport" };
             itItem.Click += AppMenu_Click;
             menu.Items.Add(itItem);
 

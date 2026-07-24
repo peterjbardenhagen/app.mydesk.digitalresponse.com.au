@@ -5,6 +5,7 @@ using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Windows;
 
@@ -79,6 +80,26 @@ namespace MyDesk.Browser.ViewModels
 
         [ObservableProperty]
         private bool _isAgentsOnline = false;
+
+        /// <summary>
+        /// Count of open (non-resolved, non-closed) support tickets.
+        /// Used to show a badge on the IT Support menu item.
+        /// </summary>
+        public int OpenTicketCount
+        {
+            get
+            {
+                try
+                {
+                    var service = new Services.SupportTicketService();
+                    return service.Tickets.Count(t => t.Status != "Resolved" && t.Status != "Closed");
+                }
+                catch
+                {
+                    return 0;
+                }
+            }
+        }
 
         /// <summary>
         /// Computed initials from the user's name for the avatar circle.
