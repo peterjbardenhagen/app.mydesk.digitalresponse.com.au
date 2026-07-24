@@ -427,6 +427,15 @@ namespace MyDesk.Browser.ViewModels
                             UserEmail = persisted.LastUserEmail;
                         }
 
+                        // If we restored a previous session's user info, optimistically
+                        // mark as authenticated so the avatar circle, AgentsOS dot, and
+                        // Sign Out menu item are visible immediately. CheckAuthStateAsync()
+                        // will correct the state on first navigation if the session expired.
+                        if (!string.IsNullOrEmpty(persisted.LastUserName))
+                        {
+                            IsAuthenticated = true;
+                        }
+
                         // Push restored user info into the title bar and initials.
                         UpdateTitle();
                         OnPropertyChanged(nameof(UserInitials));
