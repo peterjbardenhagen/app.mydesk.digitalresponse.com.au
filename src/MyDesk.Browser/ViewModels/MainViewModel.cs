@@ -259,7 +259,18 @@ namespace MyDesk.Browser.ViewModels
                     var agentsOnline = result.TryGetProperty("isAgentsOnline", out var agentsProp) && agentsProp.GetBoolean();
 
                     IsAuthenticated = isAuthed;
-                    IsAgentsOnline = agentsOnline;
+
+                    // Only update AgentsOS status when on the agentsos page,
+                    // so the green dot doesn't flicker off as the user navigates
+                    // elsewhere in the app.
+                    var pagePath = result.TryGetProperty("path", out var pathProp)
+                        ? pathProp.GetString() ?? ""
+                        : "";
+                    if (pagePath.Contains("/agentsos", StringComparison.OrdinalIgnoreCase))
+                    {
+                        IsAgentsOnline = agentsOnline;
+                    }
+
                     if (isAuthed && !string.IsNullOrEmpty(name))
                     {
                         UserName = name;
