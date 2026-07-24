@@ -203,20 +203,24 @@
             </StackPanel>
         </ScrollViewer>
 
-        <!-- Status Message -->
-        <TextBlock Grid.Row="2"
-                   Text="{Binding StatusMessage}"
-                   Foreground="{DynamicResource TextSecondaryBrush}"
-                   FontSize="11"
-                   Margin="0,8,0,8"
-                   TextWrapping="Wrap"
-                   Visibility="{Binding StatusMessage, Converter={StaticResource StringToVisibilityConverter}}" />
+        <!-- Bottom Row: Status + Buttons -->
+        <Grid Grid.Row="2" Margin="0,16,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-        <!-- Buttons -->
-        <StackPanel Grid.Row="2"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Right"
-                    Margin="0,16,0,0">
+            <TextBlock Grid.Column="0"
+                       Text="{Binding StatusMessage}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       FontSize="11"
+                       VerticalAlignment="Center"
+                       TextWrapping="Wrap"
+                       Visibility="{Binding StatusMessage, Converter={StaticResource StringToVisibilityConverter}}" />
+
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right">
             <Button Content="Reset to Defaults"
                     Style="{DynamicResource SecondaryButtonStyle}"
                     Command="{Binding ResetToDefaultsCommand}"
@@ -232,5 +236,6 @@
                     Command="{Binding SaveCommand}"
                     Width="100" />
         </StackPanel>
+        </Grid>
     </Grid>
 </Window>
