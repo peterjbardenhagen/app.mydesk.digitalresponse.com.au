@@ -435,6 +435,9 @@ namespace MyDesk.Browser.ViewModels
                             SavedWindowState = parsedState;
                         }
 
+                        // Sync toolbar visibility from persisted ShowToolbar setting
+                        ShowUrlBar = persisted.ShowToolbar;
+
                         // Restore saved user info so the UI shows the previous
                         // session's identity immediately, even before auth re-check.
                         if (!string.IsNullOrEmpty(persisted.LastUserName))
