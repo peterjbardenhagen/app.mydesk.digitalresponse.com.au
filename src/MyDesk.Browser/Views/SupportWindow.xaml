@@ -188,68 +188,69 @@
                     </StackPanel>
 
                     <!-- Ticket Detail View -->
-                    <StackPanel Visibility="{Binding ShowNewTicket, Converter={StaticResource InvertedBoolConverter}}"
-                                DataContext="{Binding SelectedTicket}">
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                            <TextBlock Text="{Binding PriorityIcon}" FontSize="16" Margin="0,0,6,0" />
-                            <TextBlock Text="{Binding Subject}"
-                                       FontSize="18"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       TextWrapping="Wrap" />
+                    <StackPanel Visibility="{Binding ShowNewTicket, Converter={StaticResource InvertedBoolConverter}}">
+                        <StackPanel DataContext="{Binding SelectedTicket}">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <TextBlock Text="{Binding PriorityIcon}" FontSize="16" Margin="0,0,6,0" />
+                                <TextBlock Text="{Binding Subject}"
+                                           FontSize="18"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <TextBlock Text="Ticket #{Binding Id}"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Margin="0,0,0,12" />
+
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Status"
+                                               Style="{DynamicResource SettingLabelStyle}" />
+                                    <TextBlock Text="{Binding StatusIcon}"
+                                               FontSize="14" />
+                                    <TextBlock Text="{Binding Status}"
+                                               FontSize="13"
+                                               Foreground="{DynamicResource TextPrimaryBrush}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="Category"
+                                               Style="{DynamicResource SettingLabelStyle}" />
+                                    <TextBlock Text="{Binding Category}"
+                                               FontSize="13"
+                                               Foreground="{DynamicResource TextPrimaryBrush}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Submitted"
+                                               Style="{DynamicResource SettingLabelStyle}" />
+                                    <TextBlock Text="{Binding ShortDate}"
+                                               FontSize="13"
+                                               Foreground="{DynamicResource TextPrimaryBrush}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <Separator Margin="0,0,0,12" />
+
+                            <TextBlock Text="Description"
+                                       Style="{DynamicResource SettingLabelStyle}"
+                                       Margin="0,0,0,4" />
+                            <Border Background="{DynamicResource WindowBackgroundBrush}"
+                                    CornerRadius="4"
+                                    Padding="12"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1">
+                                <TextBlock Text="{Binding Description}"
+                                           FontSize="13"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                           TextWrapping="Wrap" />
+                            </Border>
                         </StackPanel>
-
-                        <TextBlock Text="Ticket #{Binding Id}"
-                                   FontSize="12"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   Margin="0,0,0,12" />
-
-                        <Grid Margin="0,0,0,12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="Status"
-                                           Style="{DynamicResource SettingLabelStyle}" />
-                                <TextBlock Text="{Binding StatusIcon}"
-                                           FontSize="14" />
-                                <TextBlock Text="{Binding Status}"
-                                           FontSize="13"
-                                           Foreground="{DynamicResource TextPrimaryBrush}" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="1">
-                                <TextBlock Text="Category"
-                                           Style="{DynamicResource SettingLabelStyle}" />
-                                <TextBlock Text="{Binding Category}"
-                                           FontSize="13"
-                                           Foreground="{DynamicResource TextPrimaryBrush}" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="Submitted"
-                                           Style="{DynamicResource SettingLabelStyle}" />
-                                <TextBlock Text="{Binding ShortDate}"
-                                           FontSize="13"
-                                           Foreground="{DynamicResource TextPrimaryBrush}" />
-                            </StackPanel>
-                        </Grid>
-
-                        <Separator Margin="0,0,0,12" />
-
-                        <TextBlock Text="Description"
-                                   Style="{DynamicResource SettingLabelStyle}"
-                                   Margin="0,0,0,4" />
-                        <Border Background="{DynamicResource WindowBackgroundBrush}"
-                                CornerRadius="4"
-                                Padding="12"
-                                BorderBrush="{DynamicResource BorderBrush}"
-                                BorderThickness="1">
-                            <TextBlock Text="{Binding Description}"
-                                       FontSize="13"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       TextWrapping="Wrap" />
-                        </Border>
                     </StackPanel>
 
                     </Grid>
