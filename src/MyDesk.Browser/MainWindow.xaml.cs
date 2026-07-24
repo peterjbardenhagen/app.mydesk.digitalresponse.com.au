@@ -430,21 +430,6 @@ namespace MyDesk.Browser
             }
         }
 
-        private void BtnSettings_Click(object sender, RoutedEventArgs e)
-        {
-            var settingsWindow = new Views.SettingsWindow
-            {
-                Owner = this,
-                DataContext = new ViewModels.SettingsViewModel(null!)
-            };
-            settingsWindow.ShowDialog();
-        }
-
-        private void BtnProfile_Click(object sender, RoutedEventArgs e)
-        {
-            BtnSettings_Click(sender, e);
-        }
-
         private void UserAvatar_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             BtnMenu_Click(sender, e);
