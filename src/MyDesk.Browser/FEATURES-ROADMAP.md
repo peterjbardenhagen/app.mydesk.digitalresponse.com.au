@@ -56,7 +56,7 @@ MyDesk Browser is a WPF desktop shell (WebView2) that gives users a single brand
 | Submit request | ✅ Done | Subject, description, priority, category form |
 | Status list | ✅ Done | Tickets list with status badges (Submitted/In Progress/Resolved/Closed) |
 | API integration | ✅ Partial | Uses `mailto:` to email support; no dedicated API endpoint yet |
-| Notification badge | ⬜ Not done | Badge on support icon not implemented |
+| Notification badge | ✅ Done | Badge shows open ticket count in Apps menu |
 
 **Backend dependency**: Digital Response support API (or AgentsOS service desk endpoint) — currently uses email fallback.
 
