@@ -75,7 +75,7 @@
                              Width="8"
                              Height="8"
                              Margin="6,0,0,0"
-                             ToolTip="AgentsOS"
+                             ToolTip="{Binding AgentsStatusText}"
                              Visibility="{Binding IsAuthenticated, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <Ellipse.Style>
                             <Style TargetType="Ellipse">

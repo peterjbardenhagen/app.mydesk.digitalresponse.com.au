@@ -116,9 +116,20 @@ namespace MyDesk.Browser.ViewModels
             }
         }
 
+        /// <summary>
+        /// Display text for the AgentsOS status indicator tooltip.
+        /// Shows online/offline state dynamically.
+        /// </summary>
+        public string AgentsStatusText => IsAgentsOnline ? "AgentsOS — Online" : "AgentsOS — Offline";
+
         partial void OnUserNameChanged(string value)
         {
             OnPropertyChanged(nameof(UserInitials));
+        }
+
+        partial void OnIsAgentsOnlineChanged(bool value)
+        {
+            OnPropertyChanged(nameof(AgentsStatusText));
         }
 
         // The WebView2 instance (set by MainWindow after initialization)
