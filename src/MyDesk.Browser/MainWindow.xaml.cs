@@ -322,8 +322,7 @@ namespace MyDesk.Browser
                     case "settings":
                         var settingsWindow = new Views.SettingsWindow
                         {
-                            Owner = this,
-                            DataContext = new ViewModels.SettingsViewModel(null!)
+                            Owner = this
                         };
                         settingsWindow.ShowDialog();
                         break;
