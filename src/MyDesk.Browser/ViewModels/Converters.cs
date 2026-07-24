@@ -24,14 +24,19 @@ namespace MyDesk.Browser.ViewModels
 
     /// <summary>
     /// Inverts a boolean value. Used for binding IsEnabled when a command should be
-    /// disabled while an operation is in progress.
+    /// disabled while an operation is in progress. Also supports binding to Visibility
+    /// by returning Collapsed/Visible instead of false/true when targetType is Visibility.
     /// </summary>
     public class InvertedBoolConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
             if (value is bool boolVal)
+            {
+                if (targetType == typeof(Visibility))
+                    return boolVal ? Visibility.Collapsed : Visibility.Visible;
                 return !boolVal;
+            }
             return false;
         }
 
@@ -39,6 +44,8 @@ namespace MyDesk.Browser.ViewModels
         {
             if (value is bool boolVal)
                 return !boolVal;
+            if (value is Visibility vis)
+                return vis == Visibility.Collapsed;
             return false;
         }
     }
