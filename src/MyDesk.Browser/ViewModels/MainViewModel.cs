@@ -150,12 +150,36 @@ namespace MyDesk.Browser.ViewModels
             // Prepare persistent user data folder for WebView2
             InitializeWebViewProperties();
 
-            // Load saved window state
+            // Load saved window state (includes legacy user info from settings)
             LoadWindowState();
 
-            // Load saved user info
-            _userName = _settings.LastUserName ?? string.Empty;
-            _userEmail = _settings.LastUserEmail ?? string.Empty;
+            // Load saved user credentials from DPAPI-encrypted storage (preferred)
+            var (secureName, secureEmail) = Services.SecureStorage.LoadCredentials();
+            if (!string.IsNullOrEmpty(secureName))
+            {
+                _userName = secureName;
+                _userEmail = secureEmail ?? string.Empty;
+            }
+            else if (!string.IsNullOrEmpty(_settings.LastUserName))
+            {
+                // Fallback: migrate from plain-text settings to secure storage
+                _userName = _settings.LastUserName;
+                _userEmail = _settings.LastUserEmail ?? string.Empty;
+                Services.SecureStorage.SaveCredentials(_userName, _userEmail);
+                _settings.LastUserName = null;
+                _settings.LastUserEmail = null;
+            }
+
+            // If we restored a previous session's user info, optimistically
+            // mark as authenticated so the avatar circle, AgentsOS dot, and
+            // Sign Out menu item are visible immediately. CheckAuthStateAsync()
+            // will correct the state on first navigation if the session expired.
+            if (!string.IsNullOrEmpty(_userName))
+            {
+                IsAuthenticated = true;
+                UpdateTitle();
+                OnPropertyChanged(nameof(UserInitials));
+            }
         }
 
         public string UserDataFolder { get; private set; } = string.Empty;
@@ -275,13 +299,13 @@ namespace MyDesk.Browser.ViewModels
                     {
                         UserName = name;
                         UserEmail = email;
-                        _settings.LastUserName = name;
-                        _settings.LastUserEmail = email;
+                        Services.SecureStorage.SaveCredentials(name, email);
                     }
                     else if (!isAuthed)
                     {
                         UserName = string.Empty;
                         UserEmail = string.Empty;
+                        Services.SecureStorage.ClearCredentials();
                     }
 
                     UpdateTitle();
@@ -335,8 +359,7 @@ namespace MyDesk.Browser.ViewModels
                 IsAuthenticated = false;
                 UserName = string.Empty;
                 UserEmail = string.Empty;
-                _settings.LastUserName = null;
-                _settings.LastUserEmail = null;
+                Services.SecureStorage.ClearCredentials();
                 PersistSettings();
                 UpdateTitle();
 
@@ -460,29 +483,10 @@ namespace MyDesk.Browser.ViewModels
                         // Sync toolbar visibility from persisted ShowToolbar setting
                         ShowUrlBar = persisted.ShowToolbar;
 
-                        // Restore saved user info so the UI shows the previous
-                        // session's identity immediately, even before auth re-check.
-                        if (!string.IsNullOrEmpty(persisted.LastUserName))
-                        {
-                            _settings.LastUserName = persisted.LastUserName;
-                            UserName = persisted.LastUserName;
-                        }
-                        if (!string.IsNullOrEmpty(persisted.LastUserEmail))
-                        {
-                            _settings.LastUserEmail = persisted.LastUserEmail;
-                            UserEmail = persisted.LastUserEmail;
-                        }
-
-                        // If we restored a previous session's user info, optimistically
-                        // mark as authenticated so the avatar circle, AgentsOS dot, and
-                        // Sign Out menu item are visible immediately. CheckAuthStateAsync()
-                        // will correct the state on first navigation if the session expired.
-                        if (!string.IsNullOrEmpty(persisted.LastUserName))
-                        {
-                            IsAuthenticated = true;
-                        }
-
-                        // Push restored user info into the title bar and initials.
+                        // Restore saved user info from DPAPI-encrypted storage.
+                    // This is now handled by the constructor via SecureStorage.LoadCredentials().
+                    // We keep the optimistic IsAuthenticated = true logic in the constructor
+                    // so the avatar circle is visible immediately before auth re-check.
                         UpdateTitle();
                         OnPropertyChanged(nameof(UserInitials));
                     }
