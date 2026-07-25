@@ -383,6 +383,10 @@ namespace MyDesk.Browser.ViewModels
                 UserName = string.Empty;
                 UserEmail = string.Empty;
                 Services.SecureStorage.ClearCredentials();
+                // Clear legacy settings fields so the fallback path in the
+                // constructor does not restore stale credentials after logout.
+                _settings.LastUserName = null;
+                _settings.LastUserEmail = null;
                 PersistSettings();
                 UpdateTitle();
 
