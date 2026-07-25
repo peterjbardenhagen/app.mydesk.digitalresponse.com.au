@@ -5,8 +5,8 @@
  */
 
 import React, { useEffect, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, Dimensions } from 'react-native';
-import { Text as PaperText, Card, ProgressBar } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { Text as PaperText, Card, ProgressBar, Chip } from 'react-native-paper';
 import { useDispatch, useSelector } from 'react-redux';
 import { LineChart, PieChart } from 'recharts-native';
 
@@ -16,6 +16,7 @@ import { fetchExpenses } from '@store/slices/expensesSlice';
 const DashboardScreen: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { items: expenses, isLoading } = useSelector((state: RootState) => state.expenses);
+  const { offlineMode, pendingChanges, isSyncing } = useSelector((state: RootState) => state.sync);
 
   useEffect(() => {
     dispatch(fetchExpenses());
@@ -30,6 +31,14 @@ const DashboardScreen: React.FC = () => {
       style={styles.container}
       refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => dispatch(fetchExpenses())} />}
     >
+      {offlineMode && (
+        <View style={styles.offlineBanner}>
+          <PaperText variant="labelSmall" style={styles.offlineText}>
+            📶 Offline - {pendingChanges} pending change{pendingChanges !== 1 ? 's' : ''} {isSyncing ? '(syncing...)' : 'will sync when online'}
+          </PaperText>
+        </View>
+      )}
+
       <View style={styles.header}>
         <PaperText variant="headlineMedium">Dashboard</PaperText>
       </View>
@@ -140,6 +149,17 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 20,
     textAlign: 'center',
+  },
+  offlineBanner: {
+    backgroundColor: '#ff9800',
+    padding: 12,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  offlineText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
 
