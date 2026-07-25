@@ -208,6 +208,9 @@ namespace MyDesk.Browser.ViewModels
         /// <summary>
         /// Called after every page navigation to detect auth state.
         /// Injects JavaScript to check for auth cookies and user info.
+        /// Only processes auth state changes when on the MyDesk domain —
+        /// external site navigations preserve the existing auth state
+        /// so saved credentials are not spuriously cleared.
         /// </summary>
         public async Task CheckAuthStateAsync()
         {
@@ -263,6 +266,7 @@ namespace MyDesk.Browser.ViewModels
                             isAuthenticated: (hasCookie || hasAppContent) && !isLoginPage,
                             userName: userName,
                             userEmail: userEmail,
+                            hostname: window.location.hostname,
                             path: window.location.pathname,
                             hasCookie: hasCookie,
                             isLoginPage: isLoginPage,
@@ -281,6 +285,16 @@ namespace MyDesk.Browser.ViewModels
                     var name = result.TryGetProperty("userName", out var nameProp) ? nameProp.GetString() ?? "" : "";
                     var email = result.TryGetProperty("userEmail", out var emailProp) ? emailProp.GetString() ?? "" : "";
                     var agentsOnline = result.TryGetProperty("isAgentsOnline", out var agentsProp) && agentsProp.GetBoolean();
+                    var hostname = result.TryGetProperty("hostname", out var hostProp) ? hostProp.GetString() ?? "" : "";
+
+                    // Only trust auth state changes on the MyDesk domain.
+                    // When navigating to an external site (Outlook, Google, etc.),
+                    // preserve the existing auth state so saved credentials are
+                    // not spuriously cleared between navigations.
+                    var isMyDeskDomain = hostname.EndsWith("digitalresponse.com.au", StringComparison.OrdinalIgnoreCase)
+                                      || hostname.EndsWith("mydesk.digitalresponse.com.au", StringComparison.OrdinalIgnoreCase);
+                    if (!isMyDeskDomain)
+                        return;
 
                     IsAuthenticated = isAuthed;
 
