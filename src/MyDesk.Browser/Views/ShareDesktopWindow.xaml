@@ -200,6 +200,14 @@
                                                        Foreground="{DynamicResource TextDisabledBrush}" />
                                         </StackPanel>
                                         <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                            <Button Content="📧 Email"
+                                                    Style="{DynamicResource SecondaryButtonStyle}"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type Window}}, Path=DataContext.SendEmailCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    Height="22"
+                                                    FontSize="10"
+                                                    Padding="8,0"
+                                                    Margin="0,0,4,0" />
                                             <Button Content="📋 Copy"
                                                     Style="{DynamicResource SecondaryButtonStyle}"
                                                     Command="{Binding Source={RelativeSource AncestorType={x:Type Window}}, Path=DataContext.CopyToClipboardCommand}"
