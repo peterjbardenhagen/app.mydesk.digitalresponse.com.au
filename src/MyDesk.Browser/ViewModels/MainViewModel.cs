@@ -81,6 +81,8 @@ namespace MyDesk.Browser.ViewModels
         [ObservableProperty]
         private bool _isAgentsOnline = false;
 
+        private Services.SupportTicketService? _ticketService;
+
         /// <summary>
         /// Count of open (non-resolved, non-closed) support tickets.
         /// Used to show a badge on the IT Support menu item.
@@ -91,8 +93,8 @@ namespace MyDesk.Browser.ViewModels
             {
                 try
                 {
-                    var service = new Services.SupportTicketService();
-                    return service.Tickets.Count(t => t.Status != "Resolved" && t.Status != "Closed");
+                    _ticketService ??= new Services.SupportTicketService();
+                    return _ticketService.Tickets.Count(t => t.Status != "Resolved" && t.Status != "Closed");
                 }
                 catch
                 {
