@@ -224,6 +224,52 @@
         </Setter>
     </Style>
 
+    <!-- Modern RadioButton Style -->
+    <Style x:Key="ModernRadioButtonStyle" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <StackPanel Orientation="Horizontal" Margin="0,2">
+                        <Border x:Name="RadioBorder"
+                                Width="18"
+                                Height="18"
+                                BorderBrush="{StaticResource BorderBrush}"
+                                BorderThickness="1.5"
+                                CornerRadius="9"
+                                Background="{StaticResource SurfaceBrush}"
+                                VerticalAlignment="Center"
+                                Margin="0,0,10,0">
+                            <Ellipse x:Name="RadioDot"
+                                     Width="8"
+                                     Height="8"
+                                     Fill="{StaticResource PrimaryBrush}"
+                                     Visibility="Collapsed"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center" />
+                        </Border>
+                        <ContentPresenter VerticalAlignment="Center"
+                                          RecognizesAccessKey="True" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="RadioDot" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="RadioBorder" Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="RadioBorder" Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Control Styles -->
 
     <!-- Window Button Style -->

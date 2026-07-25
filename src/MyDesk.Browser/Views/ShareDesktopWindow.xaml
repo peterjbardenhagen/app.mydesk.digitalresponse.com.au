@@ -67,12 +67,12 @@
                         <RadioButton Content="📧 Email"
                                      IsChecked="{Binding ShareMethod, Converter={StaticResource RadioBoolConverter}, ConverterParameter=email}"
                                      GroupName="ShareMethod"
-                                     Style="{DynamicResource ModernCheckBoxStyle}"
+                                     Style="{DynamicResource ModernRadioButtonStyle}"
                                      Margin="0,0,20,0" />
                         <RadioButton Content="📋 Clipboard"
                                      IsChecked="{Binding ShareMethod, Converter={StaticResource RadioBoolConverter}, ConverterParameter=clipboard}"
                                      GroupName="ShareMethod"
-                                     Style="{DynamicResource ModernCheckBoxStyle}" />
+                                     Style="{DynamicResource ModernRadioButtonStyle}" />
                     </StackPanel>
 
                     <!-- Email field (only shown for email method) -->
