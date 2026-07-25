@@ -38,7 +38,7 @@ MyDesk Browser is a WPF desktop shell (WebView2) that gives users a single brand
 |---|---|---|
 | Microsoft Entra SSO | ✅ Done | WebView2 inherits cookies from browser session — SSO works automatically |
 | MyDesk user/pass | ✅ Done | `Login()` navigates to `/login`; `Logout()` clears cookies + navigates to `/logout` |
-| Token persistence | ⬜ Partial | User name/email saved to `appsettings.json` (not Windows Credential Manager) |
+| Token persistence | ✅ Done | DPAPI-encrypted `SecureStorage` (credentials.dat); `appsettings.json` fallback removed |
 | Auth state UI | ✅ Done | User initials shown as avatar circle in title bar, title updates with name |
 | Logout | ✅ Done | `Logout()` clears all cookies for domain + resets settings |
 
@@ -122,7 +122,7 @@ Phase 5 (Share Desktop) ──┘                       (independent track)
 
 - **Phase 0**: ✅ Complete
 - **Phase 1**: ✅ Complete (MyDesk branded; client presets deferred)
-- **Phase 2**: ✅ Mostly implemented (credential manager deferred)
+- **Phase 2**: ✅ Complete (credential manager deferred; token persistence uses DPAPI SecureStorage)
 - **Phase 3**: ✅ Implemented (uses email fallback; no API badge yet)
 - **Phase 4**: ✅ Partial (launcher + status detection done; auth bridge + multi-tab deferred)
 - **Share Desktop**: ✅ UI, model, encryption, token generation, email delivery, MAC binding, and expiry implemented. Recipient viewer and relay server remain for future.
