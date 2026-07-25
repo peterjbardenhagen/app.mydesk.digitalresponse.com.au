@@ -483,6 +483,12 @@ namespace MyDesk.Browser.ViewModels
             }
         }
 
+        /// <summary>
+        /// Loads persisted settings from %APPDATA%/MyDesk/Browser/appsettings.json.
+        /// Restores window geometry AND all user-customized settings (DefaultUrl,
+        /// WindowTitle, ShowToolbar, etc.) so changes from the Settings dialog
+        /// survive a restart.
+        /// </summary>
         public void LoadWindowState()
         {
             try
@@ -498,6 +504,21 @@ namespace MyDesk.Browser.ViewModels
                     var persisted = JsonSerializer.Deserialize<AppSettings>(json);
                     if (persisted != null)
                     {
+                        // Merge persisted settings into _settings so DefaultUrl,
+                        // WindowTitle, and other user preferences carry over.
+                        if (!string.IsNullOrEmpty(persisted.DefaultUrl))
+                            _settings.DefaultUrl = persisted.DefaultUrl;
+                        if (!string.IsNullOrEmpty(persisted.WindowTitle))
+                            _settings.WindowTitle = persisted.WindowTitle;
+                        _settings.EnableDevTools = persisted.EnableDevTools;
+                        _settings.AllowExternalLinks = persisted.AllowExternalLinks;
+                        _settings.UserAgent = persisted.UserAgent;
+                        _settings.StartMaximized = persisted.StartMaximized;
+                        _settings.RememberWindowState = persisted.RememberWindowState;
+                        _settings.HardwareAcceleration = persisted.HardwareAcceleration;
+                        _settings.ShowToolbar = persisted.ShowToolbar;
+                        _settings.AutoGrantPermissions = persisted.AutoGrantPermissions;
+
                         SavedWidth = persisted.WindowWidth > 0 ? persisted.WindowWidth : 1400;
                         SavedHeight = persisted.WindowHeight > 0 ? persisted.WindowHeight : 900;
                         SavedLeft = persisted.WindowLeft;
@@ -509,6 +530,11 @@ namespace MyDesk.Browser.ViewModels
 
                         // Sync toolbar visibility from persisted ShowToolbar setting
                         ShowUrlBar = persisted.ShowToolbar;
+
+                        // Re-apply initial URL and title from the now-merged settings
+                        InitialUrl = _settings.DefaultUrl ?? "https://app.mydesk.digitalresponse.com.au";
+                        CurrentUrl = InitialUrl;
+                        WindowTitle = _settings.WindowTitle ?? "MyDesk Browser";
                     }
                 }
             }
