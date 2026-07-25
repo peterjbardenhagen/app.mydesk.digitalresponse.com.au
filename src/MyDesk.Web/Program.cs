@@ -374,6 +374,7 @@ builder.Services.AddScoped<BankingService>();
 
     // ── Security Services (Phase 1 Week 4) ──────────────────────────────────
     builder.Services.AddScoped<RateLimitingService>();
+    builder.Services.AddSignalR();
 
     // ── Ports from legacy MyDesk (in-memory services) ──────────────────────
     builder.Services.AddScoped<RfqService>();
@@ -820,6 +821,7 @@ app.MapGraphQL("/graphql");
 
 // ── REST API + OpenAPI ──────────────────────────────────────────────────────
 app.MapControllers();
+app.MapHub<NotificationHub>("/notificationHub");
 
 // Swagger only in development — leak of API schema in production is a security risk
 if (app.Environment.IsDevelopment())
