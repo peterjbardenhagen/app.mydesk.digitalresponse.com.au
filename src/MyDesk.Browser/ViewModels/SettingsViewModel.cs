@@ -168,7 +168,9 @@ namespace MyDesk.Browser.ViewModels
             HardwareAcceleration = true;
             EnableDevTools = false;
             AllowExternalLinks = true;
-            UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+            ShowToolbar = true;
+            AutoGrantPermissions = true;
+            UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0";
 
             StatusMessage = "Reset to defaults. Click Save to apply.";
         }
