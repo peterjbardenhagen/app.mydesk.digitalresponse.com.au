@@ -496,13 +496,6 @@ namespace MyDesk.Browser.ViewModels
 
                         // Sync toolbar visibility from persisted ShowToolbar setting
                         ShowUrlBar = persisted.ShowToolbar;
-
-                        // Restore saved user info from DPAPI-encrypted storage.
-                    // This is now handled by the constructor via SecureStorage.LoadCredentials().
-                    // We keep the optimistic IsAuthenticated = true logic in the constructor
-                    // so the avatar circle is visible immediately before auth re-check.
-                        UpdateTitle();
-                        OnPropertyChanged(nameof(UserInitials));
                     }
                 }
             }
