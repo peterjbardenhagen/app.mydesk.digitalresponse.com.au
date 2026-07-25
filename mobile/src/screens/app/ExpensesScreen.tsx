@@ -15,6 +15,7 @@ import { fetchExpenses } from '@store/slices/expensesSlice';
 const ExpensesScreen: React.FC<any> = ({ navigation }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { items: expenses, isLoading } = useSelector((state: RootState) => state.expenses);
+  const { offlineMode, pendingChanges, isSyncing } = useSelector((state: RootState) => state.sync);
 
   useEffect(() => {
     dispatch(fetchExpenses());
@@ -53,6 +54,14 @@ const ExpensesScreen: React.FC<any> = ({ navigation }) => {
         <PaperText variant="headlineMedium">Expenses</PaperText>
       </View>
 
+      {offlineMode && (
+        <View style={styles.offlineBanner}>
+          <PaperText variant="labelSmall" style={styles.offlineText}>
+            📶 Offline - {pendingChanges} pending change{pendingChanges !== 1 ? 's' : ''} {isSyncing ? '(syncing...)' : 'will sync when online'}
+          </PaperText>
+        </View>
+      )}
+
       <FlatList
         data={expenses}
         renderItem={renderExpenseItem}
@@ -64,7 +73,7 @@ const ExpensesScreen: React.FC<any> = ({ navigation }) => {
             <PaperText variant="bodyMedium" style={styles.emptyText}>
               No expenses yet
             </PaperText>
-            <Button mode="contained" style={styles.createButton}>
+            <Button mode="contained" style={styles.createButton} onPress={() => navigation.navigate('CreateExpense')}>
               Create First Expense
             </Button>
           </View>
@@ -146,6 +155,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 16,
     bottom: 16,
+  },
+  offlineBanner: {
+    backgroundColor: '#ff9800',
+    padding: 12,
+    alignItems: 'center',
+  },
+  offlineText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
 
