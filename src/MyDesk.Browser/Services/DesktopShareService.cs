@@ -71,12 +71,14 @@ namespace MyDesk.Browser.Services
 
         /// <summary>
         /// Opens the default email client with share link details pre-filled.
+        /// Decrypts the stored token so the recipient can use the share link.
         /// </summary>
         public void SendShareLink(DesktopShare share)
         {
             try
             {
-                var shareUrl = DesktopShare.BuildShareUrl(share.Token, _baseUrl);
+                var rawToken = ShareTokenHelper.DecryptToken(share.Token);
+                var shareUrl = DesktopShare.BuildShareUrl(rawToken, _baseUrl);
                 var body = new StringBuilder();
                 body.AppendLine($"Here is a shared view of MyDesk for you.");
                 body.AppendLine();
@@ -108,10 +110,12 @@ namespace MyDesk.Browser.Services
 
         /// <summary>
         /// Copies the share link to the clipboard.
+        /// Decrypts the stored token so the recipient can use the share link.
         /// </summary>
         public void CopyShareLink(DesktopShare share)
         {
-            var shareUrl = DesktopShare.BuildShareUrl(share.Token, _baseUrl);
+            var rawToken = ShareTokenHelper.DecryptToken(share.Token);
+            var shareUrl = DesktopShare.BuildShareUrl(rawToken, _baseUrl);
             Clipboard.SetText(shareUrl);
         }
 
