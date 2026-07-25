@@ -298,6 +298,8 @@ namespace MyDesk.Browser.ViewModels
                     if (!isMyDeskDomain)
                         return;
 
+                    var isLoginPage = result.TryGetProperty("isLoginPage", out var loginProp) && loginProp.GetBoolean();
+
                     IsAuthenticated = isAuthed;
 
                     // Only update AgentsOS status when on the agentsos page,
@@ -317,8 +319,13 @@ namespace MyDesk.Browser.ViewModels
                         UserEmail = email;
                         Services.SecureStorage.SaveCredentials(name, email);
                     }
-                    else if (!isAuthed)
+                    else if (!isAuthed && !isLoginPage)
                     {
+                        // Only clear credentials when we're definitively not
+                        // authenticated AND not on a login page.  On login pages
+                        // (session expired, initial load) we preserve stored
+                        // credentials so the user can re-authenticate without
+                        // losing their saved name/email.
                         UserName = string.Empty;
                         UserEmail = string.Empty;
                         Services.SecureStorage.ClearCredentials();

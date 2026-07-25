@@ -385,23 +385,6 @@ namespace MyDesk.Browser
             shareWindow.ShowDialog();
         }
 
-        private void OpenITSupportEmail()
-        {
-            try
-            {
-                var mailto = "mailto:peter@bardenhagen.xyz?subject=IT Support Request";
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = mailto,
-                    UseShellExecute = true
-                });
-            }
-            catch (Exception ex)
-            {
-                _viewModel.SetError($"Failed to open email: {ex.Message}");
-            }
-        }
-
         private void BtnMinimize_Click(object sender, RoutedEventArgs e)
         {
             WindowState = WindowState.Minimized;
