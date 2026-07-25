@@ -325,6 +325,8 @@ namespace MyDesk.Browser
                             Owner = this
                         };
                         settingsWindow.ShowDialog();
+                        // Apply runtime settings changes immediately (toolbar, title, etc.)
+                        _viewModel.ReloadRuntimeSettings();
                         break;
 
                     case "quit":

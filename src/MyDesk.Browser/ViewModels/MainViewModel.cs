@@ -560,6 +560,54 @@ namespace MyDesk.Browser.ViewModels
             }
         }
 
+        /// <summary>
+        /// Reloads runtime-settable settings from the persisted AppSettings file.
+        /// Called after the Settings dialog saves to apply changes like ShowToolbar
+        /// and WindowTitle without requiring an app restart.
+        /// </summary>
+        public void ReloadRuntimeSettings()
+        {
+            try
+            {
+                var settingsPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "MyDesk",
+                    "Browser",
+                    "appsettings.json");
+                if (!File.Exists(settingsPath))
+                    return;
+
+                var json = File.ReadAllText(settingsPath);
+                var persisted = JsonSerializer.Deserialize<AppSettings>(json);
+                if (persisted == null)
+                    return;
+
+                // Apply toolbar visibility immediately
+                ShowUrlBar = persisted.ShowToolbar;
+
+                // Apply window title immediately
+                if (!string.IsNullOrEmpty(persisted.WindowTitle))
+                {
+                    _settings.WindowTitle = persisted.WindowTitle;
+                    UpdateTitle();
+                }
+
+                // Apply default URL (used for Home button)
+                if (!string.IsNullOrEmpty(persisted.DefaultUrl))
+                {
+                    _settings.DefaultUrl = persisted.DefaultUrl;
+                    InitialUrl = persisted.DefaultUrl;
+                }
+
+                _settings.AllowExternalLinks = persisted.AllowExternalLinks;
+                _settings.AutoGrantPermissions = persisted.AutoGrantPermissions;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to reload runtime settings");
+            }
+        }
+
         public void Dispose() { }
     }
 
