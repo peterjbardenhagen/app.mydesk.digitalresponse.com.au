@@ -1,9 +1,3 @@
-/**
- * Expense Creation Screen
- * Create new expense with camera capture and OCR
- * Part of Phase 7: Mobile Applications - Task 24 (Expense Form Screens)
- */
-
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -17,16 +11,7 @@ import {
   TouchableOpacity,
   Modal,
 } from 'react-native';
-import {
-  Text as PaperText,
-  Card,
-  Button,
-  ActivityIndicator as PaperActivityIndicator,
-  Divider,
-  Chip,
-  FAB,
-  Modal,
-} from 'react-native-paper';
+import { Text as PaperText, Card, Button, ActivityIndicator as PaperActivityIndicator, Divider, Chip, FAB } from 'react-native-paper';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
@@ -65,7 +50,7 @@ const CreateExpenseScreen: React.FC = () => {
   const draftId = route.params?.draftId;
 
   const dispatch = useDispatch<AppDispatch>();
-  const { items, currentExpense, isLoading } = useSelector(
+  const { items: items, currentExpense, isLoading } = useSelector(
     (state: RootState) => state.expenses
   );
   const offlineMode = useSelector((state: RootState) => state.sync.offlineMode);
@@ -81,23 +66,11 @@ const CreateExpenseScreen: React.FC = () => {
   const [ocrLoading, setOcrLoading] = useState(false);
   const [errors, setErrors] = useState<ExpenseFormErrors>({});
   const [savingDraft, setSavingDraft] = useState(false);
-  const [cameraPermissionResponse, setCameraPermissionResponse] = useState(false);
-  const [isCameraReady, setIsCameraReady] = useState(false);
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [showImagePreview, setShowImagePreview] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
 
   const isEdit = draftId != null;
   const loadedRef = useRef(false);
-
-  // Request camera permission on mount
-  useEffect(() => {
-    (async () => {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      setCameraPermissionResponse(status === 'granted');
-    })();
-  }, []);
 
   useEffect(() => {
     if (isEdit && draftId && !loadedRef.current) {
@@ -149,12 +122,17 @@ const CreateExpenseScreen: React.FC = () => {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         quality: 0.7,
         base64: false,
+        allowsMultipleSelection: true,
       });
-      if (!result.cancelled && result.assets[0]) {
-        const uri = result.assets[0].uri;
-        setCapturedImage(uri);
-        setShowImagePreview(true);
-        await runOcr(uri);
+      if (!result.cancelled && result.assets && result.assets.length > 0) {
+        const uris: string[] = result.assets
+          .filter(asset => !asset.cancelled && asset.uri)
+          .map(asset => asset.uri);
+        if (uris.length > 0) {
+          setReceiptUri(uris[0]); // Keep primary URI for existing UI
+          setShowImagePreview(true);
+          await runOcr(uris[0]);
+        }
       }
     } catch (error) {
       console.error('Image picker error:', error);
@@ -230,7 +208,6 @@ const CreateExpenseScreen: React.FC = () => {
         entityId: draftId ?? undefined,
         payload: { ...payload, draftSyncAt: new Date().toISOString() },
       });
-      // Show confirmation then go back
       setShowConfirmationModal(true);
       return;
     }
@@ -241,47 +218,11 @@ const CreateExpenseScreen: React.FC = () => {
     } else {
       dispatch(createExpense(payload));
     }
-    // Show confirmation then go back after short delay
     setShowConfirmationModal(true);
     setTimeout(() => {
       setSubmitLoading(false);
       navigation.goBack();
     }, 1500);
-  };
-
-  const handleBackPress = () => {
-    if (savingDraft || submitLoading) {
-      return true; // Prevent back during save/submit
-    }
-    // Ask to save changes if form is dirty
-    const hasChanges =
-      amount !== '' ||
-      currency !== 'AUD' ||
-      category !== CATEGORIES[0] ||
-      description !== '' ||
-      date !== new Date().toISOString().slice(0, 10) ||
-      costCenter !== '' ||
-      receiptUri !== undefined ||
-      ocr !== undefined;
-
-    if (hasChanges) {
-      Alert.alert(
-        'Save changes?',
-        'You have unsaved changes. Save as draft before leaving?',
-        [
-          {
-            text: 'Discard',
-            onPress: () => navigation.goBack(),
-            style: 'destructive',
-          },
-          { text: 'Save Draft', onPress: saveDraft },
-          { text: 'Cancel', style: 'cancel' },
-        ]
-      );
-      return true; // Stay on screen
-    }
-    navigation.goBack();
-    return true;
   };
 
   return (
@@ -799,7 +740,7 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    marginHorizontal: 8,
+    marginRight: 8,
   },
   primaryButton: {
     backgroundColor: '#4caf50',
@@ -833,33 +774,41 @@ const styles = StyleSheet.create({
     width: '80%',
     maxWidth: 400,
   },
+  previewImage: {
+    width: '100%',
+    height: 300,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 16,
+  },
   modalTitle: {
     fontSize: 20,
     fontWeight: '600',
+    marginBottom: 8,
     textAlign: 'center',
-    marginBottom: 16,
-    color: '#333',
   },
   modalSubtitle: {
-    fontSize: 16,
-    textAlign: 'center',
+    fontSize: 14,
     color: '#666',
-    marginBottom: 24,
+    textAlign: 'center',
+    marginBottom: 16,
   },
   modalNote: {
-    fontSize: 14,
+    fontSize: 12,
+    color: '#666',
     textAlign: 'center',
-    color: '#888',
-  },
-  offlineNote: {
-    color: '#ff9800',
-    fontWeight: '600',
+    marginBottom: 12,
   },
   modalButton: {
     backgroundColor: '#1976d2',
     paddingVertical: 12,
     borderRadius: 8,
     width: '100%',
+  },
+  offlineNote: {
+    color: '#ff9800',
   },
 });
 
