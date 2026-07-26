@@ -6,6 +6,9 @@ import {
   Image,
   Linking,
   Alert,
+  Share,
+  Platform,
+  RefreshControl,
 } from 'react-native';
 import {
   Text as PaperText,
@@ -45,6 +48,7 @@ const ExpenseDetailScreen: React.FC = () => {
   const { currentExpense, isLoading, error } = useSelector(
     (state: RootState) => state.expenses
   );
+  const { offlineMode } = useSelector((state: RootState) => state.sync);
 
   const [expense, setExpense] = useState<Expense | null>(null);
 
@@ -72,6 +76,28 @@ const ExpenseDetailScreen: React.FC = () => {
     ]);
   };
 
+  const handleShare = async () => {
+    if (!expense) return;
+    try {
+      await Share.share({
+        message: `MyDesk Expense: ${expense.description}\nAmount: ${expense.currency} ${expense.amount.toFixed(2)}\nStatus: ${expense.status}`,
+      });
+    } catch (error) {
+      console.error('Share failed:', error);
+    }
+  };
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return 'N/A';
+    return new Date(dateStr).toLocaleDateString('en-AU', {
+      year: 'numeric', month: 'short', day: 'numeric',
+    });
+  };
+
+  const formatCurrency = (amount: number, currency?: string) => {
+    return `${currency || 'AUD'} ${amount.toFixed(2)}`;
+  };
+
   if (isLoading && !expense) {
     return (
       <View style={styles.centered}>
@@ -97,7 +123,14 @@ const ExpenseDetailScreen: React.FC = () => {
   const canEdit = expense.status === 'Draft';
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} refreshControl={<RefreshControl refreshing={isLoading && !expense} onRefresh={() => dispatch(getExpenseDetail(expenseId))} />}>
+      {offlineMode && (
+        <View style={styles.offlineBanner}>
+          <PaperText variant="labelSmall" style={styles.offlineText}>📶 Offline mode - showing cached data</PaperText>
+        </View>
+      )}
+
+      <Card style={styles.card}>
       <Card style={styles.card}>
         <Card.Content>
           <View style={styles.headerRow}>
@@ -180,6 +213,14 @@ const ExpenseDetailScreen: React.FC = () => {
             Open Receipt
           </Button>
         )}
+        <Button
+          mode="outlined"
+          icon="share-variant"
+          onPress={handleShare}
+          style={styles.actionButton}
+        >
+          Share
+        </Button>
         {canEdit && (
           <Button mode="text" textColor="#f44336" onPress={handleDelete}>
             Delete
@@ -206,6 +247,8 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', marginTop: 4 },
   actionButton: { marginRight: 8, marginBottom: 8 },
   errorText: { color: '#f44336', marginBottom: 16, textAlign: 'center' },
+  offlineBanner: { backgroundColor: '#ff9800', padding: 12, alignItems: 'center' },
+  offlineText: { color: '#fff', fontSize: 14, fontWeight: '500' },
 });
 
 export default ExpenseDetailScreen;
