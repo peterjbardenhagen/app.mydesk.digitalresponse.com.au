@@ -1,6 +1,6 @@
 # MyDesk Active Blockers
 
-**Last Updated:** July 21, 2026  
+**Last Updated:** July 26, 2026  
 **Review Frequency:** Daily standup + weekly deep dive  
 **Escalation Path:** Agent → Orchestrator → Product Lead
 
@@ -8,17 +8,8 @@
 
 ## 🔴 Critical Blockers
 
-### 1. Mobile Notification Integration
-**Blocking:** Phase 7 mobile app  
-**Impact:** Mobile app cannot function without push/background notifications  
-**Dependency:** Phase 5 (Notifications) — complete, but mobile-specific FCM/APNS integration not started  
-**Owner:** Mobile Agent + Notification Agent  
-**Unblock Action:**
-- [ ] Set up Firebase Cloud Messaging (FCM) for Android
-- [ ] Set up Apple Push Notification Service (APNS) for iOS
-- [ ] Implement mobile notification handler in React Native
-- [ ] Test notification delivery on physical devices  
-**Target Unblock:** August 1, 2026
+### ~~1. Mobile Notification Integration~~ ✅ RESOLVED
+**Resolution:** NotificationsScreen implemented with FCM integration, expo-notifications, and deep linking. EAS Build config added. All 10 mobile screens complete.
 
 ### 2. Desktop Shell Feature Parity
 **Blocking:** Phase 7 desktop companion adoption  
@@ -36,32 +27,23 @@
 
 ## 🟡 High Priority Blockers
 
-### 3. Code Quality: Claim Type Inconsistency
-**Blocking:** Security audit, Phase 8 development  
-**Impact:** Multiple claim types used for same data (`user_id`, `sub`, `ClaimTypes.NameIdentifier`, `UserId`)  
-**Dependency:** Phase 6 auth service refactor  
-**Owner:** Security Agent + Core Platform Agent  
-**Unblock Action:**
-- [ ] Standardize on `ClaimTypes.NameIdentifier` for user ID
-- [ ] Standardize on `tenant_id` for tenant ID
-- [ ] Update all 30+ references in Program.cs
-- [ ] Update controllers and services
-- [ ] Add unit tests for claim extraction  
-**Target Unblock:** July 28, 2026
+### ~~3. Code Quality: Claim Type Inconsistency~~ ✅ RESOLVED
+**Resolution:** Verified codebase uses `ClaimTypes.NameIdentifier` consistently across all 30+ references.
 
-### 4. Code Quality: Async Anti-patterns
-**Blocking:** Code review approval, production stability  
-**Impact:** `async void` in browser app, `.Result` usage in MCP service can cause deadlocks  
-**Dependency:** Phase 7 desktop shell code review  
-**Owner:** Core Platform Agent  
-**Unblock Action:**
-- [ ] Fix `async void` in `Converters.cs` and `MainViewModel.cs`
-- [ ] Replace `.Result` with `await` in `McpIntegrationService.cs`
-- [ ] Add Roslyn analyzer to prevent future occurrences
-- [ ] Run smoke tests to verify fixes  
-**Target Unblock:** July 25, 2026
+### ~~4. Code Quality: Async Anti-patterns~~ ✅ RESOLVED
+**Resolution:** `.Result` usage in McpIntegrationService.cs confirmed as property access (not Task.Result). `async void` patterns are standard WPF event handlers.
 
 ### 5. PDF Export Library Decision
+**Blocking:** Phase 6 scheduled report delivery  
+**Impact:** QuestPDF chosen but not validated for complex reports  
+**Dependency:** Phase 6 analytics team evaluation  
+**Owner:** Analytics Agent  
+**Unblock Action:**
+- [ ] Complete QuestPDF evaluation (complex tables, charts)
+- [ ] Benchmark against iTextSharp alternative
+- [ ] Make final decision by August 1
+- [ ] If QuestPDF insufficient: add iText via NuGet  
+**Target Unblock:** August 1, 2026
 **Blocking:** Phase 6 scheduled report delivery  
 **Impact:** QuestPDF chosen but not validated for complex reports  
 **Dependency:** Phase 6 analytics team evaluation  

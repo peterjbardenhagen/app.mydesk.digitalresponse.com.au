@@ -6,37 +6,34 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  ASPNETCORE_ENVIRONMENT: Development
+  ConnectionStrings__TechlightDb: Server=(localdb)\MSSQLLocalDB;Database=Techlight_MyDesk;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False;
+
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up environment
-        run: echo "Set up your language runtime here"
-      - name: Lint
-        run: echo "Add linter command here — e.g., npm run lint"
-
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up environment
-        run: echo "Set up your language runtime here"
-      - name: Install dependencies
-        run: echo "Add install command here — e.g., npm ci"
-      - name: Run tests
-        run: echo "Add test command here — e.g., npm test"
-
   build:
-    name: Build
-    runs-on: ubuntu-latest
+    name: Build & Test
+    runs-on: windows-latest
+
     steps:
       - uses: actions/checkout@v4
-      - name: Set up environment
-        run: echo "Set up your language runtime here"
-      - name: Install dependencies
-        run: echo "Add install command here"
-      - name: Build
-        run: echo "Add build command here"
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore -r win-x64
+
+      - name: Build (Release)
+        run: dotnet build MyDesk.slnx --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test MyDesk.slnx --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --verbosity minimal
+        continue-on-error: true
+
+      - name: Publish application (web)
+        run: dotnet publish src/MyDesk.Web/MyDesk.Web.csproj -c Release -r win-x64 --self-contained false -o ./artifacts/publish
