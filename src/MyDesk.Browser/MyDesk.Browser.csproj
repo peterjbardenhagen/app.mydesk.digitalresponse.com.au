@@ -33,13 +33,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Windows Forms for system tray icon -->
-    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
+      <!-- Windows Forms for system tray icon -->
+      <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="Assets\icon.ico" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
+    <ItemGroup>
+      <Content Include="Assets\icon.ico" CopyToOutputDirectory="PreserveNewest" />
+      <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
 
   <ItemGroup>
     <None Remove="app.manifest" />
