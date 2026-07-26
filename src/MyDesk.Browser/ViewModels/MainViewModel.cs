@@ -209,7 +209,8 @@ namespace MyDesk.Browser.ViewModels
 
         /// <summary>
         /// Called after every page navigation to detect auth state.
-        /// Injects JavaScript to check for auth cookies and user info.
+        /// Combines C#-side CookieManager queries (can see HttpOnly cookies)
+        /// with JavaScript DOM inspection for user info and page context.
         /// Only processes auth state changes when on the MyDesk domain —
         /// external site navigations preserve the existing auth state
         /// so saved credentials are not spuriously cleared.
@@ -220,12 +221,35 @@ namespace MyDesk.Browser.ViewModels
 
             try
             {
-                // JavaScript to check auth state from the page
+                // Step 1: Query auth cookies from C# side (can read HttpOnly cookies
+                // that JavaScript's document.cookie cannot see).
+                var hasAuthCookie = false;
+                var cookieManager = _webView.CoreWebView2.CookieManager;
+                try
+                {
+                    // Check for ASP.NET Identity auth cookies on the app domain
+                    var cookies = await cookieManager.GetCookiesAsync("https://app.mydesk.digitalresponse.com.au");
+                    foreach (var cookie in cookies)
+                    {
+                        if (cookie.Name.IndexOf(".AspNetCore", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                            cookie.Name.IndexOf("Identity", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                            cookie.Name.IndexOf(".Auth", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                            cookie.Name.IndexOf("mydesk_auth", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            hasAuthCookie = cookie.Value.Length > 0;
+                            if (hasAuthCookie) break;
+                        }
+                    }
+                }
+                catch
+                {
+                    // CookieManager query failed — fall through to JS checks
+                }
+
+                // Step 2: Run JavaScript to extract user info, page context,
+                // and detect app content / AgentsOS status.
                 var script = @"
                     (function() {
-                        // Check for auth cookie
-                        var hasCookie = document.cookie.indexOf('.AspNetCore') >= 0 || document.cookie.indexOf('Identity') >= 0;
-
                         // Try to extract user info from common DOM patterns
                         var userName = '';
                         var userEmail = '';
@@ -265,12 +289,10 @@ namespace MyDesk.Browser.ViewModels
                         }
 
                         return JSON.stringify({
-                            isAuthenticated: (hasCookie || hasAppContent) && !isLoginPage,
                             userName: userName,
                             userEmail: userEmail,
                             hostname: window.location.hostname,
                             path: window.location.pathname,
-                            hasCookie: hasCookie,
                             isLoginPage: isLoginPage,
                             hasAppContent: hasAppContent,
                             isAgentsOnline: isAgentsOnline
@@ -283,10 +305,6 @@ namespace MyDesk.Browser.ViewModels
 
                 if (result.ValueKind == JsonValueKind.Object)
                 {
-                    var isAuthed = result.TryGetProperty("isAuthenticated", out var authProp) && authProp.GetBoolean();
-                    var name = result.TryGetProperty("userName", out var nameProp) ? nameProp.GetString() ?? "" : "";
-                    var email = result.TryGetProperty("userEmail", out var emailProp) ? emailProp.GetString() ?? "" : "";
-                    var agentsOnline = result.TryGetProperty("isAgentsOnline", out var agentsProp) && agentsProp.GetBoolean();
                     var hostname = result.TryGetProperty("hostname", out var hostProp) ? hostProp.GetString() ?? "" : "";
 
                     // Only trust auth state changes on the MyDesk domain.
@@ -298,7 +316,16 @@ namespace MyDesk.Browser.ViewModels
                     if (!isMyDeskDomain)
                         return;
 
+                    var name = result.TryGetProperty("userName", out var nameProp) ? nameProp.GetString() ?? "" : "";
+                    var email = result.TryGetProperty("userEmail", out var emailProp) ? emailProp.GetString() ?? "" : "";
+                    var agentsOnline = result.TryGetProperty("isAgentsOnline", out var agentsProp) && agentsProp.GetBoolean();
                     var isLoginPage = result.TryGetProperty("isLoginPage", out var loginProp) && loginProp.GetBoolean();
+                    var hasAppContent = result.TryGetProperty("hasAppContent", out var appProp) && appProp.GetBoolean();
+
+                    // Combine C# cookie check (reliable, HttpOnly-aware) with
+                    // JS app-content detection.  Either alone is sufficient to
+                    // confirm the user is authenticated.
+                    var isAuthed = (hasAuthCookie || hasAppContent) && !isLoginPage;
 
                     IsAuthenticated = isAuthed;
 
