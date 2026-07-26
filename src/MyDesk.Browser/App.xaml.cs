@@ -67,15 +67,17 @@ namespace MyDesk.Browser
             var mainVm = new MainViewModel();
             Current.Properties["MainViewModel"] = mainVm;
 
-            // Initialize system tray after main window is created
-            Current.Startup += (_, _) =>
+            // Initialize system tray after MainWindow is loaded.
+            // Note: subscribing to Current.Startup here would never fire because
+            // the Startup event has already been raised (we are inside OnStartup).
+            if (MainWindow != null)
             {
-                if (MainWindow != null)
+                MainWindow.Loaded += (_, _) =>
                 {
                     _trayService = new NotifyIconService(MainWindow);
                     _trayService.StartBackgroundAlerts();
-                }
-            };
+                };
+            }
         }
 
         protected override void OnExit(ExitEventArgs e)
