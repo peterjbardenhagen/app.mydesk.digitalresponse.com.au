@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows;
 using Microsoft.Web.WebView2.Core;
 using MyDesk.Browser.ViewModels;
+using MyDesk.Browser.Services;
 
 namespace MyDesk.Browser
 {
@@ -17,6 +18,8 @@ namespace MyDesk.Browser
             "Browser",
             "WebView2");
 
+        private NotifyIconService? _trayService;
+
         protected override async void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
@@ -24,10 +27,6 @@ namespace MyDesk.Browser
             // Initialize WebView2 environment
             try
             {
-                // Read dev-tools flag from settings so we only disable web security
-                // when the user explicitly enables it (dev/debug mode). This avoids
-                // shipping --disable-web-security in production, which bypasses
-                // the browser's same-origin policy and is a security risk.
                 var settingsPath = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                     "MyDesk", "Browser", "appsettings.json");
@@ -55,7 +54,6 @@ namespace MyDesk.Browser
                         AdditionalBrowserArguments = browserArgs
                     });
 
-                // Store the environment for use in MainWindow
                 Current.Properties["WebView2Environment"] = environment;
             }
             catch (Exception ex)
@@ -66,11 +64,23 @@ namespace MyDesk.Browser
             }
 
             // Initialize ViewModels
-            Current.Properties["MainViewModel"] = new MainViewModel();
+            var mainVm = new MainViewModel();
+            Current.Properties["MainViewModel"] = mainVm;
+
+            // Initialize system tray after main window is created
+            Current.Startup += (_, _) =>
+            {
+                if (MainWindow != null)
+                {
+                    _trayService = new NotifyIconService(MainWindow);
+                    _trayService.StartBackgroundAlerts();
+                }
+            };
         }
 
         protected override void OnExit(ExitEventArgs e)
         {
+            _trayService?.Dispose();
             if (Current.Properties["MainViewModel"] is MainViewModel vm)
             {
                 vm.Dispose();
