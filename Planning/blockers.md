@@ -17,11 +17,12 @@
 **Dependency:** Phase 6 dashboards + Phase 5 notifications  
 **Owner:** Desktop Agent  
 **Unblock Action:**
-- [ ] Port authentication flow from web to WPF
-- [ ] Implement expense list and detail views
-- [ ] Add notification tray integration
+- [x] Port authentication flow from web to WPF (✅ DPAPI SecureStorage, Login/Logout, session persistence)
+- [ ] Implement expense list and detail views (WebView2 renders web app — native views deferred)
+- [x] Add notification tray integration (✅ NotifyIconService — system tray icon, balloon alerts, context menu)
 - [ ] Test offline mode with local SQLite cache  
 **Target Unblock:** August 15, 2026
+**Partial Resolution:** System tray (NotifyIconService) and Techlight client preset (clients/techlight.json) added. 35 coded UI unit tests passing for ViewModels, Services, and Techlight config validation.
 
 ---
 
