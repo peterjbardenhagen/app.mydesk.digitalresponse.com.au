@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using MyDesk.Web.Services;
+using System.Security.Claims;
 
 namespace MyDesk.Web.Api.Controllers;
 

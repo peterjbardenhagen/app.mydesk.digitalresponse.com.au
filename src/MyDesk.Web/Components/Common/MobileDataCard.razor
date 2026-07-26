@@ -10,7 +10,7 @@
     {
         <div class="mobile-data-card-header">
             <MudText Typo="Typo.subtitle2" Class="font-bold">@Title</MudText>
-            @if (HeaderAction != null)
+            @if (HeaderAction.HasDelegate)
             {
                 <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" />
             }
@@ -103,7 +103,7 @@
 }
 
 /* Tablet and up: switch to table view */
-@media (min-width: 768px) {
+@@media (min-width: 768px) {
     .mobile-data-card {
         display: none;
     }
