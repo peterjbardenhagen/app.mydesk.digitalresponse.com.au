@@ -2,8 +2,13 @@
   <Folder Name="/src/">
     <Project Path="src/MyDesk.Shared/MyDesk.Shared.csproj" />
     <Project Path="src/MyDesk.Web/MyDesk.Web.csproj" />
+    <Project Path="src/MyDesk.Browser/MyDesk.Browser.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/MyDesk.UnitTests/MyDesk.UnitTests.csproj" />
+    <Project Path="tests/MyDesk.Web.Phase4.Tests/MyDesk.Web.Phase4.Tests.csproj" />
+    <Project Path="tests/MyDesk.Web.Phase5.Tests/MyDesk.Web.Phase5.Tests.csproj" />
     <Project Path="tests/MyDesk.PlaywrightTests/MyDesk.PlaywrightTests.csproj" />
+    <Project Path="tests/MyDesk.Browser.Tests/MyDesk.Browser.Tests.csproj" />
   </Folder>
 </Solution>
