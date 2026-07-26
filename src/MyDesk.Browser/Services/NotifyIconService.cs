@@ -76,7 +76,15 @@ public sealed class NotifyIconService : IDisposable
     private void OpenSupport()
     {
         RestoreMainWindow();
-        // Navigate to support page - will be handled by MainViewModel
+
+        // Navigate to support page in the main WebView
+        if (System.Windows.Application.Current.Properties["MainViewModel"] is ViewModels.MainViewModel vm)
+        {
+            // Trigger the support window via the MainViewModel's support method
+            // by navigating to the support page in the embedded WebView
+            var webView = vm.GetWebView();
+            webView?.CoreWebView2?.Navigate("https://app.mydesk.digitalresponse.com.au/support");
+        }
     }
 
     private void ExitApplication()

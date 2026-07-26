@@ -194,6 +194,12 @@ namespace MyDesk.Browser.ViewModels
             _webView = webView;
         }
 
+        /// <summary>
+        /// Returns the current WebView2 instance, if initialized.
+        /// Used by NotifyIconService to navigate on tray icon actions.
+        /// </summary>
+        public WebView2? GetWebView() => _webView;
+
         private void InitializeWebViewProperties()
         {
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
