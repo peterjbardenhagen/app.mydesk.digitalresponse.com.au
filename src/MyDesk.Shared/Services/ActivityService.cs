@@ -113,7 +113,7 @@ public class ActivityService
             if (dt.Rows.Count > 0)
                 return dt.Map(MapItem).ToList();
         }
-        catch { }
+        catch (Exception ex) { _logger.LogDebug(ex, "UserActivity query failed, falling back to synthetic"); }
 
         return await GetSyntheticAsync(limit, userCode);
     }
@@ -143,7 +143,7 @@ public class ActivityService
                 ORDER BY qa.DateEntered DESC", p);
             items.AddRange(dt.Map(MapItem));
         }
-        catch { }
+        catch (Exception ex) { _logger.LogDebug(ex, "QuoteAudit synthetic query failed"); }
 
         // Recent Invoices
         try
@@ -163,7 +163,7 @@ public class ActivityService
                 ORDER BY i.InvoiceDate DESC", p);
             items.AddRange(dt.Map(MapItem));
         }
-        catch { }
+        catch (Exception ex) { _logger.LogDebug(ex, "Invoices synthetic query failed"); }
 
         // Recent Purchase Orders
         try
@@ -183,7 +183,7 @@ public class ActivityService
                 ORDER BY p.PODate DESC", p);
             items.AddRange(dt.Map(MapItem));
         }
-        catch { }
+        catch (Exception ex) { _logger.LogDebug(ex, "PurchaseOrders synthetic query failed"); }
 
         // Recent Despatch
         try
@@ -202,7 +202,7 @@ public class ActivityService
                 ORDER BY d.DespatchId DESC");
             items.AddRange(dt.Map(MapItem));
         }
-        catch { }
+        catch (Exception ex) { _logger.LogDebug(ex, "Despatch synthetic query failed"); }
 
         return items
             .Where(i => i.ActivityDate > DateTime.MinValue)
