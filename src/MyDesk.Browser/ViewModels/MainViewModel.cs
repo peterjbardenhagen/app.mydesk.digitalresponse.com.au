@@ -345,6 +345,14 @@ namespace MyDesk.Browser.ViewModels
                     {
                         IsAgentsOnline = agentsOnline;
                     }
+                    else
+                    {
+                        // When navigating away from /agentsos, reset the status
+                        // to false so the indicator doesn't show a stale green dot.
+                        // The dot is only visible when authenticated, so this
+                        // transition is subtle — gray dot → green (/agentsos) → gray.
+                        IsAgentsOnline = false;
+                    }
 
                     if (isAuthed && !string.IsNullOrEmpty(name))
                     {
