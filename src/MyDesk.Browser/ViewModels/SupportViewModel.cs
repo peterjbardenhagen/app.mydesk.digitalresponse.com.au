@@ -43,9 +43,9 @@ namespace MyDesk.Browser.ViewModels
         public string[] Priorities => SupportTicket.Priorities;
         public string[] Categories => SupportTicket.Categories;
 
-        public SupportViewModel(string currentUser)
+        public SupportViewModel(string currentUser, string supportEmail = "peter@bardenhagen.xyz")
         {
-            _ticketService = new SupportTicketService();
+            _ticketService = new SupportTicketService(supportEmail);
             _submittedBy = currentUser;
             RefreshTickets();
         }

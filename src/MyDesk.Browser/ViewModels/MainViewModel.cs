@@ -551,6 +551,7 @@ namespace MyDesk.Browser.ViewModels
                         _settings.HardwareAcceleration = persisted.HardwareAcceleration;
                         _settings.ShowToolbar = persisted.ShowToolbar;
                         _settings.AutoGrantPermissions = persisted.AutoGrantPermissions;
+                        _settings.SupportEmail = persisted.SupportEmail;
 
                         SavedWidth = persisted.WindowWidth > 0 ? persisted.WindowWidth : 1400;
                         SavedHeight = persisted.WindowHeight > 0 ? persisted.WindowHeight : 900;
@@ -634,6 +635,7 @@ namespace MyDesk.Browser.ViewModels
 
                 _settings.AllowExternalLinks = persisted.AllowExternalLinks;
                 _settings.AutoGrantPermissions = persisted.AutoGrantPermissions;
+                _settings.SupportEmail = persisted.SupportEmail;
             }
             catch (Exception ex)
             {
@@ -661,6 +663,7 @@ namespace MyDesk.Browser.ViewModels
         public bool HardwareAcceleration { get; set; } = true;
         public bool ShowToolbar { get; set; } = true;
         public bool AutoGrantPermissions { get; set; } = true;
+        public string SupportEmail { get; set; } = "peter@bardenhagen.xyz";
 
         // Auth-related persisted settings
         public string? LastUserName { get; set; }

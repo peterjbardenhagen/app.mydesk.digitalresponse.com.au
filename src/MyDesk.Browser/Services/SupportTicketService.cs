@@ -15,11 +15,12 @@ namespace MyDesk.Browser.Services
     public class SupportTicketService
     {
         private readonly string _storagePath;
-        private readonly string _supportEmail = "peter@bardenhagen.xyz";
+        private readonly string _supportEmail;
         private List<SupportTicket> _tickets = new();
 
-        public SupportTicketService()
+        public SupportTicketService(string supportEmail = "peter@bardenhagen.xyz")
         {
+            _supportEmail = supportEmail;
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             var dir = Path.Combine(appData, "MyDesk", "Browser", "SupportTickets");
             Directory.CreateDirectory(dir);

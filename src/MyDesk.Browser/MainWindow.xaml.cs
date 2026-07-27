@@ -366,7 +366,7 @@ namespace MyDesk.Browser
 
         private void OpenSupportWindow()
         {
-            var supportWindow = new Views.SupportWindow(_viewModel.UserName)
+            var supportWindow = new Views.SupportWindow(_viewModel.UserName, _viewModel.Settings.SupportEmail)
             {
                 Owner = this
             };
