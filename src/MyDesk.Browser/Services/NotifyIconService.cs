@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Windows;
 using System.Windows.Threading;
+using MyDesk.Browser.Views;
 
 namespace MyDesk.Browser.Services;
 
@@ -77,13 +78,15 @@ public sealed class NotifyIconService : IDisposable
     {
         RestoreMainWindow();
 
-        // Navigate to support page in the main WebView
+        // Open the support dialog (consistent with main menu behavior).
+        // Need to get the user name and support email from the MainViewModel.
         if (System.Windows.Application.Current.Properties["MainViewModel"] is ViewModels.MainViewModel vm)
         {
-            // Trigger the support window via the MainViewModel's support method
-            // by navigating to the support page in the embedded WebView
-            var webView = vm.GetWebView();
-            webView?.CoreWebView2?.Navigate("https://app.mydesk.digitalresponse.com.au/support");
+            var supportWindow = new Views.SupportWindow(vm.UserName, vm.Settings.SupportEmail)
+            {
+                Owner = _mainWindow
+            };
+            supportWindow.ShowDialog();
         }
     }
 
