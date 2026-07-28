@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Web.WebView2.Core;
+using MyDesk.Browser.Services;
 using MyDesk.Browser.ViewModels;
 
 namespace MyDesk.Browser
@@ -11,6 +12,7 @@ namespace MyDesk.Browser
     public partial class MainWindow : Window
     {
         private readonly MainViewModel _viewModel;
+        private NotifyIconService? _trayService;
 
         public MainWindow()
         {
@@ -35,6 +37,10 @@ namespace MyDesk.Browser
             try
             {
                 _viewModel.ApplyWindowState(this);
+
+                // Initialize system tray icon (visible on minimize-to-tray)
+                _trayService ??= new NotifyIconService(this);
+                _trayService.StartBackgroundAlerts();
 
                 // Use the environment created in App.xaml.cs, or create a new one
                 var env = System.Windows.Application.Current.Properties["WebView2Environment"] as CoreWebView2Environment;
@@ -404,6 +410,7 @@ namespace MyDesk.Browser
 
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
+            _trayService?.Dispose();
             _viewModel.SaveWindowState(this);
         }
 

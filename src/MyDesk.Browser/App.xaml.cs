@@ -3,7 +3,6 @@ using System.IO;
 using System.Windows;
 using Microsoft.Web.WebView2.Core;
 using MyDesk.Browser.ViewModels;
-using MyDesk.Browser.Services;
 
 namespace MyDesk.Browser
 {
@@ -17,8 +16,6 @@ namespace MyDesk.Browser
             "MyDesk",
             "Browser",
             "WebView2");
-
-        private NotifyIconService? _trayService;
 
         protected override async void OnStartup(StartupEventArgs e)
         {
@@ -67,22 +64,13 @@ namespace MyDesk.Browser
             var mainVm = new MainViewModel();
             Current.Properties["MainViewModel"] = mainVm;
 
-            // Initialize system tray after MainWindow is loaded.
-            // Note: subscribing to Current.Startup here would never fire because
-            // the Startup event has already been raised (we are inside OnStartup).
-            if (MainWindow != null)
-            {
-                MainWindow.Loaded += (_, _) =>
-                {
-                    _trayService = new NotifyIconService(MainWindow);
-                    _trayService.StartBackgroundAlerts();
-                };
-            }
+            // Note: MainWindow is always null here because the StartupUri window
+            // is created by WPF after OnStartup returns. The NotifyIconService
+            // is initialized in MainWindow_Loaded in MainWindow.xaml.cs instead.
         }
 
         protected override void OnExit(ExitEventArgs e)
         {
-            _trayService?.Dispose();
             if (Current.Properties["MainViewModel"] is MainViewModel vm)
             {
                 vm.Dispose();
